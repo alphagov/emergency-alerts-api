@@ -45,7 +45,7 @@ run-celery: ## Run celery
 
 .PHONY: run-celery-with-docker
 run-celery-with-docker: ## Run celery in Docker container (useful if you can't install pycurl locally)
-	./scripts/run_with_docker.sh make run-celery
+	./scripts/run_with_docker.sh worker
 
 .PHONY: run-celery-beat
 run-celery-beat: ## Run celery beat
@@ -55,7 +55,7 @@ run-celery-beat: ## Run celery beat
 
 .PHONY: run-celery-beat-with-docker
 run-celery-beat-with-docker: ## Run celery beat in Docker container (useful if you can't install pycurl locally)
-	./scripts/run_with_docker.sh make run-celery-beat
+	./scripts/run_with_docker.sh beat
 
 .PHONY: help
 help:
