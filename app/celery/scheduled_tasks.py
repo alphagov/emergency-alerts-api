@@ -6,7 +6,7 @@ from flask import current_app
 from notifications_utils.clients.zendesk.zendesk_client import (
     NotifySupportTicket,
 )
-from sqlalchemy import between
+from sqlalchemy import between, or_
 from sqlalchemy.exc import SQLAlchemyError
 
 from app import db, notify_celery, zendesk_client
@@ -63,6 +63,7 @@ from app.models import (
     Event,
     Job,
     Organisation,
+    User,
 )
 from app.notifications.process_notifications import send_notification_to_queue
 
@@ -391,7 +392,13 @@ def zendesk_new_email_branding_report():
         previous_weekday -= timedelta(days=(previous_weekday.isoweekday() - 5))
 
     new_email_brands = (
-        EmailBranding.query.join(Organisation, isouter=True).filter(EmailBranding.created_at >= previous_weekday).all()
+        EmailBranding.query.join(Organisation, isouter=True)
+        .join(User, User.id == EmailBranding.created_by, isouter=True)
+        .filter(
+            EmailBranding.created_at >= previous_weekday,
+            or_(EmailBranding.created_by.is_(None), User.platform_admin.is_(False)),
+        )
+        .all()
     )
 
     current_app.logger.info(f"{len(new_email_brands)} new email brands to review since {previous_weekday}.")

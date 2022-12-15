@@ -51,6 +51,7 @@ from tests.app.db import (
     create_notification,
     create_organisation,
     create_template,
+    create_user,
 )
 from tests.conftest import set_config
 
@@ -932,6 +933,29 @@ def test_zendesk_new_email_branding_report_does_not_create_ticket_if_no_new_bran
     mock_send_ticket = mocker.patch("app.celery.scheduled_tasks.zendesk_client.send_ticket_to_zendesk")
     zendesk_new_email_branding_report()
     assert mock_send_ticket.call_args_list == []
+
+
+@freeze_time("2022-11-01 00:30:00")
+def test_zendesk_new_email_branding_report_does_not_report_on_brands_created_by_platform_admin(
+    notify_db_session, mocker
+):
+    plain_user = create_user(email="plain@notify.works", platform_admin=False)
+    platform_user = create_user(email="platform@notify.works", platform_admin=True)
+    brand_1 = create_email_branding(name="brand-1")
+    brand_2 = create_email_branding(name="brand-2", created_by=plain_user.id)
+    brand_3 = create_email_branding(name="brand-3", created_by=platform_user.id)
+    notify_db_session.commit()
+
+    mock_send_ticket = mocker.patch("app.celery.scheduled_tasks.zendesk_client.send_ticket_to_zendesk")
+
+    zendesk_new_email_branding_report()
+
+    # 1 brand was made by a platform admin - 2 were not. We should report on/link to those 2 brands.
+    ticket_html = mock_send_ticket.call_args_list[0][0][0].request_data["ticket"]["comment"]["html_body"]
+    assert ticket_html.count("<li><a href") == 2
+    assert str(brand_1.id) in ticket_html
+    assert str(brand_2.id) in ticket_html
+    assert str(brand_3.id) not in ticket_html
 
 
 def test_check_for_low_available_inbound_sms_numbers_logs_zendesk_ticket_if_too_few_numbers(
