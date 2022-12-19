@@ -9,7 +9,7 @@ It returns a 503 error code and a standard json response for all routes.
 
 It should already be deployed, but if not (or if you need to make changes to the nginx config) you can deploy it by running
 
-    cf push notify-api-failwhale
+    cf push eas-api-failwhale
 
 To enable it you need to run
 

@@ -65,7 +65,7 @@ def run_migrations_online():
             context.run_migrations()
 
         # if we're running on the main db (as opposed to the test db)
-        if engine.url.database == "notification_api":
+        if engine.url.database == "emergency_alerts_api":
             with open(Path(__file__).parent / ".current-alembic-head", "w") as f:
                 # write the current head to `.current-alembic-head`. This will prevent conflicting migrations
                 # being merged at the same time and breaking the build.
