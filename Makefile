@@ -27,7 +27,7 @@ PYTHON_EXECUTABLE_PREFIX := $(shell test -d "$${VIRTUALENV_ROOT}" && echo "$${VI
 .PHONY: bootstrap
 bootstrap: generate-version-file ## Set up everything to run the app
 	pip3 install -r requirements_for_test.txt
-	createdb notification_api || true
+	createdb emergency_alerts_api || true
 	(. environment.sh && flask db upgrade) || true
 
 .PHONY: bootstrap-with-docker
@@ -151,16 +151,16 @@ cf-deploy: ## Deploys the app to Cloud Foundry
 cf-deploy-api-db-migration:
 	$(if ${CF_SPACE},,$(error Must specify CF_SPACE))
 	cf target -o ${CF_ORG} -s ${CF_SPACE}
-	make -s CF_APP=notify-api-db-migration generate-manifest > ${CF_MANIFEST_PATH}
+	make -s CF_APP=eas-api-db-migration generate-manifest > ${CF_MANIFEST_PATH}
 
-	cf push notify-api-db-migration --no-route -f ${CF_MANIFEST_PATH}
+	cf push eas-api-db-migration --no-route -f ${CF_MANIFEST_PATH}
 	rm ${CF_MANIFEST_PATH}
 
-	cf run-task notify-api-db-migration --command="flask db upgrade" --name api_db_migration
+	cf run-task eas-api-db-migration --command="flask db upgrade" --name api_db_migration
 
 .PHONY: cf-check-api-db-migration-task
-cf-check-api-db-migration-task: ## Get the status for the last notify-api-db-migration task
-	@cf curl /v3/apps/`cf app --guid notify-api-db-migration`/tasks?order_by=-created_at | jq -r ".resources[0].state"
+cf-check-api-db-migration-task: ## Get the status for the last eas-api-db-migration task
+	@cf curl /v3/apps/`cf app --guid eas-api-db-migration`/tasks?order_by=-created_at | jq -r ".resources[0].state"
 
 .PHONY: cf-rollback
 cf-rollback: ## Rollbacks the app to the previous release
@@ -175,23 +175,23 @@ check-if-migrations-to-run:
 .PHONY: cf-deploy-failwhale
 cf-deploy-failwhale:
 	$(if ${CF_SPACE},,$(error Must target space, eg `make preview cf-deploy-failwhale`))
-	cd ./paas-failwhale; cf push notify-api-failwhale -f manifest.yml
+	cd ./paas-failwhale; cf push eas-api-failwhale -f manifest.yml
 
 .PHONY: enable-failwhale
 enable-failwhale: ## Enable the failwhale app and disable api
 	$(if ${DNS_NAME},,$(error Must target space, eg `make preview enable-failwhale`))
 	# make sure failwhale is running first
-	cf start notify-api-failwhale
+	cf start eas-api-failwhale
 
-	cf map-route notify-api-failwhale ${DNS_NAME} --hostname api
-	cf unmap-route notify-api ${DNS_NAME} --hostname api
+	cf map-route eas-api-failwhale ${DNS_NAME} --hostname api
+	cf unmap-route eas-api ${DNS_NAME} --hostname api
 	@echo "Failwhale is enabled"
 
 .PHONY: disable-failwhale
 disable-failwhale: ## Disable the failwhale app and enable api
 	$(if ${DNS_NAME},,$(error Must target space, eg `make preview disable-failwhale`))
 
-	cf map-route notify-api ${DNS_NAME} --hostname api
-	cf unmap-route notify-api-failwhale ${DNS_NAME} --hostname api
-	cf stop notify-api-failwhale
+	cf map-route eas-api ${DNS_NAME} --hostname api
+	cf unmap-route eas-api-failwhale ${DNS_NAME} --hostname api
+	cf stop eas-api-failwhale
 	@echo "Failwhale is disabled"

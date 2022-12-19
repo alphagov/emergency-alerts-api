@@ -132,7 +132,7 @@ flask command purge_functional_test_data -u <functional tests user name prefix>
 
 On the server
 ```
-cf run-task notify-api "flask command purge_functional_test_data -u <functional tests user name prefix>"
+cf run-task eas-api "flask command purge_functional_test_data -u <functional tests user name prefix>"
 ```
 
 All commands and command options have a --help command if you need more information.

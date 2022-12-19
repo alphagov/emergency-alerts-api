@@ -1,7 +1,7 @@
 ---
 
 applications:
-  - name: notify-api-failwhale
+  - name: eas-api-failwhale
     buildpacks:
       - nginx_buildpack
     memory: 256M
