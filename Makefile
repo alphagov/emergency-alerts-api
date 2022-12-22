@@ -81,8 +81,8 @@ freeze-requirements: ## Pin all requirements including sub dependencies into req
 	pip-compile requirements.in
 
 .PHONY: bump-utils
-bump-utils:  # Bump notifications-utils package to latest version
-	${PYTHON_EXECUTABLE_PREFIX}python -c "from notifications_utils.version_tools import upgrade_version; upgrade_version()"
+bump-utils:  # Bump emergency-alerts-utils package to latest version
+	${PYTHON_EXECUTABLE_PREFIX}python -c "from emergency_alerts_utils.version_tools import upgrade_version; upgrade_version()"
 
 .PHONY: clean
 clean:
