@@ -1,6 +1,6 @@
 import itertools
 
-from notifications_utils.recipients import allowed_to_send_to
+from emergency_alerts_utils.recipients import allowed_to_send_to
 
 from app.dao.services_dao import dao_fetch_service_by_id
 from app.models import (

@@ -3,9 +3,9 @@ from io import BytesIO
 
 import botocore
 from flask import Blueprint, current_app, jsonify, request
-from notifications_utils import SMS_CHAR_COUNT_LIMIT
-from notifications_utils.pdf import extract_page_from_pdf
-from notifications_utils.template import (
+from emergency_alerts_utils import SMS_CHAR_COUNT_LIMIT
+from emergency_alerts_utils.pdf import extract_page_from_pdf
+from emergency_alerts_utils.template import (
     BroadcastMessageTemplate,
     SMSMessageTemplate,
 )

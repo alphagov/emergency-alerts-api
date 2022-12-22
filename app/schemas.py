@@ -15,7 +15,7 @@ from marshmallow import (
     validates_schema,
 )
 from marshmallow_sqlalchemy import field_for
-from notifications_utils.recipients import (
+from emergency_alerts_utils.recipients import (
     InvalidEmailError,
     InvalidPhoneError,
     validate_and_format_phone_number,

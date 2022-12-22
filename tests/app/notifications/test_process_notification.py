@@ -5,7 +5,7 @@ from collections import namedtuple
 import pytest
 from boto3.exceptions import Boto3Error
 from freezegun import freeze_time
-from notifications_utils.recipients import (
+from emergency_alerts_utils.recipients import (
     validate_and_format_email_address,
     validate_and_format_phone_number,
 )

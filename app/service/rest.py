@@ -2,11 +2,11 @@ import itertools
 from datetime import datetime
 
 from flask import Blueprint, current_app, jsonify, request
-from notifications_utils.letter_timings import (
+from emergency_alerts_utils.letter_timings import (
     letter_can_be_cancelled,
     too_late_to_cancel_letter,
 )
-from notifications_utils.timezones import convert_utc_to_bst
+from emergency_alerts_utils.timezones import convert_utc_to_bst
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
 from werkzeug.datastructures import MultiDict

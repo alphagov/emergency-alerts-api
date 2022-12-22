@@ -1,6 +1,6 @@
 import iso8601
 from flask import Blueprint, jsonify, request
-from notifications_utils.template import BroadcastMessageTemplate
+from emergency_alerts_utils.template import BroadcastMessageTemplate
 
 from app.broadcast_message import utils as broadcast_utils
 from app.broadcast_message.broadcast_message_schema import (
