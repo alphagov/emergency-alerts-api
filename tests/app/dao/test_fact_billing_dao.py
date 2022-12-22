@@ -2,8 +2,8 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 import pytest
+from emergency_alerts_utils.timezones import convert_utc_to_bst
 from freezegun import freeze_time
-from notifications_utils.timezones import convert_utc_to_bst
 
 from app import db
 from app.dao.fact_billing_dao import (

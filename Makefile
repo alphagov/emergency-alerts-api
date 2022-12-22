@@ -32,7 +32,7 @@ bootstrap: generate-version-file ## Set up everything to run the app
 
 .PHONY: bootstrap-with-docker
 bootstrap-with-docker: ## Build the image to run the app in Docker
-	docker build -f docker/Dockerfile -t notifications-api .
+	docker build -f docker/Dockerfile -t emergency-alerts-api .
 
 .PHONY: run-flask
 run-flask: ## Run flask

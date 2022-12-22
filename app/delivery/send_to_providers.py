@@ -3,12 +3,12 @@ from datetime import datetime, timedelta
 from urllib import parse
 
 from cachetools import TTLCache, cached
-from flask import current_app
-from notifications_utils.template import (
+from emergency_alerts_utils.template import (
     HTMLEmailTemplate,
     PlainTextEmailTemplate,
     SMSMessageTemplate,
 )
+from flask import current_app
 
 from app import create_uuid, db, notification_provider_clients, statsd_client
 from app.celery.research_mode_tasks import (

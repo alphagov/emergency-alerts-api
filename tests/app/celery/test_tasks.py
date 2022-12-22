@@ -6,13 +6,13 @@ from unittest.mock import Mock, call
 import pytest
 import requests_mock
 from celery.exceptions import Retry
-from freezegun import freeze_time
-from notifications_utils.recipients import Row
-from notifications_utils.template import (
+from emergency_alerts_utils.recipients import Row
+from emergency_alerts_utils.template import (
     LetterPrintTemplate,
     PlainTextEmailTemplate,
     SMSMessageTemplate,
 )
+from freezegun import freeze_time
 from requests import RequestException
 from sqlalchemy.exc import SQLAlchemyError
 

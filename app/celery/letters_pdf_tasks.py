@@ -3,10 +3,10 @@ from datetime import datetime, timedelta
 from hashlib import sha512
 
 from botocore.exceptions import ClientError as BotoClientError
+from emergency_alerts_utils.letter_timings import LETTER_PROCESSING_DEADLINE
+from emergency_alerts_utils.postal_address import PostalAddress
+from emergency_alerts_utils.timezones import convert_utc_to_bst
 from flask import current_app
-from notifications_utils.letter_timings import LETTER_PROCESSING_DEADLINE
-from notifications_utils.postal_address import PostalAddress
-from notifications_utils.timezones import convert_utc_to_bst
 
 from app import encryption, notify_celery
 from app.aws import s3

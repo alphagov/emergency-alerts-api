@@ -1,4 +1,4 @@
-from notifications_utils.postal_address import PostalAddress
+from emergency_alerts_utils.postal_address import PostalAddress
 
 from app import create_random_identifier
 from app.models import LETTER_TYPE

@@ -1,16 +1,16 @@
-from flask import current_app
-from gds_metrics.metrics import Histogram
-from notifications_utils import SMS_CHAR_COUNT_LIMIT
-from notifications_utils.clients.redis import (
+from emergency_alerts_utils import SMS_CHAR_COUNT_LIMIT
+from emergency_alerts_utils.clients.redis import (
     daily_limit_cache_key,
     rate_limit_cache_key,
 )
-from notifications_utils.postal_address import PostalAddress
-from notifications_utils.recipients import (
+from emergency_alerts_utils.postal_address import PostalAddress
+from emergency_alerts_utils.recipients import (
     get_international_phone_info,
     validate_and_format_email_address,
     validate_and_format_phone_number,
 )
+from flask import current_app
+from gds_metrics.metrics import Histogram
 from sqlalchemy.orm.exc import NoResultFound
 
 from app import redis_store

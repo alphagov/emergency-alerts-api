@@ -1,7 +1,7 @@
 #!/bin/bash
 set -eu
 
-DOCKER_IMAGE_NAME=notifications-api
+DOCKER_IMAGE_NAME=emergency-alerts-api
 
 source environment.sh
 
