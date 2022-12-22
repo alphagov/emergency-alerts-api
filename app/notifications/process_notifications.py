@@ -1,8 +1,6 @@
 import uuid
 from datetime import datetime
 
-from flask import current_app
-from gds_metrics import Histogram
 from emergency_alerts_utils.clients import redis
 from emergency_alerts_utils.recipients import (
     format_email_address,
@@ -14,6 +12,8 @@ from emergency_alerts_utils.template import (
     PlainTextEmailTemplate,
     SMSMessageTemplate,
 )
+from flask import current_app
+from gds_metrics import Histogram
 
 from app import redis_store
 from app.celery import provider_tasks

@@ -6,6 +6,14 @@ import uuid
 from time import monotonic
 
 from celery import current_task
+from emergency_alerts_utils import logging, request_helper
+from emergency_alerts_utils.celery import NotifyCelery
+from emergency_alerts_utils.clients.encryption.encryption_client import (
+    Encryption,
+)
+from emergency_alerts_utils.clients.redis.redis_client import RedisClient
+from emergency_alerts_utils.clients.statsd.statsd_client import StatsdClient
+from emergency_alerts_utils.clients.zendesk.zendesk_client import ZendeskClient
 from flask import (
     current_app,
     g,
@@ -19,12 +27,6 @@ from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy as _SQLAlchemy
 from gds_metrics import GDSMetrics
 from gds_metrics.metrics import Gauge, Histogram
-from emergency_alerts_utils import logging, request_helper
-from emergency_alerts_utils.celery import NotifyCelery
-from emergency_alerts_utils.clients.encryption.encryption_client import Encryption
-from emergency_alerts_utils.clients.redis.redis_client import RedisClient
-from emergency_alerts_utils.clients.statsd.statsd_client import StatsdClient
-from emergency_alerts_utils.clients.zendesk.zendesk_client import ZendeskClient
 from sqlalchemy import event
 from werkzeug.exceptions import HTTPException as WerkzeugHTTPException
 from werkzeug.local import LocalProxy

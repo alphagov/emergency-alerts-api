@@ -3,7 +3,6 @@ from itertools import groupby
 from operator import attrgetter
 
 from botocore.exceptions import ClientError
-from flask import current_app
 from emergency_alerts_utils.international_billing_rates import (
     INTERNATIONAL_BILLING_RATES,
 )
@@ -12,7 +11,11 @@ from emergency_alerts_utils.recipients import (
     try_validate_and_format_phone_number,
     validate_and_format_email_address,
 )
-from emergency_alerts_utils.timezones import convert_bst_to_utc, convert_utc_to_bst
+from emergency_alerts_utils.timezones import (
+    convert_bst_to_utc,
+    convert_utc_to_bst,
+)
+from flask import current_app
 from sqlalchemy import and_, asc, desc, func, or_, union
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm.exc import NoResultFound

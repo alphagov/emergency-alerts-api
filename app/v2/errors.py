@@ -1,8 +1,8 @@
 import json
 
+from emergency_alerts_utils.recipients import InvalidEmailError
 from flask import current_app, jsonify, request
 from jsonschema import ValidationError as JsonSchemaValidationError
-from emergency_alerts_utils.recipients import InvalidEmailError
 from sqlalchemy.exc import DataError
 from sqlalchemy.orm.exc import NoResultFound
 

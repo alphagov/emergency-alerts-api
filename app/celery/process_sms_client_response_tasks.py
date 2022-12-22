@@ -1,8 +1,8 @@
 import uuid
 from datetime import datetime
 
-from flask import current_app
 from emergency_alerts_utils.template import SMSMessageTemplate
+from flask import current_app
 
 from app import notify_celery, statsd_client
 from app.clients import ClientException

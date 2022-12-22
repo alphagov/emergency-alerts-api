@@ -2,7 +2,6 @@ import datetime
 import itertools
 import uuid
 
-from flask import current_app, url_for
 from emergency_alerts_utils.insensitive_dict import InsensitiveDict
 from emergency_alerts_utils.letter_timings import get_letter_timings
 from emergency_alerts_utils.postal_address import (
@@ -22,6 +21,7 @@ from emergency_alerts_utils.template import (
     SMSMessageTemplate,
 )
 from emergency_alerts_utils.timezones import convert_utc_to_bst
+from flask import current_app, url_for
 from sqlalchemy import (
     CheckConstraint,
     Index,

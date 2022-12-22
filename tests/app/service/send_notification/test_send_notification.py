@@ -2,10 +2,10 @@ import random
 import string
 
 import pytest
+from emergency_alerts_utils import SMS_CHAR_COUNT_LIMIT
 from flask import current_app, json
 from freezegun import freeze_time
 from notifications_python_client.authentication import create_jwt_token
-from emergency_alerts_utils import SMS_CHAR_COUNT_LIMIT
 
 import app
 from app.dao import notifications_dao

@@ -1,6 +1,7 @@
 import time
 import uuid
 
+from emergency_alerts_utils import request_helper
 from flask import current_app, g, request
 from gds_metrics import Histogram
 from notifications_python_client.authentication import (
@@ -14,7 +15,6 @@ from notifications_python_client.errors import (
     TokenExpiredError,
     TokenIssuerError,
 )
-from emergency_alerts_utils import request_helper
 from sqlalchemy.orm.exc import NoResultFound
 
 from app.serialised_models import SerialisedService

@@ -1,11 +1,11 @@
 import uuid
 from datetime import datetime, timedelta
 
-from flask import current_app
 from emergency_alerts_utils.letter_timings import (
     CANCELLABLE_JOB_LETTER_STATUSES,
     letter_can_be_cancelled,
 )
+from flask import current_app
 from sqlalchemy import and_, asc, desc, func
 
 from app import db

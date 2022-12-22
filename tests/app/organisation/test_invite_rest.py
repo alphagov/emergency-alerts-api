@@ -1,9 +1,9 @@
 import uuid
 
 import pytest
+from emergency_alerts_utils.url_safe_token import generate_token
 from flask import current_app, json
 from freezegun import freeze_time
-from emergency_alerts_utils.url_safe_token import generate_token
 
 from app.models import INVITE_PENDING, Notification
 from tests import create_admin_authorization_header

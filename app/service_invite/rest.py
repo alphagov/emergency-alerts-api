@@ -1,6 +1,6 @@
+from emergency_alerts_utils.url_safe_token import check_token, generate_token
 from flask import Blueprint, current_app, jsonify, request
 from itsdangerous import BadData, SignatureExpired
-from emergency_alerts_utils.url_safe_token import check_token, generate_token
 
 from app.config import QueueNames
 from app.dao.invited_user_dao import (

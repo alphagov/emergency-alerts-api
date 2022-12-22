@@ -2,13 +2,13 @@ import base64
 from io import BytesIO
 
 import botocore
-from flask import Blueprint, current_app, jsonify, request
 from emergency_alerts_utils import SMS_CHAR_COUNT_LIMIT
 from emergency_alerts_utils.pdf import extract_page_from_pdf
 from emergency_alerts_utils.template import (
     BroadcastMessageTemplate,
     SMSMessageTemplate,
 )
+from flask import Blueprint, current_app, jsonify, request
 from PyPDF2.errors import PdfReadError
 from requests import post as requests_post
 from sqlalchemy.orm.exc import NoResultFound

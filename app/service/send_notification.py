@@ -1,8 +1,8 @@
 import urllib
 
-from flask import current_app
 from emergency_alerts_utils.s3 import S3ObjectNotFound
 from emergency_alerts_utils.s3 import s3download as utils_s3download
+from flask import current_app
 from sqlalchemy.orm.exc import NoResultFound
 
 from app import create_random_identifier

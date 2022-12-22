@@ -1,5 +1,5 @@
-from flask import Blueprint, current_app, jsonify, request
 from emergency_alerts_utils import SMS_CHAR_COUNT_LIMIT
+from flask import Blueprint, current_app, jsonify, request
 
 from app import api_user, authenticated_service
 from app.config import QueueNames

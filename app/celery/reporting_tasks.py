@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 
-from flask import current_app
 from emergency_alerts_utils.timezones import convert_utc_to_bst
+from flask import current_app
 
 from app import notify_celery
 from app.config import QueueNames
