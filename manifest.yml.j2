@@ -106,7 +106,7 @@ applications:
       {% endif %}
 
     env:
-      NOTIFY_APP_NAME: {{ app.get('NOTIFY_APP_NAME', CF_APP.replace('notify-', '')) }}
+      NOTIFY_APP_NAME: {{ app.get('NOTIFY_APP_NAME', CF_APP.replace('eas-', '')) }}
       NOTIFY_LOG_PATH: /home/vcap/logs/app.log
       SQLALCHEMY_POOL_SIZE: {{ app.get('sqlalchemy_pool_size', 1) }}
       FLASK_APP: application.py
