@@ -3,11 +3,11 @@ import uuid
 from datetime import datetime
 from urllib.parse import urlencode
 
-from flask import Blueprint, abort, current_app, jsonify, request
-from notifications_utils.recipients import (
+from emergency_alerts_utils.recipients import (
     is_uk_phone_number,
     use_numeric_sender,
 )
+from flask import Blueprint, abort, current_app, jsonify, request
 from sqlalchemy.exc import IntegrityError
 
 from app.config import QueueNames

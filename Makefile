@@ -27,12 +27,12 @@ PYTHON_EXECUTABLE_PREFIX := $(shell test -d "$${VIRTUALENV_ROOT}" && echo "$${VI
 .PHONY: bootstrap
 bootstrap: generate-version-file ## Set up everything to run the app
 	pip3 install -r requirements_for_test.txt
-	createdb notification_api || true
+	createdb emergency_alerts || true
 	(. environment.sh && flask db upgrade) || true
 
 .PHONY: bootstrap-with-docker
 bootstrap-with-docker: ## Build the image to run the app in Docker
-	docker build -f docker/Dockerfile -t notifications-api .
+	docker build -f docker/Dockerfile -t emergency-alerts-api .
 
 .PHONY: run-flask
 run-flask: ## Run flask
@@ -81,8 +81,8 @@ freeze-requirements: ## Pin all requirements including sub dependencies into req
 	pip-compile requirements.in
 
 .PHONY: bump-utils
-bump-utils:  # Bump notifications-utils package to latest version
-	${PYTHON_EXECUTABLE_PREFIX}python -c "from notifications_utils.version_tools import upgrade_version; upgrade_version()"
+bump-utils:  # Bump emergency-alerts-utils package to latest version
+	${PYTHON_EXECUTABLE_PREFIX}python -c "from emergency_alerts_utils.version_tools import upgrade_version; upgrade_version()"
 
 .PHONY: clean
 clean:

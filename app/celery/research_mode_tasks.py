@@ -2,8 +2,8 @@ import json
 import random
 from datetime import datetime, timedelta
 
+from emergency_alerts_utils.s3 import s3upload
 from flask import current_app
-from notifications_utils.s3 import s3upload
 from requests import HTTPError, request
 
 from app import notify_celery

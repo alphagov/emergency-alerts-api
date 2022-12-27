@@ -3,12 +3,12 @@ from functools import partial
 from threading import RLock
 
 import cachetools
-from flask import current_app
-from notifications_utils.clients.redis import RequestCache
-from notifications_utils.serialised_model import (
+from emergency_alerts_utils.clients.redis import RequestCache
+from emergency_alerts_utils.serialised_model import (
     SerialisedModel,
     SerialisedModelCollection,
 )
+from flask import current_app
 from werkzeug.utils import cached_property
 
 from app import db, redis_store

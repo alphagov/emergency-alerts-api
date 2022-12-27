@@ -4,9 +4,11 @@ import uuid
 from datetime import datetime
 
 import botocore
+from emergency_alerts_utils.recipients import (
+    try_validate_and_format_phone_number,
+)
 from flask import abort, current_app, jsonify, request
 from gds_metrics import Histogram
-from notifications_utils.recipients import try_validate_and_format_phone_number
 
 from app import (
     api_user,

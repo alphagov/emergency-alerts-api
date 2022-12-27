@@ -168,7 +168,7 @@ def send_broadcast_provider_message(self, broadcast_event_id, provider):
             cbc_proxy_provider_client.create_and_send_broadcast(
                 identifier=str(broadcast_provider_message.id),
                 message_number=formatted_message_number,
-                headline="GOV.UK Notify Broadcast",
+                headline="GOV.UK Emergency Alert",
                 description=broadcast_event.transmitted_content["body"],
                 areas=areas,
                 sent=broadcast_event.sent_at_as_cap_datetime_string,
@@ -179,7 +179,7 @@ def send_broadcast_provider_message(self, broadcast_event_id, provider):
             cbc_proxy_provider_client.update_and_send_broadcast(
                 identifier=str(broadcast_provider_message.id),
                 message_number=formatted_message_number,
-                headline="GOV.UK Notify Broadcast",
+                headline="GOV.UK Emergency Alert",
                 description=broadcast_event.transmitted_content["body"],
                 areas=areas,
                 previous_provider_messages=broadcast_event.get_earlier_provider_messages(provider),

@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 
+from emergency_alerts_utils.timezones import convert_utc_to_bst
 from flask import current_app
-from notifications_utils.timezones import convert_utc_to_bst
 from sqlalchemy import asc, desc, func
 
 from app import db

@@ -5,10 +5,10 @@ from unittest import mock
 from unittest.mock import ANY, call
 
 import pytest
-from freezegun import freeze_time
-from notifications_utils.clients.zendesk.zendesk_client import (
+from emergency_alerts_utils.clients.zendesk.zendesk_client import (
     NotifySupportTicket,
 )
+from freezegun import freeze_time
 
 from app.celery import scheduled_tasks
 from app.celery.scheduled_tasks import (

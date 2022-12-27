@@ -3,6 +3,13 @@ from datetime import datetime, timedelta
 from uuid import UUID
 
 from dateutil.parser import parse
+from emergency_alerts_utils.recipients import (
+    InvalidEmailError,
+    InvalidPhoneError,
+    validate_and_format_phone_number,
+    validate_email_address,
+    validate_phone_number,
+)
 from flask_marshmallow.fields import fields
 from marshmallow import (
     EXCLUDE,
@@ -15,13 +22,6 @@ from marshmallow import (
     validates_schema,
 )
 from marshmallow_sqlalchemy import field_for
-from notifications_utils.recipients import (
-    InvalidEmailError,
-    InvalidPhoneError,
-    validate_and_format_phone_number,
-    validate_email_address,
-    validate_phone_number,
-)
 
 from app import ma, models
 from app.dao.permissions_dao import permission_dao

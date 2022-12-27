@@ -3,14 +3,14 @@ import re
 from datetime import datetime, timedelta
 from uuid import UUID
 
-from iso8601 import ParseError, iso8601
-from jsonschema import Draft7Validator, FormatChecker, ValidationError
-from notifications_utils.recipients import (
+from emergency_alerts_utils.recipients import (
     InvalidEmailError,
     InvalidPhoneError,
     validate_email_address,
     validate_phone_number,
 )
+from iso8601 import ParseError, iso8601
+from jsonschema import Draft7Validator, FormatChecker, ValidationError
 
 format_checker = FormatChecker()
 

@@ -1,8 +1,8 @@
 from itertools import chain
 
+from emergency_alerts_utils.polygons import Polygons
+from emergency_alerts_utils.template import BroadcastMessageTemplate
 from flask import current_app, jsonify, request
-from notifications_utils.polygons import Polygons
-from notifications_utils.template import BroadcastMessageTemplate
 from sqlalchemy.orm.exc import MultipleResultsFound
 
 from app import api_user, authenticated_service, redis_store
