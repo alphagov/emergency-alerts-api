@@ -58,7 +58,7 @@ def create_test_db(database_uri):
         result = postgres_db.execute(sqlalchemy.sql.text("CREATE DATABASE {}".format(db_uri_parts[-1])))
         result.close()
     except sqlalchemy.exc.ProgrammingError:
-        # database "test_notification_api_master" already exists
+        # database "test_emergency_alerts_master" already exists
         pass
     finally:
         postgres_db.dispose()
@@ -70,7 +70,7 @@ def _notify_db(notify_api, worker_id):
     Manages the connection to the database. Generally this shouldn't be used, instead you should use the
     `notify_db_session` fixture which also cleans up any data you've got left over after your test run.
     """
-    assert "test_notification_api" in db.engine.url.database, "dont run tests against main db"
+    assert "test_emergency_alerts" in db.engine.url.database, "dont run tests against main db"
 
     # create a database for this worker thread -
     from flask import current_app
