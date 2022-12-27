@@ -157,7 +157,7 @@ def test_send_broadcast_provider_message_sends_data_correctly(
     mock_create_broadcast.assert_called_once_with(
         identifier=str(broadcast_provider_message.id),
         message_number=mocker.ANY,
-        headline="GOV.UK Notify Broadcast",
+        headline="GOV.UK Emergency Alert",
         description="this is an emergency broadcast message",
         areas=[
             {
@@ -220,7 +220,7 @@ def test_send_broadcast_provider_message_uses_channel_set_on_broadcast_service(
     mock_create_broadcast.assert_called_once_with(
         identifier=mocker.ANY,
         message_number=mocker.ANY,
-        headline="GOV.UK Notify Broadcast",
+        headline="GOV.UK Emergency Alert",
         description="this is an emergency broadcast message",
         areas=mocker.ANY,
         sent=mocker.ANY,
@@ -263,7 +263,7 @@ def test_send_broadcast_provider_message_works_if_we_retried_previously(mocker, 
     mock_create_broadcast.assert_called_once_with(
         identifier=str(broadcast_provider_message.id),
         message_number=mocker.ANY,
-        headline="GOV.UK Notify Broadcast",
+        headline="GOV.UK Emergency Alert",
         description="this is an emergency broadcast message",
         areas=[],
         sent=event.sent_at_as_cap_datetime_string,
@@ -311,7 +311,7 @@ def test_send_broadcast_provider_message_sends_data_correctly_when_broadcast_mes
     mock_create_broadcast.assert_called_once_with(
         identifier=str(broadcast_provider_message.id),
         message_number=mocker.ANY,
-        headline="GOV.UK Notify Broadcast",
+        headline="GOV.UK Emergency Alert",
         description="this is an emergency broadcast message",
         areas=mocker.ANY,
         sent=mocker.ANY,
@@ -361,7 +361,7 @@ def test_send_broadcast_provider_message_sends_update_with_references(
     mock_update_broadcast.assert_called_once_with(
         identifier=str(broadcast_provider_message.id),
         message_number=mocker.ANY,
-        headline="GOV.UK Notify Broadcast",
+        headline="GOV.UK Emergency Alert",
         description="this is an emergency broadcast message",
         areas=[
             {
@@ -466,7 +466,7 @@ def test_send_broadcast_provider_message_errors(mocker, sample_broadcast_service
     mock_create_broadcast.assert_called_once_with(
         identifier=ANY,
         message_number=mocker.ANY,
-        headline="GOV.UK Notify Broadcast",
+        headline="GOV.UK Emergency Alert",
         description="this is an emergency broadcast message",
         areas=[
             {
@@ -520,7 +520,7 @@ def test_send_broadcast_provider_message_delays_retry_exponentially(
     mock_create_broadcast.assert_called_once_with(
         identifier=ANY,
         message_number=mocker.ANY,
-        headline="GOV.UK Notify Broadcast",
+        headline="GOV.UK Emergency Alert",
         description="this is an emergency broadcast message",
         areas=[],
         sent=event.sent_at_as_cap_datetime_string,
