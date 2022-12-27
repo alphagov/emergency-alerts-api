@@ -1,9 +1,9 @@
 from datetime import datetime
 
 import pytest
+from emergency_alerts_utils import SMS_CHAR_COUNT_LIMIT
 from flask import current_app
 from freezegun import freeze_time
-from emergency_alerts_utils import SMS_CHAR_COUNT_LIMIT
 
 import app
 from app.dao import templates_dao

@@ -2,11 +2,11 @@ import json
 from collections import defaultdict, namedtuple
 from datetime import datetime
 
-from flask import current_app
 from emergency_alerts_utils.insensitive_dict import InsensitiveDict
 from emergency_alerts_utils.postal_address import PostalAddress
 from emergency_alerts_utils.recipients import RecipientCSV
 from emergency_alerts_utils.timezones import convert_utc_to_bst
+from flask import current_app
 from requests import HTTPError, RequestException, request
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 

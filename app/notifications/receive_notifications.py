@@ -2,9 +2,11 @@ from datetime import datetime
 from urllib.parse import unquote
 
 import iso8601
+from emergency_alerts_utils.recipients import (
+    try_validate_and_format_phone_number,
+)
 from flask import Blueprint, abort, current_app, jsonify, request
 from gds_metrics.metrics import Counter
-from emergency_alerts_utils.recipients import try_validate_and_format_phone_number
 
 from app.celery import tasks
 from app.config import QueueNames

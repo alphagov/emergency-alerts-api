@@ -8,8 +8,8 @@ from datetime import datetime, timedelta
 import botocore
 import pytest
 import requests_mock
-from freezegun import freeze_time
 from emergency_alerts_utils import SMS_CHAR_COUNT_LIMIT
+from freezegun import freeze_time
 from PyPDF2.errors import PdfReadError
 
 from app.dao.templates_dao import (

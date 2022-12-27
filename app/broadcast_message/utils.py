@@ -1,10 +1,10 @@
 import inspect
 from datetime import datetime
 
-from flask import current_app
 from emergency_alerts_utils.clients.zendesk.zendesk_client import (
     NotifySupportTicket,
 )
+from flask import current_app
 
 from app import zendesk_client
 from app.celery.broadcast_message_tasks import send_broadcast_event

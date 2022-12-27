@@ -5,11 +5,11 @@ from datetime import datetime, timedelta
 from enum import Enum
 
 import boto3
-from flask import current_app
 from emergency_alerts_utils.letter_timings import LETTER_PROCESSING_DEADLINE
 from emergency_alerts_utils.pdf import pdf_page_count
 from emergency_alerts_utils.s3 import s3upload
 from emergency_alerts_utils.timezones import convert_utc_to_bst
+from flask import current_app
 
 from app.models import (
     KEY_TYPE_TEST,

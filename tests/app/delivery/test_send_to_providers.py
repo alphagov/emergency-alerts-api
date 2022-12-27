@@ -5,8 +5,8 @@ from datetime import datetime, timedelta
 from unittest.mock import ANY
 
 import pytest
-from flask import current_app
 from emergency_alerts_utils.recipients import validate_and_format_phone_number
+from flask import current_app
 from requests import HTTPError
 
 import app

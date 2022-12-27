@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta
 
 import pytz
-from flask import url_for
 from emergency_alerts_utils.template import (
     BroadcastMessageTemplate,
     HTMLEmailTemplate,
@@ -9,6 +8,7 @@ from emergency_alerts_utils.template import (
     SMSMessageTemplate,
 )
 from emergency_alerts_utils.timezones import convert_bst_to_utc
+from flask import url_for
 from sqlalchemy import func
 
 DATETIME_FORMAT_NO_TIMEZONE = "%Y-%m-%d %H:%M:%S.%f"

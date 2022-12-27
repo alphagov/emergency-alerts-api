@@ -3,11 +3,11 @@ from unittest.mock import ANY, call
 
 import pytest
 import pytz
-from flask import current_app
-from freezegun import freeze_time
 from emergency_alerts_utils.clients.zendesk.zendesk_client import (
     NotifySupportTicket,
 )
+from flask import current_app
+from freezegun import freeze_time
 
 from app.celery import nightly_tasks
 from app.celery.nightly_tasks import (
