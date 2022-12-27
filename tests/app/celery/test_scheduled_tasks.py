@@ -6,7 +6,7 @@ from unittest.mock import ANY, call
 
 import pytest
 from freezegun import freeze_time
-from notifications_utils.clients.zendesk.zendesk_client import (
+from emergency_alerts_utils.clients.zendesk.zendesk_client import (
     NotifySupportTicket,
 )
 

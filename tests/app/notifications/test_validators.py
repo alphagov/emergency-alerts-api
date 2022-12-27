@@ -3,7 +3,7 @@ from datetime import datetime
 import pytest
 from flask import current_app
 from freezegun import freeze_time
-from notifications_utils import SMS_CHAR_COUNT_LIMIT
+from emergency_alerts_utils import SMS_CHAR_COUNT_LIMIT
 
 import app
 from app.dao import templates_dao
@@ -92,7 +92,7 @@ def test_check_service_over_daily_message_limit_should_set_cache_value_as_zero_i
 def test_check_service_over_daily_message_limit_does_nothing_if_redis_disabled(notify_api, sample_service, mocker):
     serialised_service = SerialisedService.from_id(sample_service.id)
     with set_config(notify_api, "REDIS_ENABLED", False):
-        mock_cache_key = mocker.patch("notifications_utils.clients.redis.daily_limit_cache_key")
+        mock_cache_key = mocker.patch("emergency_alerts_utils.clients.redis.daily_limit_cache_key")
         service_stats = check_service_over_daily_message_limit("normal", serialised_service)
         assert service_stats == 0
         assert mock_cache_key.method_calls == []

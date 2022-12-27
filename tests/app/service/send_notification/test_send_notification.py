@@ -5,7 +5,7 @@ import pytest
 from flask import current_app, json
 from freezegun import freeze_time
 from notifications_python_client.authentication import create_jwt_token
-from notifications_utils import SMS_CHAR_COUNT_LIMIT
+from emergency_alerts_utils import SMS_CHAR_COUNT_LIMIT
 
 import app
 from app.dao import notifications_dao

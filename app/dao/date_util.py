@@ -1,7 +1,7 @@
 from datetime import date, datetime, time, timedelta
 
 import pytz
-from notifications_utils.timezones import convert_bst_to_utc, convert_utc_to_bst
+from emergency_alerts_utils.timezones import convert_bst_to_utc, convert_utc_to_bst
 
 
 def get_months_for_financial_year(year):

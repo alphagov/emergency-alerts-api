@@ -3,25 +3,25 @@ import itertools
 import uuid
 
 from flask import current_app, url_for
-from notifications_utils.insensitive_dict import InsensitiveDict
-from notifications_utils.letter_timings import get_letter_timings
-from notifications_utils.postal_address import (
+from emergency_alerts_utils.insensitive_dict import InsensitiveDict
+from emergency_alerts_utils.letter_timings import get_letter_timings
+from emergency_alerts_utils.postal_address import (
     address_lines_1_to_6_and_postcode_keys,
 )
-from notifications_utils.recipients import (
+from emergency_alerts_utils.recipients import (
     InvalidEmailError,
     InvalidPhoneError,
     try_validate_and_format_phone_number,
     validate_email_address,
     validate_phone_number,
 )
-from notifications_utils.template import (
+from emergency_alerts_utils.template import (
     BroadcastMessageTemplate,
     LetterPrintTemplate,
     PlainTextEmailTemplate,
     SMSMessageTemplate,
 )
-from notifications_utils.timezones import convert_utc_to_bst
+from emergency_alerts_utils.timezones import convert_utc_to_bst
 from sqlalchemy import (
     CheckConstraint,
     Index,

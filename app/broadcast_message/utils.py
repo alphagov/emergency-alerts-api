@@ -2,7 +2,7 @@ import inspect
 from datetime import datetime
 
 from flask import current_app
-from notifications_utils.clients.zendesk.zendesk_client import (
+from emergency_alerts_utils.clients.zendesk.zendesk_client import (
     NotifySupportTicket,
 )
 

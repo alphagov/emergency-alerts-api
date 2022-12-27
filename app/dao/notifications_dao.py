@@ -4,15 +4,15 @@ from operator import attrgetter
 
 from botocore.exceptions import ClientError
 from flask import current_app
-from notifications_utils.international_billing_rates import (
+from emergency_alerts_utils.international_billing_rates import (
     INTERNATIONAL_BILLING_RATES,
 )
-from notifications_utils.recipients import (
+from emergency_alerts_utils.recipients import (
     InvalidEmailError,
     try_validate_and_format_phone_number,
     validate_and_format_email_address,
 )
-from notifications_utils.timezones import convert_bst_to_utc, convert_utc_to_bst
+from emergency_alerts_utils.timezones import convert_bst_to_utc, convert_utc_to_bst
 from sqlalchemy import and_, asc, desc, func, or_, union
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm.exc import NoResultFound

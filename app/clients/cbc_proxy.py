@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 import boto3
 import botocore
 from flask import current_app
-from notifications_utils.template import non_gsm_characters
+from emergency_alerts_utils.template import non_gsm_characters
 from sqlalchemy.schema import Sequence
 
 from app.config import BroadcastProvider

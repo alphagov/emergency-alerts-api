@@ -3,13 +3,13 @@ from datetime import datetime
 
 from flask import current_app
 from gds_metrics import Histogram
-from notifications_utils.clients import redis
-from notifications_utils.recipients import (
+from emergency_alerts_utils.clients import redis
+from emergency_alerts_utils.recipients import (
     format_email_address,
     get_international_phone_info,
     validate_and_format_phone_number,
 )
-from notifications_utils.template import (
+from emergency_alerts_utils.template import (
     LetterPrintTemplate,
     PlainTextEmailTemplate,
     SMSMessageTemplate,

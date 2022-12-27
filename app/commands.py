@@ -14,9 +14,9 @@ import flask
 from click_datetime import Datetime as click_dt
 from dateutil import rrule
 from flask import current_app, json
-from notifications_utils.recipients import RecipientCSV
-from notifications_utils.statsd_decorators import statsd
-from notifications_utils.template import SMSMessageTemplate
+from emergency_alerts_utils.recipients import RecipientCSV
+from emergency_alerts_utils.statsd_decorators import statsd
+from emergency_alerts_utils.template import SMSMessageTemplate
 from sqlalchemy import and_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound

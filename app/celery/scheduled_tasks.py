@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 
 import jinja2
 from flask import current_app
-from notifications_utils.clients.zendesk.zendesk_client import (
+from emergency_alerts_utils.clients.zendesk.zendesk_client import (
     NotifySupportTicket,
 )
 from sqlalchemy import between

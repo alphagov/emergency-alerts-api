@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 
 from flask import current_app
-from notifications_utils.template import SMSMessageTemplate
+from emergency_alerts_utils.template import SMSMessageTemplate
 
 from app import notify_celery, statsd_client
 from app.clients import ClientException

@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timedelta
 
 from flask import current_app
-from notifications_utils.letter_timings import (
+from emergency_alerts_utils.letter_timings import (
     CANCELLABLE_JOB_LETTER_STATUSES,
     letter_can_be_cancelled,
 )

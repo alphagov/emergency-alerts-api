@@ -2,8 +2,8 @@ import uuid
 from unittest.mock import Mock
 
 import pytest
-from notifications_utils import SMS_CHAR_COUNT_LIMIT
-from notifications_utils.recipients import InvalidPhoneError
+from emergency_alerts_utils import SMS_CHAR_COUNT_LIMIT
+from emergency_alerts_utils.recipients import InvalidPhoneError
 
 from app.config import QueueNames
 from app.dao.service_guest_list_dao import (
