@@ -451,6 +451,12 @@ class Development(Config):
     CBC_PROXY_ENABLED = False
 
 
+class Decoupled(Development):
+    SQLALCHEMY_DATABASE_URI = os.getenv("SQLALCHEMY_DATABASE_URI", "postgresql://postgres:5432/emergency_alerts")
+    REDIS_URL = os.getenv("REDIS_URL", "redis://admin:6379/0")
+    API_HOST_NAME = os.getenv("API_HOST_NAME", "http://admin:6011")
+
+
 class Test(Development):
     NOTIFY_EMAIL_DOMAIN = "test.notify.com"
     FROM_NUMBER = "testing"
@@ -571,6 +577,7 @@ class Sandbox(CloudFoundryConfig):
 
 configs = {
     "development": Development,
+    "decoupled": Decoupled,
     "test": Test,
     "production": Production,
     "staging": Staging,
