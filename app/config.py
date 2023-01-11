@@ -452,9 +452,11 @@ class Development(Config):
 
 
 class Decoupled(Development):
-    SQLALCHEMY_DATABASE_URI = os.getenv("SQLALCHEMY_DATABASE_URI", "postgresql://postgres/emergency_alerts")
-    REDIS_URL = os.getenv("REDIS_URL", "redis://api:6379/0")
-    API_HOST_NAME = os.getenv("API_HOST_NAME", "http://api:6011")
+    ADMIN_BASE_URL = "http://admin:6012"
+    SQLALCHEMY_DATABASE_URI = "postgresql://postgres/emergency_alerts"
+    REDIS_URL = "redis://api:6379/0"
+    API_HOST_NAME = "http://api:6011"
+    TEMPLATE_PREVIEW_API_HOST = "http://api:6013"
 
 
 class Test(Development):
