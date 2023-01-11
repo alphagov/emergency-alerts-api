@@ -452,6 +452,7 @@ class Development(Config):
 
 
 class Decoupled(Development):
+    NOTIFY_ENVIRONMENT = "decoupled"
     ADMIN_BASE_URL = "http://admin:6012"
     SQLALCHEMY_DATABASE_URI = "postgresql://pg/emergency_alerts"
     REDIS_URL = "redis://api:6379/0"
