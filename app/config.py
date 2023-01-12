@@ -451,6 +451,15 @@ class Development(Config):
     CBC_PROXY_ENABLED = False
 
 
+class Decoupled(Development):
+    NOTIFY_ENVIRONMENT = "decoupled"
+    ADMIN_BASE_URL = "http://admin:6012"
+    SQLALCHEMY_DATABASE_URI = "postgresql://pg/emergency_alerts"
+    REDIS_URL = "redis://api:6379/0"
+    API_HOST_NAME = "http://api:6011"
+    TEMPLATE_PREVIEW_API_HOST = "http://api:6013"
+
+
 class Test(Development):
     NOTIFY_EMAIL_DOMAIN = "test.notify.com"
     FROM_NUMBER = "testing"
@@ -571,6 +580,7 @@ class Sandbox(CloudFoundryConfig):
 
 configs = {
     "development": Development,
+    "decoupled": Decoupled,
     "test": Test,
     "production": Production,
     "staging": Staging,
