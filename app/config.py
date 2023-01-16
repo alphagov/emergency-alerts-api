@@ -460,6 +460,14 @@ class Decoupled(Development):
     TEMPLATE_PREVIEW_API_HOST = "http://api:6013"
 
 
+class ServerlessDB(Decoupled):
+    NOTIFY_ENVIRONMENT = "serverlessdb"
+    SQLALCHEMY_DATABASE_URI = "postgresql://{user}:{pw}@{url}".format( \
+        user = os.environ.get("DBUSER"), \
+        pw = os.environ.get("DBPASSWORD"), \
+        url = os.environ.get("DBURL"))
+
+
 class Test(Development):
     NOTIFY_EMAIL_DOMAIN = "test.notify.com"
     FROM_NUMBER = "testing"
@@ -581,6 +589,7 @@ class Sandbox(CloudFoundryConfig):
 configs = {
     "development": Development,
     "decoupled": Decoupled,
+    "serverlessdb": ServerlessDB,
     "test": Test,
     "production": Production,
     "staging": Staging,
