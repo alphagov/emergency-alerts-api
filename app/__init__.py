@@ -27,6 +27,7 @@ from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy as _SQLAlchemy
 from gds_metrics import GDSMetrics
 from gds_metrics.metrics import Gauge, Histogram
+from pathlib import Path
 from sqlalchemy import event
 from werkzeug.exceptions import HTTPException as WerkzeugHTTPException
 from werkzeug.local import LocalProxy
@@ -50,6 +51,10 @@ class SQLAlchemy(_SQLAlchemy):
         options["connect_args"]["options"] = "-c statement_timeout={}".format(
             int(app.config["SQLALCHEMY_STATEMENT_TIMEOUT"]) * 1000
         )
+        cert_folder = Path("certificates/")
+        cert_file = cert_folder / "global-bundle.pem"
+        ssl_args = {"ca": cert_file}
+        options["connect_args"]["ssl"] = ssl_args
 
 
 db = SQLAlchemy()
@@ -308,6 +313,14 @@ def register_v2_blueprints(application):
     application.register_blueprint(v2_broadcast_blueprint)
 
 
+def get_session_credentials():
+    creds = {}
+    creds['host'] = "ea-app-rds-cluster1.cluster-ccexcbfeqpqf.eu-west-2.rds.amazonaws.com"
+    creds['user'] = "eas-user"
+    creds['password'] = "ea-app-rds-cluster1.cluster-ccexcbfeqpqf.eu-west-2.rds.amazonaws.com:5432/?Action=connect&DBUser=eas-user&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAVUW6D47UVPRTNX3Z%2F20230119%2Feu-west-2%2Frds-db%2Faws4_request&X-Amz-Date=20230119T180755Z&X-Amz-Expires=900&X-Amz-SignedHeaders=host&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEBIaCWV1LXdlc3QtMiJHMEUCIQCjBSSt7X%2BIjtbk33xgJ03xUNMD5qnsry8jkLXByolBOwIgbZZOnnsslphv3MFv3hstZJ7Q0X47Y9EC5z5qL7AbGwwqpAIIexAAGgwzODgwODY2MjIxODUiDB06VSFP%2B%2B2ggtpqHCqBApB00PVBXugSV5Ol3%2Bb9cXAsuPUqwVyacZ4wnN8N%2FRqlsbyTTqP2l%2FS%2FJfGbZBvGns2crSuCw74WChKoBuNUPAOAnXe2os3UcIACWJ0VAgZTKxfrchHS3%2FWzHJUheaAaKXsbvZiN4o5Ep2NYEUFsZvpRZ%2BFCL%2FAUMdpS%2BsnkqpJyWiRdVLb5P7rHPoKM0VGXGbGp4Y154VTQ9EBUIHxKtcsGW6gTIE2v%2BZvdBku5gBnvm%2BMALo9cDUvYJBnrUoSWutI1S6dMt9zwqSyqObEpY1i%2FUtuGMZZl7NJqswCRWBwnr3%2FePVA3efHlFXjOu5Bt7mKHLst12TmCuVw9M2gceqJiMPSNpp4GOp0BOWVi7u%2Fl65xtw9Hll9wcOr3Bz50pkrTEEH7lbfHu%2Boa49pBbXIqLeHi%2FuylNVEcGGleqh64FGVgwA%2F9c%2B1SVE66zrRhjCz4YF4gEn4pQZUYxvYoMnpoaJ9gU1cEXHkv%2Bou1ufVPOuaWlLeEViQVNjDTbwhTL4w5X%2B%2Fofpz6dwR%2F1sKMK0ILtbEd70Azkz4VvWtMCKZWeTSc%2BAF3M8w%3D%3D&X-Amz-Signature=0fcc2189f5bb2f18190800c34aaf837fc6154c5ab8c1be30ab26869e20462d54"
+    return creds
+
+
 def init_app(app):
     @app.before_request
     def record_request_details():
@@ -371,6 +384,14 @@ def setup_sqlalchemy_events(app):
 
     # need this or db.engine isn't accessible
     with app.app_context():
+
+        @event.listens_for(db.engine, "do_connect")
+        def receive_do_connect(dialect, conn_rec, cargs, cparams):
+            creds = get_session_credentials()
+            cparams['host'] = creds['host']
+            cparams['user'] = creds['user']
+            cparams['password'] = creds['password']
+            cparams['ssl'] = "true"
 
         @event.listens_for(db.engine, "connect")
         def connect(dbapi_connection, connection_record):

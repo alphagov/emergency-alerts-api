@@ -42,7 +42,7 @@ run-flask: ## Run flask
 run-celery: ## Run celery
 	. environment.sh && celery \
 		-A run_celery.notify_celery worker \
-		--pidfile="/tmp/celery.pid" \
+		--pidfile= \
 		--loglevel=INFO \
 		--concurrency=4
 
