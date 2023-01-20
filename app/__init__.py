@@ -387,15 +387,20 @@ def setup_sqlalchemy_events(app):
     with app.app_context():
 
         @event.listens_for(db.engine, "do_connect")
-        def receive_do_connect(dialect, conn_rec, cargs, cparams):
+        def receive_do_connect(**kw):
+            print("do_connect handler invoked")
+            print(kw)
             creds = get_session_credentials()
-            cparams['host'] = "postgresql://" + creds['host']
-            cparams['user'] = creds['user']
-            cparams['password'] = creds['password']
-            cparams['database'] = creds['database']
-            cparams['echo'] = True
-            cparams['echo_pool'] = "debug"
-            cparams['ssl'] = "true"
+            kw['host'] = creds['host']
+            kw['user'] = creds['user']
+            kw['password'] = creds['password']
+            kw['database'] = creds['database']
+            kw['echo'] = True
+            kw['echo_pool'] = "debug"
+            kw['ssl'] = "true"
+            print("kw dict modified")
+            print(kw)
+            print("do_connect handler exited")
 
         @event.listens_for(db.engine, "connect")
         def connect(dbapi_connection, connection_record):
