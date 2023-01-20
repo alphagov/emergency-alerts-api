@@ -317,6 +317,7 @@ def get_session_credentials():
     creds = {}
     creds['host'] = "ea-app-rds-cluster1.cluster-ccexcbfeqpqf.eu-west-2.rds.amazonaws.com"
     creds['user'] = "eas-user"
+    creds['database'] = "emergency_alerts"
     creds['password'] = os.environ.get('TEMP_RDS_PASSWORD', "")
     return creds
 
@@ -391,6 +392,7 @@ def setup_sqlalchemy_events(app):
             cparams['host'] = creds['host']
             cparams['user'] = creds['user']
             cparams['password'] = creds['password']
+            cparams['database'] = creds['database']
             cparams['ssl'] = "true"
 
         @event.listens_for(db.engine, "connect")
