@@ -389,10 +389,12 @@ def setup_sqlalchemy_events(app):
         @event.listens_for(db.engine, "do_connect")
         def receive_do_connect(dialect, conn_rec, cargs, cparams):
             creds = get_session_credentials()
-            cparams['host'] = creds['host']
+            cparams['host'] = "postgresql://" + creds['host']
             cparams['user'] = creds['user']
             cparams['password'] = creds['password']
             cparams['database'] = creds['database']
+            cparams['echo'] = True
+            cparams['echo_pool'] = "debug"
             cparams['ssl'] = "true"
 
         @event.listens_for(db.engine, "connect")
