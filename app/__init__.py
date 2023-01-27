@@ -1,5 +1,6 @@
 import os
 import random
+import ssl
 import string
 import time
 import uuid
@@ -51,10 +52,6 @@ class SQLAlchemy(_SQLAlchemy):
         options["connect_args"]["options"] = "-c statement_timeout={}".format(
             int(app.config["SQLALCHEMY_STATEMENT_TIMEOUT"]) * 1000
         )
-        cert_folder = Path("certificates/")
-        cert_file = cert_folder / "global-bundle.pem"
-        ssl_args = {"ca": cert_file}
-        options["connect_args"]["ssl"] = ssl_args
 
 
 db = SQLAlchemy()
@@ -98,6 +95,12 @@ def create_app(application):
     metrics.init_app(application)
     request_helper.init_app(application)
     db.init_app(application)
+
+    with application.app_context():
+        @event.listens_for(db.engine, "do_connect")
+        def receive_do_connect(dialect, conn_rec, cargs, cparams):
+            print("************************************************************")
+
     migrate.init_app(application, db=db)
     ma.init_app(application)
     zendesk_client.init_app(application)
@@ -313,16 +316,20 @@ def register_v2_blueprints(application):
     application.register_blueprint(v2_broadcast_blueprint)
 
 
-def get_session_credentials():
-    creds = {}
-    creds['host'] = "ea-app-rds-cluster1.cluster-ccexcbfeqpqf.eu-west-2.rds.amazonaws.com"
-    creds['user'] = "eas-user"
-    creds['database'] = "emergency_alerts"
-    creds['password'] = os.environ.get('TEMP_RDS_PASSWORD', "")
-    return creds
+def get_authentication_token():
+    return 'ea-app-rds-cluster1.cluster-ccexcbfeqpqf.eu-west-2.rds.amazonaws.com:5432/?Action=connect&DBUser=eas-user&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAVUW6D47U7PMAOTVM%2F20230125%2Feu-west-2%2Frds-db%2Faws4_request&X-Amz-Date=20230125T134216Z&X-Amz-Expires=900&X-Amz-SignedHeaders=host&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEJ7%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCWV1LXdlc3QtMiJIMEYCIQDQl6R1toeLPdSH6pptIJP0JwTgEpGXhf%2Bz6dRV00zKTgIhAPxiWp1Qnvg0n2YO7PtoiYMeAPvkfk6nadh5Wer4cZZFKqQCCBcQABoMMzg4MDg2NjIyMTg1IgzvdRWejYkV76OPOYEqgQKEIy96xsG2NBzV7uokJX1RQPHgzNJjg27Voqj%2Bk0zdi01K%2F7npzDSlBYbZ67GAXRtoarMsuQKaUlbEoL1UZglk4on9MyCGAVZH8aZg%2FaKvEvIxIpbE8sRNTBB%2BURq5g%2FtMu%2B3MHMU9u%2BZ%2BGNoJ49TteePJ%2B3Nbh0UZE8eGAOAfCG5c9I%2FyvfdG2EgjSSOdnQBZopVJ0A7uv6Wz%2FB5vodq1T%2F4ZFEslg%2BZGc0RojminlgkBf7cSrMgRB3B7YANrMNEKnC5NeFGgu595IlYvw1ftumEH9bu4twcw9Y7PIvfTDPBvHQYX3P8A%2F2wA5kJKfWWr9Al1S7Hyh48eY2Y6FvHvMzCx48SeBjqcAeXKQ0irg3qksmkO3Kg7kDqEYINq%2FYiMg0TGcY2FBZ6LcimlckNjQm3z6DUMWt1eJkhVyd3afZArFXiTTTaLhlAWXN8n96U%2FGhbvBg3%2BnbjDWw3qbqcIRBvsYKy0ZxBuSPlF0z5k3YKuS7VqWCmeGVmwTpSGU%2BlVgTL5i1%2BBZslSi2e4N6X45yEXRAaUH971kNVPXAVKjFiSOroUug%3D%3D&X-Amz-Signature=1ea39fbbe0c4774a1a8defec9c30ef0f3b6efe1d603995b2dcec264a65887254'
 
 
 def init_app(app):
+    # with app.app_context():
+    #     print(db.engine)
+
+    # with app.app_context():
+    #     @event.listens_for(db.engine, "do_connect")
+    #     def receive_do_connect(dialect, conn_rec, cargs, cparams):
+    #         print("howdy!")
+    # #         # cparams['password'] = get_authentication_token()
+
     @app.before_request
     def record_request_details():
         CONCURRENT_REQUESTS.inc()
@@ -386,24 +393,16 @@ def setup_sqlalchemy_events(app):
     # need this or db.engine isn't accessible
     with app.app_context():
 
-        @event.listens_for(db.engine, "do_connect")
-        def receive_do_connect(**kw):
-            print("do_connect handler invoked")
-            print(kw)
-            creds = get_session_credentials()
-            kw['host'] = creds['host']
-            kw['user'] = creds['user']
-            kw['password'] = creds['password']
-            kw['database'] = creds['database']
-            kw['echo'] = True
-            kw['echo_pool'] = "debug"
-            kw['ssl'] = "true"
-            print("kw dict modified")
-            print(kw)
-            print("do_connect handler exited")
+        # @event.listens_for(db.engine, "do_connect")
+        # def receive_do_connect(dialect, conn_rec, cargs, cparams):
+        #     print(cparams)
+        #     cparams['password'] = get_authentication_token()
 
         @event.listens_for(db.engine, "connect")
         def connect(dbapi_connection, connection_record):
+            f = open("demofile2.txt", "a")
+            f.write("Now the file has more content!")
+            f.close()
             # connection first opened with db
             TOTAL_DB_CONNECTIONS.inc()
 

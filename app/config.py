@@ -462,10 +462,22 @@ class Decoupled(Development):
 
 class ServerlessDB(Decoupled):
     NOTIFY_ENVIRONMENT = "serverlessdb"
-    SQLALCHEMY_DATABASE_URI = "postgresql://{user}:{pw}@{url}".format( \
-        user = os.environ.get("DBUSER"), \
-        pw = os.environ.get("DBPASSWORD"), \
-        url = os.environ.get("DBURL"))
+    # SQLALCHEMY_DATABASE_URI = "postgresql://{user}:password@{host}:{port}/{database}?sslmode=verify-full&sslrootcert={cert}".format(
+    #     host = os.environ.get('RDS_HOST'),
+    #     port = os.environ.get('RDS_PORT'),
+    #     database = os.environ.get('DATABASE'),
+    #     user = os.environ.get('RDS_USER'),
+    #     cert = os.environ.get('CERT')
+    # )
+    SQLALCHEMY_DATABASE_URI = "postgresql://postgres:SzyxfK2TJ!5lJMxklG<!7O4DG5#<@{host}:{port}/{database}".format(
+        host = os.environ.get('RDS_HOST'),
+        port = os.environ.get('RDS_PORT'),
+        database = os.environ.get('DATABASE')
+    )
+    SQLALCHEMY_ECHO = {
+        "echo": True,
+        "echo_pool": "debug"
+    }
 
 
 class Test(Development):
