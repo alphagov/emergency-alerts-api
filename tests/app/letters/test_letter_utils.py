@@ -52,8 +52,8 @@ def _sample_precompiled_letter_notification_using_test_key(sample_precompiled_le
 @mock_s3
 def test_find_letter_pdf_in_s3_returns_object(sample_notification):
     bucket_name = current_app.config["LETTERS_PDF_BUCKET_NAME"]
-    s3 = boto3.client("s3", region_name="eu-west-1")
-    s3.create_bucket(Bucket=bucket_name, CreateBucketConfiguration={"LocationConstraint": "eu-west-1"})
+    s3 = boto3.client("s3", region_name="eu-west-2")
+    s3.create_bucket(Bucket=bucket_name, CreateBucketConfiguration={"LocationConstraint": "eu-west-2"})
 
     _, prefix = get_bucket_name_and_prefix_for_notification(sample_notification)
     s3.put_object(Bucket=bucket_name, Key=f"{prefix}-and-then-some", Body=b"f")
@@ -64,8 +64,8 @@ def test_find_letter_pdf_in_s3_returns_object(sample_notification):
 @mock_s3
 def test_find_letter_pdf_in_s3_raises_if_not_found(sample_notification):
     bucket_name = current_app.config["LETTERS_PDF_BUCKET_NAME"]
-    s3 = boto3.client("s3", region_name="eu-west-1")
-    s3.create_bucket(Bucket=bucket_name, CreateBucketConfiguration={"LocationConstraint": "eu-west-1"})
+    s3 = boto3.client("s3", region_name="eu-west-2")
+    s3.create_bucket(Bucket=bucket_name, CreateBucketConfiguration={"LocationConstraint": "eu-west-2"})
 
     with pytest.raises(LetterPDFNotFound):
         find_letter_pdf_in_s3(sample_notification)
@@ -212,9 +212,9 @@ def test_get_letter_pdf_gets_pdf_from_correct_bucket(
 
     bucket_name = current_app.config[bucket_config_name]
     filename = datetime.utcnow().strftime(filename_format)
-    conn = boto3.resource("s3", region_name="eu-west-1")
-    conn.create_bucket(Bucket=bucket_name, CreateBucketConfiguration={"LocationConstraint": "eu-west-1"})
-    s3 = boto3.client("s3", region_name="eu-west-1")
+    conn = boto3.resource("s3", region_name="eu-west-2")
+    conn.create_bucket(Bucket=bucket_name, CreateBucketConfiguration={"LocationConstraint": "eu-west-2"})
+    s3 = boto3.client("s3", region_name="eu-west-2")
     s3.put_object(Bucket=bucket_name, Key=filename, Body=b"pdf_content")
 
     file_data, metadata = get_letter_pdf_and_metadata(sample_precompiled_letter_notification_using_test_key)
@@ -278,10 +278,10 @@ def test_move_failed_pdf_error(notify_api):
     filename = "test.pdf"
     bucket_name = current_app.config["LETTERS_SCAN_BUCKET_NAME"]
 
-    conn = boto3.resource("s3", region_name="eu-west-1")
-    bucket = conn.create_bucket(Bucket=bucket_name, CreateBucketConfiguration={"LocationConstraint": "eu-west-1"})
+    conn = boto3.resource("s3", region_name="eu-west-2")
+    bucket = conn.create_bucket(Bucket=bucket_name, CreateBucketConfiguration={"LocationConstraint": "eu-west-2"})
 
-    s3 = boto3.client("s3", region_name="eu-west-1")
+    s3 = boto3.client("s3", region_name="eu-west-2")
     s3.put_object(Bucket=bucket_name, Key=filename, Body=b"pdf_content")
 
     move_failed_pdf(filename, ScanErrorType.ERROR)
@@ -296,10 +296,10 @@ def test_move_failed_pdf_scan_failed(notify_api):
     filename = "test.pdf"
     bucket_name = current_app.config["LETTERS_SCAN_BUCKET_NAME"]
 
-    conn = boto3.resource("s3", region_name="eu-west-1")
-    bucket = conn.create_bucket(Bucket=bucket_name, CreateBucketConfiguration={"LocationConstraint": "eu-west-1"})
+    conn = boto3.resource("s3", region_name="eu-west-2")
+    bucket = conn.create_bucket(Bucket=bucket_name, CreateBucketConfiguration={"LocationConstraint": "eu-west-2"})
 
-    s3 = boto3.client("s3", region_name="eu-west-1")
+    s3 = boto3.client("s3", region_name="eu-west-2")
     s3.put_object(Bucket=bucket_name, Key=filename, Body=b"pdf_content")
 
     move_failed_pdf(filename, ScanErrorType.FAILURE)
@@ -337,15 +337,15 @@ def test_move_sanitised_letter_to_live_pdf_bucket(notify_api, mocker):
     source_bucket_name = current_app.config["LETTER_SANITISE_BUCKET_NAME"]
     target_bucket_name = current_app.config["LETTERS_PDF_BUCKET_NAME"]
 
-    conn = boto3.resource("s3", region_name="eu-west-1")
+    conn = boto3.resource("s3", region_name="eu-west-2")
     source_bucket = conn.create_bucket(
-        Bucket=source_bucket_name, CreateBucketConfiguration={"LocationConstraint": "eu-west-1"}
+        Bucket=source_bucket_name, CreateBucketConfiguration={"LocationConstraint": "eu-west-2"}
     )
     target_bucket = conn.create_bucket(
-        Bucket=target_bucket_name, CreateBucketConfiguration={"LocationConstraint": "eu-west-1"}
+        Bucket=target_bucket_name, CreateBucketConfiguration={"LocationConstraint": "eu-west-2"}
     )
 
-    s3 = boto3.client("s3", region_name="eu-west-1")
+    s3 = boto3.client("s3", region_name="eu-west-2")
     s3.put_object(Bucket=source_bucket_name, Key=filename, Body=b"pdf_content")
 
     move_sanitised_letter_to_test_or_live_pdf_bucket(
@@ -362,15 +362,15 @@ def test_move_sanitised_letter_to_test_pdf_bucket(notify_api, mocker):
     source_bucket_name = current_app.config["LETTER_SANITISE_BUCKET_NAME"]
     target_bucket_name = current_app.config["TEST_LETTERS_BUCKET_NAME"]
 
-    conn = boto3.resource("s3", region_name="eu-west-1")
+    conn = boto3.resource("s3", region_name="eu-west-2")
     source_bucket = conn.create_bucket(
-        Bucket=source_bucket_name, CreateBucketConfiguration={"LocationConstraint": "eu-west-1"}
+        Bucket=source_bucket_name, CreateBucketConfiguration={"LocationConstraint": "eu-west-2"}
     )
     target_bucket = conn.create_bucket(
-        Bucket=target_bucket_name, CreateBucketConfiguration={"LocationConstraint": "eu-west-1"}
+        Bucket=target_bucket_name, CreateBucketConfiguration={"LocationConstraint": "eu-west-2"}
     )
 
-    s3 = boto3.client("s3", region_name="eu-west-1")
+    s3 = boto3.client("s3", region_name="eu-west-2")
     s3.put_object(Bucket=source_bucket_name, Key=filename, Body=b"pdf_content")
 
     move_sanitised_letter_to_test_or_live_pdf_bucket(
