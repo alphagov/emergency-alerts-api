@@ -158,7 +158,7 @@ mistune==0.8.4
     # via emergency-alerts-utils
 notifications-python-client==6.3.0
     # via -r requirements.in
-emergency-alerts-utils @ git+https://github.com/alphagov/emergency-alerts-utils.git@60.0.0-alpha
+emergency-alerts-utils @ git+https://github.com/alphagov/emergency-alerts-utils.git
     # via -r requirements.in
 orderedset==2.0.3
     # via emergency-alerts-utils
