@@ -1,4 +1,5 @@
 import json
+import os
 import uuid
 from abc import ABC, abstractmethod
 
@@ -40,8 +41,9 @@ class CBCProxyClient:
             self._lambda_client = boto3.client(
                 "lambda",
                 region_name="eu-west-2",
-                aws_access_key_id=app.config["CBC_PROXY_AWS_ACCESS_KEY_ID"],
-                aws_secret_access_key=app.config["CBC_PROXY_AWS_SECRET_ACCESS_KEY"],
+                aws_access_key_id=os.environ.get("AWS_ACCESS_KEY_ID"),
+                aws_secret_access_key=os.environ.get("AWS_SECRET_ACCESS_KEY"),
+                aws_session_token=os.environ.get("AWS_SESSION_TOKEN")
             )
 
     def get_proxy(self, provider):
