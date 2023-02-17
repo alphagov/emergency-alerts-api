@@ -47,12 +47,11 @@ run-flask: ## Run flask
 run-celery: ## Run celery
 	. environment.sh && celery \
 		-A run_celery.notify_celery worker \
-		--uid=$(shell id -u celery) \
+		--uid=$(shell id -u easuser) \
 		--pidfile=/tmp/celery.pid \
-		--loglevel=INFO \
+		--loglevel=WARNING \
 		--concurrency=4 \
-		--hostname=0.0.0.0 \
-		--detach;
+		--hostname=0.0.0.0
 
 .PHONY: run-celery-with-docker
 run-celery-with-docker: ## Run celery in Docker container (useful if you can't install pycurl locally)
