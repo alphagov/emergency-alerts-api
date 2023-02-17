@@ -469,6 +469,8 @@ class ServerlessDB(Decoupled):
         user=os.environ.get('RDS_USER'),
         cert=os.environ.get('CERT')
     )
+    CBC_PROXY_ENABLED = True
+    DEBUG = True
 
 
 class Test(Development):
