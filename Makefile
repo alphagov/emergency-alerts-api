@@ -33,7 +33,6 @@ bootstrap: generate-version-file ## Set up everything to run the app
 .PHONY: bootstrap-serverless-db
 bootstrap-serverless-db: generate-version-file
 	pip3 install -r requirements_for_test.txt
-	(. environment.sh && flask db upgrade) || true
 
 .PHONY: bootstrap-with-docker
 bootstrap-with-docker: ## Build the image to run the app in Docker
