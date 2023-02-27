@@ -30,6 +30,10 @@ bootstrap: generate-version-file ## Set up everything to run the app
 	createdb emergency_alerts || true
 	(. environment.sh && flask db upgrade) || true
 
+.PHONY: bootstrap-serverless-db
+bootstrap-serverless-db: generate-version-file
+	pip3 install -r requirements_for_test.txt
+
 .PHONY: bootstrap-with-docker
 bootstrap-with-docker: ## Build the image to run the app in Docker
 	docker build -f docker/Dockerfile -t emergency-alerts-api .
@@ -42,9 +46,11 @@ run-flask: ## Run flask
 run-celery: ## Run celery
 	. environment.sh && celery \
 		-A run_celery.notify_celery worker \
-		--pidfile="/tmp/celery.pid" \
-		--loglevel=INFO \
-		--concurrency=4
+		--uid=$(shell id -u easuser) \
+		--pidfile=/tmp/celery.pid \
+		--loglevel=WARNING \
+		--concurrency=4 \
+		--hostname=0.0.0.0
 
 .PHONY: run-celery-with-docker
 run-celery-with-docker: ## Run celery in Docker container (useful if you can't install pycurl locally)

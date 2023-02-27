@@ -1,10 +1,13 @@
+import boto3
+import botocore
 import json
+import os
 import uuid
 from abc import ABC, abstractmethod
 
-import boto3
-import botocore
+from botocore.exceptions import ClientError
 from emergency_alerts_utils.template import non_gsm_characters
+from emergency_alerts_utils.structured_logging import LogData, log_to_cloudwatch
 from flask import current_app
 from sqlalchemy.schema import Sequence
 
@@ -40,8 +43,9 @@ class CBCProxyClient:
             self._lambda_client = boto3.client(
                 "lambda",
                 region_name="eu-west-2",
-                aws_access_key_id=app.config["CBC_PROXY_AWS_ACCESS_KEY_ID"],
-                aws_secret_access_key=app.config["CBC_PROXY_AWS_SECRET_ACCESS_KEY"],
+                aws_access_key_id=os.environ.get("AWS_ACCESS_KEY_ID"),
+                aws_secret_access_key=os.environ.get("AWS_SECRET_ACCESS_KEY"),
+                aws_session_token=os.environ.get("AWS_SESSION_TOKEN")
             )
 
     def get_proxy(self, provider):
@@ -117,8 +121,30 @@ class CBCProxyClientBase(ABC):
         result = self._invoke_lambda(self.lambda_name, payload)
 
         if not result:
+            try:
+                logData = LogData(
+                    source = "eas-app-api",
+                    module = "cbc_proxy",
+                    method = "_invoke_lambda_with_failover"
+                )
+                logData.addData("LambdaError", f"Primary Lambda {self.lambda_name} failed. Invoking failover {self.failover_lambda_name}")
+                log_to_cloudwatch(logData)
+            except ClientError as e:
+                current_app.logger.info("Error writing to CloudWatch: %s", e)
+
             failover_result = self._invoke_lambda(self.failover_lambda_name, payload)
             if not failover_result:
+                try:
+                    logData = LogData(
+                        source = "eas-app-api",
+                        module = "cbc_proxy",
+                        method = "_invoke_lambda_with_failover"
+                    )
+                    logData.addData("LambdaError", f"Secondary Lambda {self.lambda_name} failed")
+                    log_to_cloudwatch(logData)
+                except ClientError as e:
+                    current_app.logger.info("Error writing to CloudWatch: %s", e)
+
                 raise CBCProxyRetryableException(
                     f"Lambda failed for both {self.lambda_name} and {self.failover_lambda_name}"
                 )

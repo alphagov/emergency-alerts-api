@@ -135,7 +135,7 @@ class Config(object):
     ###########################
 
     NOTIFY_ENVIRONMENT = "development"
-    AWS_REGION = "eu-west-1"
+    AWS_REGION = "eu-west-2"
     INVITATION_EXPIRATION_DAYS = 2
     NOTIFY_APP_NAME = "api"
     SQLALCHEMY_POOL_SIZE = int(os.environ.get("SQLALCHEMY_POOL_SIZE", 5))
@@ -391,7 +391,7 @@ class Config(object):
     FIRETEXT_URL = os.environ.get("FIRETEXT_URL", "https://www.firetext.co.uk/api/sendsms/json")
     SES_STUB_URL = os.environ.get("SES_STUB_URL")
 
-    AWS_REGION = "eu-west-1"
+    AWS_REGION = "eu-west-2"
 
     CBC_PROXY_ENABLED = True
     CBC_PROXY_AWS_ACCESS_KEY_ID = os.environ.get("CBC_PROXY_AWS_ACCESS_KEY_ID", "")
@@ -453,11 +453,24 @@ class Development(Config):
 
 class Decoupled(Development):
     NOTIFY_ENVIRONMENT = "decoupled"
-    ADMIN_BASE_URL = "http://admin:6012"
+    ADMIN_BASE_URL = "http://admin.ecs.local:6012"
     SQLALCHEMY_DATABASE_URI = "postgresql://pg/emergency_alerts"
-    REDIS_URL = "redis://api:6379/0"
-    API_HOST_NAME = "http://api:6011"
-    TEMPLATE_PREVIEW_API_HOST = "http://api:6013"
+    REDIS_URL = "redis://api.ecs.local:6379/0"
+    API_HOST_NAME = "http://api.ecs.local:6011"
+    TEMPLATE_PREVIEW_API_HOST = "http://api.ecs.local:6013"
+
+
+class ServerlessDB(Decoupled):
+    NOTIFY_ENVIRONMENT = "serverlessdb"
+    SQLALCHEMY_DATABASE_URI = "postgresql://{user}:password@{host}:{port}/{database}?sslmode=verify-full&sslrootcert={cert}".format(
+        host=os.environ.get('RDS_HOST'),
+        port=os.environ.get('RDS_PORT'),
+        database=os.environ.get('DATABASE'),
+        user=os.environ.get('RDS_USER'),
+        cert=os.environ.get('CERT')
+    )
+    CBC_PROXY_ENABLED = True
+    DEBUG = True
 
 
 class Test(Development):
@@ -581,6 +594,7 @@ class Sandbox(CloudFoundryConfig):
 configs = {
     "development": Development,
     "decoupled": Decoupled,
+    "serverlessdb": ServerlessDB,
     "test": Test,
     "production": Production,
     "staging": Staging,

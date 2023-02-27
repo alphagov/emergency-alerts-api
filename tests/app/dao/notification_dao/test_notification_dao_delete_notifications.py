@@ -29,9 +29,9 @@ from tests.app.db import (
 @mock_s3
 @freeze_time("2019-09-01 04:30")
 def test_move_notifications_deletes_letters_from_s3(sample_letter_template, mocker):
-    s3 = boto3.client("s3", region_name="eu-west-1")
+    s3 = boto3.client("s3", region_name="eu-west-2")
     bucket_name = current_app.config["LETTERS_PDF_BUCKET_NAME"]
-    s3.create_bucket(Bucket=bucket_name, CreateBucketConfiguration={"LocationConstraint": "eu-west-1"})
+    s3.create_bucket(Bucket=bucket_name, CreateBucketConfiguration={"LocationConstraint": "eu-west-2"})
 
     eight_days_ago = datetime.utcnow() - timedelta(days=8)
     create_notification(
@@ -55,10 +55,10 @@ def test_move_notifications_deletes_letters_from_s3(sample_letter_template, mock
 @mock_s3
 @freeze_time("2019-09-01 04:30")
 def test_move_notifications_copes_if_letter_not_in_s3(sample_letter_template, mocker):
-    s3 = boto3.client("s3", region_name="eu-west-1")
+    s3 = boto3.client("s3", region_name="eu-west-2")
     s3.create_bucket(
         Bucket=current_app.config["LETTERS_PDF_BUCKET_NAME"],
-        CreateBucketConfiguration={"LocationConstraint": "eu-west-1"},
+        CreateBucketConfiguration={"LocationConstraint": "eu-west-2"},
     )
 
     eight_days_ago = datetime.utcnow() - timedelta(days=8)
@@ -117,8 +117,8 @@ def test_move_notifications_deletes_letters_sent_and_in_final_state_from_table_a
     sample_service, mocker, notification_status
 ):
     bucket_name = current_app.config["LETTERS_PDF_BUCKET_NAME"]
-    s3 = boto3.client("s3", region_name="eu-west-1")
-    s3.create_bucket(Bucket=bucket_name, CreateBucketConfiguration={"LocationConstraint": "eu-west-1"})
+    s3 = boto3.client("s3", region_name="eu-west-2")
+    s3.create_bucket(Bucket=bucket_name, CreateBucketConfiguration={"LocationConstraint": "eu-west-2"})
 
     letter_template = create_template(service=sample_service, template_type="letter")
     eight_days_ago = datetime.utcnow() - timedelta(days=8)

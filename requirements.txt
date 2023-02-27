@@ -73,18 +73,20 @@ docopt==0.6.2
     # via notifications-python-client
 docutils==0.16
     # via awscli
+emergency-alerts-utils @ git+https://github.com/alphagov/emergency-alerts-utils.git
+    # via -r requirements.in
 eventlet==0.33.1
     # via gunicorn
 flask==2.2.2
     # via
     #   -r requirements.in
+    #   emergency-alerts-utils
     #   flask-bcrypt
     #   flask-marshmallow
     #   flask-migrate
     #   flask-redis
     #   flask-sqlalchemy
     #   gds-metrics
-    #   emergency-alerts-utils
 flask-bcrypt==1.0.1
     # via -r requirements.in
 flask-marshmallow==0.14.0
@@ -122,12 +124,12 @@ isoduration==20.11.0
 itsdangerous==2.1.2
     # via
     #   -r requirements.in
-    #   flask
     #   emergency-alerts-utils
+    #   flask
 jinja2==3.1.2
     # via
-    #   flask
     #   emergency-alerts-utils
+    #   flask
 jmespath==1.0.1
     # via
     #   boto3
@@ -157,8 +159,6 @@ marshmallow-sqlalchemy==0.28.1
 mistune==0.8.4
     # via emergency-alerts-utils
 notifications-python-client==6.3.0
-    # via -r requirements.in
-emergency-alerts-utils @ git+https://github.com/alphagov/emergency-alerts-utils.git@60.0.0-alpha
     # via -r requirements.in
 orderedset==2.0.3
     # via emergency-alerts-utils
@@ -213,9 +213,9 @@ redis==4.3.4
 requests==2.28.1
     # via
     #   awscli-cwlogs
+    #   emergency-alerts-utils
     #   govuk-bank-holidays
     #   notifications-python-client
-    #   emergency-alerts-utils
 rfc3339-validator==0.1.4
     # via jsonschema
 rfc3987==1.3.8

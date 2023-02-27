@@ -1,9 +1,11 @@
 import os
 import random
+import ssl
 import string
 import time
 import uuid
 from time import monotonic
+import boto3
 
 from celery import current_task
 from emergency_alerts_utils import logging, request_helper
@@ -27,6 +29,7 @@ from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy as _SQLAlchemy
 from gds_metrics import GDSMetrics
 from gds_metrics.metrics import Gauge, Histogram
+from pathlib import Path
 from sqlalchemy import event
 from werkzeug.exceptions import HTTPException as WerkzeugHTTPException
 from werkzeug.local import LocalProxy
@@ -93,6 +96,16 @@ def create_app(application):
     metrics.init_app(application)
     request_helper.init_app(application)
     db.init_app(application)
+
+    boto_session = boto3.Session(region_name=os.environ["AWS_REGION"])
+    rds_client = boto_session.client('rds')
+
+    with application.app_context():
+        @event.listens_for(db.engine, "do_connect")
+        def receive_do_connect(dialect, conn_rec, cargs, cparams):
+            token = get_authentication_token(rds_client)
+            cparams['password'] = token
+
     migrate.init_app(application, db=db)
     ma.init_app(application)
     zendesk_client.init_app(application)
@@ -308,7 +321,22 @@ def register_v2_blueprints(application):
     application.register_blueprint(v2_broadcast_blueprint)
 
 
+def get_authentication_token(rds_client):
+    try:
+        auth_token = rds_client.generate_db_auth_token(
+            DBHostname=os.environ["RDS_HOST"],
+            Port=os.environ["RDS_PORT"],
+            DBUsername=os.environ["RDS_USER"],
+            Region=os.environ["RDS_REGION"]
+        )
+
+        return auth_token
+    except Exception as e:
+        print("Could not generate auth token due to {}".format(e))
+
+
 def init_app(app):
+
     @app.before_request
     def record_request_details():
         CONCURRENT_REQUESTS.inc()
