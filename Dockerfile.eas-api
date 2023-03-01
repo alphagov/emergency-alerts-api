@@ -1,0 +1,22 @@
+FROM 388086622185.dkr.ecr.eu-west-2.amazonaws.com/emergency-alerts-base:latest
+
+ENV VENV_API=/venv/eas-api
+ENV API_DIR=/eas/emergency-alerts-api
+
+# Create root directory and copy repo
+COPY . $API_DIR
+
+# Build emergency-alerts-api
+RUN $PYTHON_VERSION -m venv $VENV_API
+RUN . $VENV_API/bin/activate && pip3 install pycurl
+RUN cd $API_DIR && . $VENV_API/bin/activate && make bootstrap
+
+# Create a blank configuration file
+RUN echo "" > $API_DIR/environment.sh
+
+RUN useradd -ms /bin/bash easuser && chown -R easuser:easuser $API_DIR
+
+COPY scripts/start-api.sh /
+CMD bash /start-api.sh
+
+EXPOSE 6011 6379 6013
