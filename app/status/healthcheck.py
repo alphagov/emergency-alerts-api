@@ -24,7 +24,6 @@ def show_status():
         )
 
 
-@status.route("/", methods=["GET"])
 @status.route("/_celery_status", methods=["GET", "POST"])
 def show_status():
     if request.args.get("simple", None):
@@ -43,7 +42,7 @@ def show_status():
         )
 
 
-@status.route(status_endpoint + "/live-service-and-organisation-counts")
+@status.route("/_api_status/live-service-and-organisation-counts")
 def live_service_and_organisation_counts():
     return (
         jsonify(
