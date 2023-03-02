@@ -9,7 +9,7 @@ status = Blueprint("status", __name__)
 
 @status.route("/", methods=["GET"])
 @status.route("/_api_status", methods=["GET", "POST"])
-def show_status():
+def show_api_status():
     if request.args.get("simple", None):
         return jsonify(status="ok"), 200
     else:
@@ -25,7 +25,7 @@ def show_status():
 
 
 @status.route("/_celery_status", methods=["GET", "POST"])
-def show_status():
+def show_celery_status():
     if request.args.get("simple", None):
         return jsonify(status="ok"), 200
     else:
