@@ -7,11 +7,9 @@ from os import environ as env_var
 
 status = Blueprint("status", __name__)
 
-status_endpoint = "/_" + env_var.get("SERVICE") + "_status"
-
 
 @status.route("/", methods=["GET"])
-@status.route(status_endpoint, methods=["GET", "POST"])
+@status.route("/_api_status", methods=["GET", "POST"])
 def show_status():
     if request.args.get("simple", None):
         return jsonify(status="ok"), 200
@@ -22,6 +20,25 @@ def show_status():
                 git_commit=version.__git_commit__,
                 build_time=version.__time__,
                 db_version=get_db_version(),
+            ),
+            200,
+        )
+
+
+@status.route("/", methods=["GET"])
+@status.route("/_celery_status", methods=["GET", "POST"])
+def show_status():
+    if request.args.get("simple", None):
+        return jsonify(status="ok"), 200
+    else:
+        return (
+            jsonify(
+                # This is a placeholder health check
+                # This should be modified to check the celery queue for
+                # availability and correctness of function
+                status="ok",
+                git_commit=version.__git_commit__,
+                build_time=version.__time__,
             ),
             200,
         )
