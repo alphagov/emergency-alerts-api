@@ -1,5 +1,6 @@
 FROM 388086622185.dkr.ecr.eu-west-2.amazonaws.com/emergency-alerts-base:latest
 
+ENV SERVICE=api
 ENV VENV_API=/venv/eas-api
 ENV API_DIR=/eas/emergency-alerts-api
 

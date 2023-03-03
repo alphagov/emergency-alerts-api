@@ -1,15 +1,15 @@
-from flask import Blueprint, jsonify, request
-
 from app import db, version
 from app.dao.organisation_dao import dao_count_organisations_with_live_services
 from app.dao.services_dao import dao_count_live_services
+
+from flask import Blueprint, jsonify, request
 
 status = Blueprint("status", __name__)
 
 
 @status.route("/", methods=["GET"])
-@status.route("/_status", methods=["GET", "POST"])
-def show_status():
+@status.route("/_api_status", methods=["GET", "POST"])
+def show_api_status():
     if request.args.get("simple", None):
         return jsonify(status="ok"), 200
     else:
@@ -24,7 +24,25 @@ def show_status():
         )
 
 
-@status.route("/_status/live-service-and-organisation-counts")
+@status.route("/_celery_status", methods=["GET", "POST"])
+def show_celery_status():
+    if request.args.get("simple", None):
+        return jsonify(status="ok"), 200
+    else:
+        return (
+            jsonify(
+                # This is a placeholder health check
+                # This should be modified to check the celery queue for
+                # availability and correctness of function
+                status="ok",
+                git_commit=version.__git_commit__,
+                build_time=version.__time__,
+            ),
+            200,
+        )
+
+
+@status.route("/_api_status/live-service-and-organisation-counts")
 def live_service_and_organisation_counts():
     return (
         jsonify(
