@@ -404,7 +404,8 @@ def test_update_broadcast_message_doesnt_allow_edits_after_broadcast_goes_live(
             "content": "emergency broadcast content",
             "starts_at": "2020-06-01 20:00:01",
             "areas": {"ids": ["london", "glasgow"], "simple_polygons": [[[51.12, 0.2], [50.13, 0.4], [50.14, 0.45]]]},
-        },        service_id=t.service_id,
+        },
+        service_id=t.service_id,
         broadcast_message_id=bm.id,
         _expected_status=400,
     )
