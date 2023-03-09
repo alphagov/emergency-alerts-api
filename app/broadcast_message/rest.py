@@ -1,6 +1,7 @@
 import iso8601
 
 from botocore.exceptions import ClientError
+from emergency_alerts_utils.structured_logging import LogData, log_to_cloudwatch
 from emergency_alerts_utils.template import BroadcastMessageTemplate
 from flask import Blueprint, jsonify, request, current_app
 
