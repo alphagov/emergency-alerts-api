@@ -1,7 +1,6 @@
 import iso8601
 
 from botocore.exceptions import ClientError
-from emergency_alerts_utils.structured_logging import LogData, log_to_cloudwatch
 from emergency_alerts_utils.template import BroadcastMessageTemplate
 from flask import Blueprint, jsonify, request, current_app
 
@@ -118,6 +117,10 @@ def update_broadcast_message(service_id, broadcast_message_id):
 
     if "personalisation" in data:
         broadcast_message.personalisation = data["personalisation"]
+    if "reference" in data:
+        broadcast_message.reference = data["reference"]
+    if "content" in data:
+        broadcast_message.content = data["content"]
     if "starts_at" in data:
         broadcast_message.starts_at = _parse_nullable_datetime(data["starts_at"])
     if "finishes_at" in data:
