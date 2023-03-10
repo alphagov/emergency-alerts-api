@@ -118,6 +118,10 @@ def update_broadcast_message(service_id, broadcast_message_id):
 
     if "personalisation" in data:
         broadcast_message.personalisation = data["personalisation"]
+    if "reference" in data:
+        broadcast_message.reference = data["reference"]
+    if "content" in data:
+        broadcast_message.content = data["content"]
     if "starts_at" in data:
         broadcast_message.starts_at = _parse_nullable_datetime(data["starts_at"])
     if "finishes_at" in data:

@@ -42,6 +42,8 @@ update_broadcast_message_schema = {
     "title": "Update broadcast_message",
     "properties": {
         "personalisation": {"type": "object"},
+        "reference": {"type": "string"},
+        "content": {"type": "string"},
         "starts_at": {"type": "string", "format": "datetime"},
         "finishes_at": {"type": "string", "format": "datetime"},
         "areas": {"type": "object"},

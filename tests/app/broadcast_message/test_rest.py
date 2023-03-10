@@ -364,6 +364,8 @@ def test_update_broadcast_message_allows_edit_while_not_yet_live(admin_request, 
     response = admin_request.post(
         "broadcast_message.update_broadcast_message",
         _data={
+            "reference": "Emergency broadcast",
+            "content": "emergency broadcast content",
             "starts_at": "2020-06-01 20:00:01",
             "areas": {"ids": ["london", "glasgow"], "simple_polygons": [[[51.12, 0.2], [50.13, 0.4], [50.14, 0.45]]]},
         },
@@ -372,6 +374,8 @@ def test_update_broadcast_message_allows_edit_while_not_yet_live(admin_request, 
         _expected_status=200,
     )
 
+    assert response["reference"] == "Emergency broadcast"
+    assert response["content"] == "emergency broadcast content"
     assert response["starts_at"] == "2020-06-01T20:00:01.000000Z"
     assert response["areas"]["ids"] == ["london", "glasgow"]
     assert response["areas"]["simple_polygons"] == [[[51.12, 0.2], [50.13, 0.4], [50.14, 0.45]]]
@@ -395,7 +399,12 @@ def test_update_broadcast_message_doesnt_allow_edits_after_broadcast_goes_live(
 
     response = admin_request.post(
         "broadcast_message.update_broadcast_message",
-        _data={"areas": {"ids": ["london", "glasgow"]}},
+        _data={
+            "reference": "Emergency broadcast",
+            "content": "emergency broadcast content",
+            "starts_at": "2020-06-01 20:00:01",
+            "areas": {"ids": ["london", "glasgow"], "simple_polygons": [[[51.12, 0.2], [50.13, 0.4], [50.14, 0.45]]]},
+        },
         service_id=t.service_id,
         broadcast_message_id=bm.id,
         _expected_status=400,
