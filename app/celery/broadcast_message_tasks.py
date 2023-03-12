@@ -1,6 +1,9 @@
-from datetime import datetime
+import boto3
 
+from botocore.exceptions import ClientError
+from datetime import datetime
 from flask import current_app
+from os import environ as env
 
 from app import cbc_proxy_client, notify_celery
 from app.clients.cbc_proxy import CBCProxyRetryableException
@@ -20,6 +23,9 @@ from app.utils import format_sequential_number
 
 class BroadcastIntegrityError(Exception):
     pass
+
+
+sns = boto3.resource('sns')
 
 
 def get_retry_delay(retry_count):
@@ -121,7 +127,17 @@ def check_event_makes_sense_in_sequence(broadcast_event, provider):
 def send_broadcast_event(broadcast_event_id):
     broadcast_event = dao_get_broadcast_event_by_id(broadcast_event_id)
 
-    notify_celery.send_task(name=TaskNames.PUBLISH_GOVUK_ALERTS, queue=QueueNames.GOVUK_ALERTS)
+    topic_name = env.get("GOVUK_ALERTS_SNS_PUBLISH_TOPIC", "test-topic-123123123123123.fifo")
+    message = env.get("GOVUK_ALERTS_PUBLISH_MSG", "govuk-alerts-publish-msg")
+
+    # create_topic() is idempotent, so if the requester already owns a topic with the
+    # specified name, that topic's ARN is returned without creating a new topic.
+    try:
+        topic = sns.create_topic(Name=topic_name)
+        response = topic.publish(Message=message)
+        messageId = response['MessageId']
+    except ClientError:
+        current_app.logger.exception(f'Could not publish message {messageId} to the topic {topic.arn}.')
 
     for provider in broadcast_event.service.get_available_broadcast_providers():
         send_broadcast_provider_message.apply_async(
