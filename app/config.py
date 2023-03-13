@@ -462,13 +462,14 @@ class Decoupled(Development):
 
 class ServerlessDB(Decoupled):
     NOTIFY_ENVIRONMENT = "serverlessdb"
-    SQLALCHEMY_DATABASE_URI = "postgresql://{user}:password@{host}:{port}/{database}?sslmode=verify-full&sslrootcert={cert}".format(
-        host=os.environ.get('RDS_HOST'),
-        port=os.environ.get('RDS_PORT'),
-        database=os.environ.get('DATABASE'),
-        user=os.environ.get('RDS_USER'),
-        cert=os.environ.get('CERT')
-    )
+    SQLALCHEMY_DATABASE_URI = \
+        "postgresql://{user}:password@{host}:{port}/{database}?sslmode=verify-full&sslrootcert={cert}".format(
+            host=os.environ.get('RDS_HOST'),
+            port=os.environ.get('RDS_PORT'),
+            database=os.environ.get('DATABASE'),
+            user=os.environ.get('RDS_USER'),
+            cert=os.environ.get('CERT')
+        )
     CBC_PROXY_ENABLED = True
     DEBUG = True
 

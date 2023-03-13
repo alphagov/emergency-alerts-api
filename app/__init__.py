@@ -1,12 +1,11 @@
 import os
 import random
-import ssl
 import string
 import time
 import uuid
 from time import monotonic
-import boto3
 
+import boto3
 from celery import current_task
 from emergency_alerts_utils import logging, request_helper
 from emergency_alerts_utils.celery import NotifyCelery
@@ -29,7 +28,6 @@ from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy as _SQLAlchemy
 from gds_metrics import GDSMetrics
 from gds_metrics.metrics import Gauge, Histogram
-from pathlib import Path
 from sqlalchemy import event
 from werkzeug.exceptions import HTTPException as WerkzeugHTTPException
 from werkzeug.local import LocalProxy

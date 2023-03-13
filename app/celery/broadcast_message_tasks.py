@@ -1,13 +1,13 @@
-import boto3
-
-from botocore.exceptions import ClientError
 from datetime import datetime
-from flask import current_app
 from os import environ as env
+
+import boto3
+from botocore.exceptions import ClientError
+from flask import current_app
 
 from app import cbc_proxy_client, notify_celery
 from app.clients.cbc_proxy import CBCProxyRetryableException
-from app.config import QueueNames, TaskNames
+from app.config import QueueNames
 from app.dao.broadcast_message_dao import (
     create_broadcast_provider_message,
     dao_get_broadcast_event_by_id,
