@@ -127,7 +127,7 @@ def check_event_makes_sense_in_sequence(broadcast_event, provider):
 def send_broadcast_event(broadcast_event_id):
     broadcast_event = dao_get_broadcast_event_by_id(broadcast_event_id)
 
-    topic_name = env.get("GOVUK_ALERTS_SNS_PUBLISH_TOPIC", "test-topic-123123123123123.fifo")
+    topic_name = env.get("GOVUK_ALERTS_SNS_PUBLISH_TOPIC", "test-topic-123123123123123")
     message = env.get("GOVUK_ALERTS_PUBLISH_MSG", "govuk-alerts-publish-msg")
 
     # create_topic() is idempotent, so if the requester already owns a topic with the
