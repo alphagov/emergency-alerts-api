@@ -142,7 +142,7 @@ def update_broadcast_message_status(service_id, broadcast_message_id):
             module="broadcast_message.rest",
             method="update_broadcast_message_status",
             serviceId=service_id,
-            broadcastMessageId=broadcast_message_id
+            broadcastMessageId=broadcast_message_id,
         )
         logData.addData("status", data["status"])
         log_to_cloudwatch(logData)

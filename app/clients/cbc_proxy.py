@@ -45,7 +45,7 @@ class CBCProxyClient:
                 region_name="eu-west-2",
                 aws_access_key_id=os.environ.get("AWS_ACCESS_KEY_ID"),
                 aws_secret_access_key=os.environ.get("AWS_SECRET_ACCESS_KEY"),
-                aws_session_token=os.environ.get("AWS_SESSION_TOKEN")
+                aws_session_token=os.environ.get("AWS_SESSION_TOKEN"),
             )
 
     def get_proxy(self, provider):
@@ -122,14 +122,10 @@ class CBCProxyClientBase(ABC):
 
         if not result:
             try:
-                logData = LogData(
-                    source="eas-app-api",
-                    module="cbc_proxy",
-                    method="_invoke_lambda_with_failover"
-                )
+                logData = LogData(source="eas-app-api", module="cbc_proxy", method="_invoke_lambda_with_failover")
                 logData.addData(
                     "LambdaError",
-                    f"Primary Lambda {self.lambda_name} failed. Invoking failover {self.failover_lambda_name}"
+                    f"Primary Lambda {self.lambda_name} failed. Invoking failover {self.failover_lambda_name}",
                 )
                 log_to_cloudwatch(logData)
             except ClientError as e:
@@ -138,11 +134,7 @@ class CBCProxyClientBase(ABC):
             failover_result = self._invoke_lambda(self.failover_lambda_name, payload)
             if not failover_result:
                 try:
-                    logData = LogData(
-                        source="eas-app-api",
-                        module="cbc_proxy",
-                        method="_invoke_lambda_with_failover"
-                    )
+                    logData = LogData(source="eas-app-api", module="cbc_proxy", method="_invoke_lambda_with_failover")
                     logData.addData("LambdaError", f"Secondary Lambda {self.lambda_name} failed")
                     log_to_cloudwatch(logData)
                 except ClientError as e:
