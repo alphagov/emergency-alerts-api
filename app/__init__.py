@@ -1,12 +1,11 @@
 import os
 import random
-import ssl
 import string
 import time
 import uuid
 from time import monotonic
-import boto3
 
+import boto3
 from celery import current_task
 from emergency_alerts_utils import logging, request_helper
 from emergency_alerts_utils.celery import NotifyCelery
@@ -29,7 +28,6 @@ from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy as _SQLAlchemy
 from gds_metrics import GDSMetrics
 from gds_metrics.metrics import Gauge, Histogram
-from pathlib import Path
 from sqlalchemy import event
 from werkzeug.exceptions import HTTPException as WerkzeugHTTPException
 from werkzeug.local import LocalProxy
@@ -98,13 +96,14 @@ def create_app(application):
     db.init_app(application)
 
     boto_session = boto3.Session(region_name=os.environ["AWS_REGION"])
-    rds_client = boto_session.client('rds')
+    rds_client = boto_session.client("rds")
 
     with application.app_context():
+
         @event.listens_for(db.engine, "do_connect")
         def receive_do_connect(dialect, conn_rec, cargs, cparams):
             token = get_authentication_token(rds_client)
-            cparams['password'] = token
+            cparams["password"] = token
 
     migrate.init_app(application, db=db)
     ma.init_app(application)
@@ -327,7 +326,7 @@ def get_authentication_token(rds_client):
             DBHostname=os.environ["RDS_HOST"],
             Port=os.environ["RDS_PORT"],
             DBUsername=os.environ["RDS_USER"],
-            Region=os.environ["RDS_REGION"]
+            Region=os.environ["RDS_REGION"],
         )
 
         return auth_token
@@ -336,7 +335,6 @@ def get_authentication_token(rds_client):
 
 
 def init_app(app):
-
     @app.before_request
     def record_request_details():
         CONCURRENT_REQUESTS.inc()
