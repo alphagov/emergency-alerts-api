@@ -1,4 +1,5 @@
 import json
+import os
 import uuid
 from collections import namedtuple
 from datetime import datetime
@@ -33,13 +34,19 @@ EXAMPLE_AREAS = [
 ]
 
 
+os.environ["AWS_ACCESS_KEY_ID"] = "cbc-proxy-aws-access-key-id"
+os.environ["AWS_SECRET_ACCESS_KEY"] = "cbc-proxy-aws-secret-access-key"
+
+
 @pytest.fixture(scope="function")
 def cbc_proxy_client(client, mocker):
     client = CBCProxyClient()
     current_app = mocker.Mock(
         config={
             "CBC_PROXY_AWS_ACCESS_KEY_ID": "cbc-proxy-aws-access-key-id",
+            "AWS_ACCESS_KEY_ID": "cbc-proxy-aws-access-key-id",
             "CBC_PROXY_AWS_SECRET_ACCESS_KEY": "cbc-proxy-aws-secret-access-key",
+            "AWS_SECRET_ACCESS_KEY": "cbc-proxy-aws-secret-access-key",
             "CBC_PROXY_ENABLED": True,
         }
     )
@@ -84,7 +91,6 @@ def test_cbc_proxy_lambda_client_has_correct_region(cbc_proxy_ee):
 def test_cbc_proxy_lambda_client_has_correct_keys(cbc_proxy_ee):
     key = cbc_proxy_ee._lambda_client._request_signer._credentials.access_key
     secret = cbc_proxy_ee._lambda_client._request_signer._credentials.secret_key
-
     assert key == "cbc-proxy-aws-access-key-id"
     assert secret == "cbc-proxy-aws-secret-access-key"
 

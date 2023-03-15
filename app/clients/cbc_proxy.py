@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 import boto3
 import botocore
 from botocore.exceptions import ClientError
-from emergency_alerts_utils.structured_logging import LogData, log_to_cloudwatch
+from emergency_alerts_utils.structured_logging import LogData
 from emergency_alerts_utils.template import non_gsm_characters
 from flask import current_app
 from sqlalchemy.schema import Sequence
@@ -127,7 +127,7 @@ class CBCProxyClientBase(ABC):
                     "LambdaError",
                     f"Primary Lambda {self.lambda_name} failed. Invoking failover {self.failover_lambda_name}",
                 )
-                log_to_cloudwatch(logData)
+                logData.log_to_cloudwatch()
             except ClientError as e:
                 current_app.logger.info("Error writing to CloudWatch: %s", e)
 
@@ -136,7 +136,7 @@ class CBCProxyClientBase(ABC):
                 try:
                     logData = LogData(source="eas-app-api", module="cbc_proxy", method="_invoke_lambda_with_failover")
                     logData.addData("LambdaError", f"Secondary Lambda {self.lambda_name} failed")
-                    log_to_cloudwatch(logData)
+                    logData.log_to_cloudwatch()
                 except ClientError as e:
                     current_app.logger.info("Error writing to CloudWatch: %s", e)
 

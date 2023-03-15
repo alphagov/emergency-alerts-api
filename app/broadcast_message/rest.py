@@ -1,6 +1,6 @@
 import iso8601
 from botocore.exceptions import ClientError
-from emergency_alerts_utils.structured_logging import LogData, log_to_cloudwatch
+from emergency_alerts_utils.structured_logging import LogData
 from emergency_alerts_utils.template import BroadcastMessageTemplate
 from flask import Blueprint, current_app, jsonify, request
 
@@ -145,7 +145,7 @@ def update_broadcast_message_status(service_id, broadcast_message_id):
             broadcastMessageId=broadcast_message_id,
         )
         logData.addData("status", data["status"])
-        log_to_cloudwatch(logData)
+        logData.log_to_cloudwatch()
     except ClientError as e:
         current_app.logger.info("Error writing to CloudWatch: %s", e)
 

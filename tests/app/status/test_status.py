@@ -4,7 +4,7 @@ from flask import json
 from tests.app.db import create_organisation, create_service
 
 
-@pytest.mark.parametrize("path", ["/", "/_status"])
+@pytest.mark.parametrize("path", ["/", "/_api_status"])
 def test_get_status_all_ok(client, notify_db_session, path):
     response = client.get(path)
     assert response.status_code == 200

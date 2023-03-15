@@ -394,8 +394,6 @@ class Config(object):
     AWS_REGION = "eu-west-2"
 
     CBC_PROXY_ENABLED = True
-    CBC_PROXY_AWS_ACCESS_KEY_ID = os.environ.get("CBC_PROXY_AWS_ACCESS_KEY_ID", "")
-    CBC_PROXY_AWS_SECRET_ACCESS_KEY = os.environ.get("CBC_PROXY_AWS_SECRET_ACCESS_KEY", "")
 
     ENABLED_CBCS = {BroadcastProvider.EE, BroadcastProvider.THREE, BroadcastProvider.O2, BroadcastProvider.VODAFONE}
 

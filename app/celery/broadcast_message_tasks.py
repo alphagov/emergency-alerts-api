@@ -25,9 +25,6 @@ class BroadcastIntegrityError(Exception):
     pass
 
 
-sns = boto3.resource("sns")
-
-
 def get_retry_delay(retry_count):
     """
     Given a count of retries so far, return a delay for the next one.
@@ -132,18 +129,22 @@ def send_broadcast_event(broadcast_event_id):
 
     # create_topic() is idempotent, so if the requester already owns a topic with the
     # specified name, that topic's ARN is returned without creating a new topic.
+    snsMessageId = ""
     try:
+        sns = boto3.resource("sns")
         topic = sns.create_topic(Name=topic_name)
         response = topic.publish(Message=message)
-        messageId = response["MessageId"]
-        current_app.logger.info(f"Message {messageId} published to SNS topic {topic.arn}.")
+        snsMessageId = response["MessageId"]
+        current_app.logger.info(f"Message {snsMessageId} published to SNS topic {topic.arn}.")
     except ClientError:
-        current_app.logger.exception(f"Could not publish message {messageId} to SNS topic {topic.arn}.")
+        current_app.logger.exception(f"Failed to publish message {message} to SNS topic {topic_name}.")
 
     for provider in broadcast_event.service.get_available_broadcast_providers():
         send_broadcast_provider_message.apply_async(
             kwargs={"broadcast_event_id": broadcast_event_id, "provider": provider}, queue=QueueNames.BROADCASTS
         )
+
+    return snsMessageId
 
 
 # max_retries=None: retry forever

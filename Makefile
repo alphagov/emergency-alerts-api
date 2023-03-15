@@ -81,6 +81,10 @@ test: ## Run tests
 	black --check .
 	pytest -n auto --maxfail=10
 
+.PHONY: pytests
+pytests: ## Run python tests only
+	pytest -n auto --maxfail=5
+
 .PHONY: freeze-requirements
 freeze-requirements: ## Pin all requirements including sub dependencies into requirements.txt
 	pip install --upgrade pip-tools
