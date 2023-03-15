@@ -24,14 +24,14 @@ PYTHON_EXECUTABLE_PREFIX := $(shell test -d "$${VIRTUALENV_ROOT}" && echo "$${VI
 
 ## DEVELOPMENT
 
-.PHONY: bootstrap
-bootstrap: generate-version-file ## Set up everything to run the app
+.PHONY: legacy-bootstrap
+legacy-bootstrap: generate-version-file ## Set up everything to run the app
 	pip3 install -r requirements_for_test.txt
 	createdb emergency_alerts || true
 	(. environment.sh && flask db upgrade) || true
 
-.PHONY: bootstrap-serverless-db
-bootstrap-serverless-db: generate-version-file
+.PHONY: bootstrap
+bootstrap: generate-version-file ## Set up everything to run the app
 	pip3 install -r requirements_for_test.txt
 
 .PHONY: bootstrap-with-docker

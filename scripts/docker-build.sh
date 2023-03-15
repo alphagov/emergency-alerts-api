@@ -26,7 +26,7 @@ function ecr_login(){
 function docker_build(){
   docker buildx build \
     --platform $PLATFORM \
-    -t $ECS_ACCOUNT_NUMBER.dkr.ecr.$REGION.amazonaws.com/emergency-alerts-$IMAGE:latest \
+    -t $ECS_ACCOUNT_NUMBER.dkr.ecr.$REGION.amazonaws.com/eas-app-$IMAGE:latest \
     -f Dockerfile.eas-$IMAGE \
     $ARGS \
     .
