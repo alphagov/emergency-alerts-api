@@ -1,0 +1,43 @@
+version: '3.8'
+services:
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.eas-api
+    environment:
+      SQLALCHEMY_DATABASE_URI: 'postgresql://postgres:root@pg:5432/test_emergency_alerts'
+    command: bash -c 'cd /eas/emergency-alerts-api && . /venv/eas-api/bin/activate && pytest -n auto --maxfail=10'
+    depends_on:
+      - pg
+    networks:
+      - test-network
+
+  pg:
+    image: postgres:14
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: root
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+      USER: $USER
+    volumes:
+      - ./postgres:/docker-entrypoint-initdb.d:ro
+    networks:
+      - test-network
+    ports:
+      - 5432:5432
+
+networks:
+  test-network:
+    driver: bridge
+
+# Running tests in a container
+# docker compose -f docker-compose-tests.yml up --force-recreate --exit-code-from api
+# docker compose -f docker-compose-tests.yml down
+
+# Starting postgres to run tests from local api directory
+# uncomment the port mapping on lines 28 and 29 above
+# docker compose -f docker-compose-tests.yml up --force-recreate pg
+# cd /eas/emergency-alerts-api && . /venv/eas-api/bin/activate && make test
+# docker compose -f docker-compose-tests.yml down

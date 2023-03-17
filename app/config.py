@@ -497,7 +497,9 @@ class Test(Development):
     LETTER_SANITISE_BUCKET_NAME = "test-letters-sanitise"
 
     # this is overriden in jenkins and on cloudfoundry
-    SQLALCHEMY_DATABASE_URI = os.getenv("SQLALCHEMY_DATABASE_URI", "postgresql://localhost/test_emergency_alerts")
+    SQLALCHEMY_DATABASE_URI = os.getenv(
+        "SQLALCHEMY_DATABASE_URI", "postgresql://postgres:root@localhost:5432/test_emergency_alerts"
+    )
     SQLALCHEMY_RECORD_QUERIES = False
 
     CELERY = {**Config.CELERY, "broker_url": "you-forgot-to-mock-celery-in-your-tests://"}
