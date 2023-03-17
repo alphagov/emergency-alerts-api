@@ -65,10 +65,6 @@ def test_performance_dashboard(sample_service, admin_request):
         {"date": "2021-03-01", "emails": 15, "sms": 20, "letters": 3},
         {"date": "2021-03-02", "emails": 25, "sms": 30, "letters": 10},
     ]
-    # assert results["processing_time"] == [
-    #     {"date": "2021-03-01", "percentage_under_10_seconds": 97.14285714285714},
-    #     {"date": "2021-03-02", "percentage_under_10_seconds": 80.0},
-    # ]
 
     assert (
         round(
