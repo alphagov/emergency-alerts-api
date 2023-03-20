@@ -1,4 +1,5 @@
 import json
+import os
 import uuid
 from datetime import datetime, timedelta
 
@@ -66,6 +67,8 @@ from tests.app.db import (
     create_template,
     create_user,
 )
+
+os.environ["AWS_DEFAULT_REGION"] = "eu-west-2"
 
 
 @pytest.yield_fixture

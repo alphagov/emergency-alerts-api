@@ -1,8 +1,8 @@
+from flask import Blueprint, jsonify, request
+
 from app import db, version
 from app.dao.organisation_dao import dao_count_organisations_with_live_services
 from app.dao.services_dao import dao_count_live_services
-
-from flask import Blueprint, jsonify, request
 
 status = Blueprint("status", __name__)
 
