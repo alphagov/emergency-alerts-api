@@ -73,7 +73,7 @@ from app.notifications.process_notifications import send_notification_to_queue
 def run_health_check():
     try:
         time_stamp = int(time.time())
-        with open("/eas/celery-health-check", mode="w") as file:
+        with open("/eas/celery-beat-healthcheck", mode="w") as file:
             file.write(time_stamp)
     except Exception:
         current_app.logger.exception("Unable to generate health-check timestamp")
