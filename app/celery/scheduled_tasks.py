@@ -65,6 +65,19 @@ from app.models import (
     Organisation,
 )
 from app.notifications.process_notifications import send_notification_to_queue
+import time
+
+
+@notify_celery.task(name="run-health-check")
+@cronitor("run-health-check")
+def run_health_check():
+    try:
+        time_stamp = int(time.time())
+        with open("/eas/eas-health-check", mode="w") as file:
+            file.write(time_stamp)
+    except Exception:
+        current_app.logger.exception("Unable to generate health-check timestamp")
+        raise
 
 
 @notify_celery.task(name="run-scheduled-jobs")

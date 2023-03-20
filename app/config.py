@@ -201,6 +201,11 @@ class Config(object):
         "task_queues": [Queue(queue, Exchange("default"), routing_key=queue) for queue in QueueNames.all_queues()],
         "beat_schedule": {
             # app/celery/scheduled_tasks.py
+            "run-health-check": {
+                "task": "run-health-check",
+                "schedule": crontab(),
+                "options": {"queue": QueueNames.PERIODIC},
+            },
             "run-scheduled-jobs": {
                 "task": "run-scheduled-jobs",
                 "schedule": crontab(minute="0,15,30,45"),
