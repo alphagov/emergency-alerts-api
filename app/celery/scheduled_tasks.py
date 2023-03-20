@@ -1,3 +1,4 @@
+import time
 from collections import defaultdict
 from datetime import datetime, timedelta
 
@@ -65,7 +66,6 @@ from app.models import (
     Organisation,
 )
 from app.notifications.process_notifications import send_notification_to_queue
-import time
 
 
 @notify_celery.task(name="run-health-check")
