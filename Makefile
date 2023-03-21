@@ -24,14 +24,14 @@ PYTHON_EXECUTABLE_PREFIX := $(shell test -d "$${VIRTUALENV_ROOT}" && echo "$${VI
 
 ## DEVELOPMENT
 
-.PHONY: bootstrap
-bootstrap: generate-version-file ## Set up everything to run the app
+.PHONY: legacy-bootstrap
+legacy-bootstrap: generate-version-file ## Set up everything to run the app
 	pip3 install -r requirements_for_test.txt
 	createdb emergency_alerts || true
 	(. environment.sh && flask db upgrade) || true
 
-.PHONY: bootstrap-serverless-db
-bootstrap-serverless-db: generate-version-file
+.PHONY: bootstrap
+bootstrap: generate-version-file ## Set up everything to run the app
 	pip3 install -r requirements_for_test.txt
 
 .PHONY: bootstrap-with-docker
@@ -80,6 +80,10 @@ test: ## Run tests
 	isort --check-only ./app ./tests
 	black --check .
 	pytest -n auto --maxfail=10
+
+.PHONY: pytests
+pytests: ## Run python tests only
+	pytest -n auto --maxfail=5
 
 .PHONY: freeze-requirements
 freeze-requirements: ## Pin all requirements including sub dependencies into requirements.txt

@@ -201,6 +201,11 @@ class Config(object):
         "task_queues": [Queue(queue, Exchange("default"), routing_key=queue) for queue in QueueNames.all_queues()],
         "beat_schedule": {
             # app/celery/scheduled_tasks.py
+            "run-health-check": {
+                "task": "run-health-check",
+                "schedule": crontab(),
+                "options": {"queue": QueueNames.PERIODIC},
+            },
             "run-scheduled-jobs": {
                 "task": "run-scheduled-jobs",
                 "schedule": crontab(minute="0,15,30,45"),
@@ -394,8 +399,6 @@ class Config(object):
     AWS_REGION = "eu-west-2"
 
     CBC_PROXY_ENABLED = True
-    CBC_PROXY_AWS_ACCESS_KEY_ID = os.environ.get("CBC_PROXY_AWS_ACCESS_KEY_ID", "")
-    CBC_PROXY_AWS_SECRET_ACCESS_KEY = os.environ.get("CBC_PROXY_AWS_SECRET_ACCESS_KEY", "")
 
     ENABLED_CBCS = {BroadcastProvider.EE, BroadcastProvider.THREE, BroadcastProvider.O2, BroadcastProvider.VODAFONE}
 
@@ -462,12 +465,14 @@ class Decoupled(Development):
 
 class ServerlessDB(Decoupled):
     NOTIFY_ENVIRONMENT = "serverlessdb"
-    SQLALCHEMY_DATABASE_URI = "postgresql://{user}:password@{host}:{port}/{database}?sslmode=verify-full&sslrootcert={cert}".format(
-        host=os.environ.get('RDS_HOST'),
-        port=os.environ.get('RDS_PORT'),
-        database=os.environ.get('DATABASE'),
-        user=os.environ.get('RDS_USER'),
-        cert=os.environ.get('CERT')
+    SQLALCHEMY_DATABASE_URI = (
+        "postgresql://{user}:password@{host}:{port}/{database}?sslmode=verify-full&sslrootcert={cert}".format(
+            host=os.environ.get("RDS_HOST"),
+            port=os.environ.get("RDS_PORT"),
+            database=os.environ.get("DATABASE"),
+            user=os.environ.get("RDS_USER"),
+            cert=os.environ.get("CERT"),
+        )
     )
     CBC_PROXY_ENABLED = True
     DEBUG = True
@@ -497,7 +502,9 @@ class Test(Development):
     LETTER_SANITISE_BUCKET_NAME = "test-letters-sanitise"
 
     # this is overriden in jenkins and on cloudfoundry
-    SQLALCHEMY_DATABASE_URI = os.getenv("SQLALCHEMY_DATABASE_URI", "postgresql://localhost/test_emergency_alerts")
+    SQLALCHEMY_DATABASE_URI = os.getenv(
+        "SQLALCHEMY_DATABASE_URI", "postgresql://postgres:root@localhost:5432/test_emergency_alerts"
+    )
     SQLALCHEMY_RECORD_QUERIES = False
 
     CELERY = {**Config.CELERY, "broker_url": "you-forgot-to-mock-celery-in-your-tests://"}

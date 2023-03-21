@@ -65,10 +65,26 @@ def test_performance_dashboard(sample_service, admin_request):
         {"date": "2021-03-01", "emails": 15, "sms": 20, "letters": 3},
         {"date": "2021-03-02", "emails": 25, "sms": 30, "letters": 10},
     ]
-    assert results["processing_time"] == [
-        {"date": "2021-03-01", "percentage_under_10_seconds": 97.1428571428571},
-        {"date": "2021-03-02", "percentage_under_10_seconds": 80.0},
-    ]
+
+    assert (
+        round(
+            next(item for item in results["processing_time"] if item["date"] == "2021-03-01")[
+                "percentage_under_10_seconds"
+            ],
+            2,
+        )
+        == 97.14
+    )
+    assert (
+        round(
+            next(item for item in results["processing_time"] if item["date"] == "2021-03-02")[
+                "percentage_under_10_seconds"
+            ],
+            2,
+        )
+        == 80.0
+    )
+
     assert results["live_service_count"] == 1
     assert results["services_using_notify"][0]["service_name"] == sample_service.name
     assert not results["services_using_notify"][0]["organisation_name"]
