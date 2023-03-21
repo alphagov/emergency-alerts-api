@@ -471,7 +471,7 @@ class ServerlessDB(Decoupled):
             port=os.environ.get("RDS_PORT"),
             database=os.environ.get("DATABASE"),
             user=os.environ.get("RDS_USER"),
-            cert=os.environ.get("CERT"),
+            cert='/etc/ssl/certs/global-bundle.pem',
         )
     )
     CBC_PROXY_ENABLED = True
