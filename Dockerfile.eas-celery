@@ -1,4 +1,4 @@
-FROM 388086622185.dkr.ecr.eu-west-2.amazonaws.com/emergency-alerts-base:latest
+FROM 388086622185.dkr.ecr.eu-west-2.amazonaws.com/eas-app-base:latest
 
 ENV SERVICE=celery
 ENV VENV_API=/venv/eas-api
@@ -8,9 +8,8 @@ ENV API_DIR=/eas/emergency-alerts-api
 COPY . $API_DIR
 
 # Build emergency-alerts-api
-RUN $PYTHON_VERSION -m venv $VENV_API
-RUN . $VENV_API/bin/activate && pip3 install pycurl
-RUN cd $API_DIR && . $VENV_API/bin/activate && make bootstrap
+RUN $PYTHON_VERSION -m venv $VENV_API && . $VENV_API/bin/activate && \
+    pip3 install pycurl && cd $API_DIR && make bootstrap
 
 # Create a blank configuration file
 RUN echo "" > $API_DIR/environment.sh
