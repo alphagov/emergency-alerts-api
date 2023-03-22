@@ -158,7 +158,7 @@ marshmallow-sqlalchemy==0.28.1
     # via -r requirements.in
 mistune==0.8.4
     # via emergency-alerts-utils
-notifications-python-client==6.3.0
+notifications-python-client==8.0.0
     # via -r requirements.in
 orderedset==2.0.3
     # via emergency-alerts-utils

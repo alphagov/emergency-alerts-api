@@ -577,6 +577,10 @@ class Service(db.Model, Versioned):
         default_reply_to = [x for x in self.reply_to_email_addresses if x.is_default]
         return default_reply_to[0].email_address if default_reply_to else None
 
+    def get_default_reply_to_email_id(self):
+        default_reply_to = [x for x in self.reply_to_email_addresses if x.is_default]
+        return default_reply_to[0].id if default_reply_to else None
+
     def get_default_letter_contact(self):
         default_letter_contact = [x for x in self.letter_contacts if x.is_default]
         return default_letter_contact[0].contact_block if default_letter_contact else None
