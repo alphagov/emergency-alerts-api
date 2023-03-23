@@ -10,8 +10,6 @@ amqp==5.1.1
     # via kombu
 arrow==1.2.3
     # via isoduration
-async-timeout==4.0.2
-    # via redis
 attrs==22.1.0
     # via jsonschema
 awscli==1.25.85
@@ -26,23 +24,16 @@ billiard==3.6.4.0
     # via celery
 blinker==1.5
     # via gds-metrics
-boto3==1.24.84
-    # via emergency-alerts-utils
 botocore==1.27.84
     # via
     #   awscli
-    #   boto3
     #   s3transfer
 cachetools==5.2.0
-    # via
-    #   -r requirements.in
-    #   emergency-alerts-utils
+    # via -r requirements.in
 celery[sqs]==5.2.7
     # via -r requirements.in
 certifi==2022.12.7
-    # via
-    #   pyproj
-    #   requests
+    # via requests
 cffi==1.15.1
     # via -r requirements.in
 charset-normalizer==2.1.1
@@ -65,26 +56,20 @@ click-repl==0.2.0
     # via celery
 colorama==0.4.4
     # via awscli
-deprecated==1.2.13
-    # via redis
 dnspython==2.2.1
     # via eventlet
 docopt==0.6.2
     # via notifications-python-client
 docutils==0.16
     # via awscli
-emergency-alerts-utils @ git+https://github.com/alphagov/emergency-alerts-utils.git
-    # via -r requirements.in
 eventlet==0.33.1
     # via gunicorn
 flask==2.2.2
     # via
     #   -r requirements.in
-    #   emergency-alerts-utils
     #   flask-bcrypt
     #   flask-marshmallow
     #   flask-migrate
-    #   flask-redis
     #   flask-sqlalchemy
     #   gds-metrics
 flask-bcrypt==1.0.1
@@ -93,8 +78,6 @@ flask-marshmallow==0.14.0
     # via -r requirements.in
 flask-migrate==3.1.0
     # via -r requirements.in
-flask-redis==0.4.0
-    # via emergency-alerts-utils
 flask-sqlalchemy==3.0.2
     # via
     #   -r requirements.in
@@ -103,10 +86,6 @@ fqdn==1.5.1
     # via jsonschema
 gds-metrics @ git+https://github.com/alphagov/gds_metrics_python.git@6f1840a57b6fb1ee40b7e84f2f18ec229de8aa72
     # via -r requirements.in
-geojson==2.5.0
-    # via emergency-alerts-utils
-govuk-bank-holidays==0.11
-    # via emergency-alerts-utils
 greenlet==1.1.3
     # via eventlet
 gunicorn @ git+https://github.com/benoitc/gunicorn.git@1299ea9e967a61ae2edebe191082fd169b864c64
@@ -124,16 +103,11 @@ isoduration==20.11.0
 itsdangerous==2.1.2
     # via
     #   -r requirements.in
-    #   emergency-alerts-utils
     #   flask
 jinja2==3.1.2
-    # via
-    #   emergency-alerts-utils
-    #   flask
+    # via flask
 jmespath==1.0.1
-    # via
-    #   boto3
-    #   botocore
+    # via botocore
 jsonpointer==2.3
     # via jsonschema
 jsonschema[format]==4.16.0
@@ -156,19 +130,12 @@ marshmallow==3.18.0
     #   marshmallow-sqlalchemy
 marshmallow-sqlalchemy==0.28.1
     # via -r requirements.in
-mistune==0.8.4
-    # via emergency-alerts-utils
-notifications-python-client==6.3.0
+notifications-python-client==8.0.0
     # via -r requirements.in
-orderedset==2.0.3
-    # via emergency-alerts-utils
 packaging==21.3
     # via
     #   marshmallow
     #   marshmallow-sqlalchemy
-    #   redis
-phonenumbers==8.12.56
-    # via emergency-alerts-utils
 prometheus-client==0.14.1
     # via
     #   -r requirements.in
@@ -187,10 +154,6 @@ pyjwt==2.5.0
     #   notifications-python-client
 pyparsing==3.0.9
     # via packaging
-pypdf2==2.11.0
-    # via emergency-alerts-utils
-pyproj==3.4.0
-    # via emergency-alerts-utils
 pyrsistent==0.18.1
     # via jsonschema
 python-dateutil==2.8.2
@@ -198,23 +161,13 @@ python-dateutil==2.8.2
     #   arrow
     #   awscli-cwlogs
     #   botocore
-python-json-logger==2.0.4
-    # via emergency-alerts-utils
 pytz==2022.4
-    # via
-    #   celery
-    #   emergency-alerts-utils
+    # via celery
 pyyaml==5.4.1
-    # via
-    #   awscli
-    #   emergency-alerts-utils
-redis==4.3.4
-    # via flask-redis
+    # via awscli
 requests==2.28.1
     # via
     #   awscli-cwlogs
-    #   emergency-alerts-utils
-    #   govuk-bank-holidays
     #   notifications-python-client
 rfc3339-validator==0.1.4
     # via jsonschema
@@ -223,11 +176,7 @@ rfc3987==1.3.8
 rsa==4.7.2
     # via awscli
 s3transfer==0.6.0
-    # via
-    #   awscli
-    #   boto3
-shapely==1.8.4
-    # via emergency-alerts-utils
+    # via awscli
 six==1.16.0
     # via
     #   awscli-cwlogs
@@ -236,8 +185,6 @@ six==1.16.0
     #   flask-marshmallow
     #   python-dateutil
     #   rfc3339-validator
-smartypants==2.0.1
-    # via emergency-alerts-utils
 soupsieve==2.3.2.post1
     # via beautifulsoup4
 sqlalchemy==1.4.41
@@ -246,10 +193,6 @@ sqlalchemy==1.4.41
     #   alembic
     #   flask-sqlalchemy
     #   marshmallow-sqlalchemy
-statsd==3.3.0
-    # via emergency-alerts-utils
-typing-extensions==4.4.0
-    # via pypdf2
 uri-template==1.2.0
     # via jsonschema
 urllib3==1.26.12
@@ -267,8 +210,6 @@ webcolors==1.12
     # via jsonschema
 werkzeug==2.2.2
     # via flask
-wrapt==1.14.1
-    # via deprecated
 zipp==3.11.0
     # via importlib-metadata
 
