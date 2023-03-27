@@ -18,11 +18,6 @@ if [[ -z $AWS_SESSION_TOKEN ]] || [[ "$AWS_SESSION_TOKEN" == "" ]]; then
   export AWS_SESSION_TOKEN=$(echo $session_tokens | jq -j .Token)
 fi
 
-function run_flask(){
-  cd $API_DIR;
-  . $VENV_API/bin/activate && make run-flask &
-}
-
 function run_celery(){
   cd $API_DIR;
   . $VENV_API/bin/activate && make run-celery &
