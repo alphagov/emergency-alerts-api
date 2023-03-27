@@ -203,7 +203,7 @@ class Config(object):
             # app/celery/scheduled_tasks.py
             "run-health-check": {
                 "task": "run-health-check",
-                "schedule": crontab(),
+                "schedule": crontab(minute='*/1'),
                 "options": {"queue": QueueNames.PERIODIC},
             },
             "run-scheduled-jobs": {
@@ -223,12 +223,12 @@ class Config(object):
             },
             "switch-current-sms-provider-on-slow-delivery": {
                 "task": "switch-current-sms-provider-on-slow-delivery",
-                "schedule": crontab(),  # Every minute
+                "schedule": crontab(minute='*/1'),  # Every minute
                 "options": {"queue": QueueNames.PERIODIC},
             },
             "check-job-status": {
                 "task": "check-job-status",
-                "schedule": crontab(),
+                "schedule": crontab(minute='*/1'),
                 "options": {"queue": QueueNames.PERIODIC},
             },
             "tend-providers-back-to-middle": {
@@ -476,6 +476,8 @@ class ServerlessDB(Decoupled):
     )
     CBC_PROXY_ENABLED = True
     DEBUG = True
+    REDIS_ENABLED = True
+    REDIS_URL = "redis://localhost:6379/0"
 
 
 class Test(Development):

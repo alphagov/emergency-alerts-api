@@ -7,6 +7,10 @@ ENV API_DIR=/eas/emergency-alerts-api
 # Create root directory and copy repo
 COPY . $API_DIR
 
+# Download the database certificate
+RUN wget https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem -O /etc/ssl/certs/global-bundle.pem && \
+    update-ca-certificates
+
 # Build emergency-alerts-api
 RUN $PYTHON_VERSION -m venv $VENV_API && . $VENV_API/bin/activate && \
     pip3 install pycurl && cd $API_DIR && make bootstrap
@@ -14,7 +18,10 @@ RUN $PYTHON_VERSION -m venv $VENV_API && . $VENV_API/bin/activate && \
 # Create a blank configuration file
 RUN echo "" > $API_DIR/environment.sh
 
-RUN useradd -ms /bin/bash celery && chown -R celery:celery $API_DIR
+RUN useradd -ms /bin/bash easuser && chown -R easuser:easuser $API_DIR
+
+COPY scripts/install-redis.sh /
+RUN . /install-redis.sh
 
 COPY scripts/healthcheck.sh /
 COPY scripts/start-celery.sh /
