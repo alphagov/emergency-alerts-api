@@ -476,7 +476,6 @@ class ServerlessDB(Decoupled):
     )
     CBC_PROXY_ENABLED = True
     DEBUG = True
-    REDIS_ENABLED = True
     REDIS_URL = "redis://localhost:6379/0"
 
 

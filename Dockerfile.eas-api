@@ -26,4 +26,4 @@ RUN . /install-redis.sh
 COPY scripts/start-api.sh /
 CMD bash /start-api.sh
 
-EXPOSE 6011 6379 6013
+EXPOSE 6011 6013

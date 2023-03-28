@@ -26,5 +26,3 @@ RUN . /install-redis.sh
 COPY scripts/healthcheck.sh /
 COPY scripts/start-celery.sh /
 CMD bash /start-celery.sh
-
-EXPOSE 8125
