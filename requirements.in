@@ -25,8 +25,10 @@ lxml==4.9.1
 
 notifications-python-client==8.0.0
 
+-e file:../emergency-alerts-utils
+
 # PaaS
-awscli-cwlogs==1.4.6
+# awscli-cwlogs==1.4.6
 
 # gds-metrics requires prometheseus 0.2.0, override that requirement as 0.7.1 brings significant performance gains
 prometheus-client==0.14.1
