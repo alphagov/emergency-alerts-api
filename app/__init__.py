@@ -28,7 +28,6 @@ from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy as _SQLAlchemy
 from gds_metrics import GDSMetrics
 from gds_metrics.metrics import Gauge, Histogram
-from moto import mock_rds
 from sqlalchemy import event
 from werkzeug.exceptions import HTTPException as WerkzeugHTTPException
 from werkzeug.local import LocalProxy
@@ -81,7 +80,6 @@ CONCURRENT_REQUESTS = Gauge(
 )
 
 
-@mock_rds
 def create_app(application):
     from app.config import configs
 

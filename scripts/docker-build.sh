@@ -28,6 +28,7 @@ function docker_build(){
     --platform $PLATFORM \
     -t $ECS_ACCOUNT_NUMBER.dkr.ecr.$REGION.amazonaws.com/eas-app-$IMAGE:latest \
     -f Dockerfile.eas-$IMAGE \
+    --no-cache \
     $ARGS \
     .
 }
