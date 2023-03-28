@@ -25,10 +25,7 @@ lxml==4.9.1
 
 notifications-python-client==8.0.0
 
-# PaaS
-awscli-cwlogs==1.4.6
-
-emergency-alerts-utils @ git+https://github.com/alphagov/emergency-alerts-utils.git
+-e file:../emergency-alerts-utils
 
 # gds-metrics requires prometheseus 0.2.0, override that requirement as 0.7.1 brings significant performance gains
 prometheus-client==0.14.1

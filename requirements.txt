@@ -4,6 +4,8 @@
 #
 #    pip-compile requirements.in
 #
+-e file:../emergency-alerts-utils
+    # via -r requirements.in
 alembic==1.8.1
     # via flask-migrate
 amqp==5.1.1
@@ -14,10 +16,6 @@ async-timeout==4.0.2
     # via redis
 attrs==22.1.0
     # via jsonschema
-awscli==1.25.85
-    # via awscli-cwlogs
-awscli-cwlogs==1.4.6
-    # via -r requirements.in
 bcrypt==4.0.0
     # via flask-bcrypt
 beautifulsoup4==4.11.1
@@ -26,11 +24,10 @@ billiard==3.6.4.0
     # via celery
 blinker==1.5
     # via gds-metrics
-boto3==1.24.84
+boto3==1.26.100
     # via emergency-alerts-utils
-botocore==1.27.84
+botocore==1.29.100
     # via
-    #   awscli
     #   boto3
     #   s3transfer
 cachetools==5.2.0
@@ -63,18 +60,10 @@ click-plugins==1.1.1
     # via celery
 click-repl==0.2.0
     # via celery
-colorama==0.4.4
-    # via awscli
-deprecated==1.2.13
-    # via redis
 dnspython==2.2.1
     # via eventlet
 docopt==0.6.2
     # via notifications-python-client
-docutils==0.16
-    # via awscli
-emergency-alerts-utils @ git+https://github.com/alphagov/emergency-alerts-utils.git
-    # via -r requirements.in
 eventlet==0.33.1
     # via gunicorn
 flask==2.2.2
@@ -103,9 +92,9 @@ fqdn==1.5.1
     # via jsonschema
 gds-metrics @ git+https://github.com/alphagov/gds_metrics_python.git@6f1840a57b6fb1ee40b7e84f2f18ec229de8aa72
     # via -r requirements.in
-geojson==2.5.0
+geojson==3.0.1
     # via emergency-alerts-utils
-govuk-bank-holidays==0.11
+govuk-bank-holidays==0.13
     # via emergency-alerts-utils
 greenlet==1.1.3
     # via eventlet
@@ -160,14 +149,15 @@ mistune==0.8.4
     # via emergency-alerts-utils
 notifications-python-client==8.0.0
     # via -r requirements.in
+numpy==1.24.2
+    # via shapely
 orderedset==2.0.3
     # via emergency-alerts-utils
 packaging==21.3
     # via
     #   marshmallow
     #   marshmallow-sqlalchemy
-    #   redis
-phonenumbers==8.12.56
+phonenumbers==8.13.8
     # via emergency-alerts-utils
 prometheus-client==0.14.1
     # via
@@ -177,8 +167,6 @@ prompt-toolkit==3.0.31
     # via click-repl
 psycopg2-binary==2.9.3
     # via -r requirements.in
-pyasn1==0.4.8
-    # via rsa
 pycparser==2.21
     # via cffi
 pyjwt==2.5.0
@@ -187,7 +175,7 @@ pyjwt==2.5.0
     #   notifications-python-client
 pyparsing==3.0.9
     # via packaging
-pypdf2==2.11.0
+pypdf2==3.0.1
     # via emergency-alerts-utils
 pyproj==3.4.0
     # via emergency-alerts-utils
@@ -196,23 +184,19 @@ pyrsistent==0.18.1
 python-dateutil==2.8.2
     # via
     #   arrow
-    #   awscli-cwlogs
     #   botocore
-python-json-logger==2.0.4
+python-json-logger==2.0.7
     # via emergency-alerts-utils
 pytz==2022.4
     # via
     #   celery
     #   emergency-alerts-utils
 pyyaml==5.4.1
-    # via
-    #   awscli
-    #   emergency-alerts-utils
-redis==4.3.4
+    # via emergency-alerts-utils
+redis==4.5.3
     # via flask-redis
 requests==2.28.1
     # via
-    #   awscli-cwlogs
     #   emergency-alerts-utils
     #   govuk-bank-holidays
     #   notifications-python-client
@@ -220,17 +204,12 @@ rfc3339-validator==0.1.4
     # via jsonschema
 rfc3987==1.3.8
     # via jsonschema
-rsa==4.7.2
-    # via awscli
 s3transfer==0.6.0
-    # via
-    #   awscli
-    #   boto3
-shapely==1.8.4
+    # via boto3
+shapely==2.0.1
     # via emergency-alerts-utils
 six==1.16.0
     # via
-    #   awscli-cwlogs
     #   click-repl
     #   eventlet
     #   flask-marshmallow
@@ -246,9 +225,9 @@ sqlalchemy==1.4.41
     #   alembic
     #   flask-sqlalchemy
     #   marshmallow-sqlalchemy
-statsd==3.3.0
+statsd==4.0.1
     # via emergency-alerts-utils
-typing-extensions==4.4.0
+typing-extensions==4.5.0
     # via pypdf2
 uri-template==1.2.0
     # via jsonschema
@@ -267,8 +246,6 @@ webcolors==1.12
     # via jsonschema
 werkzeug==2.2.2
     # via flask
-wrapt==1.14.1
-    # via deprecated
 zipp==3.11.0
     # via importlib-metadata
 

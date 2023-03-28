@@ -74,7 +74,7 @@ def run_health_check():
     try:
         time_stamp = int(time.time())
         with open("/eas/celery-beat-healthcheck", mode="w") as file:
-            file.write(time_stamp)
+            file.write(str(time_stamp))
     except Exception:
         current_app.logger.exception("Unable to generate health-check timestamp")
         raise
