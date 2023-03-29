@@ -20,9 +20,6 @@ RUN echo "" > $API_DIR/environment.sh
 
 RUN useradd -ms /bin/bash easuser && chown -R easuser:easuser $API_DIR
 
-COPY scripts/install-redis.sh /
-RUN . /install-redis.sh
-
 COPY scripts/healthcheck.sh /
 COPY scripts/start-celery.sh /
 CMD bash /start-celery.sh
