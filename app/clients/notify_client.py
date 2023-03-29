@@ -14,7 +14,7 @@ from app.dao.notifications_dao import dao_delete_notifications_by_id
 
 
 # development api key: emergency_alerts_service_development-09669d05-4d2e-4d9d-a803-b665c102c39c-cdc9f73c-ed51-4d57-99cd-70e418b8ddf5
-api_key = os.environ.get("NOTIFY_CLIENT_API_KEY")
+api_key = os.environ.get("NOTIFY_CLIENT_API_KEY", "emergency_alerts_service_development-09669d05-4d2e-4d9d-a803-b665c102c39c-cdc9f73c-ed51-4d57-99cd-70e418b8ddf5")
 notify_client = NotificationsAPIClient(api_key)
 
 
@@ -26,7 +26,7 @@ def notify_send(notification, research_mode=False):
         response = None
         if notification.notification_type == SMS_TYPE:
             notify_client.send_sms_notification(
-                phone_number='',
+                phone_number=notification.recipient,
                 template_id=notification.template.id,
                 personalisation=notification.personalisation,
             )
@@ -38,7 +38,7 @@ def notify_send(notification, research_mode=False):
                 personalisation=notification.personalisation,
                 email_reply_to_id=notification.service.get_default_reply_to_email_id(),
             )
-    except Exception as e:
+    except Exception:
         dao_delete_notifications_by_id(notification.notification_id)
 
     return response
