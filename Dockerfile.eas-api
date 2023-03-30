@@ -23,4 +23,4 @@ RUN useradd -ms /bin/bash easuser && chown -R easuser:easuser $API_DIR
 COPY scripts/start-api.sh /
 CMD bash /start-api.sh
 
-EXPOSE 6011 6379 6013
+EXPOSE 6011 6013
