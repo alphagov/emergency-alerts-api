@@ -1,6 +1,6 @@
 #! /bin/sh
-timestamp_filename='/eas/celery-beat-healthcheck'
-expected_update_interval=600
+timestamp_filename='/eas/emergency-alerts-api/celery-beat-healthcheck'
+expected_update_interval=240
 previous_timestamp=0
 current_timestamp=$(date +%s)
 

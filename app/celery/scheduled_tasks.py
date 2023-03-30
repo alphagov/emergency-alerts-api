@@ -69,11 +69,10 @@ from app.notifications.process_notifications import send_notification_to_queue
 
 
 @notify_celery.task(name="run-health-check")
-@cronitor("run-health-check")
 def run_health_check():
     try:
         time_stamp = int(time.time())
-        with open("/eas/celery-beat-healthcheck", mode="w") as file:
+        with open("/eas/emergency-alerts-api/celery-beat-healthcheck", mode="w") as file:
             file.write(str(time_stamp))
     except Exception:
         current_app.logger.exception("Unable to generate health-check timestamp")
