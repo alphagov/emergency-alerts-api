@@ -1,4 +1,5 @@
 import os
+from notifications_python_client.errors import APIError
 from notifications_python_client.notifications import NotificationsAPIClient
 from app.models import (
     EMAIL_TYPE,
@@ -18,25 +19,30 @@ api_key = os.environ.get("NOTIFY_CLIENT_API_KEY", "emergency_alerts_service_deve
 notify_client = NotificationsAPIClient(api_key)
 
 
+def get_notify_template(id):
+    response = notify_client.get_template(id)
+    if (response == None):
+        raise APIError(f"Template {id} not found")
+    return response
+
 def notify_send(notification, research_mode=False):
-    if research_mode or notification.key_type == KEY_TYPE_TEST:
+    if research_mode:
         pass # TBD: what is research mode?
 
     try:
         response = None
-        if notification.notification_type == SMS_TYPE:
+        if notification.type == SMS_TYPE:
             notify_client.send_sms_notification(
                 phone_number=notification.recipient,
-                template_id=notification.template.id,
+                template_id=notification.template_id,
                 personalisation=notification.personalisation,
             )
-
-        if notification.notification_type == EMAIL_TYPE:
+        if notification.type == EMAIL_TYPE:
             notify_client.send_email_notification(
                 email_address=notification.recipient,
-                template_id=notification.template.id,
+                template_id=notification.template_id,
                 personalisation=notification.personalisation,
-                email_reply_to_id=notification.service.get_default_reply_to_email_id(),
+                email_reply_to_id=notification.reply_to_email(),
             )
     except Exception:
         dao_delete_notifications_by_id(notification.notification_id)

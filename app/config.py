@@ -396,6 +396,8 @@ class Config(object):
     FIRETEXT_URL = os.environ.get("FIRETEXT_URL", "https://www.firetext.co.uk/api/sendsms/json")
     SES_STUB_URL = os.environ.get("SES_STUB_URL")
 
+    EMERGENCY_ALERTS_EMAIL_REPLY_TO = "emergency-alerts-support@digital.cabinet-office.gov.uk"
+
     AWS_REGION = "eu-west-2"
 
     CBC_PROXY_ENABLED = True
