@@ -10,6 +10,11 @@ if [[ -z $CONTAINER_ROLE ]] || [[ "$CONTAINER_ROLE" == "" ]]; then
   export CONTAINER_ROLE=$(echo $session_tokens | jq -j .RoleArn)
 fi
 
+function run_db_upgrade(){
+  cd $API_DIR;
+  . $VENV_API/bin/activate && flask db upgrade
+}
+
 function configure_container_role(){
   aws configure set role_arn $CONTAINER_ROLE
   aws configure set credential_source EcsContainer
@@ -26,6 +31,10 @@ function run_api(){
   . $VENV_API/bin/activate && flask run -p 6011 --host=0.0.0.0
 }
 
-configure_container_role
-run_celery
-run_api
+if [[ -n $MASTER_USERNAME ]]; then
+  run_db_upgrade
+else
+  configure_container_role
+  run_celery
+  run_api
+fi
