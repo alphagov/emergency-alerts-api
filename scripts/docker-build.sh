@@ -12,12 +12,14 @@ while [ $# -gt 0 ]; do
   shift
 done
 
-if [[ $ENVIRONMENT == "development" ]]; then
-  ECS_ACCOUNT_NUMBER=388086622185
-else
-  echo "No environment selected"
-  exit 1;
-fi
+function get_account_number(){
+  id=$(aws sts get-caller-identity)
+  ECS_ACCOUNT_NUMBER=$(echo $id | jq -j .Account)
+  if [[ -z $ECS_ACCOUNT_NUMBER ]]; then
+    echo "Unable to find AWS account number"
+    exit 1;
+  fi
+}
 
 function ecr_login(){
   aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin $ECS_ACCOUNT_NUMBER.dkr.ecr.$REGION.amazonaws.com
@@ -33,5 +35,6 @@ function docker_build(){
     .
 }
 
+get_account_number
 ecr_login
 docker_build

@@ -203,7 +203,7 @@ class Config(object):
             # app/celery/scheduled_tasks.py
             "run-health-check": {
                 "task": "run-health-check",
-                "schedule": crontab(minute='*/1'),
+                "schedule": crontab(minute="*/1"),
                 "options": {"queue": QueueNames.PERIODIC},
             },
             "run-scheduled-jobs": {
@@ -223,12 +223,12 @@ class Config(object):
             },
             "switch-current-sms-provider-on-slow-delivery": {
                 "task": "switch-current-sms-provider-on-slow-delivery",
-                "schedule": crontab(minute='*/1'),  # Every minute
+                "schedule": crontab(minute="*/1"),  # Every minute
                 "options": {"queue": QueueNames.PERIODIC},
             },
             "check-job-status": {
                 "task": "check-job-status",
-                "schedule": crontab(minute='*/1'),
+                "schedule": crontab(minute="*/1"),
                 "options": {"queue": QueueNames.PERIODIC},
             },
             "tend-providers-back-to-middle": {
@@ -465,15 +465,24 @@ class Decoupled(Development):
 
 class ServerlessDB(Decoupled):
     NOTIFY_ENVIRONMENT = "serverlessdb"
-    SQLALCHEMY_DATABASE_URI = (
-        "postgresql://{user}:password@{host}:{port}/{database}?sslmode=verify-full&sslrootcert={cert}".format(
+    if os.getenv("MASTER_USERNAME"):
+        SQLALCHEMY_DATABASE_URI = "postgresql://{user}:{password}@{host}:{port}/{database}".format(
+            user=os.environ.get("MASTER_USERNAME"),
+            password=os.environ.get("MASTER_PASSWORD"),
             host=os.environ.get("RDS_HOST"),
             port=os.environ.get("RDS_PORT"),
             database=os.environ.get("DATABASE"),
-            user=os.environ.get("RDS_USER"),
-            cert="/etc/ssl/certs/global-bundle.pem",
         )
-    )
+    else:
+        SQLALCHEMY_DATABASE_URI = (
+            "postgresql://{user}:password@{host}:{port}/{database}?sslmode=verify-full&sslrootcert={cert}".format(
+                user=os.environ.get("RDS_USER"),
+                host=os.environ.get("RDS_HOST"),
+                port=os.environ.get("RDS_PORT"),
+                database=os.environ.get("DATABASE"),
+                cert="/etc/ssl/certs/global-bundle.pem",
+            )
+        )
     CBC_PROXY_ENABLED = True
     DEBUG = True
 
