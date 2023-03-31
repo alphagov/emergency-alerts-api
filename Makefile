@@ -34,8 +34,8 @@ legacy-bootstrap: generate-version-file ## Set up everything to run the app
 bootstrap: generate-version-file ## Set up everything to run the app
 	pip3 install -r requirements_for_ci.txt
 
-.PHONY: bootstrap-dev
-boostrap-dev: generate-version-file
+.PHONY: bootstrap-dev ## If running locally, run "source environment.sh"
+bootstrap-dev: generate-version-file
 	pip3 install -r requirements_for_dev.txt
 
 .PHONY: bootstrap-with-docker
