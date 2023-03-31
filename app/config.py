@@ -466,14 +466,12 @@ class Decoupled(Development):
 class ServerlessDB(Decoupled):
     NOTIFY_ENVIRONMENT = "serverlessdb"
     if os.getenv("MASTER_USERNAME"):
-        SQLALCHEMY_DATABASE_URI = (
-            "postgresql://{user}:{password}@{host}:{port}/{database}".format(
-                user=os.environ.get("MASTER_USERNAME"),
-                password=os.environ.get("MASTER_PASSWORD"),
-                host=os.environ.get("RDS_HOST"),
-                port=os.environ.get("RDS_PORT"),
-                database=os.environ.get("DATABASE"),
-            )
+        SQLALCHEMY_DATABASE_URI = "postgresql://{user}:{password}@{host}:{port}/{database}".format(
+            user=os.environ.get("MASTER_USERNAME"),
+            password=os.environ.get("MASTER_PASSWORD"),
+            host=os.environ.get("RDS_HOST"),
+            port=os.environ.get("RDS_PORT"),
+            database=os.environ.get("DATABASE"),
         )
     else:
         SQLALCHEMY_DATABASE_URI = (
