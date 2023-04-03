@@ -241,11 +241,11 @@ class Config(object):
                 "schedule": crontab(minute="*/10"),
                 "options": {"queue": QueueNames.PERIODIC},
             },
-            "replay-created-notifications": {
-                "task": "replay-created-notifications",
-                "schedule": crontab(minute="0, 15, 30, 45"),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
+            # "replay-created-notifications": {
+            #     "task": "replay-created-notifications",
+            #     "schedule": crontab(minute="0, 15, 30, 45"),
+            #     "options": {"queue": QueueNames.PERIODIC},
+            # },
             # app/celery/nightly_tasks.py
             "timeout-sending-notifications": {
                 "task": "timeout-sending-notifications",
@@ -396,7 +396,7 @@ class Config(object):
     FIRETEXT_URL = os.environ.get("FIRETEXT_URL", "https://www.firetext.co.uk/api/sendsms/json")
     SES_STUB_URL = os.environ.get("SES_STUB_URL")
 
-    EMERGENCY_ALERTS_EMAIL_REPLY_TO = "emergency-alerts-support@digital.cabinet-office.gov.uk"
+    EAS_EMAIL_REPLY_TO_ID = "591164ac-721d-46e5-b329-fe40f5253241"
 
     AWS_REGION = "eu-west-2"
 
@@ -467,6 +467,9 @@ class Decoupled(Development):
 
 class ServerlessDB(Decoupled):
     NOTIFY_ENVIRONMENT = "serverlessdb"
+    ADMIN_BASE_URL = "https://admin.development.emergency-alerts.service.gov.uk"
+    API_HOST_NAME = "https://admin.development.emergency-alerts.service.gov.uk"
+    TEMPLATE_PREVIEW_API_HOST = "https://admin.development.emergency-alerts.service.gov.uk"
     if os.getenv("MASTER_USERNAME"):
         SQLALCHEMY_DATABASE_URI = "postgresql://{user}:{password}@{host}:{port}/{database}".format(
             user=os.environ.get("MASTER_USERNAME"),

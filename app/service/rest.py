@@ -100,6 +100,7 @@ from app.letters.utils import letter_print_day
 from app.models import (
     KEY_TYPE_NORMAL,
     LETTER_TYPE,
+    EMAIL_TYPE,
     NOTIFICATION_CANCELLED,
     EmailBranding,
     LetterBranding,
@@ -150,6 +151,7 @@ from app.utils import (
     get_prev_next_pagination_links,
     midnight_n_days_ago,
 )
+from app.clients.notify_client import notify_send
 
 service_blueprint = Blueprint("service", __name__)
 
@@ -756,23 +758,32 @@ def verify_reply_to_email_address(service_id):
     email_address = email_data_request_schema.load(request.get_json())
 
     check_if_reply_to_address_already_in_use(service_id, email_address["email"])
-    template = dao_get_template_by_id(current_app.config["REPLY_TO_EMAIL_ADDRESS_VERIFICATION_TEMPLATE_ID"])
-    notify_service = Service.query.get(current_app.config["NOTIFY_SERVICE_ID"])
-    saved_notification = persist_notification(
-        template_id=template.id,
-        template_version=template.version,
-        recipient=email_address["email"],
-        service=notify_service,
-        personalisation="",
-        notification_type=template.template_type,
-        api_key_id=None,
-        key_type=KEY_TYPE_NORMAL,
-        reply_to_text=notify_service.get_default_reply_to_email_address(),
-    )
+    # template = dao_get_template_by_id(current_app.config["REPLY_TO_EMAIL_ADDRESS_VERIFICATION_TEMPLATE_ID"])
+    # notify_service = Service.query.get(current_app.config["NOTIFY_SERVICE_ID"])
+    # saved_notification = persist_notification(
+    #     template_id=template.id,
+    #     template_version=template.version,
+    #     recipient=email_address["email"],
+    #     service=notify_service,
+    #     personalisation="",
+    #     notification_type=template.template_type,
+    #     api_key_id=None,
+    #     key_type=KEY_TYPE_NORMAL,
+    #     reply_to_text=notify_service.get_default_reply_to_email_address(),
+    # )
 
-    send_notification_to_queue(saved_notification, False, queue=QueueNames.NOTIFY)
+    # send_notification_to_queue(saved_notification, False, queue=QueueNames.NOTIFY)
 
-    return jsonify(data={"id": saved_notification.id}), 201
+    notification = {}
+    notification['type'] = EMAIL_TYPE
+    notification['template_id'] = current_app.config["REPLY_TO_EMAIL_ADDRESS_VERIFICATION_TEMPLATE_ID"]
+    notification['recipient'] = email_address["email"]
+    notification["reply_to"] = current_app.config["EAS_EMAIL_REPLY_TO_ID"]
+    notification['personalisation'] = ""
+
+    response = notify_send(notification)
+
+    return jsonify(data={"id": response.id}), 201
 
 
 @service_blueprint.route("/<uuid:service_id>/email-reply-to", methods=["POST"])

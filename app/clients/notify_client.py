@@ -3,15 +3,12 @@ from notifications_python_client.errors import APIError
 from notifications_python_client.notifications import NotificationsAPIClient
 from app.models import (
     EMAIL_TYPE,
-    INTERNATIONAL_POSTAGE_TYPES,
     KEY_TYPE_TEST,
-    LETTER_TYPE,
     NOTIFICATION_CREATED,
     SMS_TYPE,
-    Notification,
 )
 
-from app.dao.notifications_dao import dao_delete_notifications_by_id
+from flask import current_app
 
 
 # development api key: emergency_alerts_service_development-09669d05-4d2e-4d9d-a803-b665c102c39c-cdc9f73c-ed51-4d57-99cd-70e418b8ddf5
@@ -31,21 +28,21 @@ def notify_send(notification, research_mode=False):
 
     try:
         response = None
-        if notification.type == SMS_TYPE:
-            notify_client.send_sms_notification(
-                phone_number=notification.recipient,
-                template_id=notification.template_id,
-                personalisation=notification.personalisation,
+        if notification['type'] == SMS_TYPE:
+            response = notify_client.send_sms_notification(
+                phone_number=notification['recipient'],
+                template_id=notification['template_id'],
+                personalisation=notification['personalisation'],
             )
-        if notification.type == EMAIL_TYPE:
-            notify_client.send_email_notification(
-                email_address=notification.recipient,
-                template_id=notification.template_id,
-                personalisation=notification.personalisation,
-                email_reply_to_id=notification.reply_to_email(),
+        if notification['type'] == EMAIL_TYPE:
+            response = notify_client.send_email_notification(
+                email_address=notification['recipient'],
+                template_id=notification['template_id'],
+                personalisation=notification['personalisation'],
+                email_reply_to_id=notification['reply_to'],
             )
-    except Exception:
-        dao_delete_notifications_by_id(notification.notification_id)
+    except Exception as e:
+        current_app.logger.exception("Error sending notification: %s", e)
 
     return response
 

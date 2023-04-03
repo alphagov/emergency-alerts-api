@@ -191,38 +191,38 @@ def check_job_status():
         process_incomplete_jobs.apply_async([job_ids], queue=QueueNames.JOBS)
 
 
-@notify_celery.task(name="replay-created-notifications")
-def replay_created_notifications():
-    # if the notification has not be send after 1 hour, then try to resend.
-    resend_created_notifications_older_than = 60 * 60
-    for notification_type in (EMAIL_TYPE, SMS_TYPE):
-        notifications_to_resend = notifications_not_yet_sent(resend_created_notifications_older_than, notification_type)
+# @notify_celery.task(name="replay-created-notifications")
+# def replay_created_notifications():
+#     # if the notification has not be send after 1 hour, then try to resend.
+#     resend_created_notifications_older_than = 60 * 60
+#     for notification_type in (EMAIL_TYPE, SMS_TYPE):
+#         notifications_to_resend = notifications_not_yet_sent(resend_created_notifications_older_than, notification_type)
 
-        if len(notifications_to_resend) > 0:
-            current_app.logger.info(
-                "Sending {} {} notifications "
-                "to the delivery queue because the notification "
-                "status was created.".format(len(notifications_to_resend), notification_type)
-            )
+#         if len(notifications_to_resend) > 0:
+#             current_app.logger.info(
+#                 "Sending {} {} notifications "
+#                 "to the delivery queue because the notification "
+#                 "status was created.".format(len(notifications_to_resend), notification_type)
+#             )
 
-        for n in notifications_to_resend:
-            send_notification_to_queue(notification=n, research_mode=n.service.research_mode)
+#         for n in notifications_to_resend:
+#             send_notification_to_queue(notification=n, research_mode=n.service.research_mode)
 
-    # if the letter has not be send after an hour, then create a zendesk ticket
-    letters = letters_missing_from_sending_bucket(resend_created_notifications_older_than)
+#     # if the letter has not be send after an hour, then create a zendesk ticket
+#     letters = letters_missing_from_sending_bucket(resend_created_notifications_older_than)
 
-    if len(letters) > 0:
-        msg = (
-            "{} letters were created over an hour ago, "
-            "but do not have an updated_at timestamp or billable units. "
-            "\n Creating app.celery.letters_pdf_tasks.create_letters tasks to upload letter to S3 "
-            "and update notifications for the following notification ids: "
-            "\n {}".format(len(letters), [x.id for x in letters])
-        )
+#     if len(letters) > 0:
+#         msg = (
+#             "{} letters were created over an hour ago, "
+#             "but do not have an updated_at timestamp or billable units. "
+#             "\n Creating app.celery.letters_pdf_tasks.create_letters tasks to upload letter to S3 "
+#             "and update notifications for the following notification ids: "
+#             "\n {}".format(len(letters), [x.id for x in letters])
+#         )
 
-        current_app.logger.info(msg)
-        for letter in letters:
-            get_pdf_for_templated_letter.apply_async([str(letter.id)], queue=QueueNames.CREATE_LETTERS_PDF)
+#         current_app.logger.info(msg)
+#         for letter in letters:
+#             get_pdf_for_templated_letter.apply_async([str(letter.id)], queue=QueueNames.CREATE_LETTERS_PDF)
 
 
 @notify_celery.task(name="check-if-letters-still-pending-virus-check")

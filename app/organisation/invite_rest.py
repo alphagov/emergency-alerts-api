@@ -23,6 +23,7 @@ from app.organisation.organisation_schema import (
     post_update_invited_org_user_status_schema,
 )
 from app.schema_validation import validate
+from app.clients.notify_client import notify_send
 
 organisation_invite_blueprint = Blueprint("organisation_invite", __name__)
 
@@ -39,32 +40,53 @@ def invite_user_to_org(organisation_id):
     )
     save_invited_org_user(invited_org_user)
 
-    template = dao_get_template_by_id(current_app.config["ORGANISATION_INVITATION_EMAIL_TEMPLATE_ID"])
+    # template = dao_get_template_by_id(current_app.config["ORGANISATION_INVITATION_EMAIL_TEMPLATE_ID"])
 
-    saved_notification = persist_notification(
-        template_id=template.id,
-        template_version=template.version,
-        recipient=invited_org_user.email_address,
-        service=template.service,
-        personalisation={
-            "user_name": (
-                "The GOV.UK Notify team"
-                if invited_org_user.invited_by.platform_admin
-                else invited_org_user.invited_by.name
-            ),
-            "organisation_name": invited_org_user.organisation.name,
-            "url": invited_org_user_url(
-                invited_org_user.id,
-                data.get("invite_link_host"),
-            ),
-        },
-        notification_type=EMAIL_TYPE,
-        api_key_id=None,
-        key_type=KEY_TYPE_NORMAL,
-        reply_to_text=invited_org_user.invited_by.email_address,
-    )
+    # saved_notification = persist_notification(
+    #     template_id=template.id,
+    #     template_version=template.version,
+    #     recipient=invited_org_user.email_address,
+    #     service=template.service,
+    #     personalisation={
+    #         "user_name": (
+    #             "The GOV.UK Notify team"
+    #             if invited_org_user.invited_by.platform_admin
+    #             else invited_org_user.invited_by.name
+    #         ),
+    #         "organisation_name": invited_org_user.organisation.name,
+    #         "url": invited_org_user_url(
+    #             invited_org_user.id,
+    #             data.get("invite_link_host"),
+    #         ),
+    #     },
+    #     notification_type=EMAIL_TYPE,
+    #     api_key_id=None,
+    #     key_type=KEY_TYPE_NORMAL,
+    #     reply_to_text=invited_org_user.invited_by.email_address,
+    # )
 
-    send_notification_to_queue(saved_notification, research_mode=False, queue=QueueNames.NOTIFY)
+    # send_notification_to_queue(saved_notification, research_mode=False, queue=QueueNames.NOTIFY)
+
+    notification = {}
+    notification = {}
+    notification['type'] = EMAIL_TYPE
+    notification['template_id'] = current_app.config["ORGANISATION_INVITATION_EMAIL_TEMPLATE_ID"]
+    notification['recipient'] = invited_org_user.email_address
+    notification["reply_to"] = current_app.config["EAS_EMAIL_REPLY_TO_ID"]
+    notification['personalisation'] = {
+        "user_name": (
+            "The GOV.UK Emergency Alerts team"
+            if invited_org_user.invited_by.platform_admin
+            else invited_org_user.invited_by.name
+        ),
+        "organisation_name": invited_org_user.organisation.name,
+        "url": invited_org_user_url(
+            invited_org_user.id,
+            data.get("invite_link_host"),
+        ),
+    }
+
+    notify_send(notification)
 
     return jsonify(data=invited_org_user.serialize()), 201
 
