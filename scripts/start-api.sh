@@ -12,7 +12,7 @@ fi
 
 function run_db_upgrade(){
   cd $API_DIR;
-  . $VENV_API/bin/activate && flask db upgrade
+  . $VENV_API/bin/activate && flask db upgrade && flask db current
 }
 
 function configure_container_role(){

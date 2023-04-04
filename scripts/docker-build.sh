@@ -29,6 +29,7 @@ function docker_build(){
   docker buildx build \
     --platform $PLATFORM \
     -t $ECS_ACCOUNT_NUMBER.dkr.ecr.$REGION.amazonaws.com/eas-app-$IMAGE:latest \
+    --build-arg ECS_ACCOUNT_NUMBER=$ECS_ACCOUNT_NUMBER \
     -f Dockerfile.eas-$IMAGE \
     --no-cache \
     $ARGS \
