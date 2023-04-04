@@ -11,8 +11,6 @@ if [[ -z $CONTAINER_ROLE ]] || [[ "$CONTAINER_ROLE" == "" ]]; then
 fi
 
 function configure_container_role(){
-  aws configure set role_arn $CONTAINER_ROLE
-  aws configure set credential_source EcsContainer
   aws configure set default.region eu-west-2
 }
 
