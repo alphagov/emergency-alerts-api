@@ -72,6 +72,7 @@ from app.user.users_schema import (
 from app.utils import url_with_token
 
 from app.clients.notify_client import notify_send
+from notifications_python_client.errors import HTTPError
 
 user_blueprint = Blueprint("user", __name__)
 register_errors(user_blueprint)
@@ -322,7 +323,11 @@ def create_2fa_code(template_id, code_type, user_to_send_to, secret_code, recipi
     if code_type == EMAIL_TYPE:
         notification["reply_to"] = current_app.config["EAS_EMAIL_REPLY_TO_ID"]
 
-    notify_send(notification)
+    response = notify_send(notification)
+
+    if response is HTTPError:
+        current_app.logger.error(response)
+    current_app.logger.info(response)
 
 
 @user_blueprint.route("/<uuid:user_id>/change-email-verification", methods=["POST"])

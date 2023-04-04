@@ -45,6 +45,7 @@ from app.notifications.validators import (
     validate_template,
 )
 from app.v2.errors import BadRequestError
+from app.clients.notify_client import notify_send, get_notify_template
 
 
 def validate_created_by(service, created_by_id):
@@ -67,70 +68,86 @@ def _get_reference_from_personalisation(personalisation):
 
 
 def send_one_off_notification(service_id, post_data):
-    service = dao_fetch_service_by_id(service_id)
-    template = dao_get_template_by_id_and_service_id(template_id=post_data["template_id"], service_id=service_id)
+    # service = dao_fetch_service_by_id(service_id)
+    # template = dao_get_template_by_id_and_service_id(template_id=post_data["template_id"], service_id=service_id)
 
-    personalisation = post_data.get("personalisation", None)
+    # personalisation = post_data.get("personalisation", None)
 
-    validate_template(template.id, personalisation, service, template.template_type)
+    # validate_template(template.id, personalisation, service, template.template_type)
 
-    check_service_over_daily_message_limit(KEY_TYPE_NORMAL, service)
+    # check_service_over_daily_message_limit(KEY_TYPE_NORMAL, service)
 
-    validate_and_format_recipient(
-        send_to=post_data["to"],
-        key_type=KEY_TYPE_NORMAL,
-        service=service,
-        notification_type=template.template_type,
-        allow_guest_list_recipients=False,
-    )
-    postage = None
-    client_reference = None
-    if template.template_type == LETTER_TYPE:
-        # Validate address and set postage to europe|rest-of-world if international letter,
-        # otherwise persist_notification with use template postage
-        postage = validate_address(service, personalisation)
-        if not postage:
-            postage = template.postage
+    # validate_and_format_recipient(
+    #     send_to=post_data["to"],
+    #     key_type=KEY_TYPE_NORMAL,
+    #     service=service,
+    #     notification_type=template.template_type,
+    #     allow_guest_list_recipients=False,
+    # )
+    # postage = None
+    # client_reference = None
+    # if template.template_type == LETTER_TYPE:
+    #     # Validate address and set postage to europe|rest-of-world if international letter,
+    #     # otherwise persist_notification with use template postage
+    #     postage = validate_address(service, personalisation)
+    #     if not postage:
+    #         postage = template.postage
 
-        client_reference = _get_reference_from_personalisation(personalisation)
+    #     client_reference = _get_reference_from_personalisation(personalisation)
 
-    validate_created_by(service, post_data["created_by"])
+    # validate_created_by(service, post_data["created_by"])
 
-    sender_id = post_data.get("sender_id", None)
-    reply_to = get_reply_to_text(
-        notification_type=template.template_type, sender_id=sender_id, service=service, template=template
-    )
-    notification = persist_notification(
-        template_id=template.id,
-        template_version=template.version,
-        recipient=post_data["to"],
-        service=service,
-        personalisation=personalisation,
-        notification_type=template.template_type,
-        api_key_id=None,
-        key_type=KEY_TYPE_NORMAL,
-        created_by_id=post_data["created_by"],
-        reply_to_text=reply_to,
-        reference=create_one_off_reference(template.template_type),
-        postage=postage,
-        client_reference=client_reference,
-    )
+    # sender_id = post_data.get("sender_id", None)
+    # reply_to = get_reply_to_text(
+    #     notification_type=template.template_type, sender_id=sender_id, service=service, template=template
+    # )
+    # notification = persist_notification(
+    #     template_id=template.id,
+    #     template_version=template.version,
+    #     recipient=post_data["to"],
+    #     service=service,
+    #     personalisation=personalisation,
+    #     notification_type=template.template_type,
+    #     api_key_id=None,
+    #     key_type=KEY_TYPE_NORMAL,
+    #     created_by_id=post_data["created_by"],
+    #     reply_to_text=reply_to,
+    #     reference=create_one_off_reference(template.template_type),
+    #     postage=postage,
+    #     client_reference=client_reference,
+    # )
 
-    queue_name = QueueNames.PRIORITY if template.process_type == PRIORITY else None
+    # queue_name = QueueNames.PRIORITY if template.process_type == PRIORITY else None
 
-    if template.template_type == LETTER_TYPE and service.research_mode:
-        _update_notification_status(
-            notification,
-            NOTIFICATION_DELIVERED,
-        )
-    else:
-        send_notification_to_queue(
-            notification=notification,
-            research_mode=service.research_mode,
-            queue=queue_name,
-        )
+    # if template.template_type == LETTER_TYPE and service.research_mode:
+    #     _update_notification_status(
+    #         notification,
+    #         NOTIFICATION_DELIVERED,
+    #     )
+    # else:
+    #     send_notification_to_queue(
+    #         notification=notification,
+    #         research_mode=service.research_mode,
+    #         queue=queue_name,
+    #     )
 
-    return {"id": str(notification.id)}
+    # recipient = post_data["to"]
+    # personalisation = post_data.get("personalisation", None)
+
+    template_id=post_data["template_id"]
+    template = get_notify_template(template_id)
+
+    notification = {}
+    notification['type'] = template.type
+    notification['template_id'] = template_id
+    notification['recipient'] = post_data["to"]
+    notification['personalisation'] = post_data.get("personalisation", None)
+    if template.type == EMAIL_TYPE:
+        notification["reply_to"] = current_app.config["EAS_EMAIL_REPLY_TO_ID"]
+
+    response = notify_send(notification)
+
+    return {"id": str(response.id)}
 
 
 def get_reply_to_text(notification_type, sender_id, service, template):
