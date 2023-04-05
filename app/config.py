@@ -456,7 +456,6 @@ class Development(Config):
 class Decoupled(Development):
     NOTIFY_ENVIRONMENT = "decoupled"
     ADMIN_BASE_URL = "http://admin.ecs.local:6012"
-    SQLALCHEMY_DATABASE_URI = "postgresql://pg/emergency_alerts"
     REDIS_URL = "redis://api.ecs.local:6379/0"
     API_HOST_NAME = "http://api.ecs.local:6011"
     TEMPLATE_PREVIEW_API_HOST = "http://api.ecs.local:6013"
