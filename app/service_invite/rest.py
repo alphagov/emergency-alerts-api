@@ -2,20 +2,25 @@ from emergency_alerts_utils.url_safe_token import check_token, generate_token
 from flask import Blueprint, current_app, jsonify, request
 from itsdangerous import BadData, SignatureExpired
 
-from app.config import QueueNames
+from app.clients.notify_client import notify_send
+
+# from app.config import QueueNames
 from app.dao.invited_user_dao import (
     get_invited_user_by_id,
     get_invited_user_by_service_and_id,
     get_invited_users_for_service,
     save_invited_user,
 )
-from app.dao.templates_dao import dao_get_template_by_id
+
+# from app.dao.templates_dao import dao_get_template_by_id
 from app.errors import InvalidRequest, register_errors
-from app.models import BROADCAST_TYPE, EMAIL_TYPE, KEY_TYPE_NORMAL, Service
-from app.notifications.process_notifications import (
-    persist_notification,
-    send_notification_to_queue,
-)
+from app.models import EMAIL_TYPE
+
+# from app.models import BROADCAST_TYPE, EMAIL_TYPE, KEY_TYPE_NORMAL, Service
+# from app.notifications.process_notifications import (
+#     persist_notification,
+#     send_notification_to_queue,
+# )
 from app.schemas import invited_user_schema
 
 service_invite = Blueprint("service_invite", __name__)
@@ -29,34 +34,50 @@ def create_invited_user(service_id):
     invited_user = invited_user_schema.load(request_json)
     save_invited_user(invited_user)
 
-    if invited_user.service.has_permission(BROADCAST_TYPE):
-        template_id = current_app.config["BROADCAST_INVITATION_EMAIL_TEMPLATE_ID"]
-    else:
-        template_id = current_app.config["INVITATION_EMAIL_TEMPLATE_ID"]
+    # if invited_user.service.has_permission(BROADCAST_TYPE):
+    #     template_id = current_app.config["BROADCAST_INVITATION_EMAIL_TEMPLATE_ID"]
+    # else:
+    #     template_id = current_app.config["INVITATION_EMAIL_TEMPLATE_ID"]
 
-    template = dao_get_template_by_id(template_id)
-    service = Service.query.get(current_app.config["NOTIFY_SERVICE_ID"])
+    # template = dao_get_template_by_id(template_id)
+    # service = Service.query.get(current_app.config["NOTIFY_SERVICE_ID"])
 
-    saved_notification = persist_notification(
-        template_id=template.id,
-        template_version=template.version,
-        recipient=invited_user.email_address,
-        service=service,
-        personalisation={
-            "user_name": invited_user.from_user.name,
-            "service_name": invited_user.service.name,
-            "url": invited_user_url(
-                invited_user.id,
-                request_json.get("invite_link_host"),
-            ),
-        },
-        notification_type=EMAIL_TYPE,
-        api_key_id=None,
-        key_type=KEY_TYPE_NORMAL,
-        reply_to_text=invited_user.from_user.email_address,
-    )
+    # saved_notification = persist_notification(
+    #     template_id=template.id,
+    #     template_version=template.version,
+    #     recipient=invited_user.email_address,
+    #     service=service,
+    #     personalisation={
+    #         "user_name": invited_user.from_user.name,
+    #         "service_name": invited_user.service.name,
+    #         "url": invited_user_url(
+    #             invited_user.id,
+    #             request_json.get("invite_link_host"),
+    #         ),
+    #     },
+    #     notification_type=EMAIL_TYPE,
+    #     api_key_id=None,
+    #     key_type=KEY_TYPE_NORMAL,
+    #     reply_to_text=invited_user.from_user.email_address,
+    # )
 
-    send_notification_to_queue(saved_notification, False, queue=QueueNames.NOTIFY)
+    # send_notification_to_queue(saved_notification, False, queue=QueueNames.NOTIFY)
+
+    notification = {}
+    notification["type"] = EMAIL_TYPE
+    notification["template_id"] = current_app.config["BROADCAST_INVITATION_EMAIL_TEMPLATE_ID"]
+    notification["recipient"] = invited_user.email_address
+    notification["reply_to"] = current_app.config["EAS_EMAIL_REPLY_TO_ID"]
+    notification["personalisation"] = {
+        "user_name": invited_user.from_user.name,
+        "service_name": invited_user.service.name,
+        "url": invited_user_url(
+            invited_user.id,
+            request_json.get("invite_link_host"),
+        ),
+    }
+
+    notify_send(notification)
 
     return jsonify(data=invited_user_schema.dump(invited_user)), 201
 

@@ -1,7 +1,7 @@
 from flask import Blueprint, abort, current_app, jsonify, request
 from sqlalchemy.exc import IntegrityError
 
-from app.config import QueueNames
+# from app.config import QueueNames
 from app.dao.annual_billing_dao import set_default_free_allowance_for_service
 from app.dao.dao_utils import transaction
 from app.dao.fact_billing_dao import fetch_usage_for_organisation
@@ -26,19 +26,16 @@ from app.dao.organisation_dao import (
     dao_update_organisation,
 )
 from app.dao.services_dao import dao_fetch_service_by_id
-from app.dao.templates_dao import dao_get_template_by_id
+
+# from app.dao.templates_dao import dao_get_template_by_id
 from app.dao.users_dao import get_user_by_id
 from app.errors import InvalidRequest, register_errors
-from app.models import (
-    INVITE_PENDING,
-    KEY_TYPE_NORMAL,
-    NHS_ORGANISATION_TYPES,
-    Organisation,
-)
-from app.notifications.process_notifications import (
-    persist_notification,
-    send_notification_to_queue,
-)
+from app.models import INVITE_PENDING, Organisation
+
+# from app.notifications.process_notifications import (
+#     persist_notification,
+#     send_notification_to_queue,
+# )
 from app.organisation.organisation_schema import (
     post_create_organisation_schema,
     post_link_service_to_organisation_schema,
@@ -112,7 +109,7 @@ def update_organisation(organisation_id):
     data = request.get_json()
     validate(data, post_update_organisation_schema)
 
-    organisation = dao_get_organisation_by_id(organisation_id)
+    # organisation = dao_get_organisation_by_id(organisation_id)
 
     # if data.get("organisation_type") in NHS_ORGANISATION_TYPES:
     #     if not organisation.email_branding_id:

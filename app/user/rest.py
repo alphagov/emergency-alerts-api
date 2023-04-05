@@ -3,14 +3,17 @@ import uuid
 from datetime import datetime
 from urllib.parse import urlencode
 
-from emergency_alerts_utils.recipients import (
-    is_uk_phone_number,
-    use_numeric_sender,
-)
+# from emergency_alerts_utils.recipients import (
+#     is_uk_phone_number,
+#     use_numeric_sender,
+# )
 from flask import Blueprint, abort, current_app, jsonify, request
+from notifications_python_client.errors import HTTPError
 from sqlalchemy.exc import IntegrityError
 
-from app.config import QueueNames
+from app.clients.notify_client import notify_send
+
+# from app.config import QueueNames
 from app.dao.permissions_dao import permission_dao
 from app.dao.service_user_dao import (
     dao_get_service_user,
@@ -20,7 +23,8 @@ from app.dao.services_dao import dao_fetch_service_by_id
 from app.dao.template_folder_dao import (
     dao_get_template_folder_by_id_and_service_id,
 )
-from app.dao.templates_dao import dao_get_template_by_id
+
+# from app.dao.templates_dao import dao_get_template_by_id
 from app.dao.users_dao import (
     count_user_verify_codes,
     create_secret_code,
@@ -43,17 +47,12 @@ from app.dao.webauthn_credential_dao import (
     dao_update_webauthn_credential_logged_in_at,
 )
 from app.errors import InvalidRequest, register_errors
-from app.models import (
-    EMAIL_TYPE,
-    KEY_TYPE_NORMAL,
-    SMS_TYPE,
-    Permission,
-    Service,
-)
-from app.notifications.process_notifications import (
-    persist_notification,
-    send_notification_to_queue,
-)
+from app.models import EMAIL_TYPE, SMS_TYPE, Permission
+
+# from app.notifications.process_notifications import (
+#     persist_notification,
+#     send_notification_to_queue,
+# )
 from app.schema_validation import validate
 from app.schemas import (
     create_user_schema,
@@ -70,9 +69,6 @@ from app.user.users_schema import (
     post_verify_webauthn_schema,
 )
 from app.utils import url_with_token
-
-from app.clients.notify_client import notify_send
-from notifications_python_client.errors import HTTPError
 
 user_blueprint = Blueprint("user", __name__)
 register_errors(user_blueprint)
@@ -116,18 +112,18 @@ def update_user_attribute(user_id):
     notification = {}
     if updated_by:
         if "email_address" in update_dct:
-            notification['type'] = EMAIL_TYPE
-            notification['template_id'] = current_app.config["TEAM_MEMBER_EDIT_EMAIL_TEMPLATE_ID"]
-            notification['recipient'] = user_to_update.email_address
-            notification['reply_to'] = current_app.config["EAS_EMAIL_REPLY_TO_ID"]
+            notification["type"] = EMAIL_TYPE
+            notification["template_id"] = current_app.config["TEAM_MEMBER_EDIT_EMAIL_TEMPLATE_ID"]
+            notification["recipient"] = user_to_update.email_address
+            notification["reply_to"] = current_app.config["EAS_EMAIL_REPLY_TO_ID"]
         elif "mobile_number" in update_dct:
-            notification['type'] = SMS_TYPE
-            notification['template_id'] = current_app.config["TEAM_MEMBER_EDIT_MOBILE_TEMPLATE_ID"]
-            notification['recipient'] = user_to_update.mobile_number
+            notification["type"] = SMS_TYPE
+            notification["template_id"] = current_app.config["TEAM_MEMBER_EDIT_MOBILE_TEMPLATE_ID"]
+            notification["recipient"] = user_to_update.mobile_number
         else:
             return jsonify(data=user_to_update.serialize()), 200
 
-        notification['personalisation'] = {
+        notification["personalisation"] = {
             "name": user_to_update.name,
             "servicemanagername": updated_by.name,
             "email address": user_to_update.email_address,
@@ -304,7 +300,12 @@ def send_user_email_code(user_to_send_to, data):
     }
 
     create_2fa_code(
-        current_app.config["EMAIL_2FA_TEMPLATE_ID"], EMAIL_TYPE, user_to_send_to, secret_code, recipient, personalisation
+        current_app.config["EMAIL_2FA_TEMPLATE_ID"],
+        EMAIL_TYPE,
+        user_to_send_to,
+        secret_code,
+        recipient,
+        personalisation,
     )
 
 
@@ -315,10 +316,10 @@ def create_2fa_code(template_id, code_type, user_to_send_to, secret_code, recipi
     create_user_code(user_to_send_to, secret_code, code_type)
 
     notification = {}
-    notification['type'] = code_type
-    notification['template_id'] = template_id
-    notification['recipient'] = recipient
-    notification['personalisation'] = personalisation
+    notification["type"] = code_type
+    notification["template_id"] = template_id
+    notification["recipient"] = recipient
+    notification["personalisation"] = personalisation
 
     if code_type == EMAIL_TYPE:
         notification["reply_to"] = current_app.config["EAS_EMAIL_REPLY_TO_ID"]
@@ -337,11 +338,11 @@ def send_user_confirm_new_email(user_id):
     email = email_data_request_schema.load(request.get_json())
 
     notification = {}
-    notification['type'] = EMAIL_TYPE
-    notification['template_id'] = current_app.config["CHANGE_EMAIL_CONFIRMATION_TEMPLATE_ID"]
-    notification['recipient'] = email
+    notification["type"] = EMAIL_TYPE
+    notification["template_id"] = current_app.config["CHANGE_EMAIL_CONFIRMATION_TEMPLATE_ID"]
+    notification["recipient"] = email
     notification["reply_to"] = current_app.config["EAS_EMAIL_REPLY_TO_ID"]
-    notification['personalisation'] = {
+    notification["personalisation"] = {
         "name": user_to_send_to.name,
         "url": _create_confirmation_url(user=user_to_send_to, email_address=email["email"]),
         "feedback_url": current_app.config["ADMIN_BASE_URL"] + "/support",
@@ -351,6 +352,7 @@ def send_user_confirm_new_email(user_id):
 
     return jsonify({}), 204
 
+
 @user_blueprint.route("/<uuid:user_id>/email-verification", methods=["POST"])
 def send_new_user_email_verification(user_id):
     request_json = request.get_json()
@@ -359,11 +361,11 @@ def send_new_user_email_verification(user_id):
     user_to_send_to = get_user_by_id(user_id=user_id)
 
     notification = {}
-    notification['type'] = EMAIL_TYPE
-    notification['template_id'] = current_app.config["NEW_USER_EMAIL_VERIFICATION_TEMPLATE_ID"]
-    notification['recipient'] = user_to_send_to.email_address
+    notification["type"] = EMAIL_TYPE
+    notification["template_id"] = current_app.config["NEW_USER_EMAIL_VERIFICATION_TEMPLATE_ID"]
+    notification["recipient"] = user_to_send_to.email_address
     notification["reply_to"] = current_app.config["EAS_EMAIL_REPLY_TO_ID"]
-    notification['personalisation'] = {
+    notification["personalisation"] = {
         "name": user_to_send_to.name,
         "url": _create_verification_url(
             user_to_send_to,
@@ -381,11 +383,11 @@ def send_already_registered_email(user_id):
     to = email_data_request_schema.load(request.get_json())
 
     notification = {}
-    notification['type'] = EMAIL_TYPE
-    notification['template_id'] = current_app.config["ALREADY_REGISTERED_EMAIL_TEMPLATE_ID"]
-    notification['recipient'] = to["email"]
+    notification["type"] = EMAIL_TYPE
+    notification["template_id"] = current_app.config["ALREADY_REGISTERED_EMAIL_TEMPLATE_ID"]
+    notification["recipient"] = to["email"]
     notification["reply_to"] = current_app.config["EAS_EMAIL_REPLY_TO_ID"]
-    notification['personalisation'] = {
+    notification["personalisation"] = {
         "signin_url": current_app.config["ADMIN_BASE_URL"] + "/sign-in",
         "forgot_password_url": current_app.config["ADMIN_BASE_URL"] + "/forgot-password",
         "feedback_url": current_app.config["ADMIN_BASE_URL"] + "/support",
@@ -470,11 +472,11 @@ def send_user_reset_password():
     user_to_send_to = get_user_by_email(email["email"])
 
     notification = {}
-    notification['type'] = EMAIL_TYPE
-    notification['template_id'] = current_app.config["PASSWORD_RESET_TEMPLATE_ID"]
-    notification['recipient'] = email["email"]
+    notification["type"] = EMAIL_TYPE
+    notification["template_id"] = current_app.config["PASSWORD_RESET_TEMPLATE_ID"]
+    notification["recipient"] = email["email"]
     notification["reply_to"] = current_app.config["EAS_EMAIL_REPLY_TO_ID"]
-    notification['personalisation'] = {
+    notification["personalisation"] = {
         "user_name": user_to_send_to.name,
         "url": _create_reset_password_url(
             user_to_send_to.email_address,

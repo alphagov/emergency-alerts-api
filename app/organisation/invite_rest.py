@@ -2,7 +2,9 @@ from emergency_alerts_utils.url_safe_token import check_token, generate_token
 from flask import Blueprint, current_app, jsonify, request
 from itsdangerous import BadData, SignatureExpired
 
-from app.config import QueueNames
+from app.clients.notify_client import notify_send
+
+# from app.config import QueueNames
 from app.dao.invited_org_user_dao import (
     get_invited_org_user as dao_get_invited_org_user,
 )
@@ -11,19 +13,20 @@ from app.dao.invited_org_user_dao import (
     get_invited_org_users_for_organisation,
     save_invited_org_user,
 )
-from app.dao.templates_dao import dao_get_template_by_id
+
+# from app.dao.templates_dao import dao_get_template_by_id
 from app.errors import InvalidRequest, register_errors
-from app.models import EMAIL_TYPE, KEY_TYPE_NORMAL, InvitedOrganisationUser
-from app.notifications.process_notifications import (
-    persist_notification,
-    send_notification_to_queue,
-)
+from app.models import EMAIL_TYPE, InvitedOrganisationUser
+
+# from app.notifications.process_notifications import (
+#     persist_notification,
+#     send_notification_to_queue,
+# )
 from app.organisation.organisation_schema import (
     post_create_invited_org_user_status_schema,
     post_update_invited_org_user_status_schema,
 )
 from app.schema_validation import validate
-from app.clients.notify_client import notify_send
 
 organisation_invite_blueprint = Blueprint("organisation_invite", __name__)
 
@@ -69,11 +72,11 @@ def invite_user_to_org(organisation_id):
 
     notification = {}
     notification = {}
-    notification['type'] = EMAIL_TYPE
-    notification['template_id'] = current_app.config["ORGANISATION_INVITATION_EMAIL_TEMPLATE_ID"]
-    notification['recipient'] = invited_org_user.email_address
+    notification["type"] = EMAIL_TYPE
+    notification["template_id"] = current_app.config["ORGANISATION_INVITATION_EMAIL_TEMPLATE_ID"]
+    notification["recipient"] = invited_org_user.email_address
     notification["reply_to"] = current_app.config["EAS_EMAIL_REPLY_TO_ID"]
-    notification['personalisation'] = {
+    notification["personalisation"] = {
         "user_name": (
             "The GOV.UK Emergency Alerts team"
             if invited_org_user.invited_by.platform_admin

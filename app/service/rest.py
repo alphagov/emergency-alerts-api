@@ -12,7 +12,9 @@ from sqlalchemy.orm.exc import NoResultFound
 from werkzeug.datastructures import MultiDict
 
 from app.aws import s3
-from app.config import QueueNames
+from app.clients.notify_client import notify_send
+
+# from app.config import QueueNames
 from app.dao import fact_notification_status_dao, notifications_dao
 from app.dao.annual_billing_dao import set_default_free_allowance_for_service
 from app.dao.api_key_dao import (
@@ -93,14 +95,14 @@ from app.dao.services_dao import (
     dao_update_service,
     get_services_by_partial_name,
 )
-from app.dao.templates_dao import dao_get_template_by_id
+
+# from app.dao.templates_dao import dao_get_template_by_id
 from app.dao.users_dao import get_user_by_id
 from app.errors import InvalidRequest, register_errors
 from app.letters.utils import letter_print_day
 from app.models import (
-    KEY_TYPE_NORMAL,
-    LETTER_TYPE,
     EMAIL_TYPE,
+    LETTER_TYPE,
     NOTIFICATION_CANCELLED,
     EmailBranding,
     LetterBranding,
@@ -108,10 +110,11 @@ from app.models import (
     Service,
     ServiceContactList,
 )
-from app.notifications.process_notifications import (
-    persist_notification,
-    send_notification_to_queue,
-)
+
+# from app.notifications.process_notifications import (
+#     persist_notification,
+#     send_notification_to_queue,
+# )
 from app.schema_validation import validate
 from app.schemas import (
     api_key_schema,
@@ -124,7 +127,7 @@ from app.schemas import (
 from app.service import statistics
 from app.service.send_notification import (
     send_one_off_notification,
-    send_pdf_letter_notification,
+    # send_pdf_letter_notification,
 )
 from app.service.send_pdf_letter_schema import send_pdf_letter_request
 from app.service.sender import send_notification_to_service_users
@@ -151,7 +154,6 @@ from app.utils import (
     get_prev_next_pagination_links,
     midnight_n_days_ago,
 )
-from app.clients.notify_client import notify_send
 
 service_blueprint = Blueprint("service", __name__)
 
@@ -775,11 +777,11 @@ def verify_reply_to_email_address(service_id):
     # send_notification_to_queue(saved_notification, False, queue=QueueNames.NOTIFY)
 
     notification = {}
-    notification['type'] = EMAIL_TYPE
-    notification['template_id'] = current_app.config["REPLY_TO_EMAIL_ADDRESS_VERIFICATION_TEMPLATE_ID"]
-    notification['recipient'] = email_address["email"]
+    notification["type"] = EMAIL_TYPE
+    notification["template_id"] = current_app.config["REPLY_TO_EMAIL_ADDRESS_VERIFICATION_TEMPLATE_ID"]
+    notification["recipient"] = email_address["email"]
     notification["reply_to"] = current_app.config["EAS_EMAIL_REPLY_TO_ID"]
-    notification['personalisation'] = ""
+    notification["personalisation"] = ""
 
     response = notify_send(notification)
 

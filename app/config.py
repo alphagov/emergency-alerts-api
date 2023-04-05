@@ -158,8 +158,8 @@ class Config(object):
     # these should always add up to 100%
     SMS_PROVIDER_RESTING_POINTS = {"mmg": 51, "firetext": 49}
 
-    # NOTIFY_SERVICE_ID = "d6aa2c68-a2d9-4437-ab19-3ae8eb202553"
-    # NOTIFY_USER_ID = "6af522d0-2915-4e52-83a3-3690455a5fe6"
+    NOTIFY_SERVICE_ID = "d6aa2c68-a2d9-4437-ab19-3ae8eb202553"
+    NOTIFY_USER_ID = "6af522d0-2915-4e52-83a3-3690455a5fe6"
     INVITATION_EMAIL_TEMPLATE_ID = "ad68eafb-0926-4cd4-9dc4-be4aa3393b1b"
     BROADCAST_INVITATION_EMAIL_TEMPLATE_ID = "825c5863-0875-416c-8c55-6238e37808e7"
     SMS_CODE_TEMPLATE_ID = "a5b3439f-6dc5-46b0-8ea6-769eb9d16289"
@@ -176,7 +176,7 @@ class Config(object):
     # MOU_SIGNER_RECEIPT_TEMPLATE_ID = "4fd2e43c-309b-4e50-8fb8-1955852d9d71"
     # MOU_SIGNED_ON_BEHALF_SIGNER_RECEIPT_TEMPLATE_ID = "c20206d5-bf03-4002-9a90-37d5032d9e84"
     # MOU_SIGNED_ON_BEHALF_ON_BEHALF_RECEIPT_TEMPLATE_ID = "522b6657-5ca5-4368-a294-6b527703bd0b"
-    # NOTIFY_INTERNATIONAL_SMS_SENDER = "07984404008"
+    NOTIFY_INTERNATIONAL_SMS_SENDER = "07984404008"
     # LETTERS_VOLUME_EMAIL_TEMPLATE_ID = "11fad854-fd38-4a7c-bd17-805fb13dfc12"
     # NHS_EMAIL_BRANDING_ID = "a7dc4e56-660b-4db7-8cff-12c37b12b5ea"
     # NHS_LETTER_BRANDING_ID = "2cd354bb-6b85-eda3-c0ad-6b613150459f"
@@ -221,21 +221,21 @@ class Config(object):
                 "schedule": timedelta(minutes=66),
                 "options": {"queue": QueueNames.PERIODIC},
             },
-            "switch-current-sms-provider-on-slow-delivery": {
-                "task": "switch-current-sms-provider-on-slow-delivery",
-                "schedule": crontab(minute="*/1"),  # Every minute
-                "options": {"queue": QueueNames.PERIODIC},
-            },
+            # "switch-current-sms-provider-on-slow-delivery": {
+            #     "task": "switch-current-sms-provider-on-slow-delivery",
+            #     "schedule": crontab(minute="*/1"),  # Every minute
+            #     "options": {"queue": QueueNames.PERIODIC},
+            # },
             "check-job-status": {
                 "task": "check-job-status",
                 "schedule": crontab(minute="*/1"),
                 "options": {"queue": QueueNames.PERIODIC},
             },
-            "tend-providers-back-to-middle": {
-                "task": "tend-providers-back-to-middle",
-                "schedule": crontab(minute="*/5"),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
+            # "tend-providers-back-to-middle": {
+            #     "task": "tend-providers-back-to-middle",
+            #     "schedule": crontab(minute="*/5"),
+            #     "options": {"queue": QueueNames.PERIODIC},
+            # },
             "check-for-missing-rows-in-completed-jobs": {
                 "task": "check-for-missing-rows-in-completed-jobs",
                 "schedule": crontab(minute="*/10"),
@@ -288,21 +288,21 @@ class Config(object):
                 # since we mark jobs as archived
                 "options": {"queue": QueueNames.PERIODIC},
             },
-            "check-if-letters-still-in-created": {
-                "task": "check-if-letters-still-in-created",
-                "schedule": crontab(day_of_week="mon-fri", hour=7, minute=0),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
-            "check-if-letters-still-pending-virus-check": {
-                "task": "check-if-letters-still-pending-virus-check",
-                "schedule": crontab(day_of_week="mon-fri", hour="9,15", minute=0),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
-            "check-for-services-with-high-failure-rates-or-sending-to-tv-numbers": {
-                "task": "check-for-services-with-high-failure-rates-or-sending-to-tv-numbers",
-                "schedule": crontab(day_of_week="mon-fri", hour=10, minute=30),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
+            # "check-if-letters-still-in-created": {
+            #     "task": "check-if-letters-still-in-created",
+            #     "schedule": crontab(day_of_week="mon-fri", hour=7, minute=0),
+            #     "options": {"queue": QueueNames.PERIODIC},
+            # },
+            # "check-if-letters-still-pending-virus-check": {
+            #     "task": "check-if-letters-still-pending-virus-check",
+            #     "schedule": crontab(day_of_week="mon-fri", hour="9,15", minute=0),
+            #     "options": {"queue": QueueNames.PERIODIC},
+            # },
+            # "check-for-services-with-high-failure-rates-or-sending-to-tv-numbers": {
+            #     "task": "check-for-services-with-high-failure-rates-or-sending-to-tv-numbers",
+            #     "schedule": crontab(day_of_week="mon-fri", hour=10, minute=30),
+            #     "options": {"queue": QueueNames.PERIODIC},
+            # },
             "raise-alert-if-letter-notifications-still-sending": {
                 "task": "raise-alert-if-letter-notifications-still-sending",
                 "schedule": crontab(hour=17, minute=00),
@@ -310,11 +310,11 @@ class Config(object):
             },
             # The collate-letter-pdf does assume it is called in an hour that BST does not make a
             # difference to the truncate date which translates to the filename to process
-            "collate-letter-pdfs-to-be-sent": {
-                "task": "collate-letter-pdfs-to-be-sent",
-                "schedule": crontab(hour=17, minute=50),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
+            # "collate-letter-pdfs-to-be-sent": {
+            #     "task": "collate-letter-pdfs-to-be-sent",
+            #     "schedule": crontab(hour=17, minute=50),
+            #     "options": {"queue": QueueNames.PERIODIC},
+            # },
             "raise-alert-if-no-letter-ack-file": {
                 "task": "raise-alert-if-no-letter-ack-file",
                 "schedule": crontab(hour=23, minute=00),
@@ -340,16 +340,16 @@ class Config(object):
                 "schedule": crontab(hour=3, minute=4),
                 "options": {"queue": QueueNames.PERIODIC},
             },
-            "zendesk-new-email-branding-report": {
-                "task": "zendesk-new-email-branding-report",
-                "schedule": crontab(hour=0, minute=30, day_of_week="mon-fri"),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
-            "check-for-low-available-inbound-sms-numbers": {
-                "task": "check-for-low-available-inbound-sms-numbers",
-                "schedule": crontab(hour=9, minute=0, day_of_week="mon"),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
+            # "zendesk-new-email-branding-report": {
+            #     "task": "zendesk-new-email-branding-report",
+            #     "schedule": crontab(hour=0, minute=30, day_of_week="mon-fri"),
+            #     "options": {"queue": QueueNames.PERIODIC},
+            # },
+            # "check-for-low-available-inbound-sms-numbers": {
+            #     "task": "check-for-low-available-inbound-sms-numbers",
+            #     "schedule": crontab(hour=9, minute=0, day_of_week="mon"),
+            #     "options": {"queue": QueueNames.PERIODIC},
+            # },
         },
     }
 

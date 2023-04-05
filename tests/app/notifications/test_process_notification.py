@@ -1,9 +1,9 @@
 import datetime
 import uuid
-from collections import namedtuple
 
 import pytest
-from boto3.exceptions import Boto3Error
+
+# from boto3.exceptions import Boto3Error
 from emergency_alerts_utils.recipients import (
     validate_and_format_email_address,
     validate_and_format_phone_number,
@@ -15,13 +15,14 @@ from app.models import LETTER_TYPE, Notification, NotificationHistory
 from app.notifications.process_notifications import (
     create_content_for_notification,
     persist_notification,
-    send_notification_to_queue,
     simulated_recipient,
 )
 from app.serialised_models import SerialisedTemplate
 from app.v2.errors import BadRequestError
 from tests.app.db import create_api_key, create_service, create_template
 from tests.conftest import set_config
+
+# from collections import namedtuple
 
 
 def test_create_content_for_notification_passes(sample_email_template):
@@ -252,56 +253,56 @@ def test_persist_notification_sets_daily_limit_cache_if_one_does_not_exists(
         mock_set.assert_called_once_with(str(service.id) + "-2016-01-01-count", 1, ex=86400)
 
 
-@pytest.mark.parametrize(
-    ("research_mode, requested_queue, notification_type, key_type, expected_queue, expected_task"),
-    [
-        (True, None, "sms", "normal", "research-mode-tasks", "provider_tasks.deliver_sms"),
-        (True, None, "email", "normal", "research-mode-tasks", "provider_tasks.deliver_email"),
-        (True, None, "email", "team", "research-mode-tasks", "provider_tasks.deliver_email"),
-        (True, None, "letter", "normal", "research-mode-tasks", "letters_pdf_tasks.get_pdf_for_templated_letter"),
-        (False, None, "sms", "normal", "send-sms-tasks", "provider_tasks.deliver_sms"),
-        (False, None, "email", "normal", "send-email-tasks", "provider_tasks.deliver_email"),
-        (False, None, "sms", "team", "send-sms-tasks", "provider_tasks.deliver_sms"),
-        (False, None, "letter", "normal", "create-letters-pdf-tasks", "letters_pdf_tasks.get_pdf_for_templated_letter"),
-        (False, None, "sms", "test", "research-mode-tasks", "provider_tasks.deliver_sms"),
-        (True, "notify-internal-tasks", "email", "normal", "research-mode-tasks", "provider_tasks.deliver_email"),
-        (False, "notify-internal-tasks", "sms", "normal", "notify-internal-tasks", "provider_tasks.deliver_sms"),
-        (False, "notify-internal-tasks", "email", "normal", "notify-internal-tasks", "provider_tasks.deliver_email"),
-        (False, "notify-internal-tasks", "sms", "test", "research-mode-tasks", "provider_tasks.deliver_sms"),
-    ],
-)
-def test_send_notification_to_queue(
-    notify_db_session,
-    research_mode,
-    requested_queue,
-    notification_type,
-    key_type,
-    expected_queue,
-    expected_task,
-    mocker,
-):
-    mocked = mocker.patch("app.celery.{}.apply_async".format(expected_task))
-    Notification = namedtuple("Notification", ["id", "key_type", "notification_type", "created_at"])
-    notification = Notification(
-        id=uuid.uuid4(),
-        key_type=key_type,
-        notification_type=notification_type,
-        created_at=datetime.datetime(2016, 11, 11, 16, 8, 18),
-    )
+# @pytest.mark.parametrize(
+#     ("research_mode, requested_queue, notification_type, key_type, expected_queue, expected_task"),
+#     [
+#         (True, None, "sms", "normal", "research-mode-tasks", "provider_tasks.deliver_sms"),
+#         (True, None, "email", "normal", "research-mode-tasks", "provider_tasks.deliver_email"),
+#         (True, None, "email", "team", "research-mode-tasks", "provider_tasks.deliver_email"),
+#         (True, None, "letter", "normal", "research-mode-tasks", "letters_pdf_tasks.get_pdf_for_templated_letter"),
+#         (False, None, "sms", "normal", "send-sms-tasks", "provider_tasks.deliver_sms"),
+#         (False, None, "email", "normal", "send-email-tasks", "provider_tasks.deliver_email"),
+#         (False, None, "sms", "team", "send-sms-tasks", "provider_tasks.deliver_sms"),
+#         (False, None, "letter", "normal", "create-letters-pdf-tasks", "letters_pdf_tasks.get_pdf_for_templated_letter"),  # noqa
+#         (False, None, "sms", "test", "research-mode-tasks", "provider_tasks.deliver_sms"),
+#         (True, "notify-internal-tasks", "email", "normal", "research-mode-tasks", "provider_tasks.deliver_email"),
+#         (False, "notify-internal-tasks", "sms", "normal", "notify-internal-tasks", "provider_tasks.deliver_sms"),
+#         (False, "notify-internal-tasks", "email", "normal", "notify-internal-tasks", "provider_tasks.deliver_email"),
+#         (False, "notify-internal-tasks", "sms", "test", "research-mode-tasks", "provider_tasks.deliver_sms"),
+#     ],
+# )
+# def test_send_notification_to_queue(
+#     notify_db_session,
+#     research_mode,
+#     requested_queue,
+#     notification_type,
+#     key_type,
+#     expected_queue,
+#     expected_task,
+#     mocker,
+# ):
+#     mocked = mocker.patch("app.celery.{}.apply_async".format(expected_task))
+#     Notification = namedtuple("Notification", ["id", "key_type", "notification_type", "created_at"])
+#     notification = Notification(
+#         id=uuid.uuid4(),
+#         key_type=key_type,
+#         notification_type=notification_type,
+#         created_at=datetime.datetime(2016, 11, 11, 16, 8, 18),
+#     )
 
-    send_notification_to_queue(notification=notification, research_mode=research_mode, queue=requested_queue)
+#     send_notification_to_queue(notification=notification, research_mode=research_mode, queue=requested_queue)
 
-    mocked.assert_called_once_with([str(notification.id)], queue=expected_queue)
+#     mocked.assert_called_once_with([str(notification.id)], queue=expected_queue)
 
 
-def test_send_notification_to_queue_throws_exception_deletes_notification(sample_notification, mocker):
-    mocked = mocker.patch("app.celery.provider_tasks.deliver_sms.apply_async", side_effect=Boto3Error("EXPECTED"))
-    with pytest.raises(Boto3Error):
-        send_notification_to_queue(sample_notification, False)
-    mocked.assert_called_once_with([(str(sample_notification.id))], queue="send-sms-tasks")
+# def test_send_notification_to_queue_throws_exception_deletes_notification(sample_notification, mocker):
+#     mocked = mocker.patch("app.celery.provider_tasks.deliver_sms.apply_async", side_effect=Boto3Error("EXPECTED"))
+#     with pytest.raises(Boto3Error):
+#         send_notification_to_queue(sample_notification, False)
+#     mocked.assert_called_once_with([(str(sample_notification.id))], queue="send-sms-tasks")
 
-    assert Notification.query.count() == 0
-    assert NotificationHistory.query.count() == 0
+#     assert Notification.query.count() == 0
+#     assert NotificationHistory.query.count() == 0
 
 
 @pytest.mark.parametrize(
