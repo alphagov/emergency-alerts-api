@@ -129,7 +129,8 @@ def invited_org_user_url(invited_org_user_id, invite_link_host=None):
     )
 
     if invite_link_host is None:
-        invite_link_host = current_app.config["ADMIN_BASE_URL"]
+        # invite_link_host = current_app.config["ADMIN_BASE_URL"]
+        invite_link_host = current_app.config["ADMIN_EXTERNAL_URL"]
 
     return "{0}/organisation-invitation/{1}".format(invite_link_host, token)
 

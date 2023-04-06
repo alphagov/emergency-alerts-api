@@ -109,7 +109,8 @@ def invited_user_url(invited_user_id, invite_link_host=None):
     token = generate_token(str(invited_user_id), current_app.config["SECRET_KEY"], current_app.config["DANGEROUS_SALT"])
 
     if invite_link_host is None:
-        invite_link_host = current_app.config["ADMIN_BASE_URL"]
+        # invite_link_host = current_app.config["ADMIN_BASE_URL"]
+        invite_link_host = current_app.config["ADMIN_EXTERNAL_URL"]
 
     return "{0}/invitation/{1}".format(invite_link_host, token)
 

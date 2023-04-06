@@ -157,14 +157,14 @@ def register_blueprint(application):
     from app.govuk_alerts.rest import govuk_alerts_blueprint
     from app.inbound_number.rest import inbound_number_blueprint
     from app.inbound_sms.rest import inbound_sms as inbound_sms_blueprint
-    from app.job.rest import job_blueprint
+    # from app.job.rest import job_blueprint
     from app.letter_branding.letter_branding_rest import (
         letter_branding_blueprint,
     )
-    from app.letters.rest import letter_job
-    from app.notifications.notifications_letter_callback import (
-        letter_callback_blueprint,
-    )
+    # from app.letters.rest import letter_job
+    # from app.notifications.notifications_letter_callback import (
+    #     letter_callback_blueprint,
+    # )
     from app.notifications.notifications_sms_callback import (
         sms_callback_blueprint,
     )
@@ -221,8 +221,8 @@ def register_blueprint(application):
     notifications_blueprint.before_request(requires_auth)
     application.register_blueprint(notifications_blueprint)
 
-    job_blueprint.before_request(requires_admin_auth)
-    application.register_blueprint(job_blueprint)
+    # job_blueprint.before_request(requires_admin_auth)
+    # application.register_blueprint(job_blueprint)
 
     service_invite_blueprint.before_request(requires_admin_auth)
     application.register_blueprint(service_invite_blueprint)
@@ -248,11 +248,11 @@ def register_blueprint(application):
     email_branding_blueprint.before_request(requires_admin_auth)
     application.register_blueprint(email_branding_blueprint, url_prefix="/email-branding")
 
-    letter_job.before_request(requires_admin_auth)
-    application.register_blueprint(letter_job)
+    # letter_job.before_request(requires_admin_auth)
+    # application.register_blueprint(letter_job)
 
-    letter_callback_blueprint.before_request(requires_no_auth)
-    application.register_blueprint(letter_callback_blueprint)
+    # letter_callback_blueprint.before_request(requires_no_auth)
+    # application.register_blueprint(letter_callback_blueprint)
 
     billing_blueprint.before_request(requires_admin_auth)
     application.register_blueprint(billing_blueprint)

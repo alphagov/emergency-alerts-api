@@ -28,7 +28,7 @@ from app.aws import s3
 #     get_pdf_for_templated_letter,
 #     resanitise_pdf,
 # )
-from app.celery.tasks import process_row, record_daily_sorted_counts
+# from app.celery.tasks import process_row, record_daily_sorted_counts
 from app.config import QueueNames
 from app.dao.annual_billing_dao import (
     dao_create_or_update_annual_billing_for_year,
@@ -356,7 +356,8 @@ def bulk_invite_user_to_service(file_name, service_id, user_id, auth_type, permi
             "from_user": user_id,
             "permissions": permissions,
             "auth_type": auth_type,
-            "invite_link_host": current_app.config["ADMIN_BASE_URL"],
+            # "invite_link_host": current_app.config["ADMIN_BASE_URL"],
+            "invite_link_host": current_app.config["ADMIN_EXTERNAL_URL"],
         }
         with current_app.test_request_context(
             path="/service/{}/invite/".format(service_id),
@@ -479,16 +480,16 @@ def update_emails_to_remove_gsi(service_id):
         db.session.commit()
 
 
-@notify_command(name="replay-daily-sorted-count-files")
-@click.option("-f", "--file_extension", required=False, help="File extension to search for, defaults to rs.txt")
-@statsd(namespace="tasks")
-def replay_daily_sorted_count_files(file_extension):
-    bucket_location = "{}-ftp".format(current_app.config["NOTIFY_EMAIL_DOMAIN"])
-    for filename in s3.get_list_of_files_by_suffix(
-        bucket_name=bucket_location, subfolder="root/dispatch", suffix=file_extension or ".rs.txt"
-    ):
-        print("Create task to record daily sorted counts for file: ", filename)
-        record_daily_sorted_counts.apply_async([filename], queue=QueueNames.NOTIFY)
+# @notify_command(name="replay-daily-sorted-count-files")
+# @click.option("-f", "--file_extension", required=False, help="File extension to search for, defaults to rs.txt")
+# @statsd(namespace="tasks")
+# def replay_daily_sorted_count_files(file_extension):
+#     bucket_location = "{}-ftp".format(current_app.config["NOTIFY_EMAIL_DOMAIN"])
+#     for filename in s3.get_list_of_files_by_suffix(
+#         bucket_name=bucket_location, subfolder="root/dispatch", suffix=file_extension or ".rs.txt"
+#     ):
+#         print("Create task to record daily sorted counts for file: ", filename)
+#         record_daily_sorted_counts.apply_async([filename], queue=QueueNames.NOTIFY)
 
 
 @notify_command(name="populate-organisations-from-file")

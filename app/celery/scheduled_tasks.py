@@ -17,12 +17,12 @@ from app import db, notify_celery
 from app.celery.broadcast_message_tasks import trigger_link_test
 
 # from app.celery.letters_pdf_tasks import get_pdf_for_templated_letter
-from app.celery.tasks import (
-    get_recipient_csv_and_template_and_sender_id,
-    process_incomplete_jobs,
-    process_job,
-    process_row,
-)
+# from app.celery.tasks import (
+#     get_recipient_csv_and_template_and_sender_id,
+#     process_incomplete_jobs,
+#     process_job,
+#     process_row,
+# )
 from app.config import QueueNames, TaskNames
 from app.cronitor import cronitor
 
@@ -36,8 +36,8 @@ from app.dao.invited_user_dao import (
 from app.dao.jobs_dao import (
     dao_set_scheduled_jobs_to_pending,
     dao_update_job,
-    find_jobs_with_missing_rows,
-    find_missing_row_for_job,
+    # find_jobs_with_missing_rows,
+    # find_missing_row_for_job,
 )
 
 # from app.dao.notifications_dao import (
@@ -299,16 +299,16 @@ def check_job_status():
 #             current_app.logger.error(msg)
 
 
-@notify_celery.task(name="check-for-missing-rows-in-completed-jobs")
-def check_for_missing_rows_in_completed_jobs():
-    jobs = find_jobs_with_missing_rows()
-    for job in jobs:
-        recipient_csv, template, sender_id = get_recipient_csv_and_template_and_sender_id(job)
-        missing_rows = find_missing_row_for_job(job.id, job.notification_count)
-        for row_to_process in missing_rows:
-            row = recipient_csv[row_to_process.missing_row]
-            current_app.logger.info("Processing missing row: {} for job: {}".format(row_to_process.missing_row, job.id))
-            process_row(row, template, job, job.service, sender_id=sender_id)
+# @notify_celery.task(name="check-for-missing-rows-in-completed-jobs")
+# def check_for_missing_rows_in_completed_jobs():
+#     jobs = find_jobs_with_missing_rows()
+#     for job in jobs:
+#         recipient_csv, template, sender_id = get_recipient_csv_and_template_and_sender_id(job)
+#         missing_rows = find_missing_row_for_job(job.id, job.notification_count)
+#         for row_to_process in missing_rows:
+#             row = recipient_csv[row_to_process.missing_row]
+#             current_app.logger.info("Processing missing row: {} for job: {}".format(row_to_process.missing_row, job.id))
+#             process_row(row, template, job, job.service, sender_id=sender_id)
 
 
 # @notify_celery.task(name="check-for-services-with-high-failure-rates-or-sending-to-tv-numbers")
