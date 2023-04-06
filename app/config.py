@@ -459,21 +459,14 @@ class Development(Config):
 class Decoupled(Development):
     NOTIFY_ENVIRONMENT = "decoupled"
     ADMIN_BASE_URL = "http://admin.ecs.local:6012"
-    SQLALCHEMY_DATABASE_URI = "postgresql://pg/emergency_alerts"
     REDIS_URL = "redis://api.ecs.local:6379/0"
     API_HOST_NAME = "http://api.ecs.local:6011"
     TEMPLATE_PREVIEW_API_HOST = "http://api.ecs.local:6013"
-
-
-class ServerlessDB(Decoupled):
-    NOTIFY_ENVIRONMENT = "serverlessdb"
-    ADMIN_BASE_URL = "https://admin.development.emergency-alerts.service.gov.uk"
-    API_HOST_NAME = "https://admin.development.emergency-alerts.service.gov.uk"
-    TEMPLATE_PREVIEW_API_HOST = "https://admin.development.emergency-alerts.service.gov.uk"
     if os.getenv("MASTER_USERNAME"):
+        filtered_password = os.environ.get("MASTER_PASSWORD").replace("%", "%%")
         SQLALCHEMY_DATABASE_URI = "postgresql://{user}:{password}@{host}:{port}/{database}".format(
             user=os.environ.get("MASTER_USERNAME"),
-            password=os.environ.get("MASTER_PASSWORD"),
+            password=filtered_password,
             host=os.environ.get("RDS_HOST"),
             port=os.environ.get("RDS_PORT"),
             database=os.environ.get("DATABASE"),
@@ -615,7 +608,6 @@ class Sandbox(CloudFoundryConfig):
 configs = {
     "development": Development,
     "decoupled": Decoupled,
-    "serverlessdb": ServerlessDB,
     "test": Test,
     "production": Production,
     "staging": Staging,

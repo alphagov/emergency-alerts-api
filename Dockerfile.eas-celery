@@ -1,4 +1,5 @@
-FROM 388086622185.dkr.ecr.eu-west-2.amazonaws.com/eas-app-base:latest
+ARG ECS_ACCOUNT_NUMBER
+FROM ${ECS_ACCOUNT_NUMBER}.dkr.ecr.eu-west-2.amazonaws.com/eas-app-base:latest
 
 ENV SERVICE=celery
 ENV VENV_API=/venv/eas-api
