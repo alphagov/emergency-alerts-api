@@ -1,13 +1,18 @@
 version: 0.2
 
 phases:
+  install:
+    commands:
+      - apt-get update
+      - apt-get -y install python3.9-dev --fix-missing
+      - apt-get -y install python3.9-venv
+      - python3.9 -m venv .venv
+      - .venv/bin/python --version
   pre_build:
     commands:
       - echo "" > environment.sh
   build:
     commands:
-      - apt-get update
-      - apt-get -y install python3-dev --fix-missing
       - make bootstrap
       - cd $API_DIR && . $VENV_API/bin/activate && make test
   post_build:
