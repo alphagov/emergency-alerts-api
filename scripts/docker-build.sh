@@ -26,14 +26,27 @@ function ecr_login(){
 }
 
 function docker_build(){
-  docker buildx build \
-    --platform $PLATFORM \
-    -t $ECS_ACCOUNT_NUMBER.dkr.ecr.$REGION.amazonaws.com/eas-app-$IMAGE:latest \
-    --build-arg ECS_ACCOUNT_NUMBER=$ECS_ACCOUNT_NUMBER \
-    -f Dockerfile.eas-$IMAGE \
-    --no-cache \
-    $ARGS \
-    .
+  if [ -z $EXECUTION_ID ] && [ -z $COMMIT_ID ]; then
+    docker buildx build \
+      --platform $PLATFORM \
+      -t $ECS_ACCOUNT_NUMBER.dkr.ecr.$REGION.amazonaws.com/eas-app-$IMAGE:latest \
+      --build-arg ECS_ACCOUNT_NUMBER=$ECS_ACCOUNT_NUMBER \
+      -f Dockerfile.eas-$IMAGE \
+      --no-cache \
+      $ARGS \
+      .
+  else
+    docker buildx build \
+      --platform $PLATFORM \
+      -t $ECS_ACCOUNT_NUMBER.dkr.ecr.$REGION.amazonaws.com/eas-app-$IMAGE:pipeline-$EXECUTION_ID \
+      -t $ECS_ACCOUNT_NUMBER.dkr.ecr.$REGION.amazonaws.com/eas-app-$IMAGE:commit-$COMMIT_ID \
+      -t $ECS_ACCOUNT_NUMBER.dkr.ecr.$REGION.amazonaws.com/eas-app-$IMAGE:latest \
+      --build-arg ECS_ACCOUNT_NUMBER=$ECS_ACCOUNT_NUMBER \
+      -f Dockerfile.eas-$IMAGE \
+      --no-cache \
+      $ARGS \
+      .
+  fi
 }
 
 get_account_number
