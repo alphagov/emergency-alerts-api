@@ -1,0 +1,15 @@
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - echo "" > environment.sh
+  build:
+    commands:
+      - apt-get update
+      - apt-get -y install python3-dev --fix-missing
+      - make bootstrap
+      - cd $API_DIR && . $VENV_API/bin/activate && make test
+  post_build:
+    commands:
+      - echo "No post build commands"

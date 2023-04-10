@@ -1,0 +1,31 @@
+version: 0.2
+
+phases:
+  install:
+    commands:
+      - apt-get update
+      - apt install jq
+      - mkdir -vp ~/.docker/cli-plugins/
+      - curl --silent -L "https://github.com/docker/buildx/releases/download/v0.3.0/buildx-v0.3.0.linux-amd64" > ~/.docker/cli-plugins/docker-buildx
+      - chmod a+x ~/.docker/cli-plugins/docker-buildx
+  pre_build:
+    commands:
+      - docker buildx create --name builder
+      - docker buildx use builder
+  build:
+    commands:
+      - bash ./scripts/docker-build.sh --EXECUTION_ID $EXECUTION_ID --COMMIT_ID $COMMIT_ID --IMAGE api --ARGS '--push'
+  post_build:
+    commands:
+      - aws ecs describe-task-definition --task-definition $TASK_DEFINITION_ARN | jq '.taskDefinition' > taskdef.json
+      - envsubst < .codepipeline/appspec_template.yaml > appspec.yaml
+
+artifacts:
+  files:
+    - 'appspec.yaml'
+    - 'taskdef.json'
+  secondary-artifacts:
+    BuildArtifact:
+      files:
+        - appspec.yaml
+        - taskdef.json
