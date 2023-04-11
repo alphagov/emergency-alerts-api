@@ -12,10 +12,6 @@ COPY . $API_DIR
 RUN wget https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem -O /etc/ssl/certs/global-bundle.pem && \
     update-ca-certificates
 
-# Install Python and VENV.
-RUN apt-get install gcc libpq-dev build-essential -y
-RUN apt-get install $PYTHON_VERSION $PYTHON_VERSION-venv python3-pip python3-dev python3-wheel libpython3.9-dev -y --no-install-recommends
-
 # Build emergency-alerts-api
 WORKDIR $API_DIR
 RUN $PYTHON_VERSION -m venv $VENV_API && . $VENV_API/bin/activate && \
