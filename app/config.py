@@ -459,7 +459,7 @@ class Decoupled(Development):
     REDIS_URL = "redis://api.ecs.local:6379/0"
     API_HOST_NAME = "http://api.ecs.local:6011"
     TEMPLATE_PREVIEW_API_HOST = "http://api.ecs.local:6013"
-    if os.getenv("MASTER_USERNAME"):
+    if os.getenv("MASTER_USERNAME") and os.getenv("INIT"):
         filtered_password = os.environ.get("MASTER_PASSWORD").replace("%", "%%")
         SQLALCHEMY_DATABASE_URI = "postgresql://{user}:{password}@{host}:{port}/{database}".format(
             user=os.environ.get("MASTER_USERNAME"),
@@ -468,6 +468,7 @@ class Decoupled(Development):
             port=os.environ.get("RDS_PORT"),
             database=os.environ.get("DATABASE"),
         )
+        os.unsetenv("INIT")
     else:
         SQLALCHEMY_DATABASE_URI = (
             "postgresql://{user}:password@{host}:{port}/{database}?sslmode=verify-full&sslrootcert={cert}".format(
