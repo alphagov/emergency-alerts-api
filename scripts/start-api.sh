@@ -4,7 +4,20 @@ echo "Start script executing for api.."
 
 function run_db_upgrade(){
   cd $API_DIR;
-  . $VENV_API/bin/activate && flask db upgrade && flask db current
+  . $VENV_API/bin/activate
+  # take last line to trim the logging output
+  local head=$(flask db heads | tail -1)
+  local current=$(flask db current | tail -1)
+  if [[ $head != $current ]]; then
+    echo "Run DB migration"
+    flask db upgrade
+    echo $(flask db current)
+  else
+    echo "DB is up to date"
+    echo $(flask db current)
+    unset MASTER_USERNAME
+    unset MASTER_PASSWORD
+  fi
 }
 
 function configure_container_role(){
@@ -21,10 +34,7 @@ function run_api(){
   . $VENV_API/bin/activate && flask run -p 6011 --host=0.0.0.0
 }
 
-if [[ -n $MASTER_USERNAME ]]; then
-  run_db_upgrade
-else
-  configure_container_role
-  run_celery
-  run_api
-fi
+configure_container_role
+run_db_upgrade
+run_celery
+run_api
