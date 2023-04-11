@@ -11,13 +11,12 @@ function run_db_upgrade(){
   if [[ $head != $current ]]; then
     echo "Run DB migration"
     flask db upgrade
-    echo $(flask db current)
   else
     echo "DB is up to date"
-    echo $(flask db current)
-    unset MASTER_USERNAME
-    unset MASTER_PASSWORD
   fi
+  echo $(flask db current)
+  unset MASTER_USERNAME
+  unset MASTER_PASSWORD
 }
 
 function configure_container_role(){
