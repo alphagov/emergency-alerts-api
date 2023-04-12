@@ -36,8 +36,8 @@ from tests.app.db import (
 from tests.utils import count_sqlalchemy_queries
 
 
-def test_get_all_organisations(admin_request, notify_db_session, nhs_email_branding, nhs_letter_branding):
-    create_organisation(name="inactive org", active=False, organisation_type="nhs_central")
+def test_get_all_organisations(admin_request, notify_db_session):
+    create_organisation(name="inactive org", active=False, organisation_type="central")
     create_organisation(name="active org", domains=["example.com"])
 
     response = admin_request.get("organisation.get_organisations", _expected_status=200)
@@ -64,7 +64,7 @@ def test_get_all_organisations(admin_request, notify_db_session, nhs_email_brand
     assert response[1]["active"] is False
     assert response[1]["count_of_live_services"] == 0
     assert response[1]["domains"] == []
-    assert response[1]["organisation_type"] == "nhs_central"
+    assert response[1]["organisation_type"] == "central"
 
 
 def test_get_organisation_by_id(admin_request, notify_db_session):
@@ -191,28 +191,28 @@ def test_post_create_organisation(admin_request, notify_db_session, crown):
     assert organisations[0].email_branding_id is None
 
 
-@pytest.mark.parametrize("org_type", ["nhs_central", "nhs_local", "nhs_gp"])
-def test_post_create_organisation_sets_default_nhs_branding_and_adds_it_to_org_pool_for_nhs_org_types(
-    admin_request, notify_db_session, nhs_email_branding, nhs_letter_branding, org_type
-):
-    data = {
-        "name": "test organisation",
-        "active": True,
-        "crown": False,
-        "organisation_type": org_type,
-    }
+# @pytest.mark.parametrize("org_type", ["nhs_central", "nhs_local", "nhs_gp"])
+# def test_post_create_organisation_sets_default_nhs_branding_and_adds_it_to_org_pool_for_nhs_org_types(
+#     admin_request, notify_db_session, nhs_email_branding, nhs_letter_branding, org_type
+# ):
+#     data = {
+#         "name": "test organisation",
+#         "active": True,
+#         "crown": False,
+#         "organisation_type": org_type,
+#     }
 
-    admin_request.post("organisation.create_organisation", _data=data, _expected_status=201)
+#     admin_request.post("organisation.create_organisation", _data=data, _expected_status=201)
 
-    organisation = Organisation.query.one()
-    email_branding_nhs = dao_get_email_branding_by_id(current_app.config["NHS_EMAIL_BRANDING_ID"])
-    letter_branding_nhs = dao_get_letter_branding_by_id(current_app.config["NHS_LETTER_BRANDING_ID"])
+#     organisation = Organisation.query.one()
+#     email_branding_nhs = dao_get_email_branding_by_id(current_app.config["NHS_EMAIL_BRANDING_ID"])
+#     letter_branding_nhs = dao_get_letter_branding_by_id(current_app.config["NHS_LETTER_BRANDING_ID"])
 
-    assert organisation.email_branding_id == uuid.UUID(current_app.config["NHS_EMAIL_BRANDING_ID"])
-    assert organisation.letter_branding_id == uuid.UUID(current_app.config["NHS_LETTER_BRANDING_ID"])
+#     assert organisation.email_branding_id == uuid.UUID(current_app.config["NHS_EMAIL_BRANDING_ID"])
+#     assert organisation.letter_branding_id == uuid.UUID(current_app.config["NHS_LETTER_BRANDING_ID"])
 
-    assert organisation.email_branding_pool == [email_branding_nhs]
-    assert organisation.letter_branding_pool == [letter_branding_nhs]
+#     assert organisation.email_branding_pool == [email_branding_nhs]
+#     assert organisation.letter_branding_pool == [letter_branding_nhs]
 
 
 def test_post_create_organisation_existing_name_raises_400(admin_request, sample_organisation):

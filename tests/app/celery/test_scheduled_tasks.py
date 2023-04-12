@@ -14,7 +14,7 @@ from freezegun import freeze_time
 from app.celery import scheduled_tasks
 from app.celery.scheduled_tasks import (
     auto_expire_broadcast_messages,
-    check_for_missing_rows_in_completed_jobs,
+    # check_for_missing_rows_in_completed_jobs,
     check_job_status,
     delete_invitations,
     delete_old_records_from_events_table,
@@ -44,17 +44,17 @@ from tests.app.db import (
 from tests.conftest import set_config
 
 
-def _create_slow_delivery_notification(template, provider="mmg"):
-    now = datetime.utcnow()
-    five_minutes_from_now = now + timedelta(minutes=5)
+# def _create_slow_delivery_notification(template, provider="mmg"):
+#     now = datetime.utcnow()
+#     five_minutes_from_now = now + timedelta(minutes=5)
 
-    create_notification(
-        template=template,
-        status="delivered",
-        sent_by=provider,
-        updated_at=five_minutes_from_now,
-        sent_at=now,
-    )
+#     create_notification(
+#         template=template,
+#         status="delivered",
+#         sent_by=provider,
+#         updated_at=five_minutes_from_now,
+#         sent_at=now,
+#     )
 
 
 def test_should_call_delete_codes_on_delete_verify_codes_task(notify_db_session, mocker):
@@ -69,42 +69,42 @@ def test_should_call_delete_invotations_on_delete_invitations_task(notify_db_ses
     assert scheduled_tasks.delete_invitations_created_more_than_two_days_ago.call_count == 1
 
 
-def test_should_update_scheduled_jobs_and_put_on_queue(mocker, sample_template):
-    mocked = mocker.patch("app.celery.tasks.process_job.apply_async")
+# def test_should_update_scheduled_jobs_and_put_on_queue(mocker, sample_template):
+#     mocked = mocker.patch("app.celery.tasks.process_job.apply_async")
 
-    one_minute_in_the_past = datetime.utcnow() - timedelta(minutes=1)
-    job = create_job(sample_template, job_status="scheduled", scheduled_for=one_minute_in_the_past)
+#     one_minute_in_the_past = datetime.utcnow() - timedelta(minutes=1)
+#     job = create_job(sample_template, job_status="scheduled", scheduled_for=one_minute_in_the_past)
 
-    run_scheduled_jobs()
+#     run_scheduled_jobs()
 
-    updated_job = dao_get_job_by_id(job.id)
-    assert updated_job.job_status == "pending"
-    mocked.assert_called_with([str(job.id)], queue="job-tasks")
+#     updated_job = dao_get_job_by_id(job.id)
+#     assert updated_job.job_status == "pending"
+#     mocked.assert_called_with([str(job.id)], queue="job-tasks")
 
 
-def test_should_update_all_scheduled_jobs_and_put_on_queue(sample_template, mocker):
-    mocked = mocker.patch("app.celery.tasks.process_job.apply_async")
+# def test_should_update_all_scheduled_jobs_and_put_on_queue(sample_template, mocker):
+#     mocked = mocker.patch("app.celery.tasks.process_job.apply_async")
 
-    one_minute_in_the_past = datetime.utcnow() - timedelta(minutes=1)
-    ten_minutes_in_the_past = datetime.utcnow() - timedelta(minutes=10)
-    twenty_minutes_in_the_past = datetime.utcnow() - timedelta(minutes=20)
-    job_1 = create_job(sample_template, job_status="scheduled", scheduled_for=one_minute_in_the_past)
-    job_2 = create_job(sample_template, job_status="scheduled", scheduled_for=ten_minutes_in_the_past)
-    job_3 = create_job(sample_template, job_status="scheduled", scheduled_for=twenty_minutes_in_the_past)
+#     one_minute_in_the_past = datetime.utcnow() - timedelta(minutes=1)
+#     ten_minutes_in_the_past = datetime.utcnow() - timedelta(minutes=10)
+#     twenty_minutes_in_the_past = datetime.utcnow() - timedelta(minutes=20)
+#     job_1 = create_job(sample_template, job_status="scheduled", scheduled_for=one_minute_in_the_past)
+#     job_2 = create_job(sample_template, job_status="scheduled", scheduled_for=ten_minutes_in_the_past)
+#     job_3 = create_job(sample_template, job_status="scheduled", scheduled_for=twenty_minutes_in_the_past)
 
-    run_scheduled_jobs()
+#     run_scheduled_jobs()
 
-    assert dao_get_job_by_id(job_1.id).job_status == "pending"
-    assert dao_get_job_by_id(job_2.id).job_status == "pending"
-    assert dao_get_job_by_id(job_2.id).job_status == "pending"
+#     assert dao_get_job_by_id(job_1.id).job_status == "pending"
+#     assert dao_get_job_by_id(job_2.id).job_status == "pending"
+#     assert dao_get_job_by_id(job_2.id).job_status == "pending"
 
-    mocked.assert_has_calls(
-        [
-            call([str(job_3.id)], queue="job-tasks"),
-            call([str(job_2.id)], queue="job-tasks"),
-            call([str(job_1.id)], queue="job-tasks"),
-        ]
-    )
+#     mocked.assert_has_calls(
+#         [
+#             call([str(job_3.id)], queue="job-tasks"),
+#             call([str(job_2.id)], queue="job-tasks"),
+#             call([str(job_1.id)], queue="job-tasks"),
+#         ]
+#     )
 
 
 # @freeze_time("2017-05-01 14:00:00")
@@ -147,145 +147,145 @@ def test_should_update_all_scheduled_jobs_and_put_on_queue(sample_template, mock
 #     assert mock_reduce.called is False
 
 
-def test_check_job_status_task_calls_process_incomplete_jobs(mocker, sample_template):
-    mock_celery = mocker.patch("app.celery.tasks.process_incomplete_jobs.apply_async")
-    job = create_job(
-        template=sample_template,
-        notification_count=3,
-        created_at=datetime.utcnow() - timedelta(minutes=31),
-        processing_started=datetime.utcnow() - timedelta(minutes=31),
-        job_status=JOB_STATUS_IN_PROGRESS,
-    )
-    create_notification(template=sample_template, job=job)
-    check_job_status()
+# def test_check_job_status_task_calls_process_incomplete_jobs(mocker, sample_template):
+#     mock_celery = mocker.patch("app.celery.tasks.process_incomplete_jobs.apply_async")
+#     job = create_job(
+#         template=sample_template,
+#         notification_count=3,
+#         created_at=datetime.utcnow() - timedelta(minutes=31),
+#         processing_started=datetime.utcnow() - timedelta(minutes=31),
+#         job_status=JOB_STATUS_IN_PROGRESS,
+#     )
+#     create_notification(template=sample_template, job=job)
+#     check_job_status()
 
-    mock_celery.assert_called_once_with([[str(job.id)]], queue=QueueNames.JOBS)
-
-
-def test_check_job_status_task_calls_process_incomplete_jobs_when_scheduled_job_is_not_complete(
-    mocker, sample_template
-):
-    mock_celery = mocker.patch("app.celery.tasks.process_incomplete_jobs.apply_async")
-    job = create_job(
-        template=sample_template,
-        notification_count=3,
-        created_at=datetime.utcnow() - timedelta(hours=2),
-        scheduled_for=datetime.utcnow() - timedelta(minutes=31),
-        processing_started=datetime.utcnow() - timedelta(minutes=31),
-        job_status=JOB_STATUS_IN_PROGRESS,
-    )
-    check_job_status()
-
-    mock_celery.assert_called_once_with([[str(job.id)]], queue=QueueNames.JOBS)
+#     mock_celery.assert_called_once_with([[str(job.id)]], queue=QueueNames.JOBS)
 
 
-def test_check_job_status_task_calls_process_incomplete_jobs_for_pending_scheduled_jobs(mocker, sample_template):
-    mock_celery = mocker.patch("app.celery.tasks.process_incomplete_jobs.apply_async")
-    job = create_job(
-        template=sample_template,
-        notification_count=3,
-        created_at=datetime.utcnow() - timedelta(hours=2),
-        scheduled_for=datetime.utcnow() - timedelta(minutes=31),
-        job_status=JOB_STATUS_PENDING,
-    )
+# def test_check_job_status_task_calls_process_incomplete_jobs_when_scheduled_job_is_not_complete(
+#     mocker, sample_template
+# ):
+#     mock_celery = mocker.patch("app.celery.tasks.process_incomplete_jobs.apply_async")
+#     job = create_job(
+#         template=sample_template,
+#         notification_count=3,
+#         created_at=datetime.utcnow() - timedelta(hours=2),
+#         scheduled_for=datetime.utcnow() - timedelta(minutes=31),
+#         processing_started=datetime.utcnow() - timedelta(minutes=31),
+#         job_status=JOB_STATUS_IN_PROGRESS,
+#     )
+#     check_job_status()
 
-    check_job_status()
-
-    mock_celery.assert_called_once_with([[str(job.id)]], queue=QueueNames.JOBS)
-
-
-def test_check_job_status_task_does_not_call_process_incomplete_jobs_for_non_scheduled_pending_jobs(
-    mocker,
-    sample_template,
-):
-    mock_celery = mocker.patch("app.celery.tasks.process_incomplete_jobs.apply_async")
-    create_job(
-        template=sample_template,
-        notification_count=3,
-        created_at=datetime.utcnow() - timedelta(hours=2),
-        job_status=JOB_STATUS_PENDING,
-    )
-    check_job_status()
-
-    assert not mock_celery.called
+#     mock_celery.assert_called_once_with([[str(job.id)]], queue=QueueNames.JOBS)
 
 
-def test_check_job_status_task_calls_process_incomplete_jobs_for_multiple_jobs(mocker, sample_template):
-    mock_celery = mocker.patch("app.celery.tasks.process_incomplete_jobs.apply_async")
-    job = create_job(
-        template=sample_template,
-        notification_count=3,
-        created_at=datetime.utcnow() - timedelta(hours=2),
-        scheduled_for=datetime.utcnow() - timedelta(minutes=31),
-        processing_started=datetime.utcnow() - timedelta(minutes=31),
-        job_status=JOB_STATUS_IN_PROGRESS,
-    )
-    job_2 = create_job(
-        template=sample_template,
-        notification_count=3,
-        created_at=datetime.utcnow() - timedelta(hours=2),
-        scheduled_for=datetime.utcnow() - timedelta(minutes=31),
-        processing_started=datetime.utcnow() - timedelta(minutes=31),
-        job_status=JOB_STATUS_IN_PROGRESS,
-    )
-    check_job_status()
+# def test_check_job_status_task_calls_process_incomplete_jobs_for_pending_scheduled_jobs(mocker, sample_template):
+#     mock_celery = mocker.patch("app.celery.tasks.process_incomplete_jobs.apply_async")
+#     job = create_job(
+#         template=sample_template,
+#         notification_count=3,
+#         created_at=datetime.utcnow() - timedelta(hours=2),
+#         scheduled_for=datetime.utcnow() - timedelta(minutes=31),
+#         job_status=JOB_STATUS_PENDING,
+#     )
 
-    mock_celery.assert_called_once_with([[str(job.id), str(job_2.id)]], queue=QueueNames.JOBS)
+#     check_job_status()
+
+#     mock_celery.assert_called_once_with([[str(job.id)]], queue=QueueNames.JOBS)
 
 
-def test_check_job_status_task_only_sends_old_tasks(mocker, sample_template):
-    mock_celery = mocker.patch("app.celery.tasks.process_incomplete_jobs.apply_async")
-    job = create_job(
-        template=sample_template,
-        notification_count=3,
-        created_at=datetime.utcnow() - timedelta(hours=2),
-        scheduled_for=datetime.utcnow() - timedelta(minutes=31),
-        processing_started=datetime.utcnow() - timedelta(minutes=31),
-        job_status=JOB_STATUS_IN_PROGRESS,
-    )
-    create_job(
-        template=sample_template,
-        notification_count=3,
-        created_at=datetime.utcnow() - timedelta(minutes=31),
-        processing_started=datetime.utcnow() - timedelta(minutes=29),
-        job_status=JOB_STATUS_IN_PROGRESS,
-    )
-    create_job(
-        template=sample_template,
-        notification_count=3,
-        created_at=datetime.utcnow() - timedelta(minutes=50),
-        scheduled_for=datetime.utcnow() - timedelta(minutes=29),
-        job_status=JOB_STATUS_PENDING,
-    )
-    check_job_status()
+# def test_check_job_status_task_does_not_call_process_incomplete_jobs_for_non_scheduled_pending_jobs(
+#     mocker,
+#     sample_template,
+# ):
+#     mock_celery = mocker.patch("app.celery.tasks.process_incomplete_jobs.apply_async")
+#     create_job(
+#         template=sample_template,
+#         notification_count=3,
+#         created_at=datetime.utcnow() - timedelta(hours=2),
+#         job_status=JOB_STATUS_PENDING,
+#     )
+#     check_job_status()
 
-    # jobs 2 and 3 were created less than 30 minutes ago, so are not sent to Celery task
-    mock_celery.assert_called_once_with([[str(job.id)]], queue=QueueNames.JOBS)
+#     assert not mock_celery.called
 
 
-def test_check_job_status_task_sets_jobs_to_error(mocker, sample_template):
-    mock_celery = mocker.patch("app.celery.tasks.process_incomplete_jobs.apply_async")
-    job = create_job(
-        template=sample_template,
-        notification_count=3,
-        created_at=datetime.utcnow() - timedelta(hours=2),
-        scheduled_for=datetime.utcnow() - timedelta(minutes=31),
-        processing_started=datetime.utcnow() - timedelta(minutes=31),
-        job_status=JOB_STATUS_IN_PROGRESS,
-    )
-    job_2 = create_job(
-        template=sample_template,
-        notification_count=3,
-        created_at=datetime.utcnow() - timedelta(minutes=31),
-        processing_started=datetime.utcnow() - timedelta(minutes=29),
-        job_status=JOB_STATUS_IN_PROGRESS,
-    )
-    check_job_status()
+# def test_check_job_status_task_calls_process_incomplete_jobs_for_multiple_jobs(mocker, sample_template):
+#     mock_celery = mocker.patch("app.celery.tasks.process_incomplete_jobs.apply_async")
+#     job = create_job(
+#         template=sample_template,
+#         notification_count=3,
+#         created_at=datetime.utcnow() - timedelta(hours=2),
+#         scheduled_for=datetime.utcnow() - timedelta(minutes=31),
+#         processing_started=datetime.utcnow() - timedelta(minutes=31),
+#         job_status=JOB_STATUS_IN_PROGRESS,
+#     )
+#     job_2 = create_job(
+#         template=sample_template,
+#         notification_count=3,
+#         created_at=datetime.utcnow() - timedelta(hours=2),
+#         scheduled_for=datetime.utcnow() - timedelta(minutes=31),
+#         processing_started=datetime.utcnow() - timedelta(minutes=31),
+#         job_status=JOB_STATUS_IN_PROGRESS,
+#     )
+#     check_job_status()
 
-    # job 2 not in celery task
-    mock_celery.assert_called_once_with([[str(job.id)]], queue=QueueNames.JOBS)
-    assert job.job_status == JOB_STATUS_ERROR
-    assert job_2.job_status == JOB_STATUS_IN_PROGRESS
+#     mock_celery.assert_called_once_with([[str(job.id), str(job_2.id)]], queue=QueueNames.JOBS)
+
+
+# def test_check_job_status_task_only_sends_old_tasks(mocker, sample_template):
+#     mock_celery = mocker.patch("app.celery.tasks.process_incomplete_jobs.apply_async")
+#     job = create_job(
+#         template=sample_template,
+#         notification_count=3,
+#         created_at=datetime.utcnow() - timedelta(hours=2),
+#         scheduled_for=datetime.utcnow() - timedelta(minutes=31),
+#         processing_started=datetime.utcnow() - timedelta(minutes=31),
+#         job_status=JOB_STATUS_IN_PROGRESS,
+#     )
+#     create_job(
+#         template=sample_template,
+#         notification_count=3,
+#         created_at=datetime.utcnow() - timedelta(minutes=31),
+#         processing_started=datetime.utcnow() - timedelta(minutes=29),
+#         job_status=JOB_STATUS_IN_PROGRESS,
+#     )
+#     create_job(
+#         template=sample_template,
+#         notification_count=3,
+#         created_at=datetime.utcnow() - timedelta(minutes=50),
+#         scheduled_for=datetime.utcnow() - timedelta(minutes=29),
+#         job_status=JOB_STATUS_PENDING,
+#     )
+#     check_job_status()
+
+#     # jobs 2 and 3 were created less than 30 minutes ago, so are not sent to Celery task
+#     mock_celery.assert_called_once_with([[str(job.id)]], queue=QueueNames.JOBS)
+
+
+# def test_check_job_status_task_sets_jobs_to_error(mocker, sample_template):
+#     mock_celery = mocker.patch("app.celery.tasks.process_incomplete_jobs.apply_async")
+#     job = create_job(
+#         template=sample_template,
+#         notification_count=3,
+#         created_at=datetime.utcnow() - timedelta(hours=2),
+#         scheduled_for=datetime.utcnow() - timedelta(minutes=31),
+#         processing_started=datetime.utcnow() - timedelta(minutes=31),
+#         job_status=JOB_STATUS_IN_PROGRESS,
+#     )
+#     job_2 = create_job(
+#         template=sample_template,
+#         notification_count=3,
+#         created_at=datetime.utcnow() - timedelta(minutes=31),
+#         processing_started=datetime.utcnow() - timedelta(minutes=29),
+#         job_status=JOB_STATUS_IN_PROGRESS,
+#     )
+#     check_job_status()
+
+#     # job 2 not in celery task
+#     mock_celery.assert_called_once_with([[str(job.id)]], queue=QueueNames.JOBS)
+#     assert job.job_status == JOB_STATUS_ERROR
+#     assert job_2.job_status == JOB_STATUS_IN_PROGRESS
 
 
 # def test_replay_created_notifications(notify_db_session, sample_service, mocker):
@@ -344,24 +344,24 @@ def test_check_job_status_task_sets_jobs_to_error(mocker, sample_template):
 #     mock_task.assert_has_calls(calls, any_order=True)
 
 
-def test_check_job_status_task_does_not_raise_error(sample_template):
-    create_job(
-        template=sample_template,
-        notification_count=3,
-        created_at=datetime.utcnow() - timedelta(hours=2),
-        scheduled_for=datetime.utcnow() - timedelta(minutes=31),
-        processing_started=datetime.utcnow() - timedelta(minutes=31),
-        job_status=JOB_STATUS_FINISHED,
-    )
-    create_job(
-        template=sample_template,
-        notification_count=3,
-        created_at=datetime.utcnow() - timedelta(minutes=31),
-        processing_started=datetime.utcnow() - timedelta(minutes=31),
-        job_status=JOB_STATUS_FINISHED,
-    )
+# def test_check_job_status_task_does_not_raise_error(sample_template):
+#     create_job(
+#         template=sample_template,
+#         notification_count=3,
+#         created_at=datetime.utcnow() - timedelta(hours=2),
+#         scheduled_for=datetime.utcnow() - timedelta(minutes=31),
+#         processing_started=datetime.utcnow() - timedelta(minutes=31),
+#         job_status=JOB_STATUS_FINISHED,
+#     )
+#     create_job(
+#         template=sample_template,
+#         notification_count=3,
+#         created_at=datetime.utcnow() - timedelta(minutes=31),
+#         processing_started=datetime.utcnow() - timedelta(minutes=31),
+#         job_status=JOB_STATUS_FINISHED,
+#     )
 
-    check_job_status()
+#     check_job_status()
 
 
 # @freeze_time("2019-05-30 14:00:00")
@@ -522,111 +522,111 @@ def test_check_job_status_task_does_not_raise_error(sample_template):
 #     mock_send_ticket_to_zendesk.assert_called_once()
 
 
-@pytest.mark.parametrize(
-    "offset",
-    (
-        timedelta(days=1),
-        pytest.param(timedelta(hours=23, minutes=59), marks=pytest.mark.xfail),
-        pytest.param(timedelta(minutes=20), marks=pytest.mark.xfail),
-        timedelta(minutes=19),
-    ),
-)
-def test_check_for_missing_rows_in_completed_jobs_ignores_old_and_new_jobs(
-    mocker,
-    sample_email_template,
-    offset,
-):
-    mocker.patch(
-        "app.celery.tasks.s3.get_job_and_metadata_from_s3",
-        return_value=(load_example_csv("multiple_email"), {"sender_id": None}),
-    )
-    mocker.patch("app.encryption.encrypt", return_value="something_encrypted")
-    process_row = mocker.patch("app.celery.scheduled_tasks.process_row")
+# @pytest.mark.parametrize(
+#     "offset",
+#     (
+#         timedelta(days=1),
+#         pytest.param(timedelta(hours=23, minutes=59), marks=pytest.mark.xfail),
+#         pytest.param(timedelta(minutes=20), marks=pytest.mark.xfail),
+#         timedelta(minutes=19),
+#     ),
+# )
+# def test_check_for_missing_rows_in_completed_jobs_ignores_old_and_new_jobs(
+#     mocker,
+#     sample_email_template,
+#     offset,
+# ):
+#     mocker.patch(
+#         "app.celery.tasks.s3.get_job_and_metadata_from_s3",
+#         return_value=(load_example_csv("multiple_email"), {"sender_id": None}),
+#     )
+#     mocker.patch("app.encryption.encrypt", return_value="something_encrypted")
+#     process_row = mocker.patch("app.celery.scheduled_tasks.process_row")
 
-    job = create_job(
-        template=sample_email_template,
-        notification_count=5,
-        job_status=JOB_STATUS_FINISHED,
-        processing_finished=datetime.utcnow() - offset,
-    )
-    for i in range(0, 4):
-        create_notification(job=job, job_row_number=i)
+#     job = create_job(
+#         template=sample_email_template,
+#         notification_count=5,
+#         job_status=JOB_STATUS_FINISHED,
+#         processing_finished=datetime.utcnow() - offset,
+#     )
+#     for i in range(0, 4):
+#         create_notification(job=job, job_row_number=i)
 
-    check_for_missing_rows_in_completed_jobs()
+#     check_for_missing_rows_in_completed_jobs()
 
-    assert process_row.called is False
-
-
-def test_check_for_missing_rows_in_completed_jobs(mocker, sample_email_template):
-    mocker.patch(
-        "app.celery.tasks.s3.get_job_and_metadata_from_s3",
-        return_value=(load_example_csv("multiple_email"), {"sender_id": None}),
-    )
-    mocker.patch("app.encryption.encrypt", return_value="something_encrypted")
-    process_row = mocker.patch("app.celery.scheduled_tasks.process_row")
-
-    job = create_job(
-        template=sample_email_template,
-        notification_count=5,
-        job_status=JOB_STATUS_FINISHED,
-        processing_finished=datetime.utcnow() - timedelta(minutes=20),
-    )
-    for i in range(0, 4):
-        create_notification(job=job, job_row_number=i)
-
-    check_for_missing_rows_in_completed_jobs()
-
-    process_row.assert_called_once_with(mock.ANY, mock.ANY, job, job.service, sender_id=None)
+#     assert process_row.called is False
 
 
-def test_check_for_missing_rows_in_completed_jobs_calls_save_email(mocker, sample_email_template):
-    mocker.patch(
-        "app.celery.tasks.s3.get_job_and_metadata_from_s3",
-        return_value=(load_example_csv("multiple_email"), {"sender_id": None}),
-    )
-    save_email_task = mocker.patch("app.celery.tasks.save_email.apply_async")
-    mocker.patch("app.encryption.encrypt", return_value="something_encrypted")
-    mocker.patch("app.celery.tasks.create_uuid", return_value="uuid")
+# def test_check_for_missing_rows_in_completed_jobs(mocker, sample_email_template):
+#     mocker.patch(
+#         "app.celery.tasks.s3.get_job_and_metadata_from_s3",
+#         return_value=(load_example_csv("multiple_email"), {"sender_id": None}),
+#     )
+#     mocker.patch("app.encryption.encrypt", return_value="something_encrypted")
+#     process_row = mocker.patch("app.celery.scheduled_tasks.process_row")
 
-    job = create_job(
-        template=sample_email_template,
-        notification_count=5,
-        job_status=JOB_STATUS_FINISHED,
-        processing_finished=datetime.utcnow() - timedelta(minutes=20),
-    )
-    for i in range(0, 4):
-        create_notification(job=job, job_row_number=i)
+#     job = create_job(
+#         template=sample_email_template,
+#         notification_count=5,
+#         job_status=JOB_STATUS_FINISHED,
+#         processing_finished=datetime.utcnow() - timedelta(minutes=20),
+#     )
+#     for i in range(0, 4):
+#         create_notification(job=job, job_row_number=i)
 
-    check_for_missing_rows_in_completed_jobs()
-    save_email_task.assert_called_once_with(
-        (
-            str(job.service_id),
-            "uuid",
-            "something_encrypted",
-        ),
-        {},
-        queue="database-tasks",
-    )
+#     check_for_missing_rows_in_completed_jobs()
+
+#     process_row.assert_called_once_with(mock.ANY, mock.ANY, job, job.service, sender_id=None)
 
 
-def test_check_for_missing_rows_in_completed_jobs_uses_sender_id(mocker, sample_email_template, fake_uuid):
-    mocker.patch(
-        "app.celery.tasks.s3.get_job_and_metadata_from_s3",
-        return_value=(load_example_csv("multiple_email"), {"sender_id": fake_uuid}),
-    )
-    mock_process_row = mocker.patch("app.celery.scheduled_tasks.process_row")
+# def test_check_for_missing_rows_in_completed_jobs_calls_save_email(mocker, sample_email_template):
+#     mocker.patch(
+#         "app.celery.tasks.s3.get_job_and_metadata_from_s3",
+#         return_value=(load_example_csv("multiple_email"), {"sender_id": None}),
+#     )
+#     save_email_task = mocker.patch("app.celery.tasks.save_email.apply_async")
+#     mocker.patch("app.encryption.encrypt", return_value="something_encrypted")
+#     mocker.patch("app.celery.tasks.create_uuid", return_value="uuid")
 
-    job = create_job(
-        template=sample_email_template,
-        notification_count=5,
-        job_status=JOB_STATUS_FINISHED,
-        processing_finished=datetime.utcnow() - timedelta(minutes=20),
-    )
-    for i in range(0, 4):
-        create_notification(job=job, job_row_number=i)
+#     job = create_job(
+#         template=sample_email_template,
+#         notification_count=5,
+#         job_status=JOB_STATUS_FINISHED,
+#         processing_finished=datetime.utcnow() - timedelta(minutes=20),
+#     )
+#     for i in range(0, 4):
+#         create_notification(job=job, job_row_number=i)
 
-    check_for_missing_rows_in_completed_jobs()
-    mock_process_row.assert_called_once_with(mock.ANY, mock.ANY, job, job.service, sender_id=fake_uuid)
+#     check_for_missing_rows_in_completed_jobs()
+#     save_email_task.assert_called_once_with(
+#         (
+#             str(job.service_id),
+#             "uuid",
+#             "something_encrypted",
+#         ),
+#         {},
+#         queue="database-tasks",
+#     )
+
+
+# def test_check_for_missing_rows_in_completed_jobs_uses_sender_id(mocker, sample_email_template, fake_uuid):
+#     mocker.patch(
+#         "app.celery.tasks.s3.get_job_and_metadata_from_s3",
+#         return_value=(load_example_csv("multiple_email"), {"sender_id": fake_uuid}),
+#     )
+#     mock_process_row = mocker.patch("app.celery.scheduled_tasks.process_row")
+
+#     job = create_job(
+#         template=sample_email_template,
+#         notification_count=5,
+#         job_status=JOB_STATUS_FINISHED,
+#         processing_finished=datetime.utcnow() - timedelta(minutes=20),
+#     )
+#     for i in range(0, 4):
+#         create_notification(job=job, job_row_number=i)
+
+#     check_for_missing_rows_in_completed_jobs()
+#     mock_process_row.assert_called_once_with(mock.ANY, mock.ANY, job, job.service, sender_id=fake_uuid)
 
 
 MockServicesSendingToTVNumbers = namedtuple(

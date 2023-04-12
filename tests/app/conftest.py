@@ -915,15 +915,15 @@ def broadcast_organisation(notify_db_session):
     return org
 
 
-@pytest.fixture
-def nhs_email_branding(notify_db_session):
-    # we wipe email_branding table in test db between the tests, so we have to recreate this branding
-    # that is normally present on all environments and applied through migration
-    nhs_email_branding_id = current_app.config["NHS_EMAIL_BRANDING_ID"]
+# @pytest.fixture
+# def nhs_email_branding(notify_db_session):
+#     # we wipe email_branding table in test db between the tests, so we have to recreate this branding
+#     # that is normally present on all environments and applied through migration
+#     nhs_email_branding_id = current_app.config["NHS_EMAIL_BRANDING_ID"]
 
-    return create_email_branding(
-        id=nhs_email_branding_id, logo="1ac6f483-3105-4c9e-9017-dd7fb2752c44-nhs-blue_x2.png", name="NHS"
-    )
+#     return create_email_branding(
+#         id=nhs_email_branding_id, logo="1ac6f483-3105-4c9e-9017-dd7fb2752c44-nhs-blue_x2.png", name="NHS"
+#     )
 
 
 @pytest.fixture

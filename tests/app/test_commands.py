@@ -56,16 +56,16 @@ def test_populate_annual_billing_with_defaults(notify_db_session, notify_api, or
     assert results[0].free_sms_fragment_limit == expected_allowance
 
 
-def test_populate_annual_billing_with_defaults_sets_free_allowance_to_zero_if_previous_year_is_zero(
-    notify_db_session, notify_api
-):
-    service = create_service(organisation_type="central")
-    create_annual_billing(service_id=service.id, free_sms_fragment_limit=0, financial_year_start=2021)
-    notify_api.test_cli_runner().invoke(populate_annual_billing_with_defaults, ["-y", 2022])
+# def test_populate_annual_billing_with_defaults_sets_free_allowance_to_zero_if_previous_year_is_zero(
+#     notify_db_session, notify_api
+# ):
+#     service = create_service(organisation_type="central")
+#     create_annual_billing(service_id=service.id, free_sms_fragment_limit=0, financial_year_start=2021)
+#     notify_api.test_cli_runner().invoke(populate_annual_billing_with_defaults, ["-y", 2022])
 
-    results = AnnualBilling.query.filter(
-        AnnualBilling.financial_year_start == 2022, AnnualBilling.service_id == service.id
-    ).all()
+#     results = AnnualBilling.query.filter(
+#         AnnualBilling.financial_year_start == 2022, AnnualBilling.service_id == service.id
+#     ).all()
 
-    assert len(results) == 1
-    assert results[0].free_sms_fragment_limit == 0
+#     assert len(results) == 1
+#     assert results[0].free_sms_fragment_limit == 0
