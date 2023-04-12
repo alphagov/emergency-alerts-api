@@ -444,7 +444,7 @@ class Development(Config):
     NOTIFY_LOG_PATH = "application.log"
     NOTIFY_EMAIL_DOMAIN = "notify.tools"
 
-    SQLALCHEMY_DATABASE_URI = os.getenv("SQLALCHEMY_DATABASE_URI", "postgresql://localhost/emergency_alerts")
+    SQLALCHEMY_DATABASE_URI = os.getenv("SQLALCHEMY_DATABASE_URI", "postgresql://postgres:root@localhost/emergency_alerts")
     REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
     ANTIVIRUS_ENABLED = os.getenv("ANTIVIRUS_ENABLED") == "1"
@@ -464,6 +464,7 @@ class Decoupled(Development):
     API_HOST_NAME = "http://api.ecs.local:6011"
     TEMPLATE_PREVIEW_API_HOST = "http://api.ecs.local:6013"
     if os.getenv("MASTER_USERNAME"):
+        print("Using master credentials for db connection")
         filtered_password = os.environ.get("MASTER_PASSWORD").replace("%", "%%")
         SQLALCHEMY_DATABASE_URI = "postgresql://{user}:{password}@{host}:{port}/{database}".format(
             user=os.environ.get("MASTER_USERNAME"),
@@ -473,6 +474,7 @@ class Decoupled(Development):
             database=os.environ.get("DATABASE"),
         )
     else:
+        print("Using iam for db connection")
         SQLALCHEMY_DATABASE_URI = (
             "postgresql://{user}:password@{host}:{port}/{database}?sslmode=verify-full&sslrootcert={cert}".format(
                 user=os.environ.get("RDS_USER"),
