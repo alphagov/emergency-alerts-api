@@ -12,6 +12,13 @@ from tests.app.db import create_invited_org_user
 @pytest.mark.parametrize(
     "platform_admin, expected_invited_by", ((True, "The GOV.UK Emergency Alerts team"), (False, "Test User"))
 )
+@pytest.mark.parametrize(
+    "extra_args, expected_start_of_invite_url",
+    [
+        ({}, "https://admin.development.emergency-alerts.service.gov.uk"),
+        ({"invite_link_host": "https://www.example.com"}, "https://www.example.com"),
+    ],
+)
 def test_create_invited_org_user(
     admin_request,
     sample_organisation,
@@ -19,6 +26,8 @@ def test_create_invited_org_user(
     mocker,
     platform_admin,
     expected_invited_by,
+    expected_start_of_invite_url,
+    extra_args,
 ):
     mocked = mocker.patch("app.organisation.invite_rest.notify_send")
     fake_token = "0123456789"
@@ -30,6 +39,7 @@ def test_create_invited_org_user(
         organisation=str(sample_organisation.id),
         email_address=email_address,
         invited_by=str(sample_user.id),
+        **extra_args
     )
 
     json_resp = admin_request.post(
@@ -51,7 +61,7 @@ def test_create_invited_org_user(
     notification["personalisation"] = {
         "user_name": expected_invited_by,
         "organisation_name": sample_organisation.name,
-        "url": f'{current_app.config["ADMIN_EXTERNAL_URL"]}/organisation-invitation/{fake_token}',
+        "url": f'{expected_start_of_invite_url}/organisation-invitation/{fake_token}',
     }
 
     mocked.assert_called_once_with(notification)

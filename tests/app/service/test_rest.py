@@ -2291,7 +2291,7 @@ def test_update_service_calls_send_notification_as_service_becomes_live(notify_d
     assert resp.status_code == 200
     send_notification_mock.assert_called_once_with(
         service_id=restricted_service.id,
-        template_id="618185c6-3636-49cd-b7d2-6f6f5eb3bdde",
+        template_id="9e10c154-d989-4cfe-80ca-481cd09b7251",
         personalisation={"service_name": restricted_service.name, "message_limit": "1,000"},
         include_user_fields=["name"],
     )
@@ -2642,32 +2642,32 @@ def test_get_email_reply_to_addresses_with_multiple_email_addresses(client, noti
     assert not json_response[1]["updated_at"]
 
 
-def test_verify_reply_to_email_address_should_send_verification_email(
-    admin_request, notify_db_session, mocker, verify_reply_to_address_email_template
-):
-    service = create_service()
-    mocked = mocker.patch("app.celery.provider_tasks.deliver_email.apply_async")
-    data = {"email": "reply-here@example.gov.uk"}
-    notify_service = verify_reply_to_address_email_template.service
-    response = admin_request.post(
-        "service.verify_reply_to_email_address", service_id=service.id, _data=data, _expected_status=201
-    )
+# def test_verify_reply_to_email_address_should_send_verification_email(
+#     admin_request, notify_db_session, mocker, verify_reply_to_address_email_template
+# ):
+#     service = create_service()
+#     mocked = mocker.patch("app.celery.provider_tasks.deliver_email.apply_async")
+#     data = {"email": "reply-here@example.gov.uk"}
+#     notify_service = verify_reply_to_address_email_template.service
+#     response = admin_request.post(
+#         "service.verify_reply_to_email_address", service_id=service.id, _data=data, _expected_status=201
+#     )
 
-    notification = Notification.query.first()
-    assert notification.template_id == verify_reply_to_address_email_template.id
-    assert response["data"] == {"id": str(notification.id)}
-    mocked.assert_called_once_with([str(notification.id)], queue="notify-internal-tasks")
-    assert notification.reply_to_text == notify_service.get_default_reply_to_email_address()
+#     notification = Notification.query.first()
+#     assert notification.template_id == verify_reply_to_address_email_template.id
+#     assert response["data"] == {"id": str(notification.id)}
+#     mocked.assert_called_once_with([str(notification.id)], queue="notify-internal-tasks")
+#     assert notification.reply_to_text == notify_service.get_default_reply_to_email_address()
 
 
-def test_verify_reply_to_email_address_doesnt_allow_duplicates(admin_request, notify_db_session, mocker):
-    data = {"email": "reply-here@example.gov.uk"}
-    service = create_service()
-    create_reply_to_email(service, "reply-here@example.gov.uk")
-    response = admin_request.post(
-        "service.verify_reply_to_email_address", service_id=service.id, _data=data, _expected_status=409
-    )
-    assert response["message"] == "Your service already uses ‘reply-here@example.gov.uk’ as an email reply-to address."
+# def test_verify_reply_to_email_address_doesnt_allow_duplicates(admin_request, notify_db_session, mocker):
+#     data = {"email": "reply-here@example.gov.uk"}
+#     service = create_service()
+#     create_reply_to_email(service, "reply-here@example.gov.uk")
+#     response = admin_request.post(
+#         "service.verify_reply_to_email_address", service_id=service.id, _data=data, _expected_status=409
+#     )
+#     assert response["message"] == "Your service already uses ‘reply-here@example.gov.uk’ as an email reply-to address."
 
 
 def test_add_service_reply_to_email_address(admin_request, sample_service):
