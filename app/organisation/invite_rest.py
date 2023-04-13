@@ -36,13 +36,12 @@ register_errors(organisation_invite_blueprint)
 @organisation_invite_blueprint.route("/organisation/<uuid:organisation_id>/invite", methods=["POST"])
 def invite_user_to_org(organisation_id):
     data = request.get_json()
-    validate(data, post_create_invited_org_user_status_schema)
 
+    validate(data, post_create_invited_org_user_status_schema)
     invited_org_user = InvitedOrganisationUser(
         email_address=data["email_address"], invited_by_id=data["invited_by"], organisation_id=organisation_id
     )
     save_invited_org_user(invited_org_user)
-
     # template = dao_get_template_by_id(current_app.config["ORGANISATION_INVITATION_EMAIL_TEMPLATE_ID"])
 
     # saved_notification = persist_notification(
@@ -71,7 +70,6 @@ def invite_user_to_org(organisation_id):
     # send_notification_to_queue(saved_notification, research_mode=False, queue=QueueNames.NOTIFY)
 
     notification = {}
-    notification = {}
     notification["type"] = EMAIL_TYPE
     notification["template_id"] = current_app.config["ORGANISATION_INVITATION_EMAIL_TEMPLATE_ID"]
     notification["recipient"] = invited_org_user.email_address
@@ -88,7 +86,6 @@ def invite_user_to_org(organisation_id):
             data.get("invite_link_host"),
         ),
     }
-
     notify_send(notification)
 
     return jsonify(data=invited_org_user.serialize()), 201

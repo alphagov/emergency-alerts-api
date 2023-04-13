@@ -459,7 +459,7 @@ class Development(Config):
 class Decoupled(Development):
     NOTIFY_ENVIRONMENT = "decoupled"
     ADMIN_BASE_URL = "http://admin.ecs.local:6012"
-    ADMIN_EXTERNAL_URL = "https://admin.development.emergency-alerts.service.gov.uk/"
+    ADMIN_EXTERNAL_URL = "https://admin.development.emergency-alerts.service.gov.uk"
     REDIS_URL = "redis://api.ecs.local:6379/0"
     API_HOST_NAME = "http://api.ecs.local:6011"
     TEMPLATE_PREVIEW_API_HOST = "http://api.ecs.local:6013"
@@ -530,6 +530,7 @@ class Test(Development):
 
     MMG_URL = "https://example.com/mmg"
     FIRETEXT_URL = "https://example.com/firetext"
+    ADMIN_EXTERNAL_URL = "https://admin.development.emergency-alerts.service.gov.uk"
 
     CBC_PROXY_ENABLED = True
     DVLA_EMAIL_ADDRESSES = ["success@simulator.amazonses.com", "success+2@simulator.amazonses.com"]

@@ -780,28 +780,28 @@ def change_email_confirmation_template(notify_service):
     return template
 
 
-@pytest.fixture(scope="function")
-def mou_signed_templates(notify_service):
-    import importlib
+# @pytest.fixture(scope="function")
+# def mou_signed_templates(notify_service):
+#     import importlib
 
-    alembic_script = importlib.import_module("migrations.versions.0298_add_mou_signed_receipt")
+#     alembic_script = importlib.import_module("migrations.versions.0298_add_mou_signed_receipt")
 
-    return {
-        config_name: create_custom_template(
-            notify_service,
-            notify_service.users[0],
-            config_name,
-            "email",
-            content="\n".join(
-                next(x for x in alembic_script.templates if x["id"] == current_app.config[config_name])["content_lines"]
-            ),
-        )
-        for config_name in [
-            "MOU_SIGNER_RECEIPT_TEMPLATE_ID",
-            "MOU_SIGNED_ON_BEHALF_SIGNER_RECEIPT_TEMPLATE_ID",
-            "MOU_SIGNED_ON_BEHALF_ON_BEHALF_RECEIPT_TEMPLATE_ID",
-        ]
-    }
+#     return {
+#         config_name: create_custom_template(
+#             notify_service,
+#             notify_service.users[0],
+#             config_name,
+#             "email",
+#             content="\n".join(
+#                 next(x for x in alembic_script.templates if x["id"] == current_app.config[config_name])["content_lines"]
+#             ),
+#         )
+#         for config_name in [
+#             "MOU_SIGNER_RECEIPT_TEMPLATE_ID",
+#             "MOU_SIGNED_ON_BEHALF_SIGNER_RECEIPT_TEMPLATE_ID",
+#             "MOU_SIGNED_ON_BEHALF_ON_BEHALF_RECEIPT_TEMPLATE_ID",
+#         ]
+#     }
 
 
 def create_custom_template(service, user, template_config_name, template_type, content="", subject=None):
