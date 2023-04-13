@@ -124,7 +124,6 @@ def test_invited_user_for_broadcast_service_receives_broadcast_invite_email(
 
 
 def test_create_invited_user_without_auth_type(admin_request, sample_service, mocker, invitation_email_template):
-    # mocker.patch("app.celery.provider_tasks.deliver_email.apply_async")
     mocker.patch("app.service_invite.rest.notify_send")
     email_address = "invited_user@service.gov.uk"
     invite_from = sample_service.users[0]
@@ -145,7 +144,6 @@ def test_create_invited_user_without_auth_type(admin_request, sample_service, mo
 
 
 def test_create_invited_user_invalid_email(client, sample_service, mocker, fake_uuid):
-    # mocked = mocker.patch("app.celery.provider_tasks.deliver_email.apply_async")
     mocked = mocker.patch("app.service_invite.rest.notify_send")
     email_address = "notanemail"
     invite_from = sample_service.users[0]
