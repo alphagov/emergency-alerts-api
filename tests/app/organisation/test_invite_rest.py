@@ -5,10 +5,8 @@ from emergency_alerts_utils.url_safe_token import generate_token
 from flask import current_app, json
 from freezegun import freeze_time
 
-from app.models import INVITE_PENDING, Notification
 from tests import create_admin_authorization_header
 from tests.app.db import create_invited_org_user
-from app.organisation.invite_rest import invited_org_user_url
 
 
 @pytest.mark.parametrize(
