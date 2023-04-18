@@ -9,12 +9,14 @@ phases:
     commands:
       - echo Build started on `date`
       - echo Building Docker image...
-      - docker build -t $REPOSITORY_URI:latest -t $REPOSITORY_URI:$EXECUTION_ID -t $REPOSITORY_URI:$COMMIT_ID -f Dockerfile.eas-base --build-arg ECS_ACCOUNT_NUMBER=$ACCOUNT_NUMBER --no-cache .
+      - docker build -t $REPOSITORY_URI:latest -t $REPOSITORY_URI:$EXECUTION_ID -t $REPOSITORY_URI:$COMMIT_ID -f Dockerfile.eas-api --build-arg ECS_ACCOUNT_NUMBER=$ACCOUNT_NUMBER --no-cache .
   post_build:
     commands:
       - echo Building complete on `date`
       - echo Pushing the Docker image...
       - docker push $REPOSITORY_URI:latest
+      - aws ecs describe-task-definition --task-definition $TASK_DEFINITION_ARN | jq '.taskDefinition' > taskdef.json
+      - envsubst < .codepipeline/appspec_template.yaml > appspec.yaml
 
 artifacts:
   files:
