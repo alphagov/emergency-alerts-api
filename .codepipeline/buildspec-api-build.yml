@@ -1,31 +1,17 @@
 version: 0.2
 
 phases:
-  install:
-    commands:
-      - apt-get update
-      - apt install jq
-      - mkdir -vp ~/.docker/cli-plugins/
-      - curl --silent -L "https://github.com/docker/buildx/releases/download/v0.3.0/buildx-v0.3.0.linux-amd64" > ~/.docker/cli-plugins/docker-buildx
-      - chmod a+x ~/.docker/cli-plugins/docker-buildx
   pre_build:
     commands:
-      - docker buildx create --name builder
-      - docker buildx use builder
+      - echo Logging in to Amazon ECR...
+      - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ACCOUNT_NUMBER.dkr.ecr.$AWS_REGION.amazonaws.com
   build:
     commands:
-      - bash ./scripts/docker-build.sh --EXECUTION_ID $EXECUTION_ID --COMMIT_ID $COMMIT_ID --IMAGE api --ARGS '--push'
+      - echo Build started on `date`
+      - echo Building Docker image...
+      - docker build -t $REPOSITORY_URI:latest -t $REPOSITORY_URI:$EXECUTION_ID -t $REPOSITORY_URI:$COMMIT_ID -f Dockerfile.eas-api --build-arg ECS_ACCOUNT_NUMBER=$ACCOUNT_NUMBER --no-cache .
   post_build:
     commands:
-      - aws ecs describe-task-definition --task-definition $TASK_DEFINITION_ARN | jq '.taskDefinition' > taskdef.json
-      - envsubst < .codepipeline/appspec_template.yaml > appspec.yaml
-
-artifacts:
-  files:
-    - 'appspec.yaml'
-    - 'taskdef.json'
-  secondary-artifacts:
-    BuildArtifact:
-      files:
-        - appspec.yaml
-        - taskdef.json
+      - echo Building complete on `date`
+      - echo Pushing the Docker image...
+      - docker push $REPOSITORY_URI:latest
