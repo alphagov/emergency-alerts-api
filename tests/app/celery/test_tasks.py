@@ -1533,7 +1533,6 @@ def test_send_inbound_sms_to_service_does_not_retries_if_request_returns_404(not
 
 
 def test_process_incomplete_job_sms(mocker, sample_template):
-
     mocker.patch(
         "app.celery.tasks.s3.get_job_and_metadata_from_s3",
         return_value=(load_example_csv("multiple_sms"), {"sender_id": None}),
@@ -1564,7 +1563,6 @@ def test_process_incomplete_job_sms(mocker, sample_template):
 
 
 def test_process_incomplete_job_with_notifications_all_sent(mocker, sample_template):
-
     mocker.patch(
         "app.celery.tasks.s3.get_job_and_metadata_from_s3",
         return_value=(load_example_csv("multiple_sms"), {"sender_id": None}),
@@ -1603,7 +1601,6 @@ def test_process_incomplete_job_with_notifications_all_sent(mocker, sample_templ
 
 
 def test_process_incomplete_jobs_sms(mocker, sample_template):
-
     mocker.patch(
         "app.celery.tasks.s3.get_job_and_metadata_from_s3",
         return_value=(load_example_csv("multiple_sms"), {"sender_id": None}),
@@ -1682,7 +1679,6 @@ def test_process_incomplete_jobs_no_notifications_added(mocker, sample_template)
 
 
 def test_process_incomplete_jobs(mocker):
-
     mocker.patch(
         "app.celery.tasks.s3.get_job_and_metadata_from_s3",
         return_value=(load_example_csv("multiple_sms"), {"sender_id": None}),
@@ -1696,7 +1692,6 @@ def test_process_incomplete_jobs(mocker):
 
 
 def test_process_incomplete_job_no_job_in_database(mocker, fake_uuid):
-
     mocker.patch(
         "app.celery.tasks.s3.get_job_and_metadata_from_s3",
         return_value=(load_example_csv("multiple_sms"), {"sender_id": None}),
@@ -1710,7 +1705,6 @@ def test_process_incomplete_job_no_job_in_database(mocker, fake_uuid):
 
 
 def test_process_incomplete_job_email(mocker, sample_email_template):
-
     mocker.patch(
         "app.celery.tasks.s3.get_job_and_metadata_from_s3",
         return_value=(load_example_csv("multiple_email"), {"sender_id": None}),

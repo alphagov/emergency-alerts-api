@@ -277,7 +277,6 @@ def save_email(self, service_id, notification_id, encrypted_notification, sender
 
 @notify_celery.task(bind=True, name="save-api-email", max_retries=5, default_retry_delay=300)
 def save_api_email(self, encrypted_notification):
-
     save_api_email_or_sms(self, encrypted_notification)
 
 
@@ -294,7 +293,6 @@ def save_api_email_or_sms(self, encrypted_notification):
         provider_tasks.deliver_email if notification["notification_type"] == EMAIL_TYPE else provider_tasks.deliver_sms
     )
     try:
-
         persist_notification(
             notification_id=notification["id"],
             template_id=notification["template_id"],
@@ -321,7 +319,6 @@ def save_api_email_or_sms(self, encrypted_notification):
         current_app.logger.info(f"{notification['notification_type']} {notification['id']} already exists.")
 
     except SQLAlchemyError:
-
         try:
             self.retry(queue=QueueNames.RETRY)
         except self.MaxRetriesExceededError:

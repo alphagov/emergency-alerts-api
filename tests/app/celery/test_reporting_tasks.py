@@ -150,7 +150,6 @@ def test_create_nightly_billing_for_day_checks_history(sample_service, sample_le
 def test_create_nightly_billing_for_day_sms_rate_multiplier(
     sample_service, sample_template, mocker, second_rate, records_num, billable_units, multiplier
 ):
-
     yesterday = datetime.now() - timedelta(days=1)
 
     mocker.patch("app.dao.fact_billing_dao.get_rate", side_effect=mocker_get_rate)
@@ -441,7 +440,6 @@ def test_get_rate_for_sms_and_email(notify_db_session):
 @freeze_time("2018-03-30T01:00:00")
 # summer time starts on 2018-03-25
 def test_create_nightly_billing_for_day_use_BST(sample_service, sample_template, mocker):
-
     mocker.patch("app.dao.fact_billing_dao.get_rate", side_effect=mocker_get_rate)
 
     # too late
@@ -483,7 +481,6 @@ def test_create_nightly_billing_for_day_use_BST(sample_service, sample_template,
 
 @freeze_time("2018-01-15T03:30:00")
 def test_create_nightly_billing_for_day_update_when_record_exists(sample_service, sample_template, mocker):
-
     mocker.patch("app.dao.fact_billing_dao.get_rate", side_effect=mocker_get_rate)
 
     create_notification(
