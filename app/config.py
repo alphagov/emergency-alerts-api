@@ -471,7 +471,6 @@ class Decoupled(Development):
             port=os.environ.get("RDS_PORT"),
             database=os.environ.get("DATABASE"),
         )
-        os.unsetenv("INIT")
     else:
         print("Using iam for db connection")
         SQLALCHEMY_DATABASE_URI = (
