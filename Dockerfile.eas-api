@@ -13,7 +13,7 @@ RUN wget https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem -O /e
     update-ca-certificates
 
 # Build emergency-alerts-api
-RUN . $VENV_API/bin/activate && make bootstrap
+RUN . $VENV_API/bin/activate && $PYTHON_VERSION -m pip install pycurl && make bootstrap
 
 # Create a blank configuration file
 RUN echo "" > $API_DIR/environment.sh
