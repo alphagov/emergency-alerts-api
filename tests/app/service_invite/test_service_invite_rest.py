@@ -53,15 +53,27 @@ def test_create_invited_user(
     assert json_resp["data"]["id"]
     assert json_resp["data"]["folder_permissions"] == ["folder_1", "folder_2", "folder_3"]
 
-    notification = {}
-    notification["type"] = "email"
-    notification["template_id"] = current_app.config["BROADCAST_INVITATION_EMAIL_TEMPLATE_ID"]
-    notification["recipient"] = email_address
-    notification["reply_to"] = current_app.config["EAS_EMAIL_REPLY_TO_ID"]
-    notification["personalisation"] = {
-        "user_name": "Test User",
-        "service_name": "Sample service",
-        "url": f'{expected_start_of_invite_url}/invitation/{fake_token}',
+    # notification = {}
+    # notification["type"] = "email"
+    # notification["template_id"] = current_app.config["BROADCAST_INVITATION_EMAIL_TEMPLATE_ID"]
+    # notification["recipient"] = email_address
+    # notification["reply_to"] = current_app.config["EAS_EMAIL_REPLY_TO_ID"]
+    # notification["personalisation"] = {
+    #     "user_name": "Test User",
+    #     "service_name": "Sample service",
+    #     "url": f'{expected_start_of_invite_url}/invitation/{fake_token}',
+    # }
+
+    notification = {
+        "type": "email",
+        "template_id": current_app.config["BROADCAST_INVITATION_EMAIL_TEMPLATE_ID"],
+        "recipient": email_address,
+        "reply_to": current_app.config["EAS_EMAIL_REPLY_TO_ID"],
+        "personalisation": {
+            "user_name": "Test User",
+            "service_name": "Sample service",
+            "url": f'{expected_start_of_invite_url}/invitation/{fake_token}',
+        },
     }
 
     mocked.assert_called_once_with(notification)
@@ -109,15 +121,27 @@ def test_invited_user_for_broadcast_service_receives_broadcast_invite_email(
     assert json_resp["data"]["id"]
     assert json_resp["data"]["folder_permissions"] == ["folder_1", "folder_2", "folder_3"]
 
-    notification = {}
-    notification["type"] = "email"
-    notification["template_id"] = current_app.config["BROADCAST_INVITATION_EMAIL_TEMPLATE_ID"]
-    notification["recipient"] = email_address
-    notification["reply_to"] = current_app.config["EAS_EMAIL_REPLY_TO_ID"]
-    notification["personalisation"] = {
-        "user_name": "Test User",
-        "service_name": "Sample broadcast service",
-        "url": f'{expected_start_of_invite_url}/invitation/{fake_token}',
+    # notification = {}
+    # notification["type"] = "email"
+    # notification["template_id"] = current_app.config["BROADCAST_INVITATION_EMAIL_TEMPLATE_ID"]
+    # notification["recipient"] = email_address
+    # notification["reply_to"] = current_app.config["EAS_EMAIL_REPLY_TO_ID"]
+    # notification["personalisation"] = {
+    #     "user_name": "Test User",
+    #     "service_name": "Sample broadcast service",
+    #     "url": f'{expected_start_of_invite_url}/invitation/{fake_token}',
+    # }
+
+    notification = {
+        "type": "email",
+        "template_id": current_app.config["BROADCAST_INVITATION_EMAIL_TEMPLATE_ID"],
+        "recipient": email_address,
+        "reply_to": current_app.config["EAS_EMAIL_REPLY_TO_ID"],
+        "personalisation": {
+            "user_name": "Test User",
+            "service_name": "Sample broadcast service",
+            "url": f'{expected_start_of_invite_url}/invitation/{fake_token}',
+        },
     }
 
     mocked.assert_called_once_with(notification)

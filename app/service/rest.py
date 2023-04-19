@@ -773,12 +773,20 @@ def verify_reply_to_email_address(service_id):
 
     # send_notification_to_queue(saved_notification, False, queue=QueueNames.NOTIFY)
 
-    notification = {}
-    notification["type"] = EMAIL_TYPE
-    notification["template_id"] = current_app.config["REPLY_TO_EMAIL_ADDRESS_VERIFICATION_TEMPLATE_ID"]
-    notification["recipient"] = email_address["email"]
-    notification["reply_to"] = current_app.config["EAS_EMAIL_REPLY_TO_ID"]
-    notification["personalisation"] = ""
+    # notification = {}
+    # notification["type"] = EMAIL_TYPE
+    # notification["template_id"] = current_app.config["REPLY_TO_EMAIL_ADDRESS_VERIFICATION_TEMPLATE_ID"]
+    # notification["recipient"] = email_address["email"]
+    # notification["reply_to"] = current_app.config["EAS_EMAIL_REPLY_TO_ID"]
+    # notification["personalisation"] = ""
+
+    notification = {
+        "type": EMAIL_TYPE,
+        "template_id": current_app.config["REPLY_TO_EMAIL_ADDRESS_VERIFICATION_TEMPLATE_ID"],
+        "recipient": email_address["email"],
+        "reply_to": current_app.config["EAS_EMAIL_REPLY_TO_ID"],
+        "personalisation": "",
+    }
 
     response = notify_send(notification)
 

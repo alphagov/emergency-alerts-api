@@ -63,18 +63,33 @@ def create_invited_user(service_id):
 
     # send_notification_to_queue(saved_notification, False, queue=QueueNames.NOTIFY)
 
-    notification = {}
-    notification["type"] = EMAIL_TYPE
-    notification["template_id"] = current_app.config["BROADCAST_INVITATION_EMAIL_TEMPLATE_ID"]
-    notification["recipient"] = invited_user.email_address
-    notification["reply_to"] = current_app.config["EAS_EMAIL_REPLY_TO_ID"]
-    notification["personalisation"] = {
-        "user_name": invited_user.from_user.name,
-        "service_name": invited_user.service.name,
-        "url": invited_user_url(
-            invited_user.id,
-            request_json.get("invite_link_host"),
-        ),
+    # notification = {}
+    # notification["type"] = EMAIL_TYPE
+    # notification["template_id"] = current_app.config["BROADCAST_INVITATION_EMAIL_TEMPLATE_ID"]
+    # notification["recipient"] = invited_user.email_address
+    # notification["reply_to"] = current_app.config["EAS_EMAIL_REPLY_TO_ID"]
+    # notification["personalisation"] = {
+    #     "user_name": invited_user.from_user.name,
+    #     "service_name": invited_user.service.name,
+    #     "url": invited_user_url(
+    #         invited_user.id,
+    #         request_json.get("invite_link_host"),
+    #     ),
+    # }
+
+    notification = {
+        "type": EMAIL_TYPE,
+        "template_id": current_app.config["BROADCAST_INVITATION_EMAIL_TEMPLATE_ID"],
+        "recipient": invited_user.email_address,
+        "reply_to": current_app.config["EAS_EMAIL_REPLY_TO_ID"],
+        "personalisation": {
+            "user_name": invited_user.from_user.name,
+            "service_name": invited_user.service.name,
+            "url": invited_user_url(
+                invited_user.id,
+                request_json.get("invite_link_host"),
+            ),
+        },
     }
 
     notify_send(notification)

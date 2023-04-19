@@ -40,15 +40,23 @@ def send_notification_to_service_users(service_id, template_id, personalisation=
         # send_notification_to_queue(notification, False, queue=QueueNames.NOTIFY)
 
         template = get_notify_template(template_id)
-        notification = {}
-        notification["type"] = template.type
-        notification["template_id"] = current_app.config["PASSWORD_RESET_TEMPLATE_ID"]
-        notification["personalisation"] = personalisation
-        if template.type == EMAIL_TYPE:
-            notification["reply_to"] = current_app.config["EAS_EMAIL_REPLY_TO_ID"]
-            notification["recipient"] = user.email_address
-        else:
-            notification["recipient"] = user.mobile_number
+        # notification = {}
+        # notification["type"] = template.type
+        # notification["template_id"] = current_app.config["PASSWORD_RESET_TEMPLATE_ID"]
+        # notification["personalisation"] = personalisation
+        # if template.type == EMAIL_TYPE:
+        #     notification["reply_to"] = current_app.config["EAS_EMAIL_REPLY_TO_ID"]
+        #     notification["recipient"] = user.email_address
+        # else:
+        #     notification["recipient"] = user.mobile_number
+
+        notification = {
+            "type": template.type,
+            "template_id": current_app.config["PASSWORD_RESET_TEMPLATE_ID"],
+            "personalisation": personalisation,
+            "recipient": user.email_address if template.type == EMAIL_TYPE else user.mobile_number,
+            "reply_to": current_app.config["EAS_EMAIL_REPLY_TO_ID"] if template.type == EMAIL_TYPE else None,
+        }
 
         notify_send(notification)
 

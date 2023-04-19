@@ -315,14 +315,22 @@ def create_2fa_code(template_id, code_type, user_to_send_to, secret_code, recipi
     # save the code in the VerifyCode table
     create_user_code(user_to_send_to, secret_code, code_type)
 
-    notification = {}
-    notification["type"] = code_type
-    notification["template_id"] = template_id
-    notification["recipient"] = recipient
-    notification["personalisation"] = personalisation
+    # notification = {}
+    # notification["type"] = code_type
+    # notification["template_id"] = template_id
+    # notification["recipient"] = recipient
+    # notification["personalisation"] = personalisation
 
-    if code_type == EMAIL_TYPE:
-        notification["reply_to"] = current_app.config["EAS_EMAIL_REPLY_TO_ID"]
+    # if code_type == EMAIL_TYPE:
+    #     notification["reply_to"] = current_app.config["EAS_EMAIL_REPLY_TO_ID"]
+
+    notification = {
+        "type": code_type,
+        "template_id": template_id,
+        "recipient": recipient,
+        "personalisation": personalisation,
+        "reply_to": current_app.config["EAS_EMAIL_REPLY_TO_ID"] if code_type == EMAIL_TYPE else None
+    }
 
     response = notify_send(notification)
 
@@ -337,16 +345,28 @@ def send_user_confirm_new_email(user_id):
 
     email = email_data_request_schema.load(request.get_json())
 
-    notification = {}
-    notification["type"] = EMAIL_TYPE
-    notification["template_id"] = current_app.config["CHANGE_EMAIL_CONFIRMATION_TEMPLATE_ID"]
-    notification["recipient"] = email
-    notification["reply_to"] = current_app.config["EAS_EMAIL_REPLY_TO_ID"]
-    notification["personalisation"] = {
-        "name": user_to_send_to.name,
-        "url": _create_confirmation_url(user=user_to_send_to, email_address=email["email"]),
-        # "feedback_url": current_app.config["ADMIN_BASE_URL"] + "/support",
-        "feedback_url": current_app.config["ADMIN_EXTERNAL_URL"] + "/support",
+    # notification = {}
+    # notification["type"] = EMAIL_TYPE
+    # notification["template_id"] = current_app.config["CHANGE_EMAIL_CONFIRMATION_TEMPLATE_ID"]
+    # notification["recipient"] = email
+    # notification["reply_to"] = current_app.config["EAS_EMAIL_REPLY_TO_ID"]
+    # notification["personalisation"] = {
+    #     "name": user_to_send_to.name,
+    #     "url": _create_confirmation_url(user=user_to_send_to, email_address=email["email"]),
+    #     # "feedback_url": current_app.config["ADMIN_BASE_URL"] + "/support",
+    #     "feedback_url": current_app.config["ADMIN_EXTERNAL_URL"] + "/support",
+    # }
+
+    notification = {
+        "type": EMAIL_TYPE,
+        "template_id": current_app.config["CHANGE_EMAIL_CONFIRMATION_TEMPLATE_ID"],
+        "recipient": email,
+        "reply_to": current_app.config["EAS_EMAIL_REPLY_TO_ID"],
+        "personalisation": {
+            "name": user_to_send_to.name,
+            "url": _create_confirmation_url(user=user_to_send_to, email_address=email["email"]),
+            "feedback_url": current_app.config["ADMIN_EXTERNAL_URL"] + "/support",
+        },
     }
 
     notify_send(notification)
@@ -361,17 +381,31 @@ def send_new_user_email_verification(user_id):
     # when registering, we verify all users' email addresses using this function
     user_to_send_to = get_user_by_id(user_id=user_id)
 
-    notification = {}
-    notification["type"] = EMAIL_TYPE
-    notification["template_id"] = current_app.config["NEW_USER_EMAIL_VERIFICATION_TEMPLATE_ID"]
-    notification["recipient"] = user_to_send_to.email_address
-    notification["reply_to"] = current_app.config["EAS_EMAIL_REPLY_TO_ID"]
-    notification["personalisation"] = {
-        "name": user_to_send_to.name,
-        "url": _create_verification_url(
-            user_to_send_to,
-            base_url=request_json.get("admin_base_url"),
-        ),
+    # notification = {}
+    # notification["type"] = EMAIL_TYPE
+    # notification["template_id"] = current_app.config["NEW_USER_EMAIL_VERIFICATION_TEMPLATE_ID"]
+    # notification["recipient"] = user_to_send_to.email_address
+    # notification["reply_to"] = current_app.config["EAS_EMAIL_REPLY_TO_ID"]
+    # notification["personalisation"] = {
+    #     "name": user_to_send_to.name,
+    #     "url": _create_verification_url(
+    #         user_to_send_to,
+    #         base_url=request_json.get("admin_base_url"),
+    #     ),
+    # }
+
+    notification = {
+        "type": EMAIL_TYPE,
+        "template_id": current_app.config["NEW_USER_EMAIL_VERIFICATION_TEMPLATE_ID"],
+        "recipient": user_to_send_to.email_address,
+        "reply_to": current_app.config["EAS_EMAIL_REPLY_TO_ID"],
+        "personalisation": {
+            "name": user_to_send_to.name,
+            "url": _create_verification_url(
+                user_to_send_to,
+                base_url=request_json.get("admin_base_url"),
+            ),
+        },
     }
 
     notify_send(notification)
@@ -383,18 +417,30 @@ def send_new_user_email_verification(user_id):
 def send_already_registered_email(user_id):
     to = email_data_request_schema.load(request.get_json())
 
-    notification = {}
-    notification["type"] = EMAIL_TYPE
-    notification["template_id"] = current_app.config["ALREADY_REGISTERED_EMAIL_TEMPLATE_ID"]
-    notification["recipient"] = to["email"]
-    notification["reply_to"] = current_app.config["EAS_EMAIL_REPLY_TO_ID"]
-    notification["personalisation"] = {
-        # "signin_url": current_app.config["ADMIN_BASE_URL"] + "/sign-in",
-        # "forgot_password_url": current_app.config["ADMIN_BASE_URL"] + "/forgot-password",
-        # "feedback_url": current_app.config["ADMIN_BASE_URL"] + "/support",
-        "signin_url": current_app.config["ADMIN_EXTERNAL_URL"] + "/sign-in",
-        "forgot_password_url": current_app.config["ADMIN_EXTERNAL_URL"] + "/forgot-password",
-        "feedback_url": current_app.config["ADMIN_EXTERNAL_URL"] + "/support",
+    # notification = {}
+    # notification["type"] = EMAIL_TYPE
+    # notification["template_id"] = current_app.config["ALREADY_REGISTERED_EMAIL_TEMPLATE_ID"]
+    # notification["recipient"] = to["email"]
+    # notification["reply_to"] = current_app.config["EAS_EMAIL_REPLY_TO_ID"]
+    # notification["personalisation"] = {
+    #     # "signin_url": current_app.config["ADMIN_BASE_URL"] + "/sign-in",
+    #     # "forgot_password_url": current_app.config["ADMIN_BASE_URL"] + "/forgot-password",
+    #     # "feedback_url": current_app.config["ADMIN_BASE_URL"] + "/support",
+    #     "signin_url": current_app.config["ADMIN_EXTERNAL_URL"] + "/sign-in",
+    #     "forgot_password_url": current_app.config["ADMIN_EXTERNAL_URL"] + "/forgot-password",
+    #     "feedback_url": current_app.config["ADMIN_EXTERNAL_URL"] + "/support",
+    # }
+
+    notification = {
+        "type": EMAIL_TYPE,
+        "template_id": current_app.config["ALREADY_REGISTERED_EMAIL_TEMPLATE_ID"],
+        "recipient": to["email"],
+        "reply_to": current_app.config["EAS_EMAIL_REPLY_TO_ID"],
+        "personalisation": {
+            "signin_url": current_app.config["ADMIN_EXTERNAL_URL"] + "/sign-in",
+            "forgot_password_url": current_app.config["ADMIN_EXTERNAL_URL"] + "/forgot-password",
+            "feedback_url": current_app.config["ADMIN_EXTERNAL_URL"] + "/support",
+        }
     }
 
     notify_send(notification)
@@ -472,21 +518,38 @@ def find_users_by_email():
 @user_blueprint.route("/reset-password", methods=["POST"])
 def send_user_reset_password():
     request_json = request.get_json()
-    email = email_data_request_schema.load(request_json)
-    user_to_send_to = get_user_by_email(email["email"])
+    data = email_data_request_schema.load(request_json)
+    user_to_send_to = get_user_by_email(data["email"])
 
-    notification = {}
-    notification["type"] = EMAIL_TYPE
-    notification["template_id"] = current_app.config["PASSWORD_RESET_TEMPLATE_ID"]
-    notification["recipient"] = email["email"]
-    notification["reply_to"] = current_app.config["EAS_EMAIL_REPLY_TO_ID"]
-    notification["personalisation"] = {
-        "user_name": user_to_send_to.name,
-        "url": _create_reset_password_url(
-            user_to_send_to.email_address,
-            base_url=request_json.get("admin_base_url"),
-            next_redirect=request_json.get("next"),
-        ),
+    print(user_to_send_to)
+
+    # notification = {}
+    # notification["type"] = EMAIL_TYPE
+    # notification["template_id"] = current_app.config["PASSWORD_RESET_TEMPLATE_ID"]
+    # notification["recipient"] = email["email"]
+    # notification["reply_to"] = current_app.config["EAS_EMAIL_REPLY_TO_ID"]
+    # notification["personalisation"] = {
+    #     "user_name": user_to_send_to.name,
+    #     "url": _create_reset_password_url(
+    #         user_to_send_to.email_address,
+    #         base_url=request_json.get("admin_base_url"),
+    #         next_redirect=request_json.get("next"),
+    #     ),
+    # }
+
+    notification = {
+        "type": EMAIL_TYPE,
+        "template_id": current_app.config["PASSWORD_RESET_TEMPLATE_ID"],
+        "recipient": data["email"],
+        "reply_to": current_app.config["EAS_EMAIL_REPLY_TO_ID"],
+        "personalisation": {
+            "user_name": user_to_send_to.name,
+            "url": _create_reset_password_url(
+                user_to_send_to.email_address,
+                base_url=request_json.get("admin_base_url"),
+                next_redirect=request_json.get("next"),
+            ),
+        },
     }
 
     notify_send(notification)
