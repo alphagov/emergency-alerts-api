@@ -4,7 +4,6 @@ from itsdangerous import BadData, SignatureExpired
 
 from app.clients.notify_client import notify_send
 
-# from app.config import QueueNames
 from app.dao.invited_user_dao import (
     get_invited_user_by_id,
     get_invited_user_by_service_and_id,
@@ -12,15 +11,9 @@ from app.dao.invited_user_dao import (
     save_invited_user,
 )
 
-# from app.dao.templates_dao import dao_get_template_by_id
 from app.errors import InvalidRequest, register_errors
 from app.models import EMAIL_TYPE
 
-# from app.models import BROADCAST_TYPE, EMAIL_TYPE, KEY_TYPE_NORMAL, Service
-# from app.notifications.process_notifications import (
-#     persist_notification,
-#     send_notification_to_queue,
-# )
 from app.schemas import invited_user_schema
 
 service_invite = Blueprint("service_invite", __name__)
@@ -33,49 +26,6 @@ def create_invited_user(service_id):
     request_json = request.get_json()
     invited_user = invited_user_schema.load(request_json)
     save_invited_user(invited_user)
-
-    # if invited_user.service.has_permission(BROADCAST_TYPE):
-    #     template_id = current_app.config["BROADCAST_INVITATION_EMAIL_TEMPLATE_ID"]
-    # else:
-    #     template_id = current_app.config["INVITATION_EMAIL_TEMPLATE_ID"]
-
-    # template = dao_get_template_by_id(template_id)
-    # service = Service.query.get(current_app.config["NOTIFY_SERVICE_ID"])
-
-    # saved_notification = persist_notification(
-    #     template_id=template.id,
-    #     template_version=template.version,
-    #     recipient=invited_user.email_address,
-    #     service=service,
-    #     personalisation={
-    #         "user_name": invited_user.from_user.name,
-    #         "service_name": invited_user.service.name,
-    #         "url": invited_user_url(
-    #             invited_user.id,
-    #             request_json.get("invite_link_host"),
-    #         ),
-    #     },
-    #     notification_type=EMAIL_TYPE,
-    #     api_key_id=None,
-    #     key_type=KEY_TYPE_NORMAL,
-    #     reply_to_text=invited_user.from_user.email_address,
-    # )
-
-    # send_notification_to_queue(saved_notification, False, queue=QueueNames.NOTIFY)
-
-    # notification = {}
-    # notification["type"] = EMAIL_TYPE
-    # notification["template_id"] = current_app.config["BROADCAST_INVITATION_EMAIL_TEMPLATE_ID"]
-    # notification["recipient"] = invited_user.email_address
-    # notification["reply_to"] = current_app.config["EAS_EMAIL_REPLY_TO_ID"]
-    # notification["personalisation"] = {
-    #     "user_name": invited_user.from_user.name,
-    #     "service_name": invited_user.service.name,
-    #     "url": invited_user_url(
-    #         invited_user.id,
-    #         request_json.get("invite_link_host"),
-    #     ),
-    # }
 
     notification = {
         "type": EMAIL_TYPE,
@@ -124,7 +74,6 @@ def invited_user_url(invited_user_id, invite_link_host=None):
     token = generate_token(str(invited_user_id), current_app.config["SECRET_KEY"], current_app.config["DANGEROUS_SALT"])
 
     if invite_link_host is None:
-        # invite_link_host = current_app.config["ADMIN_BASE_URL"]
         invite_link_host = current_app.config["ADMIN_EXTERNAL_URL"]
 
     return "{0}/invitation/{1}".format(invite_link_host, token)

@@ -17,9 +17,6 @@ from gds_metrics import Histogram
 
 from app import redis_store
 
-# from app.celery import provider_tasks
-# from app.celery.letters_pdf_tasks import get_pdf_for_templated_letter
-# from app.config import QueueNames
 from app.dao.notifications_dao import dao_create_notification
 from app.models import (
     EMAIL_TYPE,
@@ -160,40 +157,6 @@ def persist_notification(
             "{} {} created at {}".format(notification_type, notification_id, notification_created_at)
         )
     return notification
-
-
-# def send_notification_to_queue_detached(key_type, notification_type, notification_id, research_mode, queue=None):
-#     if research_mode or key_type == KEY_TYPE_TEST:
-#         queue = QueueNames.RESEARCH_MODE
-
-#     if notification_type == SMS_TYPE:
-#         if not queue:
-#             queue = QueueNames.SEND_SMS
-#         deliver_task = provider_tasks.deliver_sms
-#     if notification_type == EMAIL_TYPE:
-#         if not queue:
-#             queue = QueueNames.SEND_EMAIL
-#         deliver_task = provider_tasks.deliver_email
-#     if notification_type == LETTER_TYPE:
-#         if not queue:
-#             queue = QueueNames.CREATE_LETTERS_PDF
-#         deliver_task = get_pdf_for_templated_letter
-
-#     try:
-#         deliver_task.apply_async([str(notification_id)], queue=queue)
-#     except Exception:
-#         dao_delete_notifications_by_id(notification_id)
-#         raise
-
-#     current_app.logger.debug(
-#         "{} {} sent to the {} queue for delivery".format(notification_type, notification_id, queue)
-#     )
-
-
-# def send_notification_to_queue(notification, research_mode, queue=None):
-#     send_notification_to_queue_detached(
-#         notification.key_type, notification.notification_type, notification.id, research_mode, queue
-#     )
 
 
 def simulated_recipient(to_address, notification_type):

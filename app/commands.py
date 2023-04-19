@@ -24,11 +24,6 @@ from sqlalchemy.orm.exc import NoResultFound
 from app import db
 from app.aws import s3
 
-# from app.celery.letters_pdf_tasks import (
-#     get_pdf_for_templated_letter,
-#     resanitise_pdf,
-# )
-# from app.celery.tasks import process_row, record_daily_sorted_counts
 from app.config import QueueNames
 from app.dao.annual_billing_dao import (
     dao_create_or_update_annual_billing_for_year,
@@ -259,32 +254,6 @@ def insert_inbound_numbers_from_file(file_name):
                 db.session.commit()
 
 
-# @notify_command(name="replay-create-pdf-for-templated-letter")
-# @click.option(
-#     "-n",
-#     "--notification_id",
-#     type=click.UUID,
-#     required=True,
-#     help="Notification id of the letter that needs the get_pdf_for_templated_letter task replayed",
-# )
-# def replay_create_pdf_for_templated_letter(notification_id):
-#     print("Create task to get_pdf_for_templated_letter for notification: {}".format(notification_id))
-#     get_pdf_for_templated_letter.apply_async([str(notification_id)], queue=QueueNames.CREATE_LETTERS_PDF)
-
-
-# @notify_command(name="recreate-pdf-for-precompiled-or-uploaded-letter")
-# @click.option(
-#     "-n",
-#     "--notification_id",
-#     type=click.UUID,
-#     required=True,
-#     help="Notification ID of the precompiled or uploaded letter",
-# )
-# def recreate_pdf_for_precompiled_or_uploaded_letter(notification_id):
-#     print(f"Call resanitise_pdf task for notification: {notification_id}")
-#     resanitise_pdf.apply_async([str(notification_id)], queue=QueueNames.LETTERS)
-
-
 def setup_commands(application):
     application.cli.add_command(command_group)
 
@@ -478,18 +447,6 @@ def update_emails_to_remove_gsi(service_id):
         """
         db.session.execute(update_stmt, {"user_id": str(user.user_id)})
         db.session.commit()
-
-
-# @notify_command(name="replay-daily-sorted-count-files")
-# @click.option("-f", "--file_extension", required=False, help="File extension to search for, defaults to rs.txt")
-# @statsd(namespace="tasks")
-# def replay_daily_sorted_count_files(file_extension):
-#     bucket_location = "{}-ftp".format(current_app.config["NOTIFY_EMAIL_DOMAIN"])
-#     for filename in s3.get_list_of_files_by_suffix(
-#         bucket_name=bucket_location, subfolder="root/dispatch", suffix=file_extension or ".rs.txt"
-#     ):
-#         print("Create task to record daily sorted counts for file: ", filename)
-#         record_daily_sorted_counts.apply_async([filename], queue=QueueNames.NOTIFY)
 
 
 @notify_command(name="populate-organisations-from-file")

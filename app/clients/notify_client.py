@@ -6,14 +6,6 @@ from notifications_python_client.notifications import NotificationsAPIClient
 
 from app.models import EMAIL_TYPE, SMS_TYPE
 
-# try:
-#     api_key = os.environ.get("NOTIFY_CLIENT_API_KEY", "empty_key")
-#     notify_client = NotificationsAPIClient(api_key)
-# except TypeError as e:
-#     current_app.logger.error(f"NotificationsAPIClient API key required: {e}")
-# except AssertionError as e:
-#     current_app.logger.error(f"Invalid API key format: {e}")
-
 
 class Notify:
     pass
@@ -45,12 +37,9 @@ def get_notify_template(id):
     return response
 
 
-def notify_send(notification, research_mode=False):
+def notify_send(notification):
     if __notify.client is None:
         get_notify_client()
-
-    if research_mode:
-        pass  # TBD: what is research mode?
 
     try:
         response = None
@@ -71,37 +60,3 @@ def notify_send(notification, research_mode=False):
         current_app.logger.exception(f"Error sending notification: {e}")
 
     return response
-
-
-# Example send_sms_notification response
-# {
-#   "id": "740e5834-3a29-46b4-9a6f-16142fde533a",
-#   "reference": "STRING",
-#   "content": {
-#     "body": "MESSAGE TEXT",
-#     "from_number": "SENDER"
-#   },
-#   "uri": "https://api.notifications.service.gov.uk/v2/notifications/740e5834-3a29-46b4-9a6f-16142fde533a",
-#   "template": {
-#     "id": 'f33517ff-2a88-4f6e-b855-c550268ce08a',
-#     "version": INTEGER,
-#     "uri": "https://api.notifications.service.gov.uk/v2/template/ceb50d92-100d-4b8b-b559-14fa3b091cd"
-#   }
-# }
-
-# Example send_email_notification response
-# {
-#   "id": "740e5834-3a29-46b4-9a6f-16142fde533a",
-#   "reference": "STRING",
-#   "content": {
-#     "subject": "SUBJECT TEXT",
-#     "body": "MESSAGE TEXT",
-#     "from_email": "SENDER EMAIL"
-#   },
-#   "uri": "https://api.notifications.service.gov.uk/v2/notifications/740e5834-3a29-46b4-9a6f-16142fde533a",
-#   "template": {
-#     "id": "f33517ff-2a88-4f6e-b855-c550268ce08a",
-#     "version": INTEGER,
-#     "uri": "https://api.notifications.service.gov.uk/v2/template/f33517ff-2a88-4f6e-b855-c550268ce08a"
-#   }
-# }

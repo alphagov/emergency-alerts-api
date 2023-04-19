@@ -173,15 +173,7 @@ class Config(object):
     TEAM_MEMBER_EDIT_EMAIL_TEMPLATE_ID = "c5aeab5e-dd4f-431d-b544-ebd944f3c942"
     TEAM_MEMBER_EDIT_MOBILE_TEMPLATE_ID = "c8474c57-6601-47bb-ba67-caacf9716ee1"
     REPLY_TO_EMAIL_ADDRESS_VERIFICATION_TEMPLATE_ID = "3a8a49b6-6d53-412f-b346-cae568a19de9"
-    # MOU_SIGNER_RECEIPT_TEMPLATE_ID = "4fd2e43c-309b-4e50-8fb8-1955852d9d71"
-    # MOU_SIGNED_ON_BEHALF_SIGNER_RECEIPT_TEMPLATE_ID = "c20206d5-bf03-4002-9a90-37d5032d9e84"
-    # MOU_SIGNED_ON_BEHALF_ON_BEHALF_RECEIPT_TEMPLATE_ID = "522b6657-5ca5-4368-a294-6b527703bd0b"
     NOTIFY_INTERNATIONAL_SMS_SENDER = "07984404008"
-    # LETTERS_VOLUME_EMAIL_TEMPLATE_ID = "11fad854-fd38-4a7c-bd17-805fb13dfc12"
-    # NHS_EMAIL_BRANDING_ID = "a7dc4e56-660b-4db7-8cff-12c37b12b5ea"
-    # NHS_LETTER_BRANDING_ID = "2cd354bb-6b85-eda3-c0ad-6b613150459f"
-    # we only need real email in Live environment (production)
-    # DVLA_EMAIL_ADDRESSES = json.loads(os.environ.get("DVLA_EMAIL_ADDRESSES", "[]"))
 
     CELERY = {
         "broker_url": "sqs://",
@@ -200,15 +192,9 @@ class Config(object):
         # this is overriden by the -Q command, but locally, we should read from all queues
         "task_queues": [Queue(queue, Exchange("default"), routing_key=queue) for queue in QueueNames.all_queues()],
         "beat_schedule": {
-            # app/celery/scheduled_tasks.py
             "run-health-check": {
                 "task": "run-health-check",
                 "schedule": crontab(minute="*/1"),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
-            "run-scheduled-jobs": {
-                "task": "run-scheduled-jobs",
-                "schedule": crontab(minute="0,15,30,45"),
                 "options": {"queue": QueueNames.PERIODIC},
             },
             "delete-verify-codes": {
@@ -221,32 +207,6 @@ class Config(object):
                 "schedule": timedelta(minutes=66),
                 "options": {"queue": QueueNames.PERIODIC},
             },
-            # "switch-current-sms-provider-on-slow-delivery": {
-            #     "task": "switch-current-sms-provider-on-slow-delivery",
-            #     "schedule": crontab(minute="*/1"),  # Every minute
-            #     "options": {"queue": QueueNames.PERIODIC},
-            # },
-            "check-job-status": {
-                "task": "check-job-status",
-                "schedule": crontab(minute="*/1"),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
-            # "tend-providers-back-to-middle": {
-            #     "task": "tend-providers-back-to-middle",
-            #     "schedule": crontab(minute="*/5"),
-            #     "options": {"queue": QueueNames.PERIODIC},
-            # },
-            "check-for-missing-rows-in-completed-jobs": {
-                "task": "check-for-missing-rows-in-completed-jobs",
-                "schedule": crontab(minute="*/10"),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
-            # "replay-created-notifications": {
-            #     "task": "replay-created-notifications",
-            #     "schedule": crontab(minute="0, 15, 30, 45"),
-            #     "options": {"queue": QueueNames.PERIODIC},
-            # },
-            # app/celery/nightly_tasks.py
             "timeout-sending-notifications": {
                 "task": "timeout-sending-notifications",
                 "schedule": crontab(hour=0, minute=5),
@@ -282,42 +242,9 @@ class Config(object):
                 "schedule": crontab(hour=4, minute=0),
                 "options": {"queue": QueueNames.PERIODIC},
             },
-            "remove_letter_jobs": {
-                "task": "remove_letter_jobs",
-                "schedule": crontab(hour=4, minute=20),
-                # since we mark jobs as archived
-                "options": {"queue": QueueNames.PERIODIC},
-            },
-            # "check-if-letters-still-in-created": {
-            #     "task": "check-if-letters-still-in-created",
-            #     "schedule": crontab(day_of_week="mon-fri", hour=7, minute=0),
-            #     "options": {"queue": QueueNames.PERIODIC},
-            # },
-            # "check-if-letters-still-pending-virus-check": {
-            #     "task": "check-if-letters-still-pending-virus-check",
-            #     "schedule": crontab(day_of_week="mon-fri", hour="9,15", minute=0),
-            #     "options": {"queue": QueueNames.PERIODIC},
-            # },
-            # "check-for-services-with-high-failure-rates-or-sending-to-tv-numbers": {
-            #     "task": "check-for-services-with-high-failure-rates-or-sending-to-tv-numbers",
-            #     "schedule": crontab(day_of_week="mon-fri", hour=10, minute=30),
-            #     "options": {"queue": QueueNames.PERIODIC},
-            # },
             "raise-alert-if-letter-notifications-still-sending": {
                 "task": "raise-alert-if-letter-notifications-still-sending",
                 "schedule": crontab(hour=17, minute=00),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
-            # The collate-letter-pdf does assume it is called in an hour that BST does not make a
-            # difference to the truncate date which translates to the filename to process
-            # "collate-letter-pdfs-to-be-sent": {
-            #     "task": "collate-letter-pdfs-to-be-sent",
-            #     "schedule": crontab(hour=17, minute=50),
-            #     "options": {"queue": QueueNames.PERIODIC},
-            # },
-            "raise-alert-if-no-letter-ack-file": {
-                "task": "raise-alert-if-no-letter-ack-file",
-                "schedule": crontab(hour=23, minute=00),
                 "options": {"queue": QueueNames.PERIODIC},
             },
             "trigger-link-tests": {
@@ -340,16 +267,6 @@ class Config(object):
                 "schedule": crontab(hour=3, minute=4),
                 "options": {"queue": QueueNames.PERIODIC},
             },
-            # "zendesk-new-email-branding-report": {
-            #     "task": "zendesk-new-email-branding-report",
-            #     "schedule": crontab(hour=0, minute=30, day_of_week="mon-fri"),
-            #     "options": {"queue": QueueNames.PERIODIC},
-            # },
-            # "check-for-low-available-inbound-sms-numbers": {
-            #     "task": "check-for-low-available-inbound-sms-numbers",
-            #     "schedule": crontab(hour=9, minute=0, day_of_week="mon"),
-            #     "options": {"queue": QueueNames.PERIODIC},
-            # },
         },
     }
 

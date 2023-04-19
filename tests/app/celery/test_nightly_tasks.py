@@ -2,7 +2,6 @@ from datetime import date, datetime, timedelta
 from unittest.mock import ANY, call
 
 import pytest
-import pytz
 from emergency_alerts_utils.clients.zendesk.zendesk_client import (
     NotifySupportTicket,
 )
@@ -17,9 +16,7 @@ from app.celery.nightly_tasks import (
     delete_letter_notifications_older_than_retention,
     delete_sms_notifications_older_than_retention,
     get_letter_notifications_still_sending_when_they_shouldnt_be,
-    letter_raise_alert_if_no_ack_file_for_zip,
     raise_alert_if_letter_notifications_still_sending,
-    remove_letter_csv_files,
     remove_sms_email_csv_files,
     s3,
     save_daily_notification_processing_time,
@@ -123,27 +120,6 @@ def test_will_remove_csv_files_for_jobs_older_than_retention_period(notify_db_se
         ],
         any_order=True,
     )
-
-
-@freeze_time("2017-01-01 10:00:00")
-def test_remove_csv_files_filters_by_type(mocker, sample_service):
-    mocker.patch("app.celery.nightly_tasks.s3.remove_job_from_s3")
-    """
-    Jobs older than seven days are deleted, but only two day's worth (two-day window)
-    """
-    letter_template = create_template(service=sample_service, template_type=LETTER_TYPE)
-    sms_template = create_template(service=sample_service, template_type=SMS_TYPE)
-
-    eight_days_ago = datetime.utcnow() - timedelta(days=8)
-
-    job_to_delete = create_job(template=letter_template, created_at=eight_days_ago)
-    create_job(template=sms_template, created_at=eight_days_ago)
-
-    remove_letter_csv_files()
-
-    assert s3.remove_job_from_s3.call_args_list == [
-        call(job_to_delete.service_id, job_to_delete.id),
-    ]
 
 
 def test_delete_sms_notifications_older_than_retention_calls_child_task(notify_api, mocker):
@@ -317,59 +293,6 @@ def test_get_letter_notifications_still_sending_when_they_shouldnt_finds_friday_
     count, expected_sent_date = get_letter_notifications_still_sending_when_they_shouldnt_be()
     assert count == 2
     assert expected_sent_date == date(2018, 1, 12)
-
-
-@freeze_time("2018-01-11T23:00:00")
-def test_letter_raise_alert_if_no_ack_file_for_zip_does_not_raise_when_files_match_zip_list(mocker, notify_db_session):
-    mock_file_list = mocker.patch("app.aws.s3.get_list_of_files_by_suffix", side_effect=mock_s3_get_list_match)
-    letter_raise_alert_if_no_ack_file_for_zip()
-
-    yesterday = datetime.now(tz=pytz.utc) - timedelta(days=1)  # Datatime format on AWS
-    subfoldername = datetime.utcnow().strftime("%Y-%m-%d") + "/zips_sent"
-    assert mock_file_list.call_count == 2
-    assert mock_file_list.call_args_list == [
-        call(bucket_name=current_app.config["LETTERS_PDF_BUCKET_NAME"], subfolder=subfoldername, suffix=".TXT"),
-        call(
-            bucket_name=current_app.config["DVLA_RESPONSE_BUCKET_NAME"],
-            subfolder="root/dispatch",
-            suffix=".ACK.txt",
-            last_modified=yesterday,
-        ),
-    ]
-
-
-@freeze_time("2018-01-11T23:00:00")
-def test_letter_raise_alert_if_ack_files_not_match_zip_list(mocker, notify_db_session):
-    mock_file_list = mocker.patch("app.aws.s3.get_list_of_files_by_suffix", side_effect=mock_s3_get_list_diff)
-    mock_create_ticket = mocker.spy(NotifySupportTicket, "__init__")
-    mock_send_ticket_to_zendesk = mocker.patch(
-        "app.celery.nightly_tasks.zendesk_client.send_ticket_to_zendesk",
-        autospec=True,
-    )
-
-    letter_raise_alert_if_no_ack_file_for_zip()
-
-    assert mock_file_list.call_count == 2
-
-    mock_create_ticket.assert_called_once_with(
-        ANY,
-        subject="Letter acknowledge error",
-        message=ANY,
-        ticket_type="incident",
-        technical_ticket=True,
-        ticket_categories=["notify_letters"],
-    )
-    mock_send_ticket_to_zendesk.assert_called_once()
-    assert "['NOTIFY.2018-01-11175009', 'NOTIFY.2018-01-11175010']" in mock_create_ticket.call_args[1]["message"]
-    assert "2018-01-11/zips_sent" in mock_create_ticket.call_args[1]["message"]
-
-
-@freeze_time("2018-01-11T23:00:00")
-def test_letter_not_raise_alert_if_no_files_do_not_cause_error(mocker, notify_db_session):
-    mock_file_list = mocker.patch("app.aws.s3.get_list_of_files_by_suffix", side_effect=None)
-    letter_raise_alert_if_no_ack_file_for_zip()
-
-    assert mock_file_list.call_count == 2
 
 
 @freeze_time("2021-01-18T02:00")
