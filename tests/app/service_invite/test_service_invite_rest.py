@@ -6,7 +6,7 @@ from emergency_alerts_utils.url_safe_token import generate_token
 from flask import current_app
 from freezegun import freeze_time
 
-from app.models import EMAIL_AUTH_TYPE, SMS_AUTH_TYPE, Notification
+from app.models import EMAIL_AUTH_TYPE, SMS_AUTH_TYPE
 from tests import create_admin_authorization_header
 from tests.app.db import create_invited_user
 
@@ -52,17 +52,6 @@ def test_create_invited_user(
     assert json_resp["data"]["auth_type"] == EMAIL_AUTH_TYPE
     assert json_resp["data"]["id"]
     assert json_resp["data"]["folder_permissions"] == ["folder_1", "folder_2", "folder_3"]
-
-    # notification = {}
-    # notification["type"] = "email"
-    # notification["template_id"] = current_app.config["BROADCAST_INVITATION_EMAIL_TEMPLATE_ID"]
-    # notification["recipient"] = email_address
-    # notification["reply_to"] = current_app.config["EAS_EMAIL_REPLY_TO_ID"]
-    # notification["personalisation"] = {
-    #     "user_name": "Test User",
-    #     "service_name": "Sample service",
-    #     "url": f'{expected_start_of_invite_url}/invitation/{fake_token}',
-    # }
 
     notification = {
         "type": "email",
@@ -120,17 +109,6 @@ def test_invited_user_for_broadcast_service_receives_broadcast_invite_email(
     assert json_resp["data"]["auth_type"] == EMAIL_AUTH_TYPE
     assert json_resp["data"]["id"]
     assert json_resp["data"]["folder_permissions"] == ["folder_1", "folder_2", "folder_3"]
-
-    # notification = {}
-    # notification["type"] = "email"
-    # notification["template_id"] = current_app.config["BROADCAST_INVITATION_EMAIL_TEMPLATE_ID"]
-    # notification["recipient"] = email_address
-    # notification["reply_to"] = current_app.config["EAS_EMAIL_REPLY_TO_ID"]
-    # notification["personalisation"] = {
-    #     "user_name": "Test User",
-    #     "service_name": "Sample broadcast service",
-    #     "url": f'{expected_start_of_invite_url}/invitation/{fake_token}',
-    # }
 
     notification = {
         "type": "email",
