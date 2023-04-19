@@ -344,7 +344,6 @@ def test_must_have_a_subject_on_an_email_or_letter_template(client, sample_user,
 
 
 def test_update_should_update_a_template(client, sample_user):
-
     service = create_service(service_permissions=[LETTER_TYPE])
     template = create_template(service, template_type="letter", postage="second")
 
@@ -684,7 +683,6 @@ def test_should_preview_a_single_template(
 
 
 def test_should_return_empty_array_if_no_templates_for_service(client, sample_service):
-
     auth_header = create_admin_authorization_header()
 
     response = client.get("/service/{}/template".format(sample_service.id), headers=[auth_header])
@@ -695,7 +693,6 @@ def test_should_return_empty_array_if_no_templates_for_service(client, sample_se
 
 
 def test_should_return_404_if_no_templates_for_service_with_id(client, sample_service, fake_uuid):
-
     auth_header = create_admin_authorization_header()
 
     response = client.get("/service/{}/template/{}".format(sample_service.id, fake_uuid), headers=[auth_header])
@@ -793,7 +790,6 @@ def test_should_return_all_template_versions_for_service_and_template_id(client,
 
 
 def test_update_does_not_create_new_version_when_there_is_no_change(client, sample_template):
-
     auth_header = create_admin_authorization_header()
     data = {
         "template_type": sample_template.template_type,
@@ -1101,7 +1097,6 @@ def test_update_redact_template_400s_if_no_created_by(admin_request, sample_temp
 
 
 def test_preview_letter_template_by_id_invalid_file_type(sample_letter_notification, admin_request):
-
     resp = admin_request.get(
         "template.preview_letter_template_by_notification_id",
         service_id=sample_letter_notification.service_id,
@@ -1209,7 +1204,6 @@ def test_preview_letter_template_by_id_shows_template_version_used_by_notificati
 def test_preview_letter_template_by_id_template_preview_500(
     notify_api, client, admin_request, sample_letter_notification
 ):
-
     with set_config_values(
         notify_api,
         {
@@ -1243,7 +1237,6 @@ def test_preview_letter_template_by_id_template_preview_500(
 
 
 def test_preview_letter_template_precompiled_pdf_file_type(notify_api, client, admin_request, sample_service, mocker):
-
     template = create_template(
         sample_service,
         template_type="letter",
@@ -1262,7 +1255,6 @@ def test_preview_letter_template_precompiled_pdf_file_type(notify_api, client, a
         },
     ):
         with requests_mock.Mocker():
-
             content = b"\x00\x01"
 
             mock_get_letter_pdf = mocker.patch(
@@ -1282,7 +1274,6 @@ def test_preview_letter_template_precompiled_pdf_file_type(notify_api, client, a
 
 
 def test_preview_letter_template_precompiled_s3_error(notify_api, client, admin_request, sample_service, mocker):
-
     template = create_template(
         sample_service,
         template_type="letter",
@@ -1301,7 +1292,6 @@ def test_preview_letter_template_precompiled_s3_error(notify_api, client, admin_
         },
     ):
         with requests_mock.Mocker():
-
             mocker.patch(
                 "app.template.rest.get_letter_pdf_and_metadata",
                 side_effect=botocore.exceptions.ClientError(
@@ -1351,7 +1341,6 @@ def test_preview_letter_template_precompiled_for_png_shows_overlay_on_pages_with
     message,
     expected_post_url,
 ):
-
     template = create_template(
         sample_service,
         template_type="letter",
@@ -1370,7 +1359,6 @@ def test_preview_letter_template_precompiled_for_png_shows_overlay_on_pages_with
         },
     ):
         with requests_mock.Mocker() as request_mock:
-
             pdf_content = b"\x00\x01"
             expected_returned_content = b"\x00\x02"
 
@@ -1419,7 +1407,6 @@ def test_preview_letter_template_precompiled_for_pdf_shows_overlay_on_all_pages_
     mocker,
     invalid_pages,
 ):
-
     template = create_template(
         sample_service,
         template_type="letter",
@@ -1438,7 +1425,6 @@ def test_preview_letter_template_precompiled_for_pdf_shows_overlay_on_all_pages_
         },
     ):
         with requests_mock.Mocker() as request_mock:
-
             pdf_content = b"\x00\x01"
             expected_returned_content = b"\x00\x02"
 
@@ -1482,7 +1468,6 @@ def test_preview_letter_template_precompiled_for_pdf_shows_overlay_on_all_pages_
 def test_preview_letter_template_precompiled_png_file_type_hide_notify_tag_only_on_first_page(
     notify_api, client, admin_request, sample_service, mocker, page_number, expect_preview_url
 ):
-
     template = create_template(
         sample_service,
         template_type="letter",
@@ -1525,7 +1510,6 @@ def test_preview_letter_template_precompiled_png_file_type_hide_notify_tag_only_
 def test_preview_letter_template_precompiled_png_template_preview_500_error(
     notify_api, client, admin_request, sample_service, mocker
 ):
-
     template = create_template(
         sample_service,
         template_type="letter",
@@ -1544,7 +1528,6 @@ def test_preview_letter_template_precompiled_png_template_preview_500_error(
         },
     ):
         with requests_mock.Mocker() as request_mock:
-
             pdf_content = b"\x00\x01"
             png_content = b"\x00\x02"
 
@@ -1577,7 +1560,6 @@ def test_preview_letter_template_precompiled_png_template_preview_500_error(
 def test_preview_letter_template_precompiled_png_template_preview_400_error(
     notify_api, client, admin_request, sample_service, mocker
 ):
-
     template = create_template(
         sample_service,
         template_type="letter",
@@ -1596,7 +1578,6 @@ def test_preview_letter_template_precompiled_png_template_preview_400_error(
         },
     ):
         with requests_mock.Mocker() as request_mock:
-
             pdf_content = b"\x00\x01"
             png_content = b"\x00\x02"
 
@@ -1629,7 +1610,6 @@ def test_preview_letter_template_precompiled_png_template_preview_400_error(
 def test_preview_letter_template_precompiled_png_template_preview_pdf_error(
     notify_api, client, admin_request, sample_service, mocker
 ):
-
     template = create_template(
         sample_service,
         template_type="letter",
@@ -1648,7 +1628,6 @@ def test_preview_letter_template_precompiled_png_template_preview_pdf_error(
         },
     ):
         with requests_mock.Mocker() as request_mock:
-
             pdf_content = b"\x00\x01"
             png_content = b"\x00\x02"
 
