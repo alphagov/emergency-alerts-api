@@ -6,7 +6,6 @@ import pytest
 from flask import current_app, url_for
 from freezegun import freeze_time
 
-import app.celery.tasks
 from app import db
 from app.dao.services_dao import dao_fetch_service_by_id, dao_update_service
 from app.dao.users_dao import create_user_code
@@ -14,7 +13,6 @@ from app.models import (
     EMAIL_TYPE,
     SMS_TYPE,
     USER_AUTH_TYPES,
-    Notification,
     User,
     VerifyCode,
 )
@@ -200,8 +198,8 @@ def test_send_user_sms_code(client, sample_user, sms_code_template, mocker, rese
         dao_update_service(notify_service)
 
     auth_header = create_admin_authorization_header()
-    mocked = mocker.patch("app.user.rest.create_secret_code", return_value="11111")
-    mocker.patch("app.celery.provider_tasks.deliver_sms.apply_async")
+    mock_create_secret_code = mocker.patch("app.user.rest.create_secret_code", return_value="11111")
+    mock_notify_send = mocker.patch("app.user.rest.notify_send")
 
     resp = client.post(
         url_for("user.send_user_2fa_code", code_type="sms", user_id=sample_user.id),
@@ -210,18 +208,19 @@ def test_send_user_sms_code(client, sample_user, sms_code_template, mocker, rese
     )
     assert resp.status_code == 204
 
-    assert mocked.call_count == 1
+    assert mock_create_secret_code.call_count == 1
     assert VerifyCode.query.one().check_code("11111")
 
-    notification = Notification.query.one()
-    assert notification.personalisation == {"verify_code": "11111"}
-    assert notification.to == sample_user.mobile_number
-    assert str(notification.service_id) == current_app.config["NOTIFY_SERVICE_ID"]
-    assert notification.reply_to_text == notify_service.get_default_sms_sender()
+    notification = {
+        "type": "sms",
+        "template_id": current_app.config["SMS_CODE_TEMPLATE_ID"],
+        "recipient": sample_user.mobile_number,
+        "reply_to": None,
+        "personalisation": {"verify_code": "11111"},
+    }
 
-    app.celery.provider_tasks.deliver_sms.apply_async.assert_called_once_with(
-        ([str(notification.id)]), queue="notify-internal-tasks"
-    )
+    mock_notify_send.assert_called_once_with(notification)
+
 
 
 @freeze_time("2016-01-01 11:09:00.061258")
@@ -230,8 +229,8 @@ def test_send_user_code_for_sms_with_optional_to_field(client, sample_user, sms_
     Tests POST endpoint /user/<user_id>/sms-code with optional to field
     """
     to_number = "+447119876757"
-    mocked = mocker.patch("app.user.rest.create_secret_code", return_value="11111")
-    mocker.patch("app.celery.provider_tasks.deliver_sms.apply_async")
+    mock_create_secret_code = mocker.patch("app.user.rest.create_secret_code", return_value="11111")
+    mock_notify_send = mocker.patch("app.user.rest.notify_send")
     auth_header = create_admin_authorization_header()
 
     resp = client.post(
@@ -241,12 +240,17 @@ def test_send_user_code_for_sms_with_optional_to_field(client, sample_user, sms_
     )
 
     assert resp.status_code == 204
-    assert mocked.call_count == 1
-    notification = Notification.query.first()
-    assert notification.to == to_number
-    app.celery.provider_tasks.deliver_sms.apply_async.assert_called_once_with(
-        ([str(notification.id)]), queue="notify-internal-tasks"
-    )
+    assert mock_create_secret_code.call_count == 1
+
+    notification = {
+        "type": "sms",
+        "template_id": current_app.config["SMS_CODE_TEMPLATE_ID"],
+        "recipient": to_number,
+        "reply_to": None,
+        "personalisation": {"verify_code": "11111"},
+    }
+
+    mock_notify_send.assert_called_once_with(notification)
 
 
 def test_send_sms_code_returns_404_for_bad_input_data(client):
@@ -288,7 +292,7 @@ def test_send_sms_code_returns_204_when_too_many_codes_already_created(client, s
     (
         (
             {},
-            "http://localhost",
+            "https://admin.development.emergency-alerts.service.gov.uk",
         ),
         (
             {"admin_base_url": "https://example.com"},
@@ -300,32 +304,41 @@ def test_send_new_user_email_verification(
     client,
     sample_user,
     mocker,
-    email_verification_template,
     post_data,
     expected_url_starts_with,
 ):
-    mocked = mocker.patch("app.celery.provider_tasks.deliver_email.apply_async")
+    mock_notify_send = mocker.patch("app.user.rest.notify_send")
+    fake_token = "0123456789"
+    mocker.patch("app.utils.generate_token", return_value=fake_token)
     auth_header = create_admin_authorization_header()
     resp = client.post(
         url_for("user.send_new_user_email_verification", user_id=str(sample_user.id)),
         data=json.dumps(post_data),
         headers=[("Content-Type", "application/json"), auth_header],
     )
-    notify_service = email_verification_template.service
     assert resp.status_code == 204
-    notification = Notification.query.first()
     assert VerifyCode.query.count() == 0
-    mocked.assert_called_once_with(([str(notification.id)]), queue="notify-internal-tasks")
-    assert notification.reply_to_text == notify_service.get_default_reply_to_email_address()
-    assert notification.personalisation["name"] == "Test User"
-    assert notification.personalisation["url"].startswith(expected_url_starts_with)
+
+    notification = {
+        "type": "email",
+        "template_id": current_app.config["NEW_USER_EMAIL_VERIFICATION_TEMPLATE_ID"],
+        "recipient": sample_user.email_address,
+        "reply_to": current_app.config["EAS_EMAIL_REPLY_TO_ID"],
+        "personalisation": {
+            "name": "Test User",
+            "url": expected_url_starts_with + "/verify-email/" + "0123456789"
+        },
+    }
+
+    mock_notify_send.assert_called_once_with(notification)
 
 
 def test_send_email_verification_returns_404_for_bad_input_data(client, notify_db_session, mocker):
     """
     Tests POST endpoint /user/<user_id>/sms-code return 404 for bad input data
     """
-    mocked = mocker.patch("app.celery.provider_tasks.deliver_email.apply_async")
+    mock_notify_send = mocker.patch("app.user.rest.notify_send")
+
     uuid_ = uuid.uuid4()
     auth_header = create_admin_authorization_header()
     resp = client.post(
@@ -335,7 +348,7 @@ def test_send_email_verification_returns_404_for_bad_input_data(client, notify_d
     )
     assert resp.status_code == 404
     assert json.loads(resp.get_data(as_text=True))["message"] == "No result found"
-    assert mocked.call_count == 0
+    assert mock_notify_send.call_count == 0
 
 
 def test_user_verify_user_code_returns_404_when_code_is_right_but_user_account_is_locked(client, sample_sms_code):
@@ -391,45 +404,66 @@ def test_reset_failed_login_count_returns_404_when_user_does_not_exist(client):
     (
         (
             {},
-            "http://localhost:6012/email-auth/%2E",
+            "https://admin.development.emergency-alerts.service.gov.uk/email-auth/",
         ),
         (
             {"to": None},
-            "http://localhost:6012/email-auth/%2E",
+            "https://admin.development.emergency-alerts.service.gov.uk/email-auth/",
         ),
         (
             {"to": None, "email_auth_link_host": "https://example.com"},
-            "https://example.com/email-auth/%2E",
+            "https://example.com/email-auth/",
         ),
     ),
 )
 def test_send_user_email_code(
     admin_request, mocker, sample_user, email_2fa_code_template, data, expected_auth_url, auth_type
 ):
-    deliver_email = mocker.patch("app.celery.provider_tasks.deliver_email.apply_async")
+    mock_notify_send = mocker.patch("app.user.rest.notify_send")
+    fake_token = "0123456789"
+    mocker.patch("app.utils.generate_token", return_value=fake_token)
     sample_user.auth_type = auth_type
 
     admin_request.post(
         "user.send_user_2fa_code", code_type="email", user_id=sample_user.id, _data=data, _expected_status=204
     )
-    noti = Notification.query.one()
-    assert noti.reply_to_text == email_2fa_code_template.service.get_default_reply_to_email_address()
-    assert noti.to == sample_user.email_address
-    assert str(noti.template_id) == current_app.config["EMAIL_2FA_TEMPLATE_ID"]
-    assert noti.personalisation["name"] == "Test User"
-    assert noti.personalisation["url"].startswith(expected_auth_url)
-    deliver_email.assert_called_once_with([str(noti.id)], queue="notify-internal-tasks")
+
+    notification = {
+        "type": "email",
+        "template_id": current_app.config["EMAIL_2FA_TEMPLATE_ID"],
+        "recipient": sample_user.email_address,
+        "personalisation": {
+            "name": "Test User",
+            "url": expected_auth_url + fake_token,
+        },
+        "reply_to": current_app.config["EAS_EMAIL_REPLY_TO_ID"],
+    }
+
+    mock_notify_send.assert_called_once_with(notification)
 
 
 def test_send_user_email_code_with_urlencoded_next_param(admin_request, mocker, sample_user, email_2fa_code_template):
-    mocker.patch("app.celery.provider_tasks.deliver_email.apply_async")
+    mock_notify_send = mocker.patch("app.user.rest.notify_send")
+    fake_token = "0123456789"
+    mocker.patch("app.utils.generate_token", return_value=fake_token)
 
     data = {"to": None, "next": "/services"}
     admin_request.post(
         "user.send_user_2fa_code", code_type="email", user_id=sample_user.id, _data=data, _expected_status=204
     )
-    noti = Notification.query.one()
-    assert noti.personalisation["url"].endswith("?next=%2Fservices")
+
+    notification = {
+        "type": "email",
+        "template_id": current_app.config["EMAIL_2FA_TEMPLATE_ID"],
+        "recipient": sample_user.email_address,
+        "reply_to": current_app.config["EAS_EMAIL_REPLY_TO_ID"],
+        "personalisation": {
+            "name": "Test User",
+            "url": "https://admin.development.emergency-alerts.service.gov.uk/email-auth/" + fake_token + "?next=%2Fservices",
+        },
+    }
+
+    mock_notify_send.assert_called_once_with(notification)
 
 
 def test_send_email_code_returns_404_for_bad_input_data(admin_request):
@@ -479,7 +513,7 @@ def test_send_user_2fa_code_sends_from_number_for_international_numbers(client, 
     sample_user.mobile_number = "601117224412"
     auth_header = create_admin_authorization_header()
     mocker.patch("app.user.rest.create_secret_code", return_value="11111")
-    mocker.patch("app.user.rest.send_notification_to_queue")
+    mock_notify_send = mocker.patch("app.user.rest.notify_send")
 
     resp = client.post(
         url_for("user.send_user_2fa_code", code_type="sms", user_id=sample_user.id),
@@ -488,5 +522,12 @@ def test_send_user_2fa_code_sends_from_number_for_international_numbers(client, 
     )
     assert resp.status_code == 204
 
-    notification = Notification.query.first()
-    assert notification.reply_to_text == current_app.config["NOTIFY_INTERNATIONAL_SMS_SENDER"]
+    notification = {
+        "type": "sms",
+        "template_id": current_app.config["SMS_CODE_TEMPLATE_ID"],
+        "recipient": sample_user.mobile_number,
+        "personalisation": { "verify_code": "11111" },
+        "reply_to": None,
+    }
+
+    mock_notify_send.assert_called_once_with(notification)

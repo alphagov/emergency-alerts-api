@@ -750,17 +750,17 @@ def team_member_mobile_edit_template(notify_service):
     )
 
 
-@pytest.fixture(scope="function")
-def already_registered_template(notify_service):
-    content = """Sign in here: ((signin_url)) If you’ve forgotten your password,
-                          you can reset it here: ((forgot_password_url)) feedback:((feedback_url))"""
-    return create_custom_template(
-        service=notify_service,
-        user=notify_service.users[0],
-        template_config_name="ALREADY_REGISTERED_EMAIL_TEMPLATE_ID",
-        content=content,
-        template_type="email",
-    )
+# @pytest.fixture(scope="function")
+# def already_registered_template(notify_service):
+#     content = """Sign in here: ((signin_url)) If you’ve forgotten your password,
+#                           you can reset it here: ((forgot_password_url)) feedback:((feedback_url))"""
+#     return create_custom_template(
+#         service=notify_service,
+#         user=notify_service.users[0],
+#         template_config_name="ALREADY_REGISTERED_EMAIL_TEMPLATE_ID",
+#         content=content,
+#         template_type="email",
+#     )
 
 
 @pytest.fixture(scope="function")

@@ -16,7 +16,6 @@ from app.models import (
     MANAGE_SETTINGS,
     MANAGE_TEMPLATES,
     SMS_AUTH_TYPE,
-    Notification,
     Permission,
     User,
 )
@@ -277,36 +276,17 @@ def test_post_user_attribute_with_updated_by(
     user_attribute,
     user_value,
     arguments,
-    team_member_email_edit_template,
-    team_member_mobile_edit_template,
 ):
     updater = create_user(name="Service Manago", email="notify_manago@digital.cabinet-office.gov.uk")
     assert getattr(sample_user, user_attribute) != user_value
     update_dict = {user_attribute: user_value, "updated_by": str(updater.id)}
-    # mock_persist_notification = mocker.patch("app.user.rest.persist_notification")
-    # mocker.patch("app.user.rest.send_notification_to_queue")
     mocked = mocker.patch("app.user.rest.notify_send")
     json_resp = admin_request.post("user.update_user_attribute", user_id=sample_user.id, _data=update_dict)
     assert json_resp["data"][user_attribute] == user_value
     if arguments:
-        # mock_persist_notification.assert_called_once_with(**arguments)
         mocked.assert_called_once()
     else:
-        # mock_persist_notification.assert_not_called()
         mocked.assert_not_called()
-
-
-# def test_post_user_attribute_with_updated_by_sends_notification_to_international_from_number(
-#     admin_request, mocker, sample_user, team_member_mobile_edit_template
-# ):
-#     updater = create_user(name="Service Manago")
-#     update_dict = {"mobile_number": "+601117224412", "updated_by": str(updater.id)}
-#     mocker.patch("app.user.rest.send_notification_to_queue")
-
-#     admin_request.post("user.update_user_attribute", user_id=sample_user.id, _data=update_dict)
-
-#     notification = Notification.query.first()
-#     assert notification.reply_to_text == current_app.config["NOTIFY_INTERNATIONAL_SMS_SENDER"]
 
 
 def test_archive_user(mocker, admin_request, sample_user):
@@ -596,7 +576,7 @@ def test_send_user_reset_password_should_send_reset_password_link(
             {
                 "email": "notify@digital.cabinet-office.gov.uk",
             },
-            ("http://localhost:6012/new-password/"),
+            ("https://admin.development.emergency-alerts.service.gov.uk/new-password/"),
         ),
         (
             {
@@ -611,13 +591,13 @@ def test_send_user_reset_password_should_send_reset_password_link(
 def test_send_user_reset_password_should_use_provided_base_url(
     admin_request,
     sample_user,
-    password_reset_email_template,
     mocker,
     data,
     expected_url,
 ):
-    # mocker.patch("app.celery.provider_tasks.deliver_email.apply_async")
     mocked = mocker.patch("app.user.rest.notify_send")
+    fake_token = "0123456789"
+    mocker.patch("app.utils.generate_token", return_value=fake_token)
 
     admin_request.post(
         "user.send_user_reset_password",
@@ -625,14 +605,27 @@ def test_send_user_reset_password_should_use_provided_base_url(
         _expected_status=204,
     )
 
-    assert Notification.query.first().personalisation["url"].startswith(expected_url)
+    notification = {
+        "type": "email",
+        "template_id": current_app.config["PASSWORD_RESET_TEMPLATE_ID"],
+        "recipient": sample_user.email_address,
+        "reply_to": current_app.config["EAS_EMAIL_REPLY_TO_ID"],
+        "personalisation": {
+            "user_name": "Test User",
+            "url": expected_url + fake_token,
+        },
+    }
 
+    mocked.assert_called_once_with(notification)
 
 @freeze_time("2016-01-01 11:09:00.061258")
 def test_send_user_reset_password_reset_password_link_contains_redirect_link_if_present_in_request(
     admin_request, sample_user, mocker, password_reset_email_template
 ):
-    mocked = mocker.patch("app.celery.provider_tasks.deliver_email.apply_async")
+    mocked = mocker.patch("app.user.rest.notify_send")
+    fake_token = "0123456789"
+    mocker.patch("app.utils.generate_token", return_value=fake_token)
+
     data = {"email": sample_user.email_address, "next": "blob"}
 
     admin_request.post(
@@ -641,13 +634,22 @@ def test_send_user_reset_password_reset_password_link_contains_redirect_link_if_
         _expected_status=204,
     )
 
-    notification = Notification.query.first()
-    assert "?next=blob" in notification.content
-    mocked.assert_called_once_with([str(notification.id)], queue="notify-internal-tasks")
+    notification = {
+        "type": "email",
+        "template_id": current_app.config["PASSWORD_RESET_TEMPLATE_ID"],
+        "recipient": sample_user.email_address,
+        "reply_to": current_app.config["EAS_EMAIL_REPLY_TO_ID"],
+        "personalisation": {
+            "user_name": "Test User",
+            "url": "https://admin.development.emergency-alerts.service.gov.uk/new-password/" + fake_token + "?next=blob",
+        },
+    }
+
+    mocked.assert_called_once_with(notification)
 
 
 def test_send_user_reset_password_should_return_400_when_email_is_missing(admin_request, mocker):
-    mocked = mocker.patch("app.celery.provider_tasks.deliver_email.apply_async")
+    mocked = mocker.patch("app.user.rest.notify_send")
     data = {}
 
     json_resp = admin_request.post(
@@ -660,7 +662,7 @@ def test_send_user_reset_password_should_return_400_when_email_is_missing(admin_
 
 
 def test_send_user_reset_password_should_return_400_when_user_doesnot_exist(admin_request, mocker):
-    mocked = mocker.patch("app.celery.provider_tasks.deliver_email.apply_async")
+    mocked = mocker.patch("app.user.rest.notify_send")
     bad_email_address = "bad@email.gov.uk"
     data = {"email": bad_email_address}
 
@@ -675,7 +677,7 @@ def test_send_user_reset_password_should_return_400_when_user_doesnot_exist(admi
 
 
 def test_send_user_reset_password_should_return_400_when_data_is_not_email_address(admin_request, mocker):
-    mocked = mocker.patch("app.celery.provider_tasks.deliver_email.apply_async")
+    mocked = mocker.patch("app.user.rest.notify_send")
     bad_email_address = "bad.email.gov.uk"
     data = {"email": bad_email_address}
 
@@ -689,10 +691,11 @@ def test_send_user_reset_password_should_return_400_when_data_is_not_email_addre
     assert mocked.call_count == 0
 
 
-def test_send_already_registered_email(admin_request, sample_user, already_registered_template, mocker):
+def test_send_already_registered_email(admin_request, sample_user, mocker):
     data = {"email": sample_user.email_address}
-    mocked = mocker.patch("app.celery.provider_tasks.deliver_email.apply_async")
-    notify_service = already_registered_template.service
+    mocked = mocker.patch("app.user.rest.notify_send")
+    fake_token = "0123456789"
+    mocker.patch("app.utils.generate_token", return_value=fake_token)
 
     admin_request.post(
         "user.send_already_registered_email",
@@ -701,9 +704,19 @@ def test_send_already_registered_email(admin_request, sample_user, already_regis
         _expected_status=204,
     )
 
-    notification = Notification.query.first()
-    mocked.assert_called_once_with(([str(notification.id)]), queue="notify-internal-tasks")
-    assert notification.reply_to_text == notify_service.get_default_reply_to_email_address()
+    notification = {
+        "type": "email",
+        "template_id": current_app.config["ALREADY_REGISTERED_EMAIL_TEMPLATE_ID"],
+        "recipient": sample_user.email_address,
+        "reply_to": current_app.config["EAS_EMAIL_REPLY_TO_ID"],
+        "personalisation": {
+            "signin_url": current_app.config["ADMIN_EXTERNAL_URL"] + "/sign-in",
+            "forgot_password_url": current_app.config["ADMIN_EXTERNAL_URL"] + "/forgot-password",
+            "feedback_url": current_app.config["ADMIN_EXTERNAL_URL"] + "/support",
+        },
+    }
+
+    mocked.assert_called_once_with(notification)
 
 
 def test_send_already_registered_email_returns_400_when_data_is_missing(admin_request, sample_user):
@@ -721,7 +734,9 @@ def test_send_already_registered_email_returns_400_when_data_is_missing(admin_re
 def test_send_user_confirm_new_email_returns_204(
     admin_request, sample_user, change_email_confirmation_template, mocker
 ):
-    mocked = mocker.patch("app.celery.provider_tasks.deliver_email.apply_async")
+    mocked = mocker.patch("app.user.rest.notify_send")
+    fake_token = "0123456789"
+    mocker.patch("app.utils.generate_token", return_value=fake_token)
     new_email = "new_address@dig.gov.uk"
     data = {"email": new_email}
     notify_service = change_email_confirmation_template.service
@@ -733,13 +748,23 @@ def test_send_user_confirm_new_email_returns_204(
         _expected_status=204,
     )
 
-    notification = Notification.query.first()
-    mocked.assert_called_once_with(([str(notification.id)]), queue="notify-internal-tasks")
-    assert notification.reply_to_text == notify_service.get_default_reply_to_email_address()
+    notification = {
+        "type": "email",
+        "template_id": current_app.config["CHANGE_EMAIL_CONFIRMATION_TEMPLATE_ID"],
+        "recipient": data,
+        "reply_to": current_app.config["EAS_EMAIL_REPLY_TO_ID"],
+        "personalisation": {
+            "name": "Test User",
+            "url": current_app.config["ADMIN_EXTERNAL_URL"] + "/user-profile/email/confirm/" + fake_token,
+            "feedback_url": current_app.config["ADMIN_EXTERNAL_URL"] + "/support",
+        },
+    }
+
+    mocked.assert_called_once_with(notification)
 
 
 def test_send_user_confirm_new_email_returns_400_when_email_missing(admin_request, sample_user, mocker):
-    mocked = mocker.patch("app.celery.provider_tasks.deliver_email.apply_async")
+    mocked = mocker.patch("app.user.rest.notify_send")
     data = {}
 
     json_resp = admin_request.post(
@@ -1034,29 +1059,6 @@ def test_search_for_users_by_email_handles_incorrect_data_format(notify_db_sessi
     json = admin_request.post("user.find_users_by_email", _data=data, _expected_status=400)
 
     assert json["message"] == {"email": ["Not a valid string."]}
-
-
-@pytest.mark.parametrize(
-    "number, expected_reply_to",
-    [
-        ("1-403-123-4567", "notify_international_sender"),
-        ("27 123 4569 2312", "notify_international_sender"),
-        ("30 123 4567 7890", "Notify"),
-        ("+20 123 4567 7890", "Notify"),
-    ],
-)
-def test_get_sms_reply_to_for_notify_service(team_member_mobile_edit_template, number, expected_reply_to):
-    # need to import locally to avoid db session errors,
-    # if this import is with the other imports at the top of the file
-    # the imports happen in the wrong order and you'll see "dummy session" errors
-    from app.user.rest import get_sms_reply_to_for_notify_service
-
-    reply_to = get_sms_reply_to_for_notify_service(number, team_member_mobile_edit_template)
-    assert (
-        reply_to == current_app.config["NOTIFY_INTERNATIONAL_SMS_SENDER"]
-        if expected_reply_to == "notify_international_sender"
-        else current_app.config["FROM_NUMBER"]
-    )
 
 
 @freeze_time("2020-01-01 11:00")

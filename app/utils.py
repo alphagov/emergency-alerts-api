@@ -8,6 +8,7 @@ from emergency_alerts_utils.template import (
     SMSMessageTemplate,
 )
 from emergency_alerts_utils.timezones import convert_bst_to_utc
+from emergency_alerts_utils.url_safe_token import generate_token
 from flask import url_for
 from sqlalchemy import func
 
@@ -41,7 +42,7 @@ def get_prev_next_pagination_links(current_page, next_page_exists, endpoint, **k
 
 
 def url_with_token(data, url, config, base_url=None):
-    from emergency_alerts_utils.url_safe_token import generate_token
+    # from emergency_alerts_utils.url_safe_token import generate_token
 
     token = generate_token(data, config["SECRET_KEY"], config["DANGEROUS_SALT"])
     # base_url = (base_url or config["ADMIN_BASE_URL"]) + url
