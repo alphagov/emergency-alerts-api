@@ -3,12 +3,9 @@ import uuid
 from datetime import datetime, timedelta
 
 import pytest
-from flask import current_app
 from freezegun import freeze_time
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.dao.email_branding_dao import dao_get_email_branding_by_id
-from app.dao.letter_branding_dao import dao_get_letter_branding_by_id
 from app.dao.organisation_dao import (
     dao_add_email_branding_to_organisation_pool,
     dao_add_letter_branding_list_to_organisation_pool,
@@ -191,30 +188,6 @@ def test_post_create_organisation(admin_request, notify_db_session, crown):
     assert organisations[0].email_branding_id is None
 
 
-# @pytest.mark.parametrize("org_type", ["nhs_central", "nhs_local", "nhs_gp"])
-# def test_post_create_organisation_sets_default_nhs_branding_and_adds_it_to_org_pool_for_nhs_org_types(
-#     admin_request, notify_db_session, nhs_email_branding, nhs_letter_branding, org_type
-# ):
-#     data = {
-#         "name": "test organisation",
-#         "active": True,
-#         "crown": False,
-#         "organisation_type": org_type,
-#     }
-
-#     admin_request.post("organisation.create_organisation", _data=data, _expected_status=201)
-
-#     organisation = Organisation.query.one()
-#     email_branding_nhs = dao_get_email_branding_by_id(current_app.config["NHS_EMAIL_BRANDING_ID"])
-#     letter_branding_nhs = dao_get_letter_branding_by_id(current_app.config["NHS_LETTER_BRANDING_ID"])
-
-#     assert organisation.email_branding_id == uuid.UUID(current_app.config["NHS_EMAIL_BRANDING_ID"])
-#     assert organisation.letter_branding_id == uuid.UUID(current_app.config["NHS_LETTER_BRANDING_ID"])
-
-#     assert organisation.email_branding_pool == [email_branding_nhs]
-#     assert organisation.letter_branding_pool == [letter_branding_nhs]
-
-
 def test_post_create_organisation_existing_name_raises_400(admin_request, sample_organisation):
     data = {
         "name": sample_organisation.name,
@@ -367,50 +340,6 @@ def test_update_other_organisation_attributes_doesnt_clear_domains(
     assert [domain.domain for domain in org.domains] == ["example.gov.uk"]
 
 
-# @pytest.mark.parametrize("new_org_type", ["nhs_central", "nhs_local", "nhs_gp"])
-# def test_post_update_organisation_to_nhs_type_updates_branding_if_none_present(
-#     admin_request, nhs_email_branding, nhs_letter_branding, notify_db_session, new_org_type
-# ):
-#     org = create_organisation(organisation_type="central")
-#     data = {
-#         "organisation_type": new_org_type,
-#     }
-
-#     admin_request.post("organisation.update_organisation", _data=data, organisation_id=org.id, _expected_status=204)
-
-#     organisation = Organisation.query.one()
-
-#     assert organisation.id == org.id
-#     assert organisation.organisation_type == new_org_type
-#     assert organisation.email_branding_id == uuid.UUID(current_app.config["NHS_EMAIL_BRANDING_ID"])
-#     assert organisation.letter_branding_id == uuid.UUID(current_app.config["NHS_LETTER_BRANDING_ID"])
-
-
-# @pytest.mark.parametrize("new_org_type", ["nhs_central", "nhs_local", "nhs_gp"])
-# def test_post_update_organisation_to_nhs_type_does_not_update_branding_if_default_branding_set(
-#     admin_request, nhs_email_branding, nhs_letter_branding, notify_db_session, new_org_type
-# ):
-#     current_email_branding = create_email_branding(logo="example.png", name="custom branding")
-#     current_letter_branding = create_letter_branding()
-#     org = create_organisation(
-#         organisation_type="central",
-#         email_branding_id=current_email_branding.id,
-#         letter_branding_id=current_letter_branding.id,
-#     )
-#     data = {
-#         "organisation_type": new_org_type,
-#     }
-
-#     admin_request.post("organisation.update_organisation", _data=data, organisation_id=org.id, _expected_status=204)
-
-#     organisation = Organisation.query.one()
-
-#     assert organisation.id == org.id
-#     assert organisation.organisation_type == new_org_type
-#     assert organisation.email_branding_id == current_email_branding.id
-#     assert organisation.letter_branding_id == current_letter_branding.id
-
-
 def test_update_organisation_default_branding(
     admin_request,
     notify_db_session,
@@ -476,73 +405,6 @@ def test_post_update_organisation_returns_400_if_domain_is_duplicate(admin_reque
     )
 
     assert response["message"] == "Domain already exists"
-
-
-# def test_post_update_organisation_set_mou_doesnt_email_if_no_signed_by(sample_organisation, admin_request, mocker):
-#     queue_mock = mocker.patch("app.organisation.rest.send_notification_to_queue")
-
-#     data = {"agreement_signed": True}
-
-#     admin_request.post(
-#         "organisation.update_organisation", _data=data, organisation_id=sample_organisation.id, _expected_status=204
-#     )
-
-#     assert queue_mock.called is False
-
-
-# @pytest.mark.parametrize(
-#     "on_behalf_of_name, on_behalf_of_email_address, templates_and_recipients",
-#     [
-#         (
-#             None,
-#             None,
-#             {
-#                 "MOU_SIGNER_RECEIPT_TEMPLATE_ID": "notify@digital.cabinet-office.gov.uk",
-#             },
-#         ),
-#         (
-#             "Important Person",
-#             "important@person.com",
-#             {
-#                 "MOU_SIGNED_ON_BEHALF_ON_BEHALF_RECEIPT_TEMPLATE_ID": "important@person.com",
-#                 "MOU_SIGNED_ON_BEHALF_SIGNER_RECEIPT_TEMPLATE_ID": "notify@digital.cabinet-office.gov.uk",
-#             },
-#         ),
-#     ],
-# )
-# def test_post_update_organisation_set_mou_emails_signed_by(
-#     sample_organisation,
-#     admin_request,
-#     mou_signed_templates,
-#     mocker,
-#     sample_user,
-#     on_behalf_of_name,
-#     on_behalf_of_email_address,
-#     templates_and_recipients,
-# ):
-#     queue_mock = mocker.patch("app.organisation.rest.send_notification_to_queue")
-#     sample_organisation.agreement_signed_on_behalf_of_name = on_behalf_of_name
-#     sample_organisation.agreement_signed_on_behalf_of_email_address = on_behalf_of_email_address
-
-#     admin_request.post(
-#         "organisation.update_organisation",
-#         _data={"agreement_signed": True, "agreement_signed_by_id": str(sample_user.id)},
-#         organisation_id=sample_organisation.id,
-#         _expected_status=204,
-#     )
-
-#     notifications = [x[0][0] for x in queue_mock.call_args_list]
-#     assert {n.template.name: n.to for n in notifications} == templates_and_recipients
-
-#     for n in notifications:
-#         # we pass in the same personalisation for all templates (though some templates don't use all fields)
-#         assert n.personalisation == {
-#             "mou_link": "http://localhost:6012/agreement/non-crown.pdf",
-#             "org_name": "sample organisation",
-#             "org_dashboard_link": "http://localhost:6012/organisations/{}".format(sample_organisation.id),
-#             "signed_by_name": "Test User",
-#             "on_behalf_of_name": on_behalf_of_name,
-#         }
 
 
 @pytest.mark.parametrize("invited_user_status", [INVITE_CANCELLED, INVITE_ACCEPTED])

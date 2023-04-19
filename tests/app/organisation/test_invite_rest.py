@@ -53,17 +53,6 @@ def test_create_invited_org_user(
     assert json_resp["data"]["invited_by"] == str(sample_user.id)
     assert json_resp["data"]["organisation"] == str(sample_organisation.id)
 
-    # notification = {}
-    # notification["type"] = "email"
-    # notification["template_id"] = current_app.config["ORGANISATION_INVITATION_EMAIL_TEMPLATE_ID"]
-    # notification["recipient"] = email_address
-    # notification["reply_to"] = current_app.config["EAS_EMAIL_REPLY_TO_ID"]
-    # notification["personalisation"] = {
-    #     "user_name": expected_invited_by,
-    #     "organisation_name": sample_organisation.name,
-    #     "url": f'{expected_start_of_invite_url}/organisation-invitation/{fake_token}',
-    # }
-
     notification = {
         "type": "email",
         "template_id": current_app.config["ORGANISATION_INVITATION_EMAIL_TEMPLATE_ID"],
