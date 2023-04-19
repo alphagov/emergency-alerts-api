@@ -3,17 +3,20 @@ version: 0.2
 phases:
   pre_build:
     commands:
-      - echo Checking out to latest tag...
-      - git checkout tags/celery_latest
-      - echo Logging in to Amazon ECR...
-      - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ACCOUNT_NUMBER.dkr.ecr.$AWS_REGION.amazonaws.com
+    - echo Checking out to latest tag...
+    - git checkout tags/celery_latest
+    - echo Logging in to Amazon ECR...
+    - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS
+      --password-stdin $ACCOUNT_NUMBER.dkr.ecr.$AWS_REGION.amazonaws.com
   build:
     commands:
-      - echo Build started on `date`
-      - echo Building Docker image...
-      - docker build -t $REPOSITORY_URI:latest -t $REPOSITORY_URI:$EXECUTION_ID -t $REPOSITORY_URI:$COMMIT_ID -f Dockerfile.eas-celery --build-arg ECS_ACCOUNT_NUMBER=$ACCOUNT_NUMBER --no-cache .
+    - echo Build started on `date`
+    - echo Building Docker image...
+    - docker build -t $REPOSITORY_URI:latest -t $REPOSITORY_URI:$EXECUTION_ID -t $REPOSITORY_URI:$COMMIT_ID
+      -f Dockerfile.eas-celery --build-arg ECS_ACCOUNT_NUMBER=$ACCOUNT_NUMBER --no-cache
+      .
   post_build:
     commands:
-      - echo Building complete on `date`
-      - echo Pushing the Docker image...
-      - docker push $REPOSITORY_URI:latest
+    - echo Building complete on `date`
+    - echo Pushing the Docker image...
+    - docker push $REPOSITORY_URI:latest
