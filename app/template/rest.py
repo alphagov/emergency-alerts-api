@@ -249,7 +249,6 @@ def preview_letter_template_by_notification_id(service_id, notification_id, file
 
     if template.is_precompiled_letter:
         try:
-
             pdf_file, metadata = get_letter_pdf_and_metadata(notification)
 
         except botocore.exceptions.ClientError as e:
@@ -296,7 +295,6 @@ def preview_letter_template_by_notification_id(service_id, notification_id, file
         else:
             response_content = content
     else:
-
         template_for_letter_print = {
             "id": str(notification.template_id),
             "subject": template.subject,

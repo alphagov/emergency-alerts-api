@@ -287,7 +287,6 @@ def dao_create_service(
     service_id=None,
     service_permissions=None,
 ):
-
     if not user:
         raise ValueError("Can't create a service without a user")
 

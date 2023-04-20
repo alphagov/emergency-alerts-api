@@ -775,7 +775,6 @@ def populate_annual_billing_with_defaults(year, missing_services_only):
     )
 
     for service in active_services:
-
         # If a service has free_sms_fragment_limit for the previous year
         # set the free allowance for this year to 0 as well.
         # Else use the default free allowance for the service.

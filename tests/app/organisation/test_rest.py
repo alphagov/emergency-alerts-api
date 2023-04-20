@@ -115,7 +115,6 @@ def test_get_organisation_by_id(admin_request, notify_db_session):
 
 
 def test_get_organisation_by_id_returns_domains(admin_request, notify_db_session):
-
     org = create_organisation(
         domains=[
             "foo.gov.uk",
@@ -344,7 +343,6 @@ def test_update_organisation_default_branding(
     admin_request,
     notify_db_session,
 ):
-
     org = create_organisation(name="Test Organisation")
 
     email_branding = create_email_branding()

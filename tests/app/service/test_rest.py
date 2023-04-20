@@ -3334,7 +3334,10 @@ def test_get_returned_letter_statistics_with_old_returned_letters(
         "app.service.rest.fetch_recent_returned_letter_count",
     )
 
-    assert admin_request.get("service.returned_letter_statistics", service_id=sample_service.id,) == {
+    assert admin_request.get(
+        "service.returned_letter_statistics",
+        service_id=sample_service.id,
+    ) == {
         "returned_letter_count": 0,
         "most_recent_report": "2019-12-03 00:00:00.000000",
     }
@@ -3351,7 +3354,10 @@ def test_get_returned_letter_statistics_with_no_returned_letters(
         "app.service.rest.fetch_recent_returned_letter_count",
     )
 
-    assert admin_request.get("service.returned_letter_statistics", service_id=sample_service.id,) == {
+    assert admin_request.get(
+        "service.returned_letter_statistics",
+        service_id=sample_service.id,
+    ) == {
         "returned_letter_count": 0,
         "most_recent_report": None,
     }
