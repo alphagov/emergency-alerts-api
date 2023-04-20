@@ -35,7 +35,6 @@ from app.models import (
     AnnualBilling,
     EmailBranding,
     InboundNumber,
-    Notification,
     Permission,
     Service,
     ServiceBroadcastSettings,
@@ -2554,34 +2553,6 @@ def test_get_email_reply_to_addresses_with_multiple_email_addresses(client, noti
     assert not json_response[1]["is_default"]
     assert json_response[1]["created_at"]
     assert not json_response[1]["updated_at"]
-
-
-# def test_verify_reply_to_email_address_should_send_verification_email(
-#     admin_request, notify_db_session, mocker, verify_reply_to_address_email_template
-# ):
-#     service = create_service()
-#     mocked = mocker.patch("app.celery.provider_tasks.deliver_email.apply_async")
-#     data = {"email": "reply-here@example.gov.uk"}
-#     notify_service = verify_reply_to_address_email_template.service
-#     response = admin_request.post(
-#         "service.verify_reply_to_email_address", service_id=service.id, _data=data, _expected_status=201
-#     )
-
-#     notification = Notification.query.first()
-#     assert notification.template_id == verify_reply_to_address_email_template.id
-#     assert response["data"] == {"id": str(notification.id)}
-#     mocked.assert_called_once_with([str(notification.id)], queue="notify-internal-tasks")
-#     assert notification.reply_to_text == notify_service.get_default_reply_to_email_address()
-
-
-# def test_verify_reply_to_email_address_doesnt_allow_duplicates(admin_request, notify_db_session, mocker):
-#     data = {"email": "reply-here@example.gov.uk"}
-#     service = create_service()
-#     create_reply_to_email(service, "reply-here@example.gov.uk")
-#     response = admin_request.post(
-#         "service.verify_reply_to_email_address", service_id=service.id, _data=data, _expected_status=409
-#     )
-#     assert response["message"] == "Your service already uses ‘reply-here@example.gov.uk’ as an email reply-to address."
 
 
 def test_add_service_reply_to_email_address(admin_request, sample_service):

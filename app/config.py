@@ -361,7 +361,10 @@ class Development(Config):
     NOTIFY_LOG_PATH = "application.log"
     NOTIFY_EMAIL_DOMAIN = "notify.tools"
 
-    SQLALCHEMY_DATABASE_URI = os.getenv("SQLALCHEMY_DATABASE_URI", "postgresql://postgres:root@localhost/emergency_alerts")
+    SQLALCHEMY_DATABASE_URI = os.getenv(
+        "SQLALCHEMY_DATABASE_URI",
+        "postgresql://postgres:root@localhost/emergency_alerts"
+    )
     REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
     ANTIVIRUS_ENABLED = os.getenv("ANTIVIRUS_ENABLED") == "1"

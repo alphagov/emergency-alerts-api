@@ -13,7 +13,6 @@ import click
 import flask
 from click_datetime import Datetime as click_dt
 from dateutil import rrule
-from emergency_alerts_utils.recipients import RecipientCSV
 from emergency_alerts_utils.statsd_decorators import statsd
 from emergency_alerts_utils.template import SMSMessageTemplate
 from flask import current_app, json
@@ -24,7 +23,6 @@ from sqlalchemy.orm.exc import NoResultFound
 from app import db
 from app.aws import s3
 
-from app.config import QueueNames
 from app.dao.annual_billing_dao import (
     dao_create_or_update_annual_billing_for_year,
     set_default_free_allowance_for_service,
@@ -35,7 +33,6 @@ from app.dao.fact_billing_dao import (
     get_service_ids_that_need_billing_populated,
     update_ft_billing,
 )
-from app.dao.jobs_dao import dao_get_job_by_id
 from app.dao.notifications_dao import move_notifications_to_notification_history
 from app.dao.organisation_dao import (
     dao_add_service_to_organisation,
@@ -704,27 +701,6 @@ def fix_billable_units():
         )
     db.session.commit()
     print("End fix_billable_units")
-
-
-@notify_command(name="process-row-from-job")
-@click.option("-j", "--job_id", required=True, help="Job id")
-@click.option("-n", "--job_row_number", type=int, required=True, help="Job id")
-def process_row_from_job(job_id, job_row_number):
-    job = dao_get_job_by_id(job_id)
-    db_template = dao_get_template_by_id(job.template_id, job.template_version)
-
-    template = db_template._as_utils_template()
-
-    for row in RecipientCSV(
-        s3.get_job_from_s3(str(job.service_id), str(job.id)),
-        template_type=template.template_type,
-        placeholders=template.placeholders,
-    ).get_rows():
-        if row.index == job_row_number:
-            notification_id = process_row(row, template, job, job.service)
-            current_app.logger.info(
-                "Process row {} for job {} created notification_id: {}".format(job_row_number, job_id, notification_id)
-            )
 
 
 @notify_command(name="populate-annual-billing-with-the-previous-years-allowance")

@@ -2,7 +2,6 @@ import pytest
 from freezegun import freeze_time
 from sqlalchemy.exc import IntegrityError
 
-from app import encryption
 from app.models import (
     EMAIL_TYPE,
     MOBILE_TYPE,

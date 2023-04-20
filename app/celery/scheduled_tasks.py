@@ -3,7 +3,6 @@ import time
 from datetime import datetime, timedelta
 
 from flask import current_app
-from sqlalchemy import between
 from sqlalchemy.exc import SQLAlchemyError
 
 from app import db, notify_celery
@@ -19,21 +18,13 @@ from app.dao.invited_org_user_dao import (
 from app.dao.invited_user_dao import (
     delete_invitations_created_more_than_two_days_ago,
 )
-from app.dao.jobs_dao import (
-    dao_set_scheduled_jobs_to_pending,
-    dao_update_job,
-)
 
 from app.dao.users_dao import delete_codes_older_created_more_than_a_day_ago
 
 from app.models import (
-    JOB_STATUS_ERROR,
-    JOB_STATUS_IN_PROGRESS,
-    JOB_STATUS_PENDING,
     BroadcastMessage,
     BroadcastStatusType,
     Event,
-    Job,
 )
 
 

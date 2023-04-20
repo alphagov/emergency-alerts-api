@@ -222,7 +222,6 @@ def test_send_user_sms_code(client, sample_user, sms_code_template, mocker, rese
     mock_notify_send.assert_called_once_with(notification)
 
 
-
 @freeze_time("2016-01-01 11:09:00.061258")
 def test_send_user_code_for_sms_with_optional_to_field(client, sample_user, sms_code_template, mocker):
     """
@@ -459,7 +458,8 @@ def test_send_user_email_code_with_urlencoded_next_param(admin_request, mocker, 
         "reply_to": current_app.config["EAS_EMAIL_REPLY_TO_ID"],
         "personalisation": {
             "name": "Test User",
-            "url": "https://admin.development.emergency-alerts.service.gov.uk/email-auth/" + fake_token + "?next=%2Fservices",
+            "url": "https://admin.development.emergency-alerts.service.gov.uk/email-auth/" +
+                fake_token + "?next=%2Fservices",
         },
     }
 
@@ -526,7 +526,7 @@ def test_send_user_2fa_code_sends_from_number_for_international_numbers(client, 
         "type": "sms",
         "template_id": current_app.config["SMS_CODE_TEMPLATE_ID"],
         "recipient": sample_user.mobile_number,
-        "personalisation": { "verify_code": "11111" },
+        "personalisation": {"verify_code": "11111"},
         "reply_to": None,
     }
 

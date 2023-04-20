@@ -2,7 +2,6 @@ import datetime
 import uuid
 
 import pytest
-from flask import current_app
 from freezegun import freeze_time
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 

@@ -618,6 +618,7 @@ def test_send_user_reset_password_should_use_provided_base_url(
 
     mocked.assert_called_once_with(notification)
 
+
 @freeze_time("2016-01-01 11:09:00.061258")
 def test_send_user_reset_password_reset_password_link_contains_redirect_link_if_present_in_request(
     admin_request, sample_user, mocker, password_reset_email_template
@@ -641,7 +642,8 @@ def test_send_user_reset_password_reset_password_link_contains_redirect_link_if_
         "reply_to": current_app.config["EAS_EMAIL_REPLY_TO_ID"],
         "personalisation": {
             "user_name": "Test User",
-            "url": "https://admin.development.emergency-alerts.service.gov.uk/new-password/" + fake_token + "?next=blob",
+            "url": "https://admin.development.emergency-alerts.service.gov.uk/new-password/" +
+                fake_token + "?next=blob",
         },
     }
 
@@ -739,7 +741,6 @@ def test_send_user_confirm_new_email_returns_204(
     mocker.patch("app.utils.generate_token", return_value=fake_token)
     new_email = "new_address@dig.gov.uk"
     data = {"email": new_email}
-    notify_service = change_email_confirmation_template.service
 
     admin_request.post(
         "user.send_user_confirm_new_email",

@@ -5,13 +5,12 @@ from app import api_user, authenticated_service
 
 from app.dao import notifications_dao
 from app.errors import InvalidRequest, register_errors
-from app.models import KEY_TYPE_TEAM, SMS_TYPE
+from app.models import SMS_TYPE
 
 from app.schemas import (
     notification_with_personalisation_schema,
     notifications_filter_schema,
 )
-from app.service.utils import service_allowed_to_send_to
 from app.utils import pagination_links
 
 notifications = Blueprint("notifications", __name__)

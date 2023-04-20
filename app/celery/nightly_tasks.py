@@ -1,6 +1,5 @@
 from datetime import datetime, timedelta
 
-import pytz
 from emergency_alerts_utils.clients.zendesk.zendesk_client import (
     NotifySupportTicket,
 )
