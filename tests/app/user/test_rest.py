@@ -642,8 +642,9 @@ def test_send_user_reset_password_reset_password_link_contains_redirect_link_if_
         "reply_to": current_app.config["EAS_EMAIL_REPLY_TO_ID"],
         "personalisation": {
             "user_name": "Test User",
-            "url": "https://admin.development.emergency-alerts.service.gov.uk/new-password/" +
-                fake_token + "?next=blob",
+            "url": "https://admin.development.emergency-alerts.service.gov.uk/new-password/"
+            + fake_token
+            + "?next=blob",
         },
     }
 

@@ -299,7 +299,7 @@ def create_2fa_code(template_id, code_type, user_to_send_to, secret_code, recipi
         "template_id": template_id,
         "recipient": recipient,
         "personalisation": personalisation,
-        "reply_to": current_app.config["EAS_EMAIL_REPLY_TO_ID"] if code_type == EMAIL_TYPE else None
+        "reply_to": current_app.config["EAS_EMAIL_REPLY_TO_ID"] if code_type == EMAIL_TYPE else None,
     }
 
     response = notify_send(notification)
@@ -370,7 +370,7 @@ def send_already_registered_email(user_id):
             "signin_url": current_app.config["ADMIN_EXTERNAL_URL"] + "/sign-in",
             "forgot_password_url": current_app.config["ADMIN_EXTERNAL_URL"] + "/forgot-password",
             "feedback_url": current_app.config["ADMIN_EXTERNAL_URL"] + "/support",
-        }
+        },
     }
 
     notify_send(notification)

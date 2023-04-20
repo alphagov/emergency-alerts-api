@@ -39,7 +39,7 @@ def test_create_invited_org_user(
         organisation=str(sample_organisation.id),
         email_address=email_address,
         invited_by=str(sample_user.id),
-        **extra_args
+        **extra_args,
     )
 
     json_resp = admin_request.post(
@@ -61,7 +61,7 @@ def test_create_invited_org_user(
         "personalisation": {
             "user_name": expected_invited_by,
             "organisation_name": sample_organisation.name,
-            "url": f'{expected_start_of_invite_url}/organisation-invitation/{fake_token}',
+            "url": f"{expected_start_of_invite_url}/organisation-invitation/{fake_token}",
         },
     }
 

@@ -317,10 +317,7 @@ def test_send_new_user_email_verification(
         "template_id": current_app.config["NEW_USER_EMAIL_VERIFICATION_TEMPLATE_ID"],
         "recipient": sample_user.email_address,
         "reply_to": current_app.config["EAS_EMAIL_REPLY_TO_ID"],
-        "personalisation": {
-            "name": "Test User",
-            "url": expected_url_starts_with + "/verify-email/" + "0123456789"
-        },
+        "personalisation": {"name": "Test User", "url": expected_url_starts_with + "/verify-email/" + "0123456789"},
     }
 
     mock_notify_send.assert_called_once_with(notification)
@@ -452,8 +449,9 @@ def test_send_user_email_code_with_urlencoded_next_param(admin_request, mocker, 
         "reply_to": current_app.config["EAS_EMAIL_REPLY_TO_ID"],
         "personalisation": {
             "name": "Test User",
-            "url": "https://admin.development.emergency-alerts.service.gov.uk/email-auth/" +
-                fake_token + "?next=%2Fservices",
+            "url": "https://admin.development.emergency-alerts.service.gov.uk/email-auth/"
+            + fake_token
+            + "?next=%2Fservices",
         },
     }
 

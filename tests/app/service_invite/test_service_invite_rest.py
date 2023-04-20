@@ -38,7 +38,7 @@ def test_create_invited_user(
         permissions="send_messages,manage_service,manage_api_keys",
         auth_type=EMAIL_AUTH_TYPE,
         folder_permissions=["folder_1", "folder_2", "folder_3"],
-        **extra_args
+        **extra_args,
     )
 
     json_resp = admin_request.post(
@@ -61,7 +61,7 @@ def test_create_invited_user(
         "personalisation": {
             "user_name": "Test User",
             "service_name": "Sample service",
-            "url": f'{expected_start_of_invite_url}/invitation/{fake_token}',
+            "url": f"{expected_start_of_invite_url}/invitation/{fake_token}",
         },
     }
 
@@ -95,7 +95,7 @@ def test_invited_user_for_broadcast_service_receives_broadcast_invite_email(
         permissions="send_messages,manage_service,manage_api_keys",
         auth_type=EMAIL_AUTH_TYPE,
         folder_permissions=["folder_1", "folder_2", "folder_3"],
-        **extra_args
+        **extra_args,
     )
 
     json_resp = admin_request.post(
@@ -118,7 +118,7 @@ def test_invited_user_for_broadcast_service_receives_broadcast_invite_email(
         "personalisation": {
             "user_name": "Test User",
             "service_name": "Sample broadcast service",
-            "url": f'{expected_start_of_invite_url}/invitation/{fake_token}',
+            "url": f"{expected_start_of_invite_url}/invitation/{fake_token}",
         },
     }
 
