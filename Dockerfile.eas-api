@@ -18,7 +18,7 @@ RUN cd $API_DIR && . $VENV_API/bin/activate && $PYTHON_VERSION -m pip install --
 # Create a blank configuration file
 RUN echo "" > $API_DIR/environment.sh
 
-RUN useradd -ms /bin/bash easuser && chown -R easuser:easuser $API_DIR
+RUN useradd -ms /bin/bash easuser && chown -R easuser:easuser $API_DIR && chown -R easuser:easuser $UTILS_DIR
 
 COPY scripts/start-api.sh /
 CMD bash /start-api.sh
