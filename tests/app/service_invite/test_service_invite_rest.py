@@ -1,4 +1,5 @@
 import json
+import os
 import uuid
 
 import pytest
@@ -14,7 +15,7 @@ from tests.app.db import create_invited_user
 @pytest.mark.parametrize(
     "extra_args, expected_start_of_invite_url",
     [
-        ({}, "https://admin.development.emergency-alerts.service.gov.uk"),
+        ({}, f"https://admin.{os.environ.get('ENVIRONMENT')}.emergency-alerts.service.gov.uk"),
         ({"invite_link_host": "https://www.example.com"}, "https://www.example.com"),
     ],
 )
@@ -71,7 +72,7 @@ def test_create_invited_user(
 @pytest.mark.parametrize(
     "extra_args, expected_start_of_invite_url",
     [
-        ({}, "https://admin.development.emergency-alerts.service.gov.uk"),
+        ({}, f"https://admin.{os.environ.get('ENVIRONMENT')}.emergency-alerts.service.gov.uk"),
         ({"invite_link_host": "https://www.example.com"}, "https://www.example.com"),
     ],
 )

@@ -1,3 +1,4 @@
+import os
 import uuid
 from datetime import datetime
 from unittest import mock
@@ -576,7 +577,7 @@ def test_send_user_reset_password_should_send_reset_password_link(
             {
                 "email": "notify@digital.cabinet-office.gov.uk",
             },
-            ("https://admin.development.emergency-alerts.service.gov.uk/new-password/"),
+            (f"https://admin.{os.environ.get('ENVIRONMENT')}.emergency-alerts.service.gov.uk/new-password/"),
         ),
         (
             {
@@ -642,7 +643,7 @@ def test_send_user_reset_password_reset_password_link_contains_redirect_link_if_
         "reply_to": current_app.config["EAS_EMAIL_REPLY_TO_ID"],
         "personalisation": {
             "user_name": "Test User",
-            "url": "https://admin.development.emergency-alerts.service.gov.uk/new-password/"
+            "url": f"https://admin.{os.environ.get('ENVIRONMENT')}.emergency-alerts.service.gov.uk/new-password/"
             + fake_token
             + "?next=blob",
         },

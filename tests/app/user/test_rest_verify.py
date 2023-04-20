@@ -1,4 +1,5 @@
 import json
+import os
 import uuid
 from datetime import datetime, timedelta
 
@@ -285,7 +286,7 @@ def test_send_sms_code_returns_204_when_too_many_codes_already_created(client, s
     (
         (
             {},
-            "https://admin.development.emergency-alerts.service.gov.uk",
+            f"https://admin.{os.environ.get('ENVIRONMENT')}.emergency-alerts.service.gov.uk",
         ),
         (
             {"admin_base_url": "https://example.com"},
@@ -394,11 +395,11 @@ def test_reset_failed_login_count_returns_404_when_user_does_not_exist(client):
     (
         (
             {},
-            "https://admin.development.emergency-alerts.service.gov.uk/email-auth/",
+            f"https://admin.{os.environ.get('ENVIRONMENT')}.emergency-alerts.service.gov.uk/email-auth/",
         ),
         (
             {"to": None},
-            "https://admin.development.emergency-alerts.service.gov.uk/email-auth/",
+            f"https://admin.{os.environ.get('ENVIRONMENT')}.emergency-alerts.service.gov.uk/email-auth/",
         ),
         (
             {"to": None, "email_auth_link_host": "https://example.com"},
@@ -449,7 +450,7 @@ def test_send_user_email_code_with_urlencoded_next_param(admin_request, mocker, 
         "reply_to": current_app.config["EAS_EMAIL_REPLY_TO_ID"],
         "personalisation": {
             "name": "Test User",
-            "url": "https://admin.development.emergency-alerts.service.gov.uk/email-auth/"
+            "url": f"https://admin.{os.environ.get('ENVIRONMENT')}.emergency-alerts.service.gov.uk/email-auth/"
             + fake_token
             + "?next=%2Fservices",
         },
