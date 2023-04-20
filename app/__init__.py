@@ -157,8 +157,12 @@ def register_blueprint(application):
     from app.govuk_alerts.rest import govuk_alerts_blueprint
     from app.inbound_number.rest import inbound_number_blueprint
     from app.inbound_sms.rest import inbound_sms as inbound_sms_blueprint
-    from app.letter_branding.letter_branding_rest import letter_branding_blueprint
-    from app.notifications.notifications_sms_callback import sms_callback_blueprint
+    from app.letter_branding.letter_branding_rest import (
+        letter_branding_blueprint,
+    )
+    from app.notifications.notifications_sms_callback import (
+        sms_callback_blueprint,
+    )
     from app.notifications.rest import notifications as notifications_blueprint
     from app.organisation.invite_rest import organisation_invite_blueprint
     from app.organisation.rest import organisation_blueprint

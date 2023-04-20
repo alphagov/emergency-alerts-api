@@ -1,31 +1,21 @@
 import time
-
 from datetime import datetime, timedelta
 
 from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
 
 from app import db, notify_celery
-
 from app.celery.broadcast_message_tasks import trigger_link_test
-
 from app.config import QueueNames, TaskNames
 from app.cronitor import cronitor
-
 from app.dao.invited_org_user_dao import (
     delete_org_invitations_created_more_than_two_days_ago,
 )
 from app.dao.invited_user_dao import (
     delete_invitations_created_more_than_two_days_ago,
 )
-
 from app.dao.users_dao import delete_codes_older_created_more_than_a_day_ago
-
-from app.models import (
-    BroadcastMessage,
-    BroadcastStatusType,
-    Event,
-)
+from app.models import BroadcastMessage, BroadcastStatusType, Event
 
 
 @notify_celery.task(name="run-health-check")

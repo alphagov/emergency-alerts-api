@@ -8,7 +8,6 @@ from notifications_python_client.errors import HTTPError
 from sqlalchemy.exc import IntegrityError
 
 from app.clients.notify_client import notify_send
-
 from app.dao.permissions_dao import permission_dao
 from app.dao.service_user_dao import (
     dao_get_service_user,
@@ -18,7 +17,6 @@ from app.dao.services_dao import dao_fetch_service_by_id
 from app.dao.template_folder_dao import (
     dao_get_template_folder_by_id_and_service_id,
 )
-
 from app.dao.users_dao import (
     count_user_verify_codes,
     create_secret_code,
@@ -42,7 +40,6 @@ from app.dao.webauthn_credential_dao import (
 )
 from app.errors import InvalidRequest, register_errors
 from app.models import EMAIL_TYPE, SMS_TYPE, Permission
-
 from app.schema_validation import validate
 from app.schemas import (
     create_user_schema,

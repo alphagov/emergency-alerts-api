@@ -16,7 +16,6 @@ from flask import current_app
 from gds_metrics import Histogram
 
 from app import redis_store
-
 from app.dao.notifications_dao import dao_create_notification
 from app.models import (
     EMAIL_TYPE,

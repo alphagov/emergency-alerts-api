@@ -22,7 +22,6 @@ from sqlalchemy.orm.exc import NoResultFound
 
 from app import db
 from app.aws import s3
-
 from app.dao.annual_billing_dao import (
     dao_create_or_update_annual_billing_for_year,
     set_default_free_allowance_for_service,

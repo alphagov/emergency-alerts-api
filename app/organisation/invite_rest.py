@@ -3,7 +3,6 @@ from flask import Blueprint, current_app, jsonify, request
 from itsdangerous import BadData, SignatureExpired
 
 from app.clients.notify_client import notify_send
-
 from app.dao.invited_org_user_dao import (
     get_invited_org_user as dao_get_invited_org_user,
 )
@@ -12,10 +11,8 @@ from app.dao.invited_org_user_dao import (
     get_invited_org_users_for_organisation,
     save_invited_org_user,
 )
-
 from app.errors import InvalidRequest, register_errors
 from app.models import EMAIL_TYPE, InvitedOrganisationUser
-
 from app.organisation.organisation_schema import (
     post_create_invited_org_user_status_schema,
     post_update_invited_org_user_status_schema,

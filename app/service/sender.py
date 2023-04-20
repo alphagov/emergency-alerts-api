@@ -1,4 +1,5 @@
 from flask import current_app
+
 from app.clients.notify_client import get_notify_template, notify_send
 from app.dao.services_dao import dao_fetch_active_users_for_service
 from app.dao.templates_dao import dao_get_template_by_id

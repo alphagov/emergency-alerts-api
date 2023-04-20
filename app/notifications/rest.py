@@ -2,11 +2,9 @@ from emergency_alerts_utils import SMS_CHAR_COUNT_LIMIT
 from flask import Blueprint, current_app, jsonify, request
 
 from app import api_user, authenticated_service
-
 from app.dao import notifications_dao
 from app.errors import InvalidRequest, register_errors
 from app.models import SMS_TYPE
-
 from app.schemas import (
     notification_with_personalisation_schema,
     notifications_filter_schema,

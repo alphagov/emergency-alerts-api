@@ -9,13 +9,7 @@ from freezegun import freeze_time
 from app import db
 from app.dao.services_dao import dao_fetch_service_by_id, dao_update_service
 from app.dao.users_dao import create_user_code
-from app.models import (
-    EMAIL_TYPE,
-    SMS_TYPE,
-    USER_AUTH_TYPES,
-    User,
-    VerifyCode,
-)
+from app.models import EMAIL_TYPE, SMS_TYPE, USER_AUTH_TYPES, User, VerifyCode
 from tests import create_admin_authorization_header
 
 

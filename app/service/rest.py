@@ -13,7 +13,6 @@ from werkzeug.datastructures import MultiDict
 
 from app.aws import s3
 from app.clients.notify_client import notify_send
-
 from app.dao import fact_notification_status_dao, notifications_dao
 from app.dao.annual_billing_dao import set_default_free_allowance_for_service
 from app.dao.api_key_dao import (
@@ -94,7 +93,6 @@ from app.dao.services_dao import (
     dao_update_service,
     get_services_by_partial_name,
 )
-
 from app.dao.users_dao import get_user_by_id
 from app.errors import InvalidRequest, register_errors
 from app.letters.utils import letter_print_day
@@ -108,7 +106,6 @@ from app.models import (
     Service,
     ServiceContactList,
 )
-
 from app.schema_validation import validate
 from app.schemas import (
     api_key_schema,

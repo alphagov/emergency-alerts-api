@@ -2,7 +2,6 @@ import datetime
 import uuid
 
 import pytest
-
 from emergency_alerts_utils.recipients import (
     validate_and_format_email_address,
     validate_and_format_phone_number,

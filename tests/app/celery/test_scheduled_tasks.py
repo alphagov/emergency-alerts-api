@@ -3,7 +3,6 @@ from datetime import datetime, timedelta
 from unittest.mock import call
 
 import pytest
-
 from freezegun import freeze_time
 
 from app.celery import scheduled_tasks
@@ -16,13 +15,8 @@ from app.celery.scheduled_tasks import (
     trigger_link_tests,
 )
 from app.config import QueueNames, TaskNames
-
-from app.models import (
-    BroadcastStatusType,
-    Event,
-)
+from app.models import BroadcastStatusType, Event
 from tests.app.db import create_broadcast_message
-
 from tests.conftest import set_config
 
 

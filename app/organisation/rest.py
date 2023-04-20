@@ -25,11 +25,9 @@ from app.dao.organisation_dao import (
     dao_update_organisation,
 )
 from app.dao.services_dao import dao_fetch_service_by_id
-
 from app.dao.users_dao import get_user_by_id
 from app.errors import InvalidRequest, register_errors
 from app.models import INVITE_PENDING, Organisation
-
 from app.organisation.organisation_schema import (
     post_create_organisation_schema,
     post_link_service_to_organisation_schema,

@@ -3,17 +3,14 @@ from flask import Blueprint, current_app, jsonify, request
 from itsdangerous import BadData, SignatureExpired
 
 from app.clients.notify_client import notify_send
-
 from app.dao.invited_user_dao import (
     get_invited_user_by_id,
     get_invited_user_by_service_and_id,
     get_invited_users_for_service,
     save_invited_user,
 )
-
 from app.errors import InvalidRequest, register_errors
 from app.models import EMAIL_TYPE
-
 from app.schemas import invited_user_schema
 
 service_invite = Blueprint("service_invite", __name__)
