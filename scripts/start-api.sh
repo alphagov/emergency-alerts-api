@@ -5,18 +5,19 @@ echo "Start script executing for api.."
 function run_db_upgrade(){
   cd $API_DIR;
   . $VENV_API/bin/activate
-  # take last line to trim the logging output
+
   local head=$(flask db heads | tail -1)
   local current=$(flask db current | tail -1)
+
+  # Checking if the database upgrade has been previously been completed to avoid running multiple times.
   if [[ $head != $current ]]; then
     echo "Run DB migration"
     flask db upgrade
   else
     echo "DB is up to date"
   fi
+
   echo $(flask db current)
-  unset MASTER_USERNAME
-  unset MASTER_PASSWORD
 }
 
 function configure_container_role(){
@@ -34,6 +35,10 @@ function run_api(){
 }
 
 configure_container_role
-run_db_upgrade
-run_celery
-run_api
+
+if [[ -z $MASTER_USERNAME ]]; then
+  run_db_upgrade
+else
+  run_celery
+  run_api
+fi
