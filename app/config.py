@@ -184,7 +184,6 @@ class Config(object):
         },
         "timezone": "Europe/London",
         "imports": [
-            "app.celery.tasks",
             "app.celery.scheduled_tasks",
             "app.celery.reporting_tasks",
             "app.celery.nightly_tasks",
