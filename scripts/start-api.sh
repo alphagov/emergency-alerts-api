@@ -35,8 +35,7 @@ function run_api(){
 }
 
 configure_container_role
-
-if [[ -z $MASTER_USERNAME ]]; then
+if [[ ! -z $MASTER_USERNAME ]]; then
   run_db_upgrade
 else
   run_celery
