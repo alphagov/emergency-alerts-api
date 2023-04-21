@@ -442,8 +442,8 @@ def test_get_all_user_services_should_return_empty_list_if_no_services_for_user(
 
 
 @freeze_time("2019-04-23T10:00:00")
-def test_dao_fetch_live_services_data(sample_user, nhs_email_branding, nhs_letter_branding):
-    org = create_organisation(organisation_type="nhs_central")
+def test_dao_fetch_live_services_data(sample_user):
+    org = create_organisation(organisation_type="central")
     service = create_service(go_live_user=sample_user, go_live_at="2014-04-20T10:00:00")
     sms_template = create_template(service=service)
     service_2 = create_service(service_name="second", go_live_at="2017-04-20T10:00:00", go_live_user=sample_user)
@@ -484,7 +484,7 @@ def test_dao_fetch_live_services_data(sample_user, nhs_email_branding, nhs_lette
             "service_id": mock.ANY,
             "service_name": "Sample service",
             "organisation_name": "test_org_1",
-            "organisation_type": "nhs_central",
+            "organisation_type": "central",
             "consent_to_research": None,
             "contact_name": "Test User",
             "contact_email": "notify@digital.cabinet-office.gov.uk",

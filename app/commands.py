@@ -13,7 +13,6 @@ import click
 import flask
 from click_datetime import Datetime as click_dt
 from dateutil import rrule
-from emergency_alerts_utils.recipients import RecipientCSV
 from emergency_alerts_utils.statsd_decorators import statsd
 from emergency_alerts_utils.template import SMSMessageTemplate
 from flask import current_app, json
@@ -23,12 +22,6 @@ from sqlalchemy.orm.exc import NoResultFound
 
 from app import db
 from app.aws import s3
-from app.celery.letters_pdf_tasks import (
-    get_pdf_for_templated_letter,
-    resanitise_pdf,
-)
-from app.celery.tasks import process_row, record_daily_sorted_counts
-from app.config import QueueNames
 from app.dao.annual_billing_dao import (
     dao_create_or_update_annual_billing_for_year,
     set_default_free_allowance_for_service,
@@ -39,7 +32,6 @@ from app.dao.fact_billing_dao import (
     get_service_ids_that_need_billing_populated,
     update_ft_billing,
 )
-from app.dao.jobs_dao import dao_get_job_by_id
 from app.dao.notifications_dao import move_notifications_to_notification_history
 from app.dao.organisation_dao import (
     dao_add_service_to_organisation,
@@ -258,32 +250,6 @@ def insert_inbound_numbers_from_file(file_name):
                 db.session.commit()
 
 
-@notify_command(name="replay-create-pdf-for-templated-letter")
-@click.option(
-    "-n",
-    "--notification_id",
-    type=click.UUID,
-    required=True,
-    help="Notification id of the letter that needs the get_pdf_for_templated_letter task replayed",
-)
-def replay_create_pdf_for_templated_letter(notification_id):
-    print("Create task to get_pdf_for_templated_letter for notification: {}".format(notification_id))
-    get_pdf_for_templated_letter.apply_async([str(notification_id)], queue=QueueNames.CREATE_LETTERS_PDF)
-
-
-@notify_command(name="recreate-pdf-for-precompiled-or-uploaded-letter")
-@click.option(
-    "-n",
-    "--notification_id",
-    type=click.UUID,
-    required=True,
-    help="Notification ID of the precompiled or uploaded letter",
-)
-def recreate_pdf_for_precompiled_or_uploaded_letter(notification_id):
-    print(f"Call resanitise_pdf task for notification: {notification_id}")
-    resanitise_pdf.apply_async([str(notification_id)], queue=QueueNames.LETTERS)
-
-
 def setup_commands(application):
     application.cli.add_command(command_group)
 
@@ -355,7 +321,8 @@ def bulk_invite_user_to_service(file_name, service_id, user_id, auth_type, permi
             "from_user": user_id,
             "permissions": permissions,
             "auth_type": auth_type,
-            "invite_link_host": current_app.config["ADMIN_BASE_URL"],
+            # "invite_link_host": current_app.config["ADMIN_BASE_URL"],
+            "invite_link_host": current_app.config["ADMIN_EXTERNAL_URL"],
         }
         with current_app.test_request_context(
             path="/service/{}/invite/".format(service_id),
@@ -476,18 +443,6 @@ def update_emails_to_remove_gsi(service_id):
         """
         db.session.execute(update_stmt, {"user_id": str(user.user_id)})
         db.session.commit()
-
-
-@notify_command(name="replay-daily-sorted-count-files")
-@click.option("-f", "--file_extension", required=False, help="File extension to search for, defaults to rs.txt")
-@statsd(namespace="tasks")
-def replay_daily_sorted_count_files(file_extension):
-    bucket_location = "{}-ftp".format(current_app.config["NOTIFY_EMAIL_DOMAIN"])
-    for filename in s3.get_list_of_files_by_suffix(
-        bucket_name=bucket_location, subfolder="root/dispatch", suffix=file_extension or ".rs.txt"
-    ):
-        print("Create task to record daily sorted counts for file: ", filename)
-        record_daily_sorted_counts.apply_async([filename], queue=QueueNames.NOTIFY)
 
 
 @notify_command(name="populate-organisations-from-file")
@@ -745,27 +700,6 @@ def fix_billable_units():
         )
     db.session.commit()
     print("End fix_billable_units")
-
-
-@notify_command(name="process-row-from-job")
-@click.option("-j", "--job_id", required=True, help="Job id")
-@click.option("-n", "--job_row_number", type=int, required=True, help="Job id")
-def process_row_from_job(job_id, job_row_number):
-    job = dao_get_job_by_id(job_id)
-    db_template = dao_get_template_by_id(job.template_id, job.template_version)
-
-    template = db_template._as_utils_template()
-
-    for row in RecipientCSV(
-        s3.get_job_from_s3(str(job.service_id), str(job.id)),
-        template_type=template.template_type,
-        placeholders=template.placeholders,
-    ).get_rows():
-        if row.index == job_row_number:
-            notification_id = process_row(row, template, job, job.service)
-            current_app.logger.info(
-                "Process row {} for job {} created notification_id: {}".format(job_row_number, job_id, notification_id)
-            )
 
 
 @notify_command(name="populate-annual-billing-with-the-previous-years-allowance")

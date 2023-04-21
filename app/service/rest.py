@@ -12,7 +12,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from werkzeug.datastructures import MultiDict
 
 from app.aws import s3
-from app.config import QueueNames
+from app.clients.notify_client import notify_send
 from app.dao import fact_notification_status_dao, notifications_dao
 from app.dao.annual_billing_dao import set_default_free_allowance_for_service
 from app.dao.api_key_dao import (
@@ -93,12 +93,11 @@ from app.dao.services_dao import (
     dao_update_service,
     get_services_by_partial_name,
 )
-from app.dao.templates_dao import dao_get_template_by_id
 from app.dao.users_dao import get_user_by_id
 from app.errors import InvalidRequest, register_errors
 from app.letters.utils import letter_print_day
 from app.models import (
-    KEY_TYPE_NORMAL,
+    EMAIL_TYPE,
     LETTER_TYPE,
     NOTIFICATION_CANCELLED,
     EmailBranding,
@@ -106,10 +105,6 @@ from app.models import (
     Permission,
     Service,
     ServiceContactList,
-)
-from app.notifications.process_notifications import (
-    persist_notification,
-    send_notification_to_queue,
 )
 from app.schema_validation import validate
 from app.schemas import (
@@ -121,11 +116,6 @@ from app.schemas import (
     service_schema,
 )
 from app.service import statistics
-from app.service.send_notification import (
-    send_one_off_notification,
-    send_pdf_letter_notification,
-)
-from app.service.send_pdf_letter_schema import send_pdf_letter_request
 from app.service.sender import send_notification_to_service_users
 from app.service.service_broadcast_settings_schema import (
     service_broadcast_settings_schema,
@@ -724,19 +714,6 @@ def get_monthly_template_usage(service_id):
         raise InvalidRequest("Year must be a number", status_code=400)
 
 
-@service_blueprint.route("/<uuid:service_id>/send-notification", methods=["POST"])
-def create_one_off_notification(service_id):
-    resp = send_one_off_notification(service_id, request.get_json())
-    return jsonify(resp), 201
-
-
-@service_blueprint.route("/<uuid:service_id>/send-pdf-letter", methods=["POST"])
-def create_pdf_letter(service_id):
-    data = validate(request.get_json(), send_pdf_letter_request)
-    resp = send_pdf_letter_notification(service_id, data)
-    return jsonify(resp), 201
-
-
 @service_blueprint.route("/<uuid:service_id>/email-reply-to", methods=["GET"])
 def get_email_reply_to_addresses(service_id):
     result = dao_get_reply_to_by_service_id(service_id)
@@ -754,23 +731,18 @@ def verify_reply_to_email_address(service_id):
     email_address = email_data_request_schema.load(request.get_json())
 
     check_if_reply_to_address_already_in_use(service_id, email_address["email"])
-    template = dao_get_template_by_id(current_app.config["REPLY_TO_EMAIL_ADDRESS_VERIFICATION_TEMPLATE_ID"])
-    notify_service = Service.query.get(current_app.config["NOTIFY_SERVICE_ID"])
-    saved_notification = persist_notification(
-        template_id=template.id,
-        template_version=template.version,
-        recipient=email_address["email"],
-        service=notify_service,
-        personalisation="",
-        notification_type=template.template_type,
-        api_key_id=None,
-        key_type=KEY_TYPE_NORMAL,
-        reply_to_text=notify_service.get_default_reply_to_email_address(),
-    )
 
-    send_notification_to_queue(saved_notification, False, queue=QueueNames.NOTIFY)
+    notification = {
+        "type": EMAIL_TYPE,
+        "template_id": current_app.config["REPLY_TO_EMAIL_ADDRESS_VERIFICATION_TEMPLATE_ID"],
+        "recipient": email_address["email"],
+        "reply_to": current_app.config["EAS_EMAIL_REPLY_TO_ID"],
+        "personalisation": "",
+    }
 
-    return jsonify(data={"id": saved_notification.id}), 201
+    response = notify_send(notification)
+
+    return jsonify(data={"id": response.id}), 201
 
 
 @service_blueprint.route("/<uuid:service_id>/email-reply-to", methods=["POST"])

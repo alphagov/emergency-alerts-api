@@ -35,7 +35,6 @@ from app.models import (
     AnnualBilling,
     EmailBranding,
     InboundNumber,
-    Notification,
     Permission,
     Service,
     ServiceBroadcastSettings,
@@ -2291,7 +2290,7 @@ def test_update_service_calls_send_notification_as_service_becomes_live(notify_d
     assert resp.status_code == 200
     send_notification_mock.assert_called_once_with(
         service_id=restricted_service.id,
-        template_id="618185c6-3636-49cd-b7d2-6f6f5eb3bdde",
+        template_id="9e10c154-d989-4cfe-80ca-481cd09b7251",
         personalisation={"service_name": restricted_service.name, "message_limit": "1,000"},
         include_user_fields=["name"],
     )
@@ -2395,92 +2394,6 @@ def test_search_for_notification_by_to_field_returns_content(client, sample_temp
     assert notifications[0]["id"] == str(notification.id)
     assert notifications[0]["to"] == "+447700900855"
     assert notifications[0]["template"]["content"] == "Hello (( Name))\nYour thing is due soon"
-
-
-def test_send_one_off_notification(sample_service, admin_request, mocker):
-    template = create_template(service=sample_service)
-    mocker.patch("app.service.send_notification.send_notification_to_queue")
-
-    response = admin_request.post(
-        "service.create_one_off_notification",
-        service_id=sample_service.id,
-        _data={"template_id": str(template.id), "to": "07700900001", "created_by": str(sample_service.created_by_id)},
-        _expected_status=201,
-    )
-
-    noti = Notification.query.one()
-    assert response["id"] == str(noti.id)
-
-
-def test_create_pdf_letter(mocker, sample_service_full_permissions, client, fake_uuid, notify_user):
-    mocker.patch("app.service.send_notification.utils_s3download")
-    mocker.patch("app.service.send_notification.get_page_count", return_value=1)
-    mocker.patch("app.service.send_notification.move_uploaded_pdf_to_letters_bucket")
-
-    user = sample_service_full_permissions.users[0]
-    data = json.dumps(
-        {
-            "filename": "valid.pdf",
-            "created_by": str(user.id),
-            "file_id": fake_uuid,
-            "postage": "second",
-            "recipient_address": "Bugs%20Bunny%0A123%20Main%20Street%0ALooney%20Town",
-        }
-    )
-
-    response = client.post(
-        url_for("service.create_pdf_letter", service_id=sample_service_full_permissions.id),
-        data=data,
-        headers=[("Content-Type", "application/json"), create_admin_authorization_header()],
-    )
-    json_resp = json.loads(response.get_data(as_text=True))
-
-    assert response.status_code == 201
-    assert json_resp == {"id": fake_uuid}
-
-
-@pytest.mark.parametrize(
-    "post_data, expected_errors",
-    [
-        (
-            {},
-            [
-                {"error": "ValidationError", "message": "postage is a required property"},
-                {"error": "ValidationError", "message": "filename is a required property"},
-                {"error": "ValidationError", "message": "created_by is a required property"},
-                {"error": "ValidationError", "message": "file_id is a required property"},
-                {"error": "ValidationError", "message": "recipient_address is a required property"},
-            ],
-        ),
-        (
-            {
-                "postage": "third",
-                "filename": "string",
-                "created_by": "string",
-                "file_id": "string",
-                "recipient_address": "Some Address",
-            },
-            [
-                {
-                    "error": "ValidationError",
-                    "message": "postage invalid. It must be first, second, europe or rest-of-world.",
-                }
-            ],
-        ),
-    ],
-)
-def test_create_pdf_letter_validates_against_json_schema(
-    sample_service_full_permissions, client, post_data, expected_errors
-):
-    response = client.post(
-        url_for("service.create_pdf_letter", service_id=sample_service_full_permissions.id),
-        data=json.dumps(post_data),
-        headers=[("Content-Type", "application/json"), create_admin_authorization_header()],
-    )
-    json_resp = json.loads(response.get_data(as_text=True))
-
-    assert response.status_code == 400
-    assert json_resp["errors"] == expected_errors
 
 
 def test_get_notification_for_service_includes_template_redacted(admin_request, sample_notification):
@@ -2640,34 +2553,6 @@ def test_get_email_reply_to_addresses_with_multiple_email_addresses(client, noti
     assert not json_response[1]["is_default"]
     assert json_response[1]["created_at"]
     assert not json_response[1]["updated_at"]
-
-
-def test_verify_reply_to_email_address_should_send_verification_email(
-    admin_request, notify_db_session, mocker, verify_reply_to_address_email_template
-):
-    service = create_service()
-    mocked = mocker.patch("app.celery.provider_tasks.deliver_email.apply_async")
-    data = {"email": "reply-here@example.gov.uk"}
-    notify_service = verify_reply_to_address_email_template.service
-    response = admin_request.post(
-        "service.verify_reply_to_email_address", service_id=service.id, _data=data, _expected_status=201
-    )
-
-    notification = Notification.query.first()
-    assert notification.template_id == verify_reply_to_address_email_template.id
-    assert response["data"] == {"id": str(notification.id)}
-    mocked.assert_called_once_with([str(notification.id)], queue="notify-internal-tasks")
-    assert notification.reply_to_text == notify_service.get_default_reply_to_email_address()
-
-
-def test_verify_reply_to_email_address_doesnt_allow_duplicates(admin_request, notify_db_session, mocker):
-    data = {"email": "reply-here@example.gov.uk"}
-    service = create_service()
-    create_reply_to_email(service, "reply-here@example.gov.uk")
-    response = admin_request.post(
-        "service.verify_reply_to_email_address", service_id=service.id, _data=data, _expected_status=409
-    )
-    assert response["message"] == "Your service already uses ‘reply-here@example.gov.uk’ as an email reply-to address."
 
 
 def test_add_service_reply_to_email_address(admin_request, sample_service):
@@ -3449,10 +3334,7 @@ def test_get_returned_letter_statistics_with_old_returned_letters(
         "app.service.rest.fetch_recent_returned_letter_count",
     )
 
-    assert admin_request.get(
-        "service.returned_letter_statistics",
-        service_id=sample_service.id,
-    ) == {
+    assert admin_request.get("service.returned_letter_statistics", service_id=sample_service.id,) == {
         "returned_letter_count": 0,
         "most_recent_report": "2019-12-03 00:00:00.000000",
     }
@@ -3469,10 +3351,7 @@ def test_get_returned_letter_statistics_with_no_returned_letters(
         "app.service.rest.fetch_recent_returned_letter_count",
     )
 
-    assert admin_request.get(
-        "service.returned_letter_statistics",
-        service_id=sample_service.id,
-    ) == {
+    assert admin_request.get("service.returned_letter_statistics", service_id=sample_service.id,) == {
         "returned_letter_count": 0,
         "most_recent_report": None,
     }

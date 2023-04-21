@@ -157,19 +157,11 @@ def register_blueprint(application):
     from app.govuk_alerts.rest import govuk_alerts_blueprint
     from app.inbound_number.rest import inbound_number_blueprint
     from app.inbound_sms.rest import inbound_sms as inbound_sms_blueprint
-    from app.job.rest import job_blueprint
     from app.letter_branding.letter_branding_rest import (
         letter_branding_blueprint,
     )
-    from app.letters.rest import letter_job
-    from app.notifications.notifications_letter_callback import (
-        letter_callback_blueprint,
-    )
     from app.notifications.notifications_sms_callback import (
         sms_callback_blueprint,
-    )
-    from app.notifications.receive_notifications import (
-        receive_notifications_blueprint,
     )
     from app.notifications.rest import notifications as notifications_blueprint
     from app.organisation.invite_rest import organisation_invite_blueprint
@@ -214,15 +206,8 @@ def register_blueprint(application):
     sms_callback_blueprint.before_request(requires_no_auth)
     application.register_blueprint(sms_callback_blueprint)
 
-    # inbound sms
-    receive_notifications_blueprint.before_request(requires_no_auth)
-    application.register_blueprint(receive_notifications_blueprint)
-
     notifications_blueprint.before_request(requires_auth)
     application.register_blueprint(notifications_blueprint)
-
-    job_blueprint.before_request(requires_admin_auth)
-    application.register_blueprint(job_blueprint)
 
     service_invite_blueprint.before_request(requires_admin_auth)
     application.register_blueprint(service_invite_blueprint)
@@ -247,12 +232,6 @@ def register_blueprint(application):
 
     email_branding_blueprint.before_request(requires_admin_auth)
     application.register_blueprint(email_branding_blueprint, url_prefix="/email-branding")
-
-    letter_job.before_request(requires_admin_auth)
-    application.register_blueprint(letter_job)
-
-    letter_callback_blueprint.before_request(requires_no_auth)
-    application.register_blueprint(letter_callback_blueprint)
 
     billing_blueprint.before_request(requires_admin_auth)
     application.register_blueprint(billing_blueprint)
@@ -292,26 +271,10 @@ def register_v2_blueprints(application):
     from app.authentication.auth import requires_auth
     from app.v2.broadcast.post_broadcast import v2_broadcast_blueprint
     from app.v2.inbound_sms.get_inbound_sms import v2_inbound_sms_blueprint
-    from app.v2.notifications import (  # noqa
-        get_notifications,
-        post_notifications,
-        v2_notification_blueprint,
-    )
-    from app.v2.template import (  # noqa
-        get_template,
-        post_template,
-        v2_template_blueprint,
-    )
     from app.v2.templates.get_templates import v2_templates_blueprint
-
-    v2_notification_blueprint.before_request(requires_auth)
-    application.register_blueprint(v2_notification_blueprint)
 
     v2_templates_blueprint.before_request(requires_auth)
     application.register_blueprint(v2_templates_blueprint)
-
-    v2_template_blueprint.before_request(requires_auth)
-    application.register_blueprint(v2_template_blueprint)
 
     v2_inbound_sms_blueprint.before_request(requires_auth)
     application.register_blueprint(v2_inbound_sms_blueprint)

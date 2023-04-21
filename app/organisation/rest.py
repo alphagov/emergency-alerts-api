@@ -1,7 +1,6 @@
 from flask import Blueprint, abort, current_app, jsonify, request
 from sqlalchemy.exc import IntegrityError
 
-from app.config import QueueNames
 from app.dao.annual_billing_dao import set_default_free_allowance_for_service
 from app.dao.dao_utils import transaction
 from app.dao.fact_billing_dao import fetch_usage_for_organisation
@@ -26,19 +25,9 @@ from app.dao.organisation_dao import (
     dao_update_organisation,
 )
 from app.dao.services_dao import dao_fetch_service_by_id
-from app.dao.templates_dao import dao_get_template_by_id
 from app.dao.users_dao import get_user_by_id
 from app.errors import InvalidRequest, register_errors
-from app.models import (
-    INVITE_PENDING,
-    KEY_TYPE_NORMAL,
-    NHS_ORGANISATION_TYPES,
-    Organisation,
-)
-from app.notifications.process_notifications import (
-    persist_notification,
-    send_notification_to_queue,
-)
+from app.models import INVITE_PENDING, Organisation
 from app.organisation.organisation_schema import (
     post_create_organisation_schema,
     post_link_service_to_organisation_schema,
@@ -111,20 +100,7 @@ def update_organisation(organisation_id):
     data = request.get_json()
     validate(data, post_update_organisation_schema)
 
-    organisation = dao_get_organisation_by_id(organisation_id)
-
-    if data.get("organisation_type") in NHS_ORGANISATION_TYPES:
-        if not organisation.email_branding_id:
-            data["email_branding_id"] = current_app.config["NHS_EMAIL_BRANDING_ID"]
-        if not organisation.letter_branding_id:
-            data["letter_branding_id"] = current_app.config["NHS_LETTER_BRANDING_ID"]
-
     result = dao_update_organisation(organisation_id, **data)
-
-    if data.get("agreement_signed") is True:
-        # if a platform admin has manually adjusted the organisation, don't tell people
-        if data.get("agreement_signed_by_id"):
-            send_notifications_on_mou_signed(organisation_id)
 
     if result:
         return "", 204
@@ -281,51 +257,3 @@ def remove_letter_branding_from_organisation_pool(organisation_id, letter_brandi
     dao_remove_letter_branding_from_organisation_pool(organisation_id, letter_branding_id)
 
     return {}, 204
-
-
-def send_notifications_on_mou_signed(organisation_id):
-    organisation = dao_get_organisation_by_id(organisation_id)
-    notify_service = dao_fetch_service_by_id(current_app.config["NOTIFY_SERVICE_ID"])
-
-    def _send_notification(template_id, recipient, personalisation):
-        template = dao_get_template_by_id(template_id)
-
-        saved_notification = persist_notification(
-            template_id=template.id,
-            template_version=template.version,
-            recipient=recipient,
-            service=notify_service,
-            personalisation=personalisation,
-            notification_type=template.template_type,
-            api_key_id=None,
-            key_type=KEY_TYPE_NORMAL,
-            reply_to_text=notify_service.get_default_reply_to_email_address(),
-        )
-        send_notification_to_queue(saved_notification, research_mode=False, queue=QueueNames.NOTIFY)
-
-    personalisation = {
-        "mou_link": "{}/agreement/{}.pdf".format(
-            current_app.config["ADMIN_BASE_URL"], "crown" if organisation.crown else "non-crown"
-        ),
-        "org_name": organisation.name,
-        "org_dashboard_link": "{}/organisations/{}".format(current_app.config["ADMIN_BASE_URL"], organisation.id),
-        "signed_by_name": organisation.agreement_signed_by.name,
-        "on_behalf_of_name": organisation.agreement_signed_on_behalf_of_name,
-    }
-
-    if not organisation.agreement_signed_on_behalf_of_email_address:
-        signer_template_id = "MOU_SIGNER_RECEIPT_TEMPLATE_ID"
-    else:
-        signer_template_id = "MOU_SIGNED_ON_BEHALF_SIGNER_RECEIPT_TEMPLATE_ID"
-
-        # let the person who has been signed on behalf of know.
-        _send_notification(
-            current_app.config["MOU_SIGNED_ON_BEHALF_ON_BEHALF_RECEIPT_TEMPLATE_ID"],
-            organisation.agreement_signed_on_behalf_of_email_address,
-            personalisation,
-        )
-
-    # let the person who signed know - the template is different depending on if they signed on behalf of someone
-    _send_notification(
-        current_app.config[signer_template_id], organisation.agreement_signed_by.email_address, personalisation
-    )

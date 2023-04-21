@@ -1,3 +1,4 @@
+import os
 import uuid
 
 import pytest
@@ -5,19 +6,18 @@ from emergency_alerts_utils.url_safe_token import generate_token
 from flask import current_app, json
 from freezegun import freeze_time
 
-from app.models import INVITE_PENDING, Notification
 from tests import create_admin_authorization_header
 from tests.app.db import create_invited_org_user
 
 
 @pytest.mark.parametrize(
-    "platform_admin, expected_invited_by", ((True, "The GOV.UK Notify team"), (False, "Test User"))
+    "platform_admin, expected_invited_by", ((True, "The GOV.UK Emergency Alerts team"), (False, "Test User"))
 )
 @pytest.mark.parametrize(
     "extra_args, expected_start_of_invite_url",
     [
-        ({}, "http://localhost:6012/organisation-invitation/"),
-        ({"invite_link_host": "https://www.example.com"}, "https://www.example.com/organisation-invitation/"),
+        ({}, f"https://admin.{os.environ.get('ENVIRONMENT')}.emergency-alerts.service.gov.uk"),
+        ({"invite_link_host": "https://www.example.com"}, "https://www.example.com"),
     ],
 )
 def test_create_invited_org_user(
@@ -25,13 +25,14 @@ def test_create_invited_org_user(
     sample_organisation,
     sample_user,
     mocker,
-    org_invite_email_template,
-    extra_args,
-    expected_start_of_invite_url,
     platform_admin,
     expected_invited_by,
+    expected_start_of_invite_url,
+    extra_args,
 ):
-    mocked = mocker.patch("app.celery.provider_tasks.deliver_email.apply_async")
+    mocked = mocker.patch("app.organisation.invite_rest.notify_send")
+    fake_token = "0123456789"
+    mocker.patch("app.organisation.invite_rest.generate_token", return_value=fake_token)
     email_address = "invited_user@example.com"
     sample_user.platform_admin = platform_admin
 
@@ -39,7 +40,7 @@ def test_create_invited_org_user(
         organisation=str(sample_organisation.id),
         email_address=email_address,
         invited_by=str(sample_user.id),
-        **extra_args
+        **extra_args,
     )
 
     json_resp = admin_request.post(
@@ -49,27 +50,27 @@ def test_create_invited_org_user(
         _expected_status=201,
     )
 
-    assert json_resp["data"]["organisation"] == str(sample_organisation.id)
     assert json_resp["data"]["email_address"] == email_address
     assert json_resp["data"]["invited_by"] == str(sample_user.id)
-    assert json_resp["data"]["status"] == INVITE_PENDING
-    assert json_resp["data"]["id"]
+    assert json_resp["data"]["organisation"] == str(sample_organisation.id)
 
-    notification = Notification.query.first()
+    notification = {
+        "type": "email",
+        "template_id": current_app.config["ORGANISATION_INVITATION_EMAIL_TEMPLATE_ID"],
+        "recipient": email_address,
+        "reply_to": current_app.config["EAS_EMAIL_REPLY_TO_ID"],
+        "personalisation": {
+            "user_name": expected_invited_by,
+            "organisation_name": sample_organisation.name,
+            "url": f"{expected_start_of_invite_url}/organisation-invitation/{fake_token}",
+        },
+    }
 
-    assert notification.reply_to_text == sample_user.email_address
-
-    assert len(notification.personalisation.keys()) == 3
-    assert notification.personalisation["organisation_name"] == "sample organisation"
-    assert notification.personalisation["user_name"] == expected_invited_by
-    assert notification.personalisation["url"].startswith(expected_start_of_invite_url)
-    assert len(notification.personalisation["url"]) > len(expected_start_of_invite_url)
-
-    mocked.assert_called_once_with([(str(notification.id))], queue="notify-internal-tasks")
+    mocked.assert_called_once_with(notification)
 
 
 def test_create_invited_user_invalid_email(admin_request, sample_organisation, sample_user, mocker):
-    mocked = mocker.patch("app.celery.provider_tasks.deliver_email.apply_async")
+    mocked = mocker.patch("app.organisation.invite_rest.notify_send")
     email_address = "notanemail"
 
     data = {

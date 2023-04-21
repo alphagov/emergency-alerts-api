@@ -751,19 +751,6 @@ def team_member_mobile_edit_template(notify_service):
 
 
 @pytest.fixture(scope="function")
-def already_registered_template(notify_service):
-    content = """Sign in here: ((signin_url)) If you’ve forgotten your password,
-                          you can reset it here: ((forgot_password_url)) feedback:((feedback_url))"""
-    return create_custom_template(
-        service=notify_service,
-        user=notify_service.users[0],
-        template_config_name="ALREADY_REGISTERED_EMAIL_TEMPLATE_ID",
-        content=content,
-        template_type="email",
-    )
-
-
-@pytest.fixture(scope="function")
 def change_email_confirmation_template(notify_service):
     content = """Hi ((name)),
               Click this link to confirm your new email address:
@@ -778,30 +765,6 @@ def change_email_confirmation_template(notify_service):
         template_type="email",
     )
     return template
-
-
-@pytest.fixture(scope="function")
-def mou_signed_templates(notify_service):
-    import importlib
-
-    alembic_script = importlib.import_module("migrations.versions.0298_add_mou_signed_receipt")
-
-    return {
-        config_name: create_custom_template(
-            notify_service,
-            notify_service.users[0],
-            config_name,
-            "email",
-            content="\n".join(
-                next(x for x in alembic_script.templates if x["id"] == current_app.config[config_name])["content_lines"]
-            ),
-        )
-        for config_name in [
-            "MOU_SIGNER_RECEIPT_TEMPLATE_ID",
-            "MOU_SIGNED_ON_BEHALF_SIGNER_RECEIPT_TEMPLATE_ID",
-            "MOU_SIGNED_ON_BEHALF_ON_BEHALF_RECEIPT_TEMPLATE_ID",
-        ]
-    }
 
 
 def create_custom_template(service, user, template_config_name, template_type, content="", subject=None):
@@ -913,17 +876,6 @@ def broadcast_organisation(notify_db_session):
         dao_create_organisation(org)
 
     return org
-
-
-@pytest.fixture
-def nhs_email_branding(notify_db_session):
-    # we wipe email_branding table in test db between the tests, so we have to recreate this branding
-    # that is normally present on all environments and applied through migration
-    nhs_email_branding_id = current_app.config["NHS_EMAIL_BRANDING_ID"]
-
-    return create_email_branding(
-        id=nhs_email_branding_id, logo="1ac6f483-3105-4c9e-9017-dd7fb2752c44-nhs-blue_x2.png", name="NHS"
-    )
 
 
 @pytest.fixture

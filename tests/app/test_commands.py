@@ -8,7 +8,7 @@ from app.commands import (
 from app.dao.inbound_numbers_dao import dao_get_available_inbound_numbers
 from app.dao.services_dao import dao_add_user_to_service
 from app.models import AnnualBilling
-from tests.app.db import create_annual_billing, create_service, create_user
+from tests.app.db import create_service, create_user
 
 
 def test_insert_inbound_numbers_from_file(notify_db_session, notify_api, tmpdir):
@@ -54,18 +54,3 @@ def test_populate_annual_billing_with_defaults(notify_db_session, notify_api, or
 
     assert len(results) == 1
     assert results[0].free_sms_fragment_limit == expected_allowance
-
-
-def test_populate_annual_billing_with_defaults_sets_free_allowance_to_zero_if_previous_year_is_zero(
-    notify_db_session, notify_api
-):
-    service = create_service(organisation_type="central")
-    create_annual_billing(service_id=service.id, free_sms_fragment_limit=0, financial_year_start=2021)
-    notify_api.test_cli_runner().invoke(populate_annual_billing_with_defaults, ["-y", 2022])
-
-    results = AnnualBilling.query.filter(
-        AnnualBilling.financial_year_start == 2022, AnnualBilling.service_id == service.id
-    ).all()
-
-    assert len(results) == 1
-    assert results[0].free_sms_fragment_limit == 0

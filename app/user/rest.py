@@ -3,14 +3,11 @@ import uuid
 from datetime import datetime
 from urllib.parse import urlencode
 
-from emergency_alerts_utils.recipients import (
-    is_uk_phone_number,
-    use_numeric_sender,
-)
 from flask import Blueprint, abort, current_app, jsonify, request
+from notifications_python_client.errors import HTTPError
 from sqlalchemy.exc import IntegrityError
 
-from app.config import QueueNames
+from app.clients.notify_client import notify_send
 from app.dao.permissions_dao import permission_dao
 from app.dao.service_user_dao import (
     dao_get_service_user,
@@ -20,7 +17,6 @@ from app.dao.services_dao import dao_fetch_service_by_id
 from app.dao.template_folder_dao import (
     dao_get_template_folder_by_id_and_service_id,
 )
-from app.dao.templates_dao import dao_get_template_by_id
 from app.dao.users_dao import (
     count_user_verify_codes,
     create_secret_code,
@@ -43,17 +39,7 @@ from app.dao.webauthn_credential_dao import (
     dao_update_webauthn_credential_logged_in_at,
 )
 from app.errors import InvalidRequest, register_errors
-from app.models import (
-    EMAIL_TYPE,
-    KEY_TYPE_NORMAL,
-    SMS_TYPE,
-    Permission,
-    Service,
-)
-from app.notifications.process_notifications import (
-    persist_notification,
-    send_notification_to_queue,
-)
+from app.models import EMAIL_TYPE, SMS_TYPE, Permission
 from app.schema_validation import validate
 from app.schemas import (
     create_user_schema,
@@ -110,45 +96,29 @@ def update_user_attribute(user_id):
     update_dct = user_update_schema_load_json.load(req_json)
 
     save_user_attribute(user_to_update, update_dict=update_dct)
+    notification = {}
     if updated_by:
         if "email_address" in update_dct:
-            template = dao_get_template_by_id(current_app.config["TEAM_MEMBER_EDIT_EMAIL_TEMPLATE_ID"])
-            recipient = user_to_update.email_address
-            reply_to = template.service.get_default_reply_to_email_address()
+            notification["type"] = EMAIL_TYPE
+            notification["template_id"] = current_app.config["TEAM_MEMBER_EDIT_EMAIL_TEMPLATE_ID"]
+            notification["recipient"] = user_to_update.email_address
+            notification["reply_to"] = current_app.config["EAS_EMAIL_REPLY_TO_ID"]
         elif "mobile_number" in update_dct:
-            template = dao_get_template_by_id(current_app.config["TEAM_MEMBER_EDIT_MOBILE_TEMPLATE_ID"])
-            recipient = user_to_update.mobile_number
-            reply_to = get_sms_reply_to_for_notify_service(recipient, template)
+            notification["type"] = SMS_TYPE
+            notification["template_id"] = current_app.config["TEAM_MEMBER_EDIT_MOBILE_TEMPLATE_ID"]
+            notification["recipient"] = user_to_update.mobile_number
         else:
             return jsonify(data=user_to_update.serialize()), 200
-        service = Service.query.get(current_app.config["NOTIFY_SERVICE_ID"])
 
-        saved_notification = persist_notification(
-            template_id=template.id,
-            template_version=template.version,
-            recipient=recipient,
-            service=service,
-            personalisation={
-                "name": user_to_update.name,
-                "servicemanagername": updated_by.name,
-                "email address": user_to_update.email_address,
-            },
-            notification_type=template.template_type,
-            api_key_id=None,
-            key_type=KEY_TYPE_NORMAL,
-            reply_to_text=reply_to,
-        )
+        notification["personalisation"] = {
+            "name": user_to_update.name,
+            "servicemanagername": updated_by.name,
+            "email address": user_to_update.email_address,
+        }
 
-        send_notification_to_queue(saved_notification, False, queue=QueueNames.NOTIFY)
+        notify_send(notification)
+
     return jsonify(data=user_to_update.serialize()), 200
-
-
-def get_sms_reply_to_for_notify_service(recipient, template):
-    if not is_uk_phone_number(recipient) and use_numeric_sender(recipient):
-        reply_to = current_app.config["NOTIFY_INTERNATIONAL_SMS_SENDER"]
-    else:
-        reply_to = template.service.get_default_sms_sender()
-    return reply_to
 
 
 @user_blueprint.route("/<uuid:user_id>/archive", methods=["POST"])
@@ -275,6 +245,7 @@ def send_user_2fa_code(user_id, code_type):
         current_app.logger.warning("Too many verify codes created for user {}".format(user_to_send_to.id))
     else:
         data = request.get_json()
+        current_app.logger.info(data)
         if code_type == SMS_TYPE:
             validate(data, post_send_user_sms_code_schema)
             send_user_sms_code(user_to_send_to, data)
@@ -294,7 +265,7 @@ def send_user_sms_code(user_to_send_to, data):
     personalisation = {"verify_code": secret_code}
 
     create_2fa_code(
-        current_app.config["SMS_CODE_TEMPLATE_ID"], user_to_send_to, secret_code, recipient, personalisation
+        current_app.config["SMS_CODE_TEMPLATE_ID"], SMS_TYPE, user_to_send_to, secret_code, recipient, personalisation
     )
 
 
@@ -308,63 +279,55 @@ def send_user_email_code(user_to_send_to, data):
     }
 
     create_2fa_code(
-        current_app.config["EMAIL_2FA_TEMPLATE_ID"], user_to_send_to, secret_code, recipient, personalisation
+        current_app.config["EMAIL_2FA_TEMPLATE_ID"],
+        EMAIL_TYPE,
+        user_to_send_to,
+        secret_code,
+        recipient,
+        personalisation,
     )
 
 
-def create_2fa_code(template_id, user_to_send_to, secret_code, recipient, personalisation):
-    template = dao_get_template_by_id(template_id)
+def create_2fa_code(template_id, code_type, user_to_send_to, secret_code, recipient, personalisation):
+    current_app.logger.info(f"Create_2fa_code for template {template_id}")
 
     # save the code in the VerifyCode table
-    create_user_code(user_to_send_to, secret_code, template.template_type)
-    reply_to = None
-    if template.template_type == SMS_TYPE:
-        reply_to = get_sms_reply_to_for_notify_service(recipient, template)
-    elif template.template_type == EMAIL_TYPE:
-        reply_to = template.service.get_default_reply_to_email_address()
-    saved_notification = persist_notification(
-        template_id=template.id,
-        template_version=template.version,
-        recipient=recipient,
-        service=template.service,
-        personalisation=personalisation,
-        notification_type=template.template_type,
-        api_key_id=None,
-        key_type=KEY_TYPE_NORMAL,
-        reply_to_text=reply_to,
-    )
-    # Assume that we never want to observe the Notify service's research mode
-    # setting for this notification - we still need to be able to log into the
-    # admin even if we're doing user research using this service:
-    send_notification_to_queue(saved_notification, False, queue=QueueNames.NOTIFY)
+    create_user_code(user_to_send_to, secret_code, code_type)
+
+    notification = {
+        "type": code_type,
+        "template_id": template_id,
+        "recipient": recipient,
+        "personalisation": personalisation,
+        "reply_to": current_app.config["EAS_EMAIL_REPLY_TO_ID"] if code_type == EMAIL_TYPE else None,
+    }
+
+    response = notify_send(notification)
+
+    if response is HTTPError:
+        current_app.logger.error(response)
+    current_app.logger.info(response)
 
 
 @user_blueprint.route("/<uuid:user_id>/change-email-verification", methods=["POST"])
 def send_user_confirm_new_email(user_id):
     user_to_send_to = get_user_by_id(user_id=user_id)
-
     email = email_data_request_schema.load(request.get_json())
 
-    template = dao_get_template_by_id(current_app.config["CHANGE_EMAIL_CONFIRMATION_TEMPLATE_ID"])
-    service = Service.query.get(current_app.config["NOTIFY_SERVICE_ID"])
-
-    saved_notification = persist_notification(
-        template_id=template.id,
-        template_version=template.version,
-        recipient=email["email"],
-        service=service,
-        personalisation={
+    notification = {
+        "type": EMAIL_TYPE,
+        "template_id": current_app.config["CHANGE_EMAIL_CONFIRMATION_TEMPLATE_ID"],
+        "recipient": email,
+        "reply_to": current_app.config["EAS_EMAIL_REPLY_TO_ID"],
+        "personalisation": {
             "name": user_to_send_to.name,
             "url": _create_confirmation_url(user=user_to_send_to, email_address=email["email"]),
-            "feedback_url": current_app.config["ADMIN_BASE_URL"] + "/support",
+            "feedback_url": current_app.config["ADMIN_EXTERNAL_URL"] + "/support",
         },
-        notification_type=template.template_type,
-        api_key_id=None,
-        key_type=KEY_TYPE_NORMAL,
-        reply_to_text=service.get_default_reply_to_email_address(),
-    )
+    }
 
-    send_notification_to_queue(saved_notification, False, queue=QueueNames.NOTIFY)
+    notify_send(notification)
+
     return jsonify({}), 204
 
 
@@ -375,28 +338,21 @@ def send_new_user_email_verification(user_id):
     # when registering, we verify all users' email addresses using this function
     user_to_send_to = get_user_by_id(user_id=user_id)
 
-    template = dao_get_template_by_id(current_app.config["NEW_USER_EMAIL_VERIFICATION_TEMPLATE_ID"])
-    service = Service.query.get(current_app.config["NOTIFY_SERVICE_ID"])
-
-    saved_notification = persist_notification(
-        template_id=template.id,
-        template_version=template.version,
-        recipient=user_to_send_to.email_address,
-        service=service,
-        personalisation={
+    notification = {
+        "type": EMAIL_TYPE,
+        "template_id": current_app.config["NEW_USER_EMAIL_VERIFICATION_TEMPLATE_ID"],
+        "recipient": user_to_send_to.email_address,
+        "reply_to": current_app.config["EAS_EMAIL_REPLY_TO_ID"],
+        "personalisation": {
             "name": user_to_send_to.name,
             "url": _create_verification_url(
                 user_to_send_to,
                 base_url=request_json.get("admin_base_url"),
             ),
         },
-        notification_type=template.template_type,
-        api_key_id=None,
-        key_type=KEY_TYPE_NORMAL,
-        reply_to_text=service.get_default_reply_to_email_address(),
-    )
+    }
 
-    send_notification_to_queue(saved_notification, False, queue=QueueNames.NOTIFY)
+    notify_send(notification)
 
     return jsonify({}), 204
 
@@ -405,26 +361,19 @@ def send_new_user_email_verification(user_id):
 def send_already_registered_email(user_id):
     to = email_data_request_schema.load(request.get_json())
 
-    template = dao_get_template_by_id(current_app.config["ALREADY_REGISTERED_EMAIL_TEMPLATE_ID"])
-    service = Service.query.get(current_app.config["NOTIFY_SERVICE_ID"])
-
-    saved_notification = persist_notification(
-        template_id=template.id,
-        template_version=template.version,
-        recipient=to["email"],
-        service=service,
-        personalisation={
-            "signin_url": current_app.config["ADMIN_BASE_URL"] + "/sign-in",
-            "forgot_password_url": current_app.config["ADMIN_BASE_URL"] + "/forgot-password",
-            "feedback_url": current_app.config["ADMIN_BASE_URL"] + "/support",
+    notification = {
+        "type": EMAIL_TYPE,
+        "template_id": current_app.config["ALREADY_REGISTERED_EMAIL_TEMPLATE_ID"],
+        "recipient": to["email"],
+        "reply_to": current_app.config["EAS_EMAIL_REPLY_TO_ID"],
+        "personalisation": {
+            "signin_url": current_app.config["ADMIN_EXTERNAL_URL"] + "/sign-in",
+            "forgot_password_url": current_app.config["ADMIN_EXTERNAL_URL"] + "/forgot-password",
+            "feedback_url": current_app.config["ADMIN_EXTERNAL_URL"] + "/support",
         },
-        notification_type=template.template_type,
-        api_key_id=None,
-        key_type=KEY_TYPE_NORMAL,
-        reply_to_text=service.get_default_reply_to_email_address(),
-    )
+    }
 
-    send_notification_to_queue(saved_notification, False, queue=QueueNames.NOTIFY)
+    notify_send(notification)
 
     return jsonify({}), 204
 
@@ -499,17 +448,17 @@ def find_users_by_email():
 @user_blueprint.route("/reset-password", methods=["POST"])
 def send_user_reset_password():
     request_json = request.get_json()
-    email = email_data_request_schema.load(request_json)
+    data = email_data_request_schema.load(request_json)
+    user_to_send_to = get_user_by_email(data["email"])
 
-    user_to_send_to = get_user_by_email(email["email"])
-    template = dao_get_template_by_id(current_app.config["PASSWORD_RESET_TEMPLATE_ID"])
-    service = Service.query.get(current_app.config["NOTIFY_SERVICE_ID"])
-    saved_notification = persist_notification(
-        template_id=template.id,
-        template_version=template.version,
-        recipient=email["email"],
-        service=service,
-        personalisation={
+    print(user_to_send_to)
+
+    notification = {
+        "type": EMAIL_TYPE,
+        "template_id": current_app.config["PASSWORD_RESET_TEMPLATE_ID"],
+        "recipient": data["email"],
+        "reply_to": current_app.config["EAS_EMAIL_REPLY_TO_ID"],
+        "personalisation": {
             "user_name": user_to_send_to.name,
             "url": _create_reset_password_url(
                 user_to_send_to.email_address,
@@ -517,13 +466,9 @@ def send_user_reset_password():
                 next_redirect=request_json.get("next"),
             ),
         },
-        notification_type=template.template_type,
-        api_key_id=None,
-        key_type=KEY_TYPE_NORMAL,
-        reply_to_text=service.get_default_reply_to_email_address(),
-    )
+    }
 
-    send_notification_to_queue(saved_notification, False, queue=QueueNames.NOTIFY)
+    notify_send(notification)
 
     return jsonify({}), 204
 

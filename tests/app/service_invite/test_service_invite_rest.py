@@ -1,4 +1,5 @@
 import json
+import os
 import uuid
 
 import pytest
@@ -6,7 +7,7 @@ from emergency_alerts_utils.url_safe_token import generate_token
 from flask import current_app
 from freezegun import freeze_time
 
-from app.models import EMAIL_AUTH_TYPE, SMS_AUTH_TYPE, Notification
+from app.models import EMAIL_AUTH_TYPE, SMS_AUTH_TYPE
 from tests import create_admin_authorization_header
 from tests.app.db import create_invited_user
 
@@ -14,19 +15,20 @@ from tests.app.db import create_invited_user
 @pytest.mark.parametrize(
     "extra_args, expected_start_of_invite_url",
     [
-        ({}, "http://localhost:6012/invitation/"),
-        ({"invite_link_host": "https://www.example.com"}, "https://www.example.com/invitation/"),
+        ({}, f"https://admin.{os.environ.get('ENVIRONMENT')}.emergency-alerts.service.gov.uk"),
+        ({"invite_link_host": "https://www.example.com"}, "https://www.example.com"),
     ],
 )
 def test_create_invited_user(
     admin_request,
     sample_service,
     mocker,
-    invitation_email_template,
     extra_args,
     expected_start_of_invite_url,
 ):
-    mocked = mocker.patch("app.celery.provider_tasks.deliver_email.apply_async")
+    mocked = mocker.patch("app.service_invite.rest.notify_send")
+    fake_token = "0123456789"
+    mocker.patch("app.service_invite.rest.generate_token", return_value=fake_token)
     email_address = "invited_user@service.gov.uk"
     invite_from = sample_service.users[0]
 
@@ -37,7 +39,7 @@ def test_create_invited_user(
         permissions="send_messages,manage_service,manage_api_keys",
         auth_type=EMAIL_AUTH_TYPE,
         folder_permissions=["folder_1", "folder_2", "folder_3"],
-        **extra_args
+        **extra_args,
     )
 
     json_resp = admin_request.post(
@@ -52,36 +54,38 @@ def test_create_invited_user(
     assert json_resp["data"]["id"]
     assert json_resp["data"]["folder_permissions"] == ["folder_1", "folder_2", "folder_3"]
 
-    notification = Notification.query.first()
+    notification = {
+        "type": "email",
+        "template_id": current_app.config["BROADCAST_INVITATION_EMAIL_TEMPLATE_ID"],
+        "recipient": email_address,
+        "reply_to": current_app.config["EAS_EMAIL_REPLY_TO_ID"],
+        "personalisation": {
+            "user_name": "Test User",
+            "service_name": "Sample service",
+            "url": f"{expected_start_of_invite_url}/invitation/{fake_token}",
+        },
+    }
 
-    assert notification.reply_to_text == invite_from.email_address
-
-    assert len(notification.personalisation.keys()) == 3
-    assert notification.personalisation["service_name"] == "Sample service"
-    assert notification.personalisation["user_name"] == "Test User"
-    assert notification.personalisation["url"].startswith(expected_start_of_invite_url)
-    assert len(notification.personalisation["url"]) > len(expected_start_of_invite_url)
-    assert str(notification.template_id) == current_app.config["INVITATION_EMAIL_TEMPLATE_ID"]
-
-    mocked.assert_called_once_with([(str(notification.id))], queue="notify-internal-tasks")
+    mocked.assert_called_once_with(notification)
 
 
 @pytest.mark.parametrize(
     "extra_args, expected_start_of_invite_url",
     [
-        ({}, "http://localhost:6012/invitation/"),
-        ({"invite_link_host": "https://www.example.com"}, "https://www.example.com/invitation/"),
+        ({}, f"https://admin.{os.environ.get('ENVIRONMENT')}.emergency-alerts.service.gov.uk"),
+        ({"invite_link_host": "https://www.example.com"}, "https://www.example.com"),
     ],
 )
 def test_invited_user_for_broadcast_service_receives_broadcast_invite_email(
     admin_request,
     sample_broadcast_service,
     mocker,
-    broadcast_invitation_email_template,
     extra_args,
     expected_start_of_invite_url,
 ):
-    mocked = mocker.patch("app.celery.provider_tasks.deliver_email.apply_async")
+    mocked = mocker.patch("app.service_invite.rest.notify_send")
+    fake_token = "0123456789"
+    mocker.patch("app.service_invite.rest.generate_token", return_value=fake_token)
     email_address = "invited_user@service.gov.uk"
     invite_from = sample_broadcast_service.users[0]
 
@@ -92,29 +96,38 @@ def test_invited_user_for_broadcast_service_receives_broadcast_invite_email(
         permissions="send_messages,manage_service,manage_api_keys",
         auth_type=EMAIL_AUTH_TYPE,
         folder_permissions=["folder_1", "folder_2", "folder_3"],
-        **extra_args
+        **extra_args,
     )
 
-    admin_request.post(
+    json_resp = admin_request.post(
         "service_invite.create_invited_user", service_id=sample_broadcast_service.id, _data=data, _expected_status=201
     )
 
-    notification = Notification.query.first()
+    assert json_resp["data"]["service"] == str(sample_broadcast_service.id)
+    assert json_resp["data"]["email_address"] == email_address
+    assert json_resp["data"]["from_user"] == str(invite_from.id)
+    assert json_resp["data"]["permissions"] == "send_messages,manage_service,manage_api_keys"
+    assert json_resp["data"]["auth_type"] == EMAIL_AUTH_TYPE
+    assert json_resp["data"]["id"]
+    assert json_resp["data"]["folder_permissions"] == ["folder_1", "folder_2", "folder_3"]
 
-    assert notification.reply_to_text == invite_from.email_address
+    notification = {
+        "type": "email",
+        "template_id": current_app.config["BROADCAST_INVITATION_EMAIL_TEMPLATE_ID"],
+        "recipient": email_address,
+        "reply_to": current_app.config["EAS_EMAIL_REPLY_TO_ID"],
+        "personalisation": {
+            "user_name": "Test User",
+            "service_name": "Sample broadcast service",
+            "url": f"{expected_start_of_invite_url}/invitation/{fake_token}",
+        },
+    }
 
-    assert len(notification.personalisation.keys()) == 3
-    assert notification.personalisation["service_name"] == "Sample broadcast service"
-    assert notification.personalisation["user_name"] == "Test User"
-    assert notification.personalisation["url"].startswith(expected_start_of_invite_url)
-    assert len(notification.personalisation["url"]) > len(expected_start_of_invite_url)
-    assert str(notification.template_id) == current_app.config["BROADCAST_INVITATION_EMAIL_TEMPLATE_ID"]
-
-    mocked.assert_called_once_with([(str(notification.id))], queue="notify-internal-tasks")
+    mocked.assert_called_once_with(notification)
 
 
 def test_create_invited_user_without_auth_type(admin_request, sample_service, mocker, invitation_email_template):
-    mocker.patch("app.celery.provider_tasks.deliver_email.apply_async")
+    mocker.patch("app.service_invite.rest.notify_send")
     email_address = "invited_user@service.gov.uk"
     invite_from = sample_service.users[0]
 
@@ -134,7 +147,7 @@ def test_create_invited_user_without_auth_type(admin_request, sample_service, mo
 
 
 def test_create_invited_user_invalid_email(client, sample_service, mocker, fake_uuid):
-    mocked = mocker.patch("app.celery.provider_tasks.deliver_email.apply_async")
+    mocked = mocker.patch("app.service_invite.rest.notify_send")
     email_address = "notanemail"
     invite_from = sample_service.users[0]
 
