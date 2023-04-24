@@ -3,8 +3,8 @@ version: 0.2
 phases:
   pre_build:
     commands:
-      - echo Checking out to latest tag...
-      - git checkout tags/api_$ENVIRONMENT_latest
+      - echo Checking out to api_${ENVIRONMENT}_latest tag...
+      - git checkout tags/api_${ENVIRONMENT}_latest
       - echo Logging in to Amazon ECR...
       - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS
         --password-stdin $ACCOUNT_NUMBER.dkr.ecr.$AWS_REGION.amazonaws.com
