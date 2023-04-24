@@ -22,7 +22,7 @@ phases:
       - docker push $REPOSITORY_URI:latest
       - aws ecs describe-task-definition --task-definition $TASK_DEFINITION_ARN | jq
         '.taskDefinition' > taskdef.json
-      - envsubst < .codepipeline/appspec_template.yaml > appspec.yaml
+      - envsubst < .codepipeline/appspec-template.yaml > appspec.yaml
 
 artifacts:
   files:
