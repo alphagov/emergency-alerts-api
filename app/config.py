@@ -183,11 +183,11 @@ class Config(object):
             "queue_name_prefix": NOTIFICATION_QUEUE_PREFIX,
         },
         "timezone": "Europe/London",
-        "imports": [
-            "app.celery.scheduled_tasks",
-            "app.celery.reporting_tasks",
-            "app.celery.nightly_tasks",
-        ],
+        # "imports": [
+        #     "app.celery.scheduled_tasks",
+        #     "app.celery.reporting_tasks",
+        #     "app.celery.nightly_tasks",
+        # ],
         # this is overriden by the -Q command, but locally, we should read from all queues
         "task_queues": [Queue(queue, Exchange("default"), routing_key=queue) for queue in QueueNames.all_queues()],
         # "worker_prefetch_multiplier": 0,
