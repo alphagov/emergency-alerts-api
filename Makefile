@@ -53,7 +53,7 @@ run-celery: ## Run celery
 		--uid=$(shell id -u easuser) \
 		--pidfile=/tmp/celery.pid \
 		--loglevel=WARNING \
-		--concurrency=1 \
+		--concurrency=0 \
 		--hostname=0.0.0.0
 
 .PHONY: run-celery-with-docker
