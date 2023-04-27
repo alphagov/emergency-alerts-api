@@ -198,7 +198,7 @@ class Config(object):
             },
             "delete-verify-codes": {
                 "task": "delete-verify-codes",
-                "schedule": timedelta(minutes=63),
+                "schedule": timedelta(minutes=1),
                 "options": {"queue": QueueNames.PERIODIC},
             },
             "delete-invitations": {
