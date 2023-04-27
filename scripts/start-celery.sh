@@ -18,5 +18,4 @@ function run_celery_beat(){
 
 configure_container_role
 run_celery
-sleep 20
 run_celery_beat

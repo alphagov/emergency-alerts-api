@@ -190,6 +190,7 @@ class Config(object):
         ],
         # this is overriden by the -Q command, but locally, we should read from all queues
         "task_queues": [Queue(queue, Exchange("default"), routing_key=queue) for queue in QueueNames.all_queues()],
+        # "worker_prefetch_multiplier": 0,
         "beat_schedule": {
             "run-health-check": {
                 "task": "run-health-check",
