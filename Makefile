@@ -52,7 +52,7 @@ run-celery: ## Run celery
 		-A run_celery.notify_celery worker \
 		--uid=$(shell id -u easuser) \
 		--pidfile=/tmp/celery.pid \
-		--prefetch-multiplier=0 \
+		--prefetch-multiplier=1 \
 		--loglevel=WARNING \
 		--concurrency=1 \
 		--hostname=0.0.0.0
