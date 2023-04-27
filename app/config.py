@@ -267,8 +267,10 @@ class Config(object):
                 "schedule": crontab(hour=3, minute=4),
                 "options": {"queue": QueueNames.PERIODIC},
             },
-        } if "a" == "b" else {},
+        },
     }
+
+    CELERY["beat_schedule"] = {}
 
     # we can set celeryd_prefetch_multiplier to be 1 for celery apps which handle only long running tasks
     if os.getenv("CELERYD_PREFETCH_MULTIPLIER"):
