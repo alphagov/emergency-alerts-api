@@ -17,5 +17,5 @@ function run_celery_beat(){
 }
 
 configure_container_role
-run_celery
+# run_celery
 run_celery_beat
