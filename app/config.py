@@ -175,99 +175,101 @@ class Config(object):
     REPLY_TO_EMAIL_ADDRESS_VERIFICATION_TEMPLATE_ID = "3a8a49b6-6d53-412f-b346-cae568a19de9"
     NOTIFY_INTERNATIONAL_SMS_SENDER = "07984404008"
 
+    # /aws/ecs/eas-app-api
+    SERVICE = os.environ.get("LOG_GROUP_NAME")[17:]
+
     CELERY = {
         "broker_url": "sqs://",
         "broker_transport_options": {
             "region": AWS_REGION,
             "visibility_timeout": 310,
-            "queue_name_prefix": NOTIFICATION_QUEUE_PREFIX,
+            "queue_name_prefix": f"{NOTIFICATION_QUEUE_PREFIX}{SERVICE}-",
         },
         "timezone": "Europe/London",
-        # "imports": [
-        #     "app.celery.scheduled_tasks",
-        #     "app.celery.reporting_tasks",
-        #     "app.celery.nightly_tasks",
-        # ],
+        "imports": [
+            "app.celery.scheduled_tasks",
+            "app.celery.reporting_tasks",
+            "app.celery.nightly_tasks",
+        ],
         # this is overriden by the -Q command, but locally, we should read from all queues
         "task_queues": [Queue(queue, Exchange("default"), routing_key=queue) for queue in QueueNames.all_queues()],
-        # "worker_prefetch_multiplier": 0,
-        # "beat_schedule": {
-        #     "run-health-check": {
-        #         "task": "run-health-check",
-        #         "schedule": crontab(minute="*/1"),
-        #         "options": {"queue": QueueNames.PERIODIC},
-        #     },
-        #     "delete-verify-codes": {
-        #         "task": "delete-verify-codes",
-        #         "schedule": timedelta(minutes=1),
-        #         "options": {"queue": QueueNames.PERIODIC},
-        #     },
-        #     "delete-invitations": {
-        #         "task": "delete-invitations",
-        #         "schedule": timedelta(minutes=66),
-        #         "options": {"queue": QueueNames.PERIODIC},
-        #     },
-        #     "timeout-sending-notifications": {
-        #         "task": "timeout-sending-notifications",
-        #         "schedule": crontab(hour=0, minute=5),
-        #         "options": {"queue": QueueNames.PERIODIC},
-        #     },
-        #     "create-nightly-billing": {
-        #         "task": "create-nightly-billing",
-        #         "schedule": crontab(hour=0, minute=15),
-        #         "options": {"queue": QueueNames.REPORTING},
-        #     },
-        #     "create-nightly-notification-status": {
-        #         "task": "create-nightly-notification-status",
-        #         "schedule": crontab(hour=0, minute=30),  # after 'timeout-sending-notifications'
-        #         "options": {"queue": QueueNames.REPORTING},
-        #     },
-        #     "delete-notifications-older-than-retention": {
-        #         "task": "delete-notifications-older-than-retention",
-        #         "schedule": crontab(hour=3, minute=0),  # after 'create-nightly-notification-status'
-        #         "options": {"queue": QueueNames.REPORTING},
-        #     },
-        #     "delete-inbound-sms": {
-        #         "task": "delete-inbound-sms",
-        #         "schedule": crontab(hour=1, minute=40),
-        #         "options": {"queue": QueueNames.PERIODIC},
-        #     },
-        #     "save-daily-notification-processing-time": {
-        #         "task": "save-daily-notification-processing-time",
-        #         "schedule": crontab(hour=2, minute=0),
-        #         "options": {"queue": QueueNames.PERIODIC},
-        #     },
-        #     "remove_sms_email_jobs": {
-        #         "task": "remove_sms_email_jobs",
-        #         "schedule": crontab(hour=4, minute=0),
-        #         "options": {"queue": QueueNames.PERIODIC},
-        #     },
-        #     "raise-alert-if-letter-notifications-still-sending": {
-        #         "task": "raise-alert-if-letter-notifications-still-sending",
-        #         "schedule": crontab(hour=17, minute=00),
-        #         "options": {"queue": QueueNames.PERIODIC},
-        #     },
-        #     "trigger-link-tests": {
-        #         "task": "trigger-link-tests",
-        #         "schedule": timedelta(minutes=15),
-        #         "options": {"queue": QueueNames.PERIODIC},
-        #     },
-        #     "auto-expire-broadcast-messages": {
-        #         "task": "auto-expire-broadcast-messages",
-        #         "schedule": timedelta(minutes=5),
-        #         "options": {"queue": QueueNames.PERIODIC},
-        #     },
-        #     "remove-yesterdays-planned-tests-on-govuk-alerts": {
-        #         "task": "remove-yesterdays-planned-tests-on-govuk-alerts",
-        #         "schedule": crontab(hour=00, minute=00),
-        #         "options": {"queue": QueueNames.PERIODIC},
-        #     },
-        #     "delete-old-records-from-events-table": {
-        #         "task": "delete-old-records-from-events-table",
-        #         "schedule": crontab(hour=3, minute=4),
-        #         "options": {"queue": QueueNames.PERIODIC},
-        #     },
-        # },
+        "beat_schedule": {
+            "run-health-check": {
+                "task": "run-health-check",
+                "schedule": crontab(minute="*/1"),
+                "options": {"queue": QueueNames.PERIODIC},
+            },
+            "delete-verify-codes": {
+                "task": "delete-verify-codes",
+                "schedule": timedelta(minutes=1),
+                "options": {"queue": QueueNames.PERIODIC},
+            },
+            "delete-invitations": {
+                "task": "delete-invitations",
+                "schedule": timedelta(minutes=66),
+                "options": {"queue": QueueNames.PERIODIC},
+            },
+            "timeout-sending-notifications": {
+                "task": "timeout-sending-notifications",
+                "schedule": crontab(hour=0, minute=5),
+                "options": {"queue": QueueNames.PERIODIC},
+            },
+            "create-nightly-billing": {
+                "task": "create-nightly-billing",
+                "schedule": crontab(hour=0, minute=15),
+                "options": {"queue": QueueNames.REPORTING},
+            },
+            "create-nightly-notification-status": {
+                "task": "create-nightly-notification-status",
+                "schedule": crontab(hour=0, minute=30),  # after 'timeout-sending-notifications'
+                "options": {"queue": QueueNames.REPORTING},
+            },
+            "delete-notifications-older-than-retention": {
+                "task": "delete-notifications-older-than-retention",
+                "schedule": crontab(hour=3, minute=0),  # after 'create-nightly-notification-status'
+                "options": {"queue": QueueNames.REPORTING},
+            },
+            "delete-inbound-sms": {
+                "task": "delete-inbound-sms",
+                "schedule": crontab(hour=1, minute=40),
+                "options": {"queue": QueueNames.PERIODIC},
+            },
+            "save-daily-notification-processing-time": {
+                "task": "save-daily-notification-processing-time",
+                "schedule": crontab(hour=2, minute=0),
+                "options": {"queue": QueueNames.PERIODIC},
+            },
+            "remove_sms_email_jobs": {
+                "task": "remove_sms_email_jobs",
+                "schedule": crontab(hour=4, minute=0),
+                "options": {"queue": QueueNames.PERIODIC},
+            },
+            "raise-alert-if-letter-notifications-still-sending": {
+                "task": "raise-alert-if-letter-notifications-still-sending",
+                "schedule": crontab(hour=17, minute=00),
+                "options": {"queue": QueueNames.PERIODIC},
+            },
+            "trigger-link-tests": {
+                "task": "trigger-link-tests",
+                "schedule": timedelta(minutes=15),
+                "options": {"queue": QueueNames.PERIODIC},
+            },
+            "auto-expire-broadcast-messages": {
+                "task": "auto-expire-broadcast-messages",
+                "schedule": timedelta(minutes=5),
+                "options": {"queue": QueueNames.PERIODIC},
+            },
+            "remove-yesterdays-planned-tests-on-govuk-alerts": {
+                "task": "remove-yesterdays-planned-tests-on-govuk-alerts",
+                "schedule": crontab(hour=00, minute=00),
+                "options": {"queue": QueueNames.PERIODIC},
+            },
+            "delete-old-records-from-events-table": {
+                "task": "delete-old-records-from-events-table",
+                "schedule": crontab(hour=3, minute=4),
+                "options": {"queue": QueueNames.PERIODIC},
+            },
+        },
     }
 
     CELERY["beat_schedule"] = {}
