@@ -166,12 +166,12 @@ class Config(object):
             },
             "delete-verify-codes": {
                 "task": "delete-verify-codes",
-                "schedule": timedelta(minutes=1),
+                "schedule": timedelta(minutes=60),
                 "options": {"queue": QueueNames.PERIODIC},
             },
             "delete-invitations": {
                 "task": "delete-invitations",
-                "schedule": timedelta(minutes=66),
+                "schedule": timedelta(minutes=60),
                 "options": {"queue": QueueNames.PERIODIC},
             },
             "trigger-link-tests": {
@@ -191,7 +191,7 @@ class Config(object):
             },
             "delete-old-records-from-events-table": {
                 "task": "delete-old-records-from-events-table",
-                "schedule": crontab(hour=3, minute=4),
+                "schedule": crontab(hour=3, minute=00),
                 "options": {"queue": QueueNames.PERIODIC},
             },
         },
