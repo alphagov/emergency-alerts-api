@@ -140,10 +140,6 @@ class CBCProxyClientBase(ABC):
                 except ClientError as e:
                     current_app.logger.info("Error writing to CloudWatch: %s", e)
 
-                # raise CBCProxyRetryableException(
-                #     f"Lambda failed for both {self.lambda_name} and {self.failover_lambda_name}"
-                # )
-
                 return failover_result
 
         return result
