@@ -54,7 +54,7 @@ run-celery: ## Run celery
 		--pidfile=/tmp/celery.pid \
 		--prefetch-multiplier=1 \
 		--loglevel=WARNING \
-		--concurrency=2 \
+		--concurrency=1 \
 		--hostname=0.0.0.0
 
 .PHONY: run-celery-with-docker
