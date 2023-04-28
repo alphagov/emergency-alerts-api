@@ -55,6 +55,8 @@ run-celery: ## Run celery
 		--prefetch-multiplier=1 \
 		--loglevel=WARNING \
 		--concurrency=1 \
+		--max-concurrency=1 \
+		--max-tasks-per-child=1 \
 		--hostname=0.0.0.0
 
 .PHONY: run-celery-with-docker
