@@ -27,6 +27,7 @@ class QueueNames(object):
             QueueNames.PERIODIC,
             QueueNames.DATABASE,
             QueueNames.BROADCASTS,
+            QueueNames.GOVUK_ALERTS,
         ]
 
 
