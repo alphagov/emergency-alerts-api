@@ -17,23 +17,6 @@ class QueueNames(object):
     PERIODIC = "periodic-tasks"
     PRIORITY = "priority-tasks"
     DATABASE = "database-tasks"
-    SEND_SMS = "send-sms-tasks"
-    SEND_EMAIL = "send-email-tasks"
-    RESEARCH_MODE = "research-mode-tasks"
-    REPORTING = "reporting-tasks"
-    JOBS = "job-tasks"
-    RETRY = "retry-tasks"
-    NOTIFY = "notify-internal-tasks"
-    PROCESS_FTP = "process-ftp-tasks"
-    CREATE_LETTERS_PDF = "create-letters-pdf-tasks"
-    CALLBACKS = "service-callbacks"
-    CALLBACKS_RETRY = "service-callbacks-retry"
-    LETTERS = "letter-tasks"
-    SMS_CALLBACKS = "sms-callbacks"
-    ANTIVIRUS = "antivirus-tasks"
-    SANITISE_LETTERS = "sanitise-letter-tasks"
-    SAVE_API_EMAIL = "save-api-email-tasks"
-    SAVE_API_SMS = "save-api-sms-tasks"
     BROADCASTS = "broadcast-tasks"
     GOVUK_ALERTS = "govuk-alerts"
 
@@ -43,21 +26,8 @@ class QueueNames(object):
             QueueNames.PRIORITY,
             QueueNames.PERIODIC,
             QueueNames.DATABASE,
-            QueueNames.SEND_SMS,
-            QueueNames.SEND_EMAIL,
-            QueueNames.RESEARCH_MODE,
-            QueueNames.REPORTING,
-            QueueNames.JOBS,
-            QueueNames.RETRY,
-            QueueNames.NOTIFY,
-            QueueNames.CREATE_LETTERS_PDF,
-            QueueNames.CALLBACKS,
-            QueueNames.CALLBACKS_RETRY,
-            QueueNames.LETTERS,
-            QueueNames.SMS_CALLBACKS,
-            QueueNames.SAVE_API_EMAIL,
-            QueueNames.SAVE_API_SMS,
             QueueNames.BROADCASTS,
+            QueueNames.GOVUK_ALERTS,
         ]
 
 
@@ -108,9 +78,7 @@ class Config(object):
     FIRETEXT_INTERNATIONAL_API_KEY = os.getenv("FIRETEXT_INTERNATIONAL_API_KEY", "placeholder")
 
     # Prefix to identify queues in SQS
-    # /aws/ecs/eas-app-api
-    SERVICE = os.environ.get("LOG_GROUP_NAME")[17:]
-    NOTIFICATION_QUEUE_PREFIX = f"{os.getenv('ENVIRONMENT')}-{SERVICE}-"
+    NOTIFICATION_QUEUE_PREFIX = f"{os.getenv('ENVIRONMENT')}-{os.environ.get('SERVICE')}-"
 
     # URL of redis instance
     REDIS_URL = os.getenv("REDIS_URL")
