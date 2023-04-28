@@ -17,23 +17,6 @@ class QueueNames(object):
     PERIODIC = "periodic-tasks"
     PRIORITY = "priority-tasks"
     DATABASE = "database-tasks"
-    SEND_SMS = "send-sms-tasks"
-    SEND_EMAIL = "send-email-tasks"
-    RESEARCH_MODE = "research-mode-tasks"
-    REPORTING = "reporting-tasks"
-    JOBS = "job-tasks"
-    RETRY = "retry-tasks"
-    NOTIFY = "notify-internal-tasks"
-    PROCESS_FTP = "process-ftp-tasks"
-    CREATE_LETTERS_PDF = "create-letters-pdf-tasks"
-    CALLBACKS = "service-callbacks"
-    CALLBACKS_RETRY = "service-callbacks-retry"
-    LETTERS = "letter-tasks"
-    SMS_CALLBACKS = "sms-callbacks"
-    ANTIVIRUS = "antivirus-tasks"
-    SANITISE_LETTERS = "sanitise-letter-tasks"
-    SAVE_API_EMAIL = "save-api-email-tasks"
-    SAVE_API_SMS = "save-api-sms-tasks"
     BROADCASTS = "broadcast-tasks"
     GOVUK_ALERTS = "govuk-alerts"
 
@@ -43,21 +26,8 @@ class QueueNames(object):
             QueueNames.PRIORITY,
             QueueNames.PERIODIC,
             QueueNames.DATABASE,
-            QueueNames.SEND_SMS,
-            QueueNames.SEND_EMAIL,
-            QueueNames.RESEARCH_MODE,
-            QueueNames.REPORTING,
-            QueueNames.JOBS,
-            QueueNames.RETRY,
-            QueueNames.NOTIFY,
-            QueueNames.CREATE_LETTERS_PDF,
-            QueueNames.CALLBACKS,
-            QueueNames.CALLBACKS_RETRY,
-            QueueNames.LETTERS,
-            QueueNames.SMS_CALLBACKS,
-            QueueNames.SAVE_API_EMAIL,
-            QueueNames.SAVE_API_SMS,
             QueueNames.BROADCASTS,
+            QueueNames.GOVUK_ALERTS,
         ]
 
 
@@ -108,7 +78,7 @@ class Config(object):
     FIRETEXT_INTERNATIONAL_API_KEY = os.getenv("FIRETEXT_INTERNATIONAL_API_KEY", "placeholder")
 
     # Prefix to identify queues in SQS
-    NOTIFICATION_QUEUE_PREFIX = f"{os.getenv('ENVIRONMENT')}-"
+    NOTIFICATION_QUEUE_PREFIX = f"{os.getenv('ENVIRONMENT')}-{os.environ.get('SERVICE')}-"
 
     # URL of redis instance
     REDIS_URL = os.getenv("REDIS_URL")
@@ -185,8 +155,6 @@ class Config(object):
         "timezone": "Europe/London",
         "imports": [
             "app.celery.scheduled_tasks",
-            "app.celery.reporting_tasks",
-            "app.celery.nightly_tasks",
         ],
         # this is overriden by the -Q command, but locally, we should read from all queues
         "task_queues": [Queue(queue, Exchange("default"), routing_key=queue) for queue in QueueNames.all_queues()],
@@ -198,52 +166,12 @@ class Config(object):
             },
             "delete-verify-codes": {
                 "task": "delete-verify-codes",
-                "schedule": timedelta(minutes=63),
+                "schedule": timedelta(minutes=60),
                 "options": {"queue": QueueNames.PERIODIC},
             },
             "delete-invitations": {
                 "task": "delete-invitations",
-                "schedule": timedelta(minutes=66),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
-            "timeout-sending-notifications": {
-                "task": "timeout-sending-notifications",
-                "schedule": crontab(hour=0, minute=5),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
-            "create-nightly-billing": {
-                "task": "create-nightly-billing",
-                "schedule": crontab(hour=0, minute=15),
-                "options": {"queue": QueueNames.REPORTING},
-            },
-            "create-nightly-notification-status": {
-                "task": "create-nightly-notification-status",
-                "schedule": crontab(hour=0, minute=30),  # after 'timeout-sending-notifications'
-                "options": {"queue": QueueNames.REPORTING},
-            },
-            "delete-notifications-older-than-retention": {
-                "task": "delete-notifications-older-than-retention",
-                "schedule": crontab(hour=3, minute=0),  # after 'create-nightly-notification-status'
-                "options": {"queue": QueueNames.REPORTING},
-            },
-            "delete-inbound-sms": {
-                "task": "delete-inbound-sms",
-                "schedule": crontab(hour=1, minute=40),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
-            "save-daily-notification-processing-time": {
-                "task": "save-daily-notification-processing-time",
-                "schedule": crontab(hour=2, minute=0),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
-            "remove_sms_email_jobs": {
-                "task": "remove_sms_email_jobs",
-                "schedule": crontab(hour=4, minute=0),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
-            "raise-alert-if-letter-notifications-still-sending": {
-                "task": "raise-alert-if-letter-notifications-still-sending",
-                "schedule": crontab(hour=17, minute=00),
+                "schedule": timedelta(minutes=60),
                 "options": {"queue": QueueNames.PERIODIC},
             },
             "trigger-link-tests": {
@@ -263,7 +191,7 @@ class Config(object):
             },
             "delete-old-records-from-events-table": {
                 "task": "delete-old-records-from-events-table",
-                "schedule": crontab(hour=3, minute=4),
+                "schedule": crontab(hour=3, minute=00),
                 "options": {"queue": QueueNames.PERIODIC},
             },
         },
