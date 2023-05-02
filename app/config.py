@@ -144,13 +144,22 @@ class Config(object):
     NOTIFY_INTERNATIONAL_SMS_SENDER = "07984404008"
 
     CELERY = {
-        "broker_url": "sqs://",
+        # "broker_url": "sqs://",
+        # "broker_transport_options": {
+        #     "region": AWS_REGION,
+        #     "visibility_timeout": 310,
+        #     "queue_name_prefix": NOTIFICATION_QUEUE_PREFIX,
+        # },
+        # "timezone": "Europe/London",
+        "broker_url": "https://sqs.eu-west-2.amazonaws.com",
+        "broker_transport": "sqs",
         "broker_transport_options": {
             "region": AWS_REGION,
             "visibility_timeout": 310,
             "queue_name_prefix": NOTIFICATION_QUEUE_PREFIX,
+            "is_secure": True,
         },
-        "timezone": "Europe/London",
+        "timezone": "UTC",
         "imports": [
             "app.celery.scheduled_tasks",
         ],
