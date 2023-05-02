@@ -156,7 +156,7 @@ class Config(object):
         ],
         # this is overriden by the -Q command, but locally, we should read from all queues
         "task_queues": [Queue(queue, Exchange("default"), routing_key=queue) for queue in QueueNames.all_queues()],
-        "beath_scheduler": "celery.shedules:crontab",
+        "beat_scheduler": "celery.shedules:crontab",
         "beat_schedule": {
             "run-health-check": {
                 "task": "run-health-check",
