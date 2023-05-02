@@ -165,22 +165,22 @@ class Config(object):
             },
             "delete-verify-codes": {
                 "task": "delete-verify-codes",
-                "schedule": timedelta(minutes=60),
+                "schedule": crontab(minute=10),
                 "options": {"queue": QueueNames.PERIODIC},
             },
             "delete-invitations": {
                 "task": "delete-invitations",
-                "schedule": timedelta(minutes=60),
+                "schedule": crontab(minute=20),
                 "options": {"queue": QueueNames.PERIODIC},
             },
             "trigger-link-tests": {
                 "task": "trigger-link-tests",
-                "schedule": timedelta(minutes=15),
+                "schedule": crontab(minute=30),
                 "options": {"queue": QueueNames.PERIODIC},
             },
             "auto-expire-broadcast-messages": {
                 "task": "auto-expire-broadcast-messages",
-                "schedule": timedelta(minutes=5),
+                "schedule": crontab(minute=40),
                 "options": {"queue": QueueNames.PERIODIC},
             },
             "remove-yesterdays-planned-tests-on-govuk-alerts": {

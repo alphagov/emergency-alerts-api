@@ -67,6 +67,7 @@ run-celery-with-docker: ## Run celery in Docker container (useful if you can't i
 run-celery-beat: ## Run celery beat
 	. environment.sh && celery \
 		-A run_celery.notify_celery beat \
+		-S celery.beat.CrontabScheduler \
 		--loglevel=INFO
 
 .PHONY: run-celery-beat-with-docker
