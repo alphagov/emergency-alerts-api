@@ -197,8 +197,8 @@ class Config(object):
     }
 
     # we can set celeryd_prefetch_multiplier to be 1 for celery apps which handle only long running tasks
-    if os.getenv("CELERYD_PREFETCH_MULTIPLIER"):
-        CELERY["worker_prefetch_multiplier"] = os.getenv("CELERYD_PREFETCH_MULTIPLIER")
+    # if os.getenv("CELERYD_PREFETCH_MULTIPLIER"):
+    #     CELERY["worker_prefetch_multiplier"] = os.getenv("CELERYD_PREFETCH_MULTIPLIER")
 
     FROM_NUMBER = "development"
 
