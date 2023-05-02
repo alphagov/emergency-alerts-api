@@ -156,12 +156,11 @@ class Config(object):
         ],
         # this is overriden by the -Q command, but locally, we should read from all queues
         "task_queues": [Queue(queue, Exchange("default"), routing_key=queue) for queue in QueueNames.all_queues()],
-        "beat_scheduler": "celery.schedules.CrontabScheduler",
         "task_acks_late": True,
         "beat_schedule": {
             "run-health-check": {
                 "task": "run-health-check",
-                "schedule": crontab(minute="*/1"),
+                "schedule": crontab(minute="*/2"),
                 "options": {"queue": QueueNames.PERIODIC},
             },
             "delete-verify-codes": {
