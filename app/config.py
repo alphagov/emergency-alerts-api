@@ -162,12 +162,12 @@ class Config(object):
         "beat_schedule": {
             "run-health-check": {
                 "task": "run-health-check",
-                "schedule": crontab(minute="*/2"),
+                "schedule": crontab(minute="*/1"),
                 "options": {"queue": QueueNames.PERIODIC},
             },
             "delete-verify-codes": {
                 "task": "delete-verify-codes",
-                "schedule": crontab(minute="*/1"),
+                "schedule": crontab(minute="*/10"),
                 "options": {"queue": QueueNames.PERIODIC},
             },
             # "delete-invitations": {
