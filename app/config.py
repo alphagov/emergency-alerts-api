@@ -146,6 +146,7 @@ class Config(object):
         },
         "timezone": "UTC",
         "imports": [
+            "app.celery.tasks",
             "app.celery.scheduled_tasks",
         ],
         # this is overriden by the -Q command, but locally, we should read from all queues
@@ -164,7 +165,7 @@ class Config(object):
             "delete-verify-codes": {
                 "task": "delete-verify-codes",
                 # "schedule": crontab(minute=10),
-                "schedule": crontab(minute="*/3"),
+                "schedule": crontab(minute="*/1"),
                 "options": {"queue": QueueNames.PERIODIC},
             },
             "delete-invitations": {
@@ -176,13 +177,13 @@ class Config(object):
             "auto-expire-broadcast-messages": {
                 "task": "auto-expire-broadcast-messages",
                 # "schedule": crontab(minute=40),
-                "schedule": crontab(minute="*/2"),
+                "schedule": crontab(minute="*/1"),
                 "options": {"queue": QueueNames.PERIODIC},
             },
             "remove-yesterdays-planned-tests-on-govuk-alerts": {
                 "task": "remove-yesterdays-planned-tests-on-govuk-alerts",
                 # "schedule": crontab(hour=00, minute=00),
-                "schedule": crontab(minute="*/3"),
+                "schedule": crontab(minute="*/1"),
                 "options": {"queue": QueueNames.PERIODIC},
             },
             "delete-old-records-from-events-table": {
