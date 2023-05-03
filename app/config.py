@@ -156,12 +156,11 @@ class Config(object):
                 "schedule": crontab(minute="*/1"),
                 "options": {"queue": QueueNames.PERIODIC},
             },
-            "trigger-link-tests": {
-                "task": "trigger-link-tests",
-                # "schedule": crontab(minute="*/15"),
-                "schedule": crontab(minute="*/2"),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
+            # "trigger-link-tests": {
+            #     "task": "trigger-link-tests",
+            #     "schedule": crontab(minute="*/15"),
+            #     "options": {"queue": QueueNames.PERIODIC},
+            # },
             "delete-verify-codes": {
                 "task": "delete-verify-codes",
                 # "schedule": crontab(minute=10),
