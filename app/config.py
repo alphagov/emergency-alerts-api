@@ -36,13 +36,7 @@ class BroadcastProvider:
 
 
 class TaskNames(object):
-    PROCESS_INCOMPLETE_JOBS = "process-incomplete-jobs"
-    ZIP_AND_SEND_LETTER_PDFS = "zip-and-send-letter-pdfs"
-    SCAN_FILE = "scan-file"
-    SANITISE_LETTER = "sanitise-and-upload-letter"
-    CREATE_PDF_FOR_TEMPLATED_LETTER = "create-pdf-for-templated-letter"
     PUBLISH_GOVUK_ALERTS = "publish-govuk-alerts"
-    RECREATE_PDF_FOR_PRECOMPILED_LETTER = "recreate-pdf-for-precompiled-letter"
 
 
 class Config(object):
@@ -162,11 +156,11 @@ class Config(object):
                 "schedule": crontab(minute="*/1"),
                 "options": {"queue": QueueNames.PERIODIC},
             },
-            "trigger-link-tests": {
-                "task": "trigger-link-tests",
-                "schedule": crontab(minute="*/15"),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
+            # "trigger-link-tests": {
+            #     "task": "trigger-link-tests",
+            #     "schedule": crontab(minute="*/15"),
+            #     "options": {"queue": QueueNames.PERIODIC},
+            # },
             "delete-verify-codes": {
                 "task": "delete-verify-codes",
                 "schedule": crontab(minute=10),
