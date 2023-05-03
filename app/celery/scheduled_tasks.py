@@ -19,11 +19,12 @@ from app.models import BroadcastMessage, BroadcastStatusType, Event
 
 
 @notify_celery.task(name="run-health-check")
-def run_health_check():
+def run_health_check(message):
     try:
         time_stamp = int(time.time())
         with open("/eas/emergency-alerts-api/celery-beat-healthcheck", mode="w") as file:
             file.write(str(time_stamp))
+        message.ack()
     except Exception:
         current_app.logger.exception("Unable to generate health-check timestamp")
         raise
