@@ -183,7 +183,7 @@ class Config(object):
             "remove-yesterdays-planned-tests-on-govuk-alerts": {
                 "task": "remove-yesterdays-planned-tests-on-govuk-alerts",
                 # "schedule": crontab(hour=00, minute=00),
-                "schedule": crontab(minute="*/1"),
+                "schedule": crontab(minute="*/10"),
                 "options": {"queue": QueueNames.PERIODIC},
             },
             "delete-old-records-from-events-table": {
