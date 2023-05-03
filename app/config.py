@@ -144,13 +144,6 @@ class Config(object):
     NOTIFY_INTERNATIONAL_SMS_SENDER = "07984404008"
 
     CELERY = {
-        # "broker_url": "sqs://",
-        # "broker_transport_options": {
-        #     "region": AWS_REGION,
-        #     "visibility_timeout": 310,
-        #     "queue_name_prefix": NOTIFICATION_QUEUE_PREFIX,
-        # },
-        # "timezone": "Europe/London",
         "broker_url": "https://sqs.eu-west-2.amazonaws.com",
         "broker_transport": "sqs",
         "broker_transport_options": {
@@ -168,39 +161,39 @@ class Config(object):
         "beat_schedule": {
             "run-health-check": {
                 "task": "run-health-check",
-                "schedule": crontab(minute="*/1"),
+                "schedule": crontab(minute="*/2"),
                 "options": {"queue": QueueNames.PERIODIC},
             },
             "delete-verify-codes": {
                 "task": "delete-verify-codes",
-                "schedule": crontab(minute=10),
+                "schedule": crontab(minute="*/1"),
                 "options": {"queue": QueueNames.PERIODIC},
             },
-            "delete-invitations": {
-                "task": "delete-invitations",
-                "schedule": crontab(minute=20),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
-            "trigger-link-tests": {
-                "task": "trigger-link-tests",
-                "schedule": crontab(minute=30),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
-            "auto-expire-broadcast-messages": {
-                "task": "auto-expire-broadcast-messages",
-                "schedule": crontab(minute=40),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
-            "remove-yesterdays-planned-tests-on-govuk-alerts": {
-                "task": "remove-yesterdays-planned-tests-on-govuk-alerts",
-                "schedule": crontab(hour=00, minute=00),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
-            "delete-old-records-from-events-table": {
-                "task": "delete-old-records-from-events-table",
-                "schedule": crontab(hour=3, minute=00),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
+            # "delete-invitations": {
+            #     "task": "delete-invitations",
+            #     "schedule": crontab(minute=20),
+            #     "options": {"queue": QueueNames.PERIODIC},
+            # },
+            # "trigger-link-tests": {
+            #     "task": "trigger-link-tests",
+            #     "schedule": crontab(minute=30),
+            #     "options": {"queue": QueueNames.PERIODIC},
+            # },
+            # "auto-expire-broadcast-messages": {
+            #     "task": "auto-expire-broadcast-messages",
+            #     "schedule": crontab(minute=40),
+            #     "options": {"queue": QueueNames.PERIODIC},
+            # },
+            # "remove-yesterdays-planned-tests-on-govuk-alerts": {
+            #     "task": "remove-yesterdays-planned-tests-on-govuk-alerts",
+            #     "schedule": crontab(hour=00, minute=00),
+            #     "options": {"queue": QueueNames.PERIODIC},
+            # },
+            # "delete-old-records-from-events-table": {
+            #     "task": "delete-old-records-from-events-table",
+            #     "schedule": crontab(hour=3, minute=00),
+            #     "options": {"queue": QueueNames.PERIODIC},
+            # },
         },
     }
 
