@@ -14,18 +14,15 @@ if os.environ.get("VCAP_SERVICES"):
 
 class QueueNames(object):
     PERIODIC = "periodic-tasks"
-    PRIORITY = "priority-tasks"
-    DATABASE = "database-tasks"
     BROADCASTS = "broadcast-tasks"
     GOVUK_ALERTS = "govuk-alerts"
 
     @staticmethod
     def all_queues():
         return [
-            QueueNames.PRIORITY,
             QueueNames.PERIODIC,
-            QueueNames.DATABASE,
             QueueNames.BROADCASTS,
+            QueueNames.GOVUK_ALERTS,
         ]
 
 
