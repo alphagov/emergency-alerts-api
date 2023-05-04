@@ -17,13 +17,9 @@ class QueueNames(object):
     BROADCASTS = "broadcast-tasks"
     GOVUK_ALERTS = "govuk-alerts"
 
-    @staticmethod
-    def all_queues():
-        return [
-            QueueNames.PERIODIC,
-            QueueNames.BROADCASTS,
-            QueueNames.GOVUK_ALERTS,
-        ]
+
+class TaskNames(object):
+    PUBLISH_GOVUK_ALERTS = "publish-govuk-alerts"
 
 
 class BroadcastProvider:
@@ -33,10 +29,6 @@ class BroadcastProvider:
     O2 = "o2"
 
     PROVIDERS = [EE, VODAFONE, THREE, O2]
-
-
-class TaskNames(object):
-    PUBLISH_GOVUK_ALERTS = "publish-govuk-alerts"
 
 
 class Config(object):
@@ -67,7 +59,7 @@ class Config(object):
     FIRETEXT_INTERNATIONAL_API_KEY = os.getenv("FIRETEXT_INTERNATIONAL_API_KEY", "placeholder")
 
     # Prefix to identify queues in SQS
-    NOTIFICATION_QUEUE_PREFIX = f"{os.getenv('ENVIRONMENT')}-{os.environ.get('SERVICE')}-"
+    NOTIFICATION_QUEUE_PREFIX = f"{os.getenv('ENVIRONMENT')}-"
 
     # URL of redis instance
     REDIS_URL = os.getenv("REDIS_URL")
@@ -133,6 +125,8 @@ class Config(object):
     TEAM_MEMBER_EDIT_MOBILE_TEMPLATE_ID = "c8474c57-6601-47bb-ba67-caacf9716ee1"
     REPLY_TO_EMAIL_ADDRESS_VERIFICATION_TEMPLATE_ID = "3a8a49b6-6d53-412f-b346-cae568a19de9"
     NOTIFY_INTERNATIONAL_SMS_SENDER = "07984404008"
+    SERVICE = os.environ.get("SERVICE")
+    QUEUE_NAME = QueueNames.BROADCASTS if SERVICE == "api" else QueueNames.PERIODIC
 
     CELERY = {
         "broker_url": "https://sqs.eu-west-2.amazonaws.com",
@@ -146,50 +140,46 @@ class Config(object):
         },
         "timezone": "UTC",
         "imports": [
-            "app.celery.tasks",
             "app.celery.scheduled_tasks",
         ],
-        # this is overriden by the -Q command, but locally, we should read from all queues
-        "task_queues": [Queue(queue, Exchange("default"), routing_key=queue) for queue in QueueNames.all_queues()],
+        'worker_max_tasks_per_child': 10,
+        "task_queues": [
+            Queue(QUEUE_NAME, Exchange("default"), routing_key=QUEUE_NAME)
+        ],
         "beat_schedule": {
             "run-health-check": {
                 "task": "run-health-check",
                 "schedule": crontab(minute="*/1"),
                 "options": {"queue": QueueNames.PERIODIC},
             },
-            # "trigger-link-tests": {
-            #     "task": "trigger-link-tests",
-            #     "schedule": crontab(minute="*/15"),
-            #     "options": {"queue": QueueNames.PERIODIC},
-            # },
+            "trigger-link-tests": {
+                "task": "trigger-link-tests",
+                "schedule": crontab(minute="*/15"),
+                "options": {"queue": QueueNames.PERIODIC},
+            },
             "delete-verify-codes": {
                 "task": "delete-verify-codes",
-                # "schedule": crontab(minute=10),
-                "schedule": crontab(minute="*/1"),
+                "schedule": crontab(minute=10),
                 "options": {"queue": QueueNames.PERIODIC},
             },
             "delete-invitations": {
                 "task": "delete-invitations",
-                # "schedule": crontab(minute=20),
-                "schedule": crontab(minute="*/1"),
+                "schedule": crontab(minute=20),
                 "options": {"queue": QueueNames.PERIODIC},
             },
             "auto-expire-broadcast-messages": {
                 "task": "auto-expire-broadcast-messages",
-                # "schedule": crontab(minute=40),
-                "schedule": crontab(minute="*/1"),
+                "schedule": crontab(minute=40),
                 "options": {"queue": QueueNames.PERIODIC},
             },
             "remove-yesterdays-planned-tests-on-govuk-alerts": {
                 "task": "remove-yesterdays-planned-tests-on-govuk-alerts",
-                # "schedule": crontab(hour=00, minute=00),
-                "schedule": crontab(minute="*/10"),
+                "schedule": crontab(hour=00, minute=00),
                 "options": {"queue": QueueNames.PERIODIC},
             },
             "delete-old-records-from-events-table": {
                 "task": "delete-old-records-from-events-table",
-                # "schedule": crontab(hour=3, minute=00),
-                "schedule": crontab(minute="*/1"),
+                "schedule": crontab(hour=3, minute=00),
                 "options": {"queue": QueueNames.PERIODIC},
             },
         },

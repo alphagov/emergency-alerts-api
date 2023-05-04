@@ -53,10 +53,9 @@ run-celery: ## Run celery
 		--uid=$(shell id -u easuser) \
 		--pidfile=/tmp/celery.pid \
 		--prefetch-multiplier=1 \
-		--loglevel=WARNING \
+		--loglevel=INFO \
 		--concurrency=1 \
 		--autoscale=1,1
-		--max-tasks-per-child=1 \
 		--hostname=0.0.0.0
 
 .PHONY: run-celery-with-docker
