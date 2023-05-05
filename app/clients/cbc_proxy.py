@@ -157,7 +157,7 @@ class CBCProxyClientBase(ABC):
                 Payload=payload_bytes,
             )
         except botocore.exceptions.ClientError:
-            current_app.logger.exception(f"Boto ClientError calling lambda {lambda_name}")
+            current_app.logger.error(f"Boto ClientError calling lambda {lambda_name}")
             success = False
             return success
 
