@@ -143,6 +143,7 @@ class Config(object):
             "app.celery.scheduled_tasks",
         ],
         'worker_max_tasks_per_child': 10,
+        "worker_log_format": "[%(levelname)s] %(message)s",
         "task_queues": [
             Queue(QUEUE_NAME, Exchange("default"), routing_key=QUEUE_NAME)
         ],
