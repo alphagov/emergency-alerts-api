@@ -1,5 +1,4 @@
 from datetime import datetime
-from os import environ as env
 
 from flask import current_app
 

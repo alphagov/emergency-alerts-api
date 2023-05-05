@@ -142,11 +142,9 @@ class Config(object):
         "imports": [
             "app.celery.scheduled_tasks",
         ],
-        'worker_max_tasks_per_child': 10,
+        "worker_max_tasks_per_child": 10,
         "worker_log_format": "[%(levelname)s] %(message)s",
-        "task_queues": [
-            Queue(QUEUE_NAME, Exchange("default"), routing_key=QUEUE_NAME)
-        ],
+        "task_queues": [Queue(QUEUE_NAME, Exchange("default"), routing_key=QUEUE_NAME)],
         "beat_schedule": {
             "run-health-check": {
                 "task": "run-health-check",
