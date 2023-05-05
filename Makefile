@@ -53,7 +53,7 @@ run-celery: ## Run celery
 		--uid=$(shell id -u easuser) \
 		--pidfile=/tmp/celery.pid \
 		--prefetch-multiplier=1 \
-		--loglevel=INFO \
+		--loglevel=WARNING \
 		--concurrency=1 \
 		--autoscale=1,1
 		--hostname=0.0.0.0
@@ -66,7 +66,7 @@ run-celery-with-docker: ## Run celery in Docker container (useful if you can't i
 run-celery-beat: ## Run celery beat
 	. environment.sh && celery \
 		-A run_celery.notify_celery beat \
-		--loglevel=INFO
+		--loglevel=WARNING
 
 .PHONY: run-celery-beat-with-docker
 run-celery-beat-with-docker: ## Run celery beat in Docker container (useful if you can't install pycurl locally)
