@@ -160,9 +160,6 @@ def register_blueprint(application):
     from app.letter_branding.letter_branding_rest import (
         letter_branding_blueprint,
     )
-    from app.notifications.notifications_sms_callback import (
-        sms_callback_blueprint,
-    )
     from app.notifications.rest import notifications as notifications_blueprint
     from app.organisation.invite_rest import organisation_invite_blueprint
     from app.organisation.rest import organisation_blueprint
@@ -202,10 +199,6 @@ def register_blueprint(application):
     application.register_blueprint(status_blueprint)
 
     # delivery receipts
-    # TODO: make sure research mode can still trigger sms callbacks, then re-enable this
-    sms_callback_blueprint.before_request(requires_no_auth)
-    application.register_blueprint(sms_callback_blueprint)
-
     notifications_blueprint.before_request(requires_auth)
     application.register_blueprint(notifications_blueprint)
 
