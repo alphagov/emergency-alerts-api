@@ -1,6 +1,5 @@
 import json
 import os
-from datetime import timedelta
 
 from celery.schedules import crontab
 from kombu import Exchange, Queue
@@ -15,19 +14,12 @@ if os.environ.get("VCAP_SERVICES"):
 
 class QueueNames(object):
     PERIODIC = "periodic-tasks"
-    PRIORITY = "priority-tasks"
-    DATABASE = "database-tasks"
     BROADCASTS = "broadcast-tasks"
     GOVUK_ALERTS = "govuk-alerts"
 
-    @staticmethod
-    def all_queues():
-        return [
-            QueueNames.PRIORITY,
-            QueueNames.PERIODIC,
-            QueueNames.DATABASE,
-            QueueNames.BROADCASTS,
-        ]
+
+class TaskNames(object):
+    PUBLISH_GOVUK_ALERTS = "publish-govuk-alerts"
 
 
 class BroadcastProvider:
@@ -37,16 +29,6 @@ class BroadcastProvider:
     O2 = "o2"
 
     PROVIDERS = [EE, VODAFONE, THREE, O2]
-
-
-class TaskNames(object):
-    PROCESS_INCOMPLETE_JOBS = "process-incomplete-jobs"
-    ZIP_AND_SEND_LETTER_PDFS = "zip-and-send-letter-pdfs"
-    SCAN_FILE = "scan-file"
-    SANITISE_LETTER = "sanitise-and-upload-letter"
-    CREATE_PDF_FOR_TEMPLATED_LETTER = "create-pdf-for-templated-letter"
-    PUBLISH_GOVUK_ALERTS = "publish-govuk-alerts"
-    RECREATE_PDF_FOR_PRECOMPILED_LETTER = "recreate-pdf-for-precompiled-letter"
 
 
 class Config(object):
@@ -77,7 +59,7 @@ class Config(object):
     FIRETEXT_INTERNATIONAL_API_KEY = os.getenv("FIRETEXT_INTERNATIONAL_API_KEY", "placeholder")
 
     # Prefix to identify queues in SQS
-    NOTIFICATION_QUEUE_PREFIX = f"{os.getenv('ENVIRONMENT')}-{os.environ.get('SERVICE')}-"
+    NOTIFICATION_QUEUE_PREFIX = f"{os.getenv('ENVIRONMENT')}-"
 
     # URL of redis instance
     REDIS_URL = os.getenv("REDIS_URL")
@@ -143,44 +125,50 @@ class Config(object):
     TEAM_MEMBER_EDIT_MOBILE_TEMPLATE_ID = "c8474c57-6601-47bb-ba67-caacf9716ee1"
     REPLY_TO_EMAIL_ADDRESS_VERIFICATION_TEMPLATE_ID = "3a8a49b6-6d53-412f-b346-cae568a19de9"
     NOTIFY_INTERNATIONAL_SMS_SENDER = "07984404008"
+    SERVICE = os.environ.get("SERVICE")
+    QUEUE_NAME = QueueNames.BROADCASTS if SERVICE == "api" else QueueNames.PERIODIC
 
     CELERY = {
-        "broker_url": "sqs://",
+        "broker_url": "https://sqs.eu-west-2.amazonaws.com",
+        "broker_transport": "sqs",
         "broker_transport_options": {
             "region": AWS_REGION,
             "visibility_timeout": 310,
             "queue_name_prefix": NOTIFICATION_QUEUE_PREFIX,
+            "is_secure": True,
+            "task_acks_late": True,
         },
-        "timezone": "Europe/London",
+        "timezone": "UTC",
         "imports": [
             "app.celery.scheduled_tasks",
         ],
-        # this is overriden by the -Q command, but locally, we should read from all queues
-        "task_queues": [Queue(queue, Exchange("default"), routing_key=queue) for queue in QueueNames.all_queues()],
+        "worker_max_tasks_per_child": 10,
+        "worker_log_format": "[%(levelname)s] %(message)s",
+        "task_queues": [Queue(QUEUE_NAME, Exchange("default"), routing_key=QUEUE_NAME)],
         "beat_schedule": {
             "run-health-check": {
                 "task": "run-health-check",
                 "schedule": crontab(minute="*/1"),
                 "options": {"queue": QueueNames.PERIODIC},
             },
+            "trigger-link-tests": {
+                "task": "trigger-link-tests",
+                "schedule": crontab(minute="*/15"),
+                "options": {"queue": QueueNames.PERIODIC},
+            },
             "delete-verify-codes": {
                 "task": "delete-verify-codes",
-                "schedule": timedelta(minutes=60),
+                "schedule": crontab(minute=10),
                 "options": {"queue": QueueNames.PERIODIC},
             },
             "delete-invitations": {
                 "task": "delete-invitations",
-                "schedule": timedelta(minutes=60),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
-            "trigger-link-tests": {
-                "task": "trigger-link-tests",
-                "schedule": timedelta(minutes=15),
+                "schedule": crontab(minute=20),
                 "options": {"queue": QueueNames.PERIODIC},
             },
             "auto-expire-broadcast-messages": {
                 "task": "auto-expire-broadcast-messages",
-                "schedule": timedelta(minutes=5),
+                "schedule": crontab(minute=40),
                 "options": {"queue": QueueNames.PERIODIC},
             },
             "remove-yesterdays-planned-tests-on-govuk-alerts": {
@@ -195,10 +183,6 @@ class Config(object):
             },
         },
     }
-
-    # we can set celeryd_prefetch_multiplier to be 1 for celery apps which handle only long running tasks
-    if os.getenv("CELERYD_PREFETCH_MULTIPLIER"):
-        CELERY["worker_prefetch_multiplier"] = os.getenv("CELERYD_PREFETCH_MULTIPLIER")
 
     FROM_NUMBER = "development"
 

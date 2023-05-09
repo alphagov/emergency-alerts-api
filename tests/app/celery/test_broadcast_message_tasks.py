@@ -4,7 +4,6 @@ from unittest.mock import ANY, Mock, call
 import pytest
 from celery.exceptions import Retry
 from freezegun import freeze_time
-from moto import mock_sns
 
 from app.celery.broadcast_message_tasks import (
     BroadcastIntegrityError,
@@ -15,6 +14,7 @@ from app.celery.broadcast_message_tasks import (
     trigger_link_test,
 )
 from app.clients.cbc_proxy import CBCProxyRetryableException
+from app.config import QueueNames, TaskNames
 from app.models import (
     BROADCAST_TYPE,
     BroadcastEventMessageType,
@@ -57,7 +57,6 @@ def test_send_broadcast_event_queues_up_for_active_providers(mocker, notify_api,
         BroadcastStatusType.CANCELLED,
     ],
 )
-@mock_sns
 def test_send_broadcast_event_calls_publish_govuk_alerts_task(
     mocker, notify_api, sample_broadcast_service, message_status
 ):
@@ -68,12 +67,12 @@ def test_send_broadcast_event_calls_publish_govuk_alerts_task(
         "app.celery.broadcast_message_tasks.send_broadcast_provider_message",
     )
 
-    from app.celery.broadcast_message_tasks import send_broadcast_event
+    mock = mocker.patch("app.celery.broadcast_message_tasks.notify_celery.send_task")
 
     with set_config(notify_api, "ENABLED_CBCS", ["ee", "vodafone"]):
-        snsMessageId = send_broadcast_event(event.id)
+        send_broadcast_event(event.id)
 
-    assert snsMessageId is not False
+    mock.assert_called_once_with(name=TaskNames.PUBLISH_GOVUK_ALERTS, queue=QueueNames.GOVUK_ALERTS)
 
 
 def test_send_broadcast_event_only_sends_to_one_provider_if_set_on_service(

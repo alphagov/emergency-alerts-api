@@ -57,6 +57,6 @@ def notify_send(notification):
                 email_reply_to_id=notification["reply_to"],
             )
     except Exception as e:
-        current_app.logger.exception(f"Error sending notification: {e}")
+        current_app.logger.error(f"Error sending notification: {e}")
 
     return response
