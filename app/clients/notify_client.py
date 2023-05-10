@@ -16,6 +16,9 @@ __notify.client = None
 
 
 def get_notify_client():
+    if current_app.config["NOTIFY_ENVIRONMENT"] == "development":
+        return
+
     try:
         api_key = os.environ.get("NOTIFY_CLIENT_API_KEY", "empty_key")
         __notify.client = NotificationsAPIClient(api_key)
@@ -26,6 +29,9 @@ def get_notify_client():
 
 
 def get_notify_template(id):
+    if current_app.config["NOTIFY_ENVIRONMENT"] == "development":
+        return
+
     if __notify.client is None:
         get_notify_client()
 
@@ -38,6 +44,9 @@ def get_notify_template(id):
 
 
 def notify_send(notification):
+    if current_app.config["NOTIFY_ENVIRONMENT"] == "development":
+        return
+
     if __notify.client is None:
         get_notify_client()
 

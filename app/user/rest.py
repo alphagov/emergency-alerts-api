@@ -294,6 +294,9 @@ def create_2fa_code(template_id, code_type, user_to_send_to, secret_code, recipi
     # save the code in the VerifyCode table
     create_user_code(user_to_send_to, secret_code, code_type)
 
+    if (current_app.config["NOTIFY_ENVIRONMENT"] == 'development'):
+        print(f"Development environment 2fa code: {secret_code}")
+
     notification = {
         "type": code_type,
         "template_id": template_id,
