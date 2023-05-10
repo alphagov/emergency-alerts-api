@@ -26,26 +26,27 @@ Creating and edit an environment.sh file.
 ```
 echo "
 export NOTIFY_ENVIRONMENT='development'
-
-export MMG_API_KEY='MMG_API_KEY'
-export FIRETEXT_API_KEY='FIRETEXT_ACTUAL_KEY'
-export NOTIFICATION_QUEUE_PREFIX='YOUR_OWN_PREFIX'
+export ENVIRONMENT='development'
+export SERVICE='api'
 
 export FLASK_APP=application.py
-export FLASK_DEBUG=1
+export FLASK_DEBUG=False
 export WERKZEUG_DEBUG_PIN=off
+
+export RDS_HOST='localhost'
+export RDS_PORT=5432
+export RDS_USER='eas-user'
+export RDS_REGION='eu-west-2'
 "> environment.sh
 ```
 
-Things to change:
+## Running the Admin and Api services with Postgres
 
-* Replace `YOUR_OWN_PREFIX` with `local_dev_<first name>`.
-* Run the following in the credentials repo to get the API keys.
+Please refer to the README in the /emergency-alerts-tooling repository, in the /emergency-alerts-tooling/compose folder.
 
-```
-notify-pass credentials/firetext
-notify-pass credentials/mmg
-```
+
+## THE FOLLOWING INSTRUCTIONS ARE DEPRECATED AND SHOULD BE USED FOR HISTORICAL REFERENCE ONLY
+(This section will be removed in the future, as the Emergency Alerts app is fully decoupled from Notify)
 
 ### Postgres
 
