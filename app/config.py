@@ -33,10 +33,10 @@ class BroadcastProvider:
 
 class Config(object):
     # URL of admin app
-    ADMIN_BASE_URL = os.getenv("ADMIN_BASE_URL", "http://localhost:6012")
+    ADMIN_BASE_URL = "http://localhost:6012"
 
     # URL of api app (on AWS this is the internal api endpoint)
-    API_HOST_NAME = os.getenv("API_HOST_NAME")
+    API_HOST_NAME = "http://localhost:6011"
 
     # secrets that internal apps, such as the admin app or document download, must use to authenticate with the API
     ADMIN_CLIENT_ID = "notify-admin"
@@ -271,14 +271,12 @@ class Development(Config):
     NOTIFY_LOG_PATH = "application.log"
     NOTIFY_EMAIL_DOMAIN = "notify.tools"
 
-    SQLALCHEMY_DATABASE_URI = os.getenv(
-        "SQLALCHEMY_DATABASE_URI", "postgresql://postgres:root@localhost/emergency_alerts"
-    )
+    SQLALCHEMY_DATABASE_URI = "postgresql://postgres:root@localhost/emergency_alerts"
     REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
     ANTIVIRUS_ENABLED = os.getenv("ANTIVIRUS_ENABLED") == "1"
 
-    API_HOST_NAME = os.getenv("API_HOST_NAME", "http://localhost:6011")
+    API_HOST_NAME = "http://localhost:6011"
     API_RATE_LIMIT_ENABLED = True
     DVLA_EMAIL_ADDRESSES = ["success@simulator.amazonses.com"]
 
@@ -304,7 +302,6 @@ class Decoupled(Development):
             database=os.environ.get("DATABASE"),
         )
     else:
-        print("Using iam for db connection")
         SQLALCHEMY_DATABASE_URI = (
             "postgresql://{user}:password@{host}:{port}/{database}?sslmode=verify-full&sslrootcert={cert}".format(
                 user=os.environ.get("RDS_USER"),
