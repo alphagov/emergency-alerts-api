@@ -47,6 +47,7 @@ def cbc_proxy_client(client, mocker):
             "AWS_ACCESS_KEY_ID": "cbc-proxy-aws-access-key-id",
             "CBC_PROXY_AWS_SECRET_ACCESS_KEY": "cbc-proxy-aws-secret-access-key",
             "AWS_SECRET_ACCESS_KEY": "cbc-proxy-aws-secret-access-key",
+            "CBC_ACCOUNT_NUMBER": None,
             "CBC_PROXY_ENABLED": True,
         }
     )

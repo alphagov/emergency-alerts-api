@@ -37,15 +37,21 @@ class CBCProxyRetryableException(Exception):
 
 class CBCProxyClient:
     _lambda_client = None
+    _arn_prefix = ""
 
     def init_app(self, app):
         if app.config.get("CBC_PROXY_ENABLED"):
+            if app.config.get("CBC_ACCOUNT_NUMBER") is not None:
+                self._arn_prefix = (app.config.get("CBC_ACCOUNT_NUMBER") + ":function:")
             self._lambda_client = boto3.client(
                 "lambda",
                 region_name="eu-west-2",
                 aws_access_key_id=os.environ.get("AWS_ACCESS_KEY_ID"),
                 aws_secret_access_key=os.environ.get("AWS_SECRET_ACCESS_KEY"),
                 aws_session_token=os.environ.get("AWS_SESSION_TOKEN"),
+            ) if app.config.get("NOTIFY_ENVIRONMENT") == "development" else boto3.client(
+                "lambda",
+                region_name="eu-west-2"
             )
 
     def get_proxy(self, provider):
@@ -55,7 +61,7 @@ class CBCProxyClient:
             BroadcastProvider.O2: CBCProxyO2,
             BroadcastProvider.VODAFONE: CBCProxyVodafone,
         }
-        return proxy_classes[provider](self._lambda_client)
+        return proxy_classes[provider](self._lambda_client, self._arn_prefix)
 
 
 class CBCProxyClientBase(ABC):
@@ -79,8 +85,9 @@ class CBCProxyClientBase(ABC):
     def LANGUAGE_WELSH(self):
         pass
 
-    def __init__(self, lambda_client):
+    def __init__(self, lambda_client, arn_prefix):
         self._lambda_client = lambda_client
+        self._arn_prefix = arn_prefix
 
     def send_link_test(self):
         self._send_link_test(self.lambda_name)
@@ -152,7 +159,7 @@ class CBCProxyClientBase(ABC):
             current_app.logger.info(f"Calling lambda {lambda_name} with payload {str(payload)[:1000]}")
 
             result = self._lambda_client.invoke(
-                FunctionName=lambda_name,
+                FunctionName=f"{self._arn_prefix}{lambda_name}",
                 InvocationType="RequestResponse",
                 Payload=payload_bytes,
             )
