@@ -94,7 +94,7 @@ pytests: ## Run python tests only
 
 .PHONY: freeze-requirements
 freeze-requirements: ## Pin all requirements including sub dependencies into requirements.txt
-	pip install --upgrade pip-tools
+	pip3 install --upgrade pip-tools
 	pip-compile requirements.in
 
 .PHONY: bump-utils
