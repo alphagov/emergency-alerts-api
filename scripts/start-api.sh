@@ -36,6 +36,7 @@ function run_api(){
 
 if [[ ! -z $DEBUG ]]; then
     echo "Starting in debug mode.."
+    while true; do echo 'Debug mode active..'; sleep 30; done
 else
     configure_container_role
     if [[ ! -z $MASTER_USERNAME ]]; then
