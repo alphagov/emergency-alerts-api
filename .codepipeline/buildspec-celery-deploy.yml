@@ -1,0 +1,7 @@
+version: 0.2
+
+phases:
+  build:
+    commands:
+      - echo Deployment started on `date`
+      - bash ./codepipeline/deploy-service.sh --SERVICE celery
