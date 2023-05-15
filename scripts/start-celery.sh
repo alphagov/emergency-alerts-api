@@ -34,10 +34,14 @@ function run_api(){
     . $VENV_API/bin/activate && flask run -p 6011 --host=0.0.0.0
 }
 
-configure_container_role
-if [[ ! -z $MASTER_USERNAME ]]; then
-    run_db_upgrade
+if [[ ! -z $DEBUG ]]; then
+    echo "Starting in debug mode.."
 else
-    run_celery
-    run_api
+    configure_container_role
+    if [[ ! -z $MASTER_USERNAME ]]; then
+        run_db_upgrade
+    else
+        run_celery
+        run_api
+    fi
 fi
