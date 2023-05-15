@@ -4,4 +4,4 @@ phases:
   build:
     commands:
       - echo Deployment started on `date`
-      - bash ./codepipeline/deploy-service.sh --SERVICE celery
+      - bash ./.codepipeline/deploy-service.sh --SERVICE celery
