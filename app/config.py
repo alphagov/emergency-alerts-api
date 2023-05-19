@@ -38,6 +38,9 @@ class Config(object):
     # URL of api app (on AWS this is the internal api endpoint)
     API_HOST_NAME = "http://localhost:6011"
 
+    # CBC Proxy AWS account number
+    CBC_ACCOUNT_NUMBER = os.getenv("CBC_ACCOUNT_NUMBER")
+
     # secrets that internal apps, such as the admin app or document download, must use to authenticate with the API
     ADMIN_CLIENT_ID = "notify-admin"
     GOVUK_ALERTS_CLIENT_ID = "govuk-alerts"
