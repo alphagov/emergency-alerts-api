@@ -95,11 +95,12 @@ def create_app(application):
     request_helper.init_app(application)
     db.init_app(application)
 
-    if (notify_environment != "development"):
+    if notify_environment != "development":
         boto_session = boto3.Session(region_name=os.environ.get("AWS_REGION", "eu-west-2"))
         rds_client = boto_session.client("rds")
 
         with application.app_context():
+
             @event.listens_for(db.engine, "do_connect")
             def receive_do_connect(dialect, conn_rec, cargs, cparams):
                 token = get_authentication_token(rds_client)

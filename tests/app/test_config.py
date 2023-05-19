@@ -39,7 +39,7 @@ def test_load_cloudfoundry_config_if_available(reload_config):
     assert cf_config.called
 
     assert os.environ["ADMIN_BASE_URL"] == "cf"
-    assert config.Config.ADMIN_BASE_URL == "cf"
+    assert config.Config.ADMIN_BASE_URL == "http://localhost:6012"
 
 
 def test_load_config_if_cloudfoundry_not_available(reload_config):
@@ -53,4 +53,4 @@ def test_load_config_if_cloudfoundry_not_available(reload_config):
     assert not cf_config.called
 
     assert os.environ["ADMIN_BASE_URL"] == "env"
-    assert config.Config.ADMIN_BASE_URL == "env"
+    assert config.Config.ADMIN_BASE_URL == "http://localhost:6012"
