@@ -20,6 +20,7 @@ class QueueNames(object):
 
 class TaskNames(object):
     PUBLISH_GOVUK_ALERTS = "publish-govuk-alerts"
+    TRIGGER_GOVUK_HEALTHCHECK = "trigger-govuk-alerts-healthcheck"
 
 
 class BroadcastProvider:
@@ -153,6 +154,11 @@ class Config(object):
                 "task": "run-health-check",
                 "schedule": crontab(minute="*/1"),
                 "options": {"queue": QueueNames.PERIODIC},
+            },
+            TaskNames.TRIGGER_GOVUK_HEALTHCHECK: {
+                "task": TaskNames.TRIGGER_GOVUK_HEALTHCHECK,
+                "schedule": crontab(minute="*/1"),
+                "options": {"queue": QueueNames.GOVUK_ALERTS},
             },
             "trigger-link-tests": {
                 "task": "trigger-link-tests",
