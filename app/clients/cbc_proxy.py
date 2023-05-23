@@ -42,16 +42,17 @@ class CBCProxyClient:
     def init_app(self, app):
         if app.config.get("CBC_PROXY_ENABLED"):
             if app.config.get("CBC_ACCOUNT_NUMBER") is not None:
-                self._arn_prefix = (app.config.get("CBC_ACCOUNT_NUMBER") + ":function:")
-            self._lambda_client = boto3.client(
-                "lambda",
-                region_name="eu-west-2",
-                aws_access_key_id=os.environ.get("AWS_ACCESS_KEY_ID"),
-                aws_secret_access_key=os.environ.get("AWS_SECRET_ACCESS_KEY"),
-                aws_session_token=os.environ.get("AWS_SESSION_TOKEN"),
-            ) if app.config.get("NOTIFY_ENVIRONMENT") == "development" else boto3.client(
-                "lambda",
-                region_name="eu-west-2"
+                self._arn_prefix = app.config.get("CBC_ACCOUNT_NUMBER") + ":function:"
+            self._lambda_client = (
+                boto3.client(
+                    "lambda",
+                    region_name="eu-west-2",
+                    aws_access_key_id=os.environ.get("AWS_ACCESS_KEY_ID"),
+                    aws_secret_access_key=os.environ.get("AWS_SECRET_ACCESS_KEY"),
+                    aws_session_token=os.environ.get("AWS_SESSION_TOKEN"),
+                )
+                if app.config.get("NOTIFY_ENVIRONMENT") == "development"
+                else boto3.client("lambda", region_name="eu-west-2")
             )
 
     def get_proxy(self, provider):
