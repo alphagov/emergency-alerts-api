@@ -1,7 +1,7 @@
 ARG ECS_ACCOUNT_NUMBER
 FROM ${ECS_ACCOUNT_NUMBER}.dkr.ecr.eu-west-2.amazonaws.com/eas-app-base:latest
 
-ENV SERVICE=api
+ENV SERVICE='api'
 
 # Create root directory and copy repo
 COPY . $DIR_API
