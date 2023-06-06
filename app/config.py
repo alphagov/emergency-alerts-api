@@ -130,7 +130,7 @@ class Config(object):
     REPLY_TO_EMAIL_ADDRESS_VERIFICATION_TEMPLATE_ID = "3a8a49b6-6d53-412f-b346-cae568a19de9"
     NOTIFY_INTERNATIONAL_SMS_SENDER = "07984404008"
     SERVICE = os.environ.get("SERVICE")
-    SQS_QUEUE_BASE_URL = os.environ.get("SQS_QUEUE_BASE_URL", "https://sqs.eu-west-2.amazonaws.com/071839617283")
+    SQS_QUEUE_BASE_URL = os.environ.get("SQS_QUEUE_BASE_URL")
     SQS_QUEUE_BACKOFF_POLICY = {1: 1, 2: 2, 3: 4, 4: 8, 5: 16, 6: 32, 7: 64, 8: 128}
     QUEUE_NAME = QueueNames.BROADCASTS if SERVICE == "api" else QueueNames.PERIODIC
 
