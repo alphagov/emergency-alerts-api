@@ -133,6 +133,7 @@ class Config(object):
     SQS_QUEUE_BASE_URL = os.environ.get("SQS_QUEUE_BASE_URL")
     SQS_QUEUE_BACKOFF_POLICY = {1: 1, 2: 2, 3: 4, 4: 8, 5: 16, 6: 32, 7: 64, 8: 128}
     QUEUE_NAME = QueueNames.BROADCASTS if SERVICE == "api" else QueueNames.PERIODIC
+    TASK_IMPORTS = "broadcast_message_tasks" if SERVICE == "api" else "scheduled_tasks"
 
     CELERY = {
         "broker_url": "sqs://",
@@ -158,7 +159,7 @@ class Config(object):
         },
         "timezone": "UTC",
         "imports": [
-            "app.celery.scheduled_tasks",
+            f"app.celery.{TASK_IMPORTS}",
         ],
         "worker_max_tasks_per_child": 10,
         "worker_log_format": "[%(levelname)s] %(message)s",
