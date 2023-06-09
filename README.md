@@ -27,7 +27,6 @@ Creating and edit an environment.sh file.
 echo "
 export NOTIFY_ENVIRONMENT='development'
 export ENVIRONMENT='development'
-export SERVICE='api'
 
 export FLASK_APP=application.py
 export FLASK_DEBUG=False
