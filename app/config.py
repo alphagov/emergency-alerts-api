@@ -130,21 +130,36 @@ class Config(object):
     REPLY_TO_EMAIL_ADDRESS_VERIFICATION_TEMPLATE_ID = "3a8a49b6-6d53-412f-b346-cae568a19de9"
     NOTIFY_INTERNATIONAL_SMS_SENDER = "07984404008"
     SERVICE = os.environ.get("SERVICE")
+    SQS_QUEUE_BASE_URL = os.environ.get("SQS_QUEUE_BASE_URL")
+    SQS_QUEUE_BACKOFF_POLICY = {1: 1, 2: 2, 3: 4, 4: 8, 5: 16, 6: 32, 7: 64, 8: 128}
     QUEUE_NAME = QueueNames.BROADCASTS if SERVICE == "api" else QueueNames.PERIODIC
+    TASK_IMPORTS = "broadcast_message_tasks" if SERVICE == "api" else "scheduled_tasks"
 
     CELERY = {
-        "broker_url": "https://sqs.eu-west-2.amazonaws.com",
+        "broker_url": "sqs://",
         "broker_transport": "sqs",
         "broker_transport_options": {
+            "predefined_queues": {
+                QueueNames.BROADCASTS: {
+                    "url": f"{SQS_QUEUE_BASE_URL}/{NOTIFY_ENVIRONMENT}-broadcast-tasks",
+                    "backoff_policy": SQS_QUEUE_BACKOFF_POLICY
+                },
+                QueueNames.GOVUK_ALERTS: {
+                    "url": f"{SQS_QUEUE_BASE_URL}/{NOTIFY_ENVIRONMENT}-govuk-alerts",
+                    "backoff_policy": SQS_QUEUE_BACKOFF_POLICY
+                },
+                QueueNames.PERIODIC: {
+                    "url": f"{SQS_QUEUE_BASE_URL}/{NOTIFY_ENVIRONMENT}-periodic-tasks",
+                    "backoff_policy": SQS_QUEUE_BACKOFF_POLICY
+                }
+            },
             "region": AWS_REGION,
-            "visibility_timeout": 310,
-            "queue_name_prefix": NOTIFICATION_QUEUE_PREFIX,
             "is_secure": True,
             "task_acks_late": True,
         },
         "timezone": "UTC",
         "imports": [
-            "app.celery.scheduled_tasks",
+            f"app.celery.{TASK_IMPORTS}",
         ],
         "worker_max_tasks_per_child": 10,
         "worker_log_format": "[%(levelname)s] %(message)s",
