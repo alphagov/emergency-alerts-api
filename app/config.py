@@ -141,15 +141,15 @@ class Config(object):
         "broker_transport_options": {
             "predefined_queues": {
                 QueueNames.BROADCASTS: {
-                    "url": f"{SQS_QUEUE_BASE_URL}/{NOTIFY_ENVIRONMENT}-broadcast-tasks",
+                    "url": f"{SQS_QUEUE_BASE_URL}/{NOTIFICATION_QUEUE_PREFIX}broadcast-tasks",
                     "backoff_policy": SQS_QUEUE_BACKOFF_POLICY
                 },
                 QueueNames.GOVUK_ALERTS: {
-                    "url": f"{SQS_QUEUE_BASE_URL}/{NOTIFY_ENVIRONMENT}-govuk-alerts",
+                    "url": f"{SQS_QUEUE_BASE_URL}/{NOTIFICATION_QUEUE_PREFIX}govuk-alerts",
                     "backoff_policy": SQS_QUEUE_BACKOFF_POLICY
                 },
                 QueueNames.PERIODIC: {
-                    "url": f"{SQS_QUEUE_BASE_URL}/{NOTIFY_ENVIRONMENT}-periodic-tasks",
+                    "url": f"{SQS_QUEUE_BASE_URL}/{NOTIFICATION_QUEUE_PREFIX}periodic-tasks",
                     "backoff_policy": SQS_QUEUE_BACKOFF_POLICY
                 }
             },
