@@ -138,7 +138,7 @@ class Config(object):
         "broker_transport": "sqs",
         "broker_transport_options": {
             "region": AWS_REGION,
-            "visibility_timeout": 310,
+            # "visibility_timeout": 310,    # Configured in Terraform
             "queue_name_prefix": NOTIFICATION_QUEUE_PREFIX,
             "is_secure": True,
             "task_acks_late": True,
