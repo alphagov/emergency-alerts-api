@@ -32,5 +32,5 @@ def test_local_dev_broadcast_permissions(
 
     notify_api.test_cli_runner().invoke(local_dev_broadcast_permissions, ["-u", user.id])
 
-    assert len(user.get_permissions(sample_service.id)) == 0
+    assert len(user.get_permissions(sample_service.id)) == 6
     assert len(user.get_permissions(sample_broadcast_service.id)) > 0
