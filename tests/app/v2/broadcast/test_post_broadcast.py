@@ -6,12 +6,8 @@ from flask import json
 from app.dao.broadcast_message_dao import (
     dao_get_broadcast_message_by_id_and_service_id,
 )
-from app.dao.service_permissions_dao import (
-    dao_remove_service_permission,
-)
-from app.models import (
-    BROADCAST_TYPE,
-)
+from app.dao.service_permissions_dao import dao_remove_service_permission
+from app.models import BROADCAST_TYPE
 from tests import create_service_authorization_header
 from tests.app.db import create_api_key
 
