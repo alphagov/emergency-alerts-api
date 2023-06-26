@@ -6,6 +6,8 @@ from flask import json
 from app.dao.broadcast_message_dao import (
     dao_get_broadcast_message_by_id_and_service_id,
 )
+from app.dao.service_permissions_dao import dao_remove_service_permission
+from app.models import BROADCAST_TYPE
 from tests import create_service_authorization_header
 from tests.app.db import create_api_key
 
@@ -16,6 +18,7 @@ def test_broadcast_for_service_without_permission_returns_400(
     client,
     sample_service,
 ):
+    dao_remove_service_permission(service_id=sample_service.id, permission=BROADCAST_TYPE)
     auth_header = create_service_authorization_header(service_id=sample_service.id)
     response = client.post(
         path="/v2/broadcast",

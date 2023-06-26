@@ -16,6 +16,7 @@ from app.dao.service_sms_sender_dao import insert_service_sms_sender
 from app.dao.service_user_dao import dao_get_service_user
 from app.dao.template_folder_dao import dao_get_valid_template_folders_by_id
 from app.models import (
+    BROADCAST_TYPE,
     CROWN_ORGANISATION_TYPES,
     EMAIL_TYPE,
     INTERNATIONAL_LETTERS,
@@ -57,6 +58,7 @@ from app.utils import (
 )
 
 DEFAULT_SERVICE_PERMISSIONS = [
+    BROADCAST_TYPE,
     SMS_TYPE,
     EMAIL_TYPE,
     LETTER_TYPE,
