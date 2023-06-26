@@ -24,9 +24,9 @@ def upgrade():
             SET
                 name = 'Emergency Alerts'
             WHERE
-                id = :org_id
+                id = :id
         """),
-        {"org_id": organisation_id},
+        {"id": organisation_id},
     )
 
 
