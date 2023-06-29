@@ -17,15 +17,6 @@ service_id = "d6aa2c68-a2d9-4437-ab19-3ae8eb202553"
 
 def upgrade():
     conn = op.get_bind()
-    conn.execute(
-        text("""
-            DELETE FROM
-                services
-            WHERE
-                id = :id
-        """),
-        {"id": service_id},
-    )
 
     conn.execute(
         text("""
@@ -80,16 +71,6 @@ def upgrade():
     conn.execute(
         text("""
             DELETE FROM
-                templates
-            WHERE
-                service_id = :id
-        """),
-        {"id": service_id},
-    )
-
-    conn.execute(
-        text("""
-            DELETE FROM
                 templates_history
             WHERE
                 service_id = :id
@@ -106,6 +87,41 @@ def upgrade():
         """),
         {"id": service_id},
     )
+
+    conn.execute(
+        text("""
+            DELETE FROM
+                template_redacted
+            WHERE
+                template_id IN (
+                    SELECT template_id
+                    FROM templates
+                    WHERE service_id = :id
+                )
+        """),
+        {"id": service_id},
+    )
+
+    conn.execute(
+        text("""
+            DELETE FROM
+                templates
+            WHERE
+                service_id = :id
+        """),
+        {"id": service_id},
+    )
+
+    conn.execute(
+        text("""
+            DELETE FROM
+                services
+            WHERE
+                id = :id
+        """),
+        {"id": service_id},
+    )
+
 
 def downgrade():
     pass
