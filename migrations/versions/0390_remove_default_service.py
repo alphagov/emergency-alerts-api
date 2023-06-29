@@ -19,77 +19,92 @@ def upgrade():
     conn = op.get_bind()
 
     conn.execute(
-        text("""
+        text(
+            """
             DELETE FROM
                 annual_billing
             WHERE
                 service_id = :id
-        """),
+        """
+        ),
         {"id": service_id},
     )
 
     conn.execute(
-        text("""
+        text(
+            """
             DELETE FROM
                 service_email_reply_to
             WHERE
                 service_id = :id
-        """),
+        """
+        ),
         {"id": service_id},
     )
 
     conn.execute(
-        text("""
+        text(
+            """
             DELETE FROM
                 service_permissions
             WHERE
                 service_id = :id
-        """),
+        """
+        ),
         {"id": service_id},
     )
 
     conn.execute(
-        text("""
+        text(
+            """
             DELETE FROM
                 service_sms_senders
             WHERE
                 service_id = :id
-        """),
+        """
+        ),
         {"id": service_id},
     )
 
     conn.execute(
-        text("""
+        text(
+            """
             DELETE FROM
                 services_history
             WHERE
                 id = :id
-        """),
+        """
+        ),
         {"id": service_id},
     )
 
     conn.execute(
-        text("""
+        text(
+            """
             DELETE FROM
                 templates_history
             WHERE
                 service_id = :id
-        """),
+        """
+        ),
         {"id": service_id},
     )
 
     conn.execute(
-        text("""
+        text(
+            """
             DELETE FROM
                 user_to_service
             WHERE
                 service_id = :id
-        """),
+        """
+        ),
         {"id": service_id},
     )
 
     conn.execute(
-        text("""
+        text(
+            """
             DELETE FROM
                 template_redacted
             WHERE
@@ -98,27 +113,32 @@ def upgrade():
                     FROM templates
                     WHERE service_id = :id
                 )
-        """),
+        """
+        ),
         {"id": service_id},
     )
 
     conn.execute(
-        text("""
+        text(
+            """
             DELETE FROM
                 templates
             WHERE
                 service_id = :id
-        """),
+        """
+        ),
         {"id": service_id},
     )
 
     conn.execute(
-        text("""
+        text(
+            """
             DELETE FROM
                 services
             WHERE
                 id = :id
-        """),
+        """
+        ),
         {"id": service_id},
     )
 
