@@ -28,11 +28,14 @@ jobs:
           sudo apt-get install -y libcurl4-openssl-dev
           sudo apt-get install -y libssl-dev
 
+      - name: Launch a postgres instance
+        run: |
+          docker compose -f docker-compose-tests.yml up --force-recreate pg
+
       - name: Bootstrap Python app and run tests
         run: |
           export ENVIRONMENT='development'
           export FLASK_APP=application.py
-          docker compose -f docker-compose-tests.yml up --force-recreate pg
           set -eu
           make bootstrap
           make test
