@@ -20,6 +20,7 @@ jobs:
       - name: Verify Docker
         run: |
           docker --version || echo 'Could not find docker engine'
+          docker compose version || echo 'Could not find docker compose'
 
       - name: Install and upgrade pre-requisites
         run: |
@@ -33,4 +34,3 @@ jobs:
           export FLASK_APP=application.py
           set -eu
           make bootstrap
-          docker --version
