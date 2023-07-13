@@ -1,4 +1,4 @@
-name: pr-checks
+name: on-pr-into-main
 
 on:
   pull_request:
@@ -16,6 +16,16 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
+
+      - name: Verify Docker
+        run: |
+          docker --version || echo 'Could not find docker engine'
+
+      - name: Install and upgrade pre-requisites
+        run: |
+          python3.9 -m pip install --upgrade pip wheel setuptools
+          sudo apt-get install -y libcurl4-openssl-dev
+          sudo apt-get install -y libssl-dev
 
       - name: Bootstrap Python app and run tests
         run: |
