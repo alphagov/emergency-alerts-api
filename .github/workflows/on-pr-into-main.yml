@@ -32,5 +32,7 @@ jobs:
         run: |
           export ENVIRONMENT='development'
           export FLASK_APP=application.py
+          docker compose -f docker-compose-tests.yml up --force-recreate pg
           set -eu
           make bootstrap
+          make test
