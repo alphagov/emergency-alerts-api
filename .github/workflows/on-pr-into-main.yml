@@ -30,7 +30,7 @@ jobs:
 
       - name: Launch a postgres instance
         run: |
-          docker compose -f docker-compose-tests.yml up --force-recreate pg
+          docker compose -f docker-compose-tests.yml up --detach pg
 
       - name: Bootstrap Python app and run tests
         run: |
