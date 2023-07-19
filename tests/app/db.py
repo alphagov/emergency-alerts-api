@@ -49,6 +49,7 @@ from app.models import (
     FactBilling,
     FactNotificationStatus,
     FactProcessingTime,
+    FeatureToggle,
     InboundNumber,
     InboundSms,
     InvitedOrganisationUser,
@@ -1254,3 +1255,11 @@ def create_webauthn_credential(
     db.session.add(webauthn_credential)
     db.session.commit()
     return webauthn_credential
+
+
+def create_feature_toggle(name="feature_toggle", is_enabled=True, display_html=None):
+    feature_toggle = FeatureToggle(name=name, is_enabled=is_enabled, display_html=display_html)
+
+    db.session.add(feature_toggle)
+    db.session.commit()
+    return feature_toggle

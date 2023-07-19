@@ -155,6 +155,7 @@ def register_blueprint(application):
     from app.complaint.complaint_rest import complaint_blueprint
     from app.email_branding.rest import email_branding_blueprint
     from app.events.rest import events as events_blueprint
+    from app.feature_toggle.rest import feature_toggle_blueprint
     from app.govuk_alerts.rest import govuk_alerts_blueprint
     from app.inbound_number.rest import inbound_number_blueprint
     from app.inbound_sms.rest import inbound_sms as inbound_sms_blueprint
@@ -256,6 +257,9 @@ def register_blueprint(application):
 
     broadcast_message_blueprint.before_request(requires_admin_auth)
     application.register_blueprint(broadcast_message_blueprint)
+
+    feature_toggle_blueprint.before_request(requires_admin_auth)
+    application.register_blueprint(feature_toggle_blueprint)
 
     govuk_alerts_blueprint.before_request(requires_govuk_alerts_auth)
     application.register_blueprint(govuk_alerts_blueprint)
