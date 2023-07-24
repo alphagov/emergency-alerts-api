@@ -26,7 +26,7 @@ def upgrade():
         "INSERT INTO feature_toggles \
             (name, is_enabled, display_html) \
         VALUES \
-            ('service_is_not_live', true, \
+            ('service_is_not_live', false, \
                 'This service is currently not live. You cannot send alerts out to the public.')"
     )
 
