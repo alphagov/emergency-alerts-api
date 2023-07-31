@@ -66,6 +66,10 @@ def get_user_code(user, code, code_type):
     return next((x for x in codes if x.check_code(code)), None)
 
 
+def get_code_for_user(user):
+    return VerifyCode.query.filter_by(user=user).order_by(VerifyCode.created_at.desc()).first().code
+
+
 def delete_codes_older_created_more_than_a_day_ago():
     deleted = (
         db.session.query(VerifyCode).filter(VerifyCode.created_at < datetime.utcnow() - timedelta(hours=24)).delete()

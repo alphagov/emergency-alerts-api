@@ -22,6 +22,7 @@ from app.dao.users_dao import (
     create_secret_code,
     create_user_code,
     dao_archive_user,
+    get_code_for_user,
     get_user_and_accounts,
     get_user_by_email,
     get_user_by_id,
@@ -493,6 +494,11 @@ def get_organisations_and_services_for_user(user_id):
     user = get_user_and_accounts(user_id)
     data = get_orgs_and_services(user)
     return jsonify(data)
+
+
+@user_blueprint.route("/<uuid:user_id>/verify-code", methods=["GET"])
+def get_latest_verify_code_for_user(user_id):
+    return get_code_for_user(user_id)
 
 
 def _create_reset_password_url(email, next_redirect, base_url=None):

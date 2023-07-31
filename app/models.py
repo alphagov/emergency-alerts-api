@@ -1249,14 +1249,14 @@ class VerifyCode(db.Model):
 
     @property
     def code(self):
-        raise AttributeError("Code not readable")
+        return self._code
 
     @code.setter
     def code(self, cde):
-        self._code = hashpw(cde)
+        self._code = cde
 
     def check_code(self, cde):
-        return check_hash(cde, self._code)
+        return cde == self._code
 
 
 NOTIFICATION_CANCELLED = "cancelled"
