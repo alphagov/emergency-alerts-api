@@ -10,6 +10,7 @@ phases:
         --password-stdin $ACCOUNT_NUMBER.dkr.ecr.$AWS_REGION.amazonaws.com
   build:
     commands:
+      - COMMIT_ID=$(echo $COMMIT_ID | cut -c 1-7)
       - echo Build started on `date`
       - echo Building Docker image...
       - docker build -t $REPOSITORY_URI:latest -t $REPOSITORY_URI:$EXECUTION_ID -t $REPOSITORY_URI:$COMMIT_ID
@@ -19,4 +20,4 @@ phases:
     commands:
       - echo Building complete on `date`
       - echo Pushing the Docker image...
-      - docker push $REPOSITORY_URI:latest
+      - docker push --all-tags $REPOSITORY_URI
