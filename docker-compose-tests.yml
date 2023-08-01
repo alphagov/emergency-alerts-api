@@ -36,8 +36,8 @@ networks:
 # docker compose -f docker-compose-tests.yml up --force-recreate --exit-code-from api
 # docker compose -f docker-compose-tests.yml down
 
-# Starting postgres to run tests from local api directory
-# uncomment the port mapping on lines 28 and 29 above
+# To start postgres to run tests from local api directory,
+# use the following commands:
 # docker compose -f docker-compose-tests.yml up --force-recreate pg
 # cd /eas/emergency-alerts-api && . /venv/eas-api/bin/activate && make test
 # docker compose -f docker-compose-tests.yml down

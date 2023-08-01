@@ -2575,3 +2575,20 @@ class WebauthnCredential(db.Model):
             "updated_at": get_dt_string_or_none(self.updated_at),
             "logged_in_at": get_dt_string_or_none(self.logged_in_at),
         }
+
+
+class FeatureToggle(db.Model):
+    """
+    This table is used to store feature toggles that can be updated with the intention
+    of changing the application's behaviour in some way, without having to run an
+    entire deployment just for that change.
+    """
+
+    __tablename__ = "feature_toggles"
+
+    name = db.Column(db.String(255), primary_key=True)
+    is_enabled = db.Column(db.Boolean, nullable=False)
+    display_html = db.Column(db.String, nullable=True)
+
+    def serialize(self):
+        return {"name": self.name, "is_enabled": self.is_enabled, "display_html": self.display_html}

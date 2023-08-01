@@ -25,17 +25,34 @@ function ecr_login(){
   aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin $ECS_ACCOUNT_NUMBER.dkr.ecr.$REGION.amazonaws.com
 }
 
-function docker_build(){
+function docker_buildx(){
   docker buildx build \
     --platform $PLATFORM \
     -t $ECS_ACCOUNT_NUMBER.dkr.ecr.$REGION.amazonaws.com/eas-app-$IMAGE:latest \
     --build-arg ECS_ACCOUNT_NUMBER=$ECS_ACCOUNT_NUMBER \
     -f Dockerfile.eas-$IMAGE \
     --no-cache \
-    $ARGS \
+    $BUILDX_ARGS \
     .
+}
+
+function docker_build(){
+  docker build \
+    -t $ECS_ACCOUNT_NUMBER.dkr.ecr.$REGION.amazonaws.com/eas-app-$IMAGE:latest \
+    -f Dockerfile.eas-$IMAGE \
+    --no-cache \
+    .
+}
+
+function docker_push(){
+  docker push $ECS_ACCOUNT_NUMBER.dkr.ecr.$REGION.amazonaws.com/eas-app-$IMAGE:latest
 }
 
 get_account_number
 ecr_login
-docker_build
+if [[ -n $BUILDX_ARGS ]]; then
+  docker_buildx
+else
+  docker_build
+  docker_push
+fi
