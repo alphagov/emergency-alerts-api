@@ -19,6 +19,16 @@ We run python 3.9 both locally and in production.
 
 To run the API you will need appropriate AWS credentials. See the [Wiki](https://github.com/alphagov/notifications-manuals/wiki/aws-accounts#how-to-set-up-local-development) for more details.
 
+### Pre-commit
+
+- If `pre-commit` and `tflint` are not already installed on your machine, run
+`brew install pre-commit` and 
+`brew install tflint`
+
+- In this repository’s folder, run
+`pre-commit install` and 
+`pre-commit install-hooks`
+
 ### `environment.sh`
 
 Creating and edit an environment.sh file.
