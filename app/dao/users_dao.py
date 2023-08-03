@@ -67,7 +67,7 @@ def get_user_code(user, code, code_type):
 
 
 def get_code_for_user(user):
-    return VerifyCode.query.filter_by(user=user).order_by(VerifyCode.created_at.desc()).first().code
+    return VerifyCode.query.filter_by(user_id=user).order_by(VerifyCode.created_at.desc()).first().code
 
 
 def delete_codes_older_created_more_than_a_day_ago():
