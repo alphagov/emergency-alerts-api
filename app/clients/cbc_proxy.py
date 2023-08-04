@@ -139,18 +139,21 @@ class CBCProxyClientBase(ABC):
             except ClientError as e:
                 current_app.logger.info("Error writing to CloudWatch: %s", e)
 
-            failover_result = self._invoke_lambda(self.failover_lambda_name, payload)
-            if not failover_result:
-                try:
-                    logData = LogData(source="eas-app-api", module="cbc_proxy", method="_invoke_lambda_with_failover")
-                    logData.addData("LambdaError", f"Secondary Lambda {self.lambda_name} failed")
-                    logData.log_to_cloudwatch()
-                except ClientError as e:
-                    current_app.logger.info("Error writing to CloudWatch: %s", e)
+            if self.failover_lambda_name is not None:
+                failover_result = self._invoke_lambda(self.failover_lambda_name, payload)
+                if not failover_result:
+                    try:
+                        logData = LogData(
+                            source="eas-app-api", module="cbc_proxy", method="_invoke_lambda_with_failover"
+                        )
+                        logData.addData("LambdaError", f"Secondary Lambda {self.lambda_name} failed")
+                        logData.log_to_cloudwatch()
+                    except ClientError as e:
+                        current_app.logger.info("Error writing to CloudWatch: %s", e)
 
-                raise CBCProxyRetryableException(
-                    f"Lambda failed for both {self.lambda_name} and {self.failover_lambda_name}"
-                )
+                    raise CBCProxyRetryableException(
+                        f"Lambda failed for both {self.lambda_name} and {self.failover_lambda_name}"
+                    )
 
         return result
 
@@ -241,7 +244,7 @@ class CBCProxyOne2ManyClient(CBCProxyClientBase):
 
 class CBCProxyEE(CBCProxyOne2ManyClient):
     lambda_name = "ee-1-proxy"
-    failover_lambda_name = "ee-2-proxy"
+    failover_lambda_name = "ee-2-proxy" if os.environ.get("ENVIRONMENT") != "staging" else None
 
 
 class CBCProxyThree(CBCProxyOne2ManyClient):
