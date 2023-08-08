@@ -183,6 +183,7 @@ def register_blueprint(application):
     )
     from app.upload.rest import upload_blueprint
     from app.user.rest import user_blueprint
+    from app.verify.rest import verify_code_blueprint
     from app.webauthn.rest import webauthn_blueprint
 
     service_blueprint.before_request(requires_admin_auth)
@@ -199,6 +200,9 @@ def register_blueprint(application):
 
     status_blueprint.before_request(requires_no_auth)
     application.register_blueprint(status_blueprint)
+
+    verify_code_blueprint.before_request(requires_no_auth)
+    application.register_blueprint(verify_code_blueprint, url_prefix="/verify-code")
 
     # delivery receipts
     notifications_blueprint.before_request(requires_auth)
