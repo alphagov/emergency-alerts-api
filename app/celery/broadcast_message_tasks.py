@@ -130,7 +130,13 @@ def send_broadcast_event(broadcast_event_id):
 
 
 # max_retries=None: retry forever
-@notify_celery.task(bind=True, name="send-broadcast-provider-message", max_retries=None)
+@notify_celery.task(
+    bind=True,
+    name="send-broadcast-provider-message",
+    autoretry_for=(CBCProxyRetryableException,),
+    retry_backoff=True,
+    max_retries=None,
+)
 def send_broadcast_provider_message(self, broadcast_event_id, provider):
     if not current_app.config["CBC_PROXY_ENABLED"]:
         current_app.logger.info(
@@ -163,55 +169,55 @@ def send_broadcast_provider_message(self, broadcast_event_id, provider):
 
     cbc_proxy_provider_client = cbc_proxy_client.get_proxy(provider)
 
-    try:
-        if broadcast_event.message_type == BroadcastEventMessageType.ALERT:
-            cbc_proxy_provider_client.create_and_send_broadcast(
-                identifier=str(broadcast_provider_message.id),
-                message_number=formatted_message_number,
-                headline="GOV.UK Emergency Alert",
-                description=broadcast_event.transmitted_content["body"],
-                areas=areas,
-                sent=broadcast_event.sent_at_as_cap_datetime_string,
-                expires=broadcast_event.transmitted_finishes_at_as_cap_datetime_string,
-                channel=broadcast_event.service.broadcast_channel,
-            )
-        elif broadcast_event.message_type == BroadcastEventMessageType.UPDATE:
-            cbc_proxy_provider_client.update_and_send_broadcast(
-                identifier=str(broadcast_provider_message.id),
-                message_number=formatted_message_number,
-                headline="GOV.UK Emergency Alert",
-                description=broadcast_event.transmitted_content["body"],
-                areas=areas,
-                previous_provider_messages=broadcast_event.get_earlier_provider_messages(provider),
-                sent=broadcast_event.sent_at_as_cap_datetime_string,
-                expires=broadcast_event.transmitted_finishes_at_as_cap_datetime_string,
-                # We think an alert update should always go out on the same channel that created the alert
-                # We recognise there is a small risk with this code here that if the services channel was
-                # changed between an alert being sent out and then updated, then something might go wrong
-                # but we are relying on service channels changing almost never, and not mid incident
-                # We may consider in the future, changing this such that we store the channel a broadcast was
-                # sent on on the broadcast message itself and pick the value from there instead of the service
-                channel=broadcast_event.service.broadcast_channel,
-            )
-        elif broadcast_event.message_type == BroadcastEventMessageType.CANCEL:
-            cbc_proxy_provider_client.cancel_broadcast(
-                identifier=str(broadcast_provider_message.id),
-                message_number=formatted_message_number,
-                previous_provider_messages=broadcast_event.get_earlier_provider_messages(provider),
-                sent=broadcast_event.sent_at_as_cap_datetime_string,
-            )
-    except CBCProxyRetryableException as exc:
-        delay = get_retry_delay(self.request.retries)
-        current_app.logger.exception(
-            f"Retrying send_broadcast_provider_message for broadcast event {broadcast_event_id}, "
-            f"provider message {broadcast_provider_message.id}, provider {provider} in {delay} seconds"
+    # try:
+    if broadcast_event.message_type == BroadcastEventMessageType.ALERT:
+        cbc_proxy_provider_client.create_and_send_broadcast(
+            identifier=str(broadcast_provider_message.id),
+            message_number=formatted_message_number,
+            headline="GOV.UK Emergency Alert",
+            description=broadcast_event.transmitted_content["body"],
+            areas=areas,
+            sent=broadcast_event.sent_at_as_cap_datetime_string,
+            expires=broadcast_event.transmitted_finishes_at_as_cap_datetime_string,
+            channel=broadcast_event.service.broadcast_channel,
         )
+    elif broadcast_event.message_type == BroadcastEventMessageType.UPDATE:
+        cbc_proxy_provider_client.update_and_send_broadcast(
+            identifier=str(broadcast_provider_message.id),
+            message_number=formatted_message_number,
+            headline="GOV.UK Emergency Alert",
+            description=broadcast_event.transmitted_content["body"],
+            areas=areas,
+            previous_provider_messages=broadcast_event.get_earlier_provider_messages(provider),
+            sent=broadcast_event.sent_at_as_cap_datetime_string,
+            expires=broadcast_event.transmitted_finishes_at_as_cap_datetime_string,
+            # We think an alert update should always go out on the same channel that created the alert
+            # We recognise there is a small risk with this code here that if the services channel was
+            # changed between an alert being sent out and then updated, then something might go wrong
+            # but we are relying on service channels changing almost never, and not mid incident
+            # We may consider in the future, changing this such that we store the channel a broadcast was
+            # sent on on the broadcast message itself and pick the value from there instead of the service
+            channel=broadcast_event.service.broadcast_channel,
+        )
+    elif broadcast_event.message_type == BroadcastEventMessageType.CANCEL:
+        cbc_proxy_provider_client.cancel_broadcast(
+            identifier=str(broadcast_provider_message.id),
+            message_number=formatted_message_number,
+            previous_provider_messages=broadcast_event.get_earlier_provider_messages(provider),
+            sent=broadcast_event.sent_at_as_cap_datetime_string,
+        )
+    # except CBCProxyRetryableException as exc:
+    #     delay = get_retry_delay(self.request.retries)
+    #     current_app.logger.exception(
+    #         f"Retrying send_broadcast_provider_message for broadcast event {broadcast_event_id}, "
+    #         f"provider message {broadcast_provider_message.id}, provider {provider} in {delay} seconds"
+    #     )
 
-        self.retry(
-            exc=exc,
-            countdown=delay,
-            queue=QueueNames.BROADCASTS,
-        )
+    #     self.retry(
+    #         exc=exc,
+    #         countdown=delay,
+    #         queue=QueueNames.BROADCASTS,
+    #     )
 
     update_broadcast_provider_message_status(broadcast_provider_message, status=BroadcastProviderMessageStatus.ACK)
 
