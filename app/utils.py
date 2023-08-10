@@ -140,6 +140,10 @@ def get_dt_string_or_none(val):
     return val.strftime(DATETIME_FORMAT) if val else None
 
 
+def get_interval_seconds_or_none(val):
+    return val.total_seconds() if val else None
+
+
 def get_uuid_string_or_none(val):
     return str(val) if val else None
 
