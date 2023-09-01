@@ -145,7 +145,7 @@ class CBCProxyClientBase(ABC):
                     "source": "eas-app-api",
                     "module": __name__,
                     "method": "_invoke_lambda_with_failover",
-                    "LambdaError": f"Primary {self.lambda_name} failed. Invoking {self.failover_lambda_name}",
+                    "message": f"Primary {self.lambda_name} failed. Invoking {self.failover_lambda_name}",
                 }
             )
 
@@ -166,7 +166,7 @@ class CBCProxyClientBase(ABC):
                             "source": "eas-app-api",
                             "module": __name__,
                             "method": "_invoke_lambda_with_failover",
-                            "LambdaError": f"Secondary Lambda {self.lambda_name} failed",
+                            "message": f"Secondary Lambda {self.lambda_name} failed",
                         }
                     )
 

@@ -210,7 +210,6 @@ def send_broadcast_provider_message(self, broadcast_event_id, provider):
         current_app.logger.exception(
             f"Retrying send_broadcast_provider_message for broadcast event {broadcast_event_id}, "
             f"provider message {broadcast_provider_message.id}, provider {provider} in {delay} seconds",
-            exc,
             tb,
         )
 
