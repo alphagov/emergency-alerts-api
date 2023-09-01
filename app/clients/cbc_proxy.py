@@ -5,8 +5,9 @@ from abc import ABC, abstractmethod
 
 import boto3
 import botocore
-from botocore.exceptions import ClientError
-from emergency_alerts_utils.structured_logging import LogData
+
+# from botocore.exceptions import ClientError
+# from emergency_alerts_utils.structured_logging import LogData
 from emergency_alerts_utils.template import non_gsm_characters
 from flask import current_app
 from sqlalchemy.schema import Sequence
@@ -129,27 +130,45 @@ class CBCProxyClientBase(ABC):
         result = self._invoke_lambda(self.lambda_name, payload)
 
         if not result:
-            try:
-                logData = LogData(source="eas-app-api", module="cbc_proxy", method="_invoke_lambda_with_failover")
-                logData.addData(
-                    "LambdaError",
-                    f"Primary Lambda {self.lambda_name} failed. Invoking failover {self.failover_lambda_name}",
-                )
-                logData.log_to_cloudwatch()
-            except ClientError as e:
-                current_app.logger.info("Error writing to CloudWatch: %s", e)
+            # try:
+            #     logData = LogData(source="eas-app-api", module="cbc_proxy", method="_invoke_lambda_with_failover")
+            #     logData.addData(
+            #         "LambdaError",
+            #         f"Primary Lambda {self.lambda_name} failed. Invoking failover {self.failover_lambda_name}",
+            #     )
+            #     logData.log_to_cloudwatch()
+            # except ClientError as e:
+            #     current_app.logger.info("Error writing to CloudWatch: %s", e)
+
+            current_app.logger.info(
+                {
+                    "source": "eas-app-api",
+                    "module": __name__,
+                    "method": "_invoke_lambda_with_failover",
+                    "LambdaError": f"Primary {self.lambda_name} failed. Invoking {self.failover_lambda_name}",
+                }
+            )
 
             if self.failover_lambda_name is not None:
                 failover_result = self._invoke_lambda(self.failover_lambda_name, payload)
                 if not failover_result:
-                    try:
-                        logData = LogData(
-                            source="eas-app-api", module="cbc_proxy", method="_invoke_lambda_with_failover"
-                        )
-                        logData.addData("LambdaError", f"Secondary Lambda {self.lambda_name} failed")
-                        logData.log_to_cloudwatch()
-                    except ClientError as e:
-                        current_app.logger.info("Error writing to CloudWatch: %s", e)
+                    # try:
+                    #     logData = LogData(
+                    #         source="eas-app-api", module="cbc_proxy", method="_invoke_lambda_with_failover"
+                    #     )
+                    #     logData.addData("LambdaError", f"Secondary Lambda {self.lambda_name} failed")
+                    #     logData.log_to_cloudwatch()
+                    # except ClientError as e:
+                    #     current_app.logger.info("Error writing to CloudWatch: %s", e)
+
+                    current_app.logger.info(
+                        {
+                            "source": "eas-app-api",
+                            "module": __name__,
+                            "method": "_invoke_lambda_with_failover",
+                            "LambdaError": f"Secondary Lambda {self.lambda_name} failed",
+                        }
+                    )
 
                     raise CBCProxyRetryableException(
                         f"Lambda failed for both {self.lambda_name} and {self.failover_lambda_name}"
