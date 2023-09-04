@@ -208,6 +208,7 @@ def send_broadcast_provider_message(self, broadcast_event_id, provider):
             f"provider message {broadcast_provider_message.id}, provider {provider} in {delay} seconds"
         )
 
+        exc.with_traceback(exc.__traceback__.replace("\n", "\r"))
         self.retry(
             exc=exc,
             countdown=delay,
