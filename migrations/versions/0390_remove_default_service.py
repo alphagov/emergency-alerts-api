@@ -34,6 +34,18 @@ def upgrade():
         text(
             """
             DELETE FROM
+                service_broadcast_settings
+            WHERE
+                service_id = :id
+        """
+        ),
+        {"id": service_id},
+    )
+
+    conn.execute(
+        text(
+            """
+            DELETE FROM
                 service_email_reply_to
             WHERE
                 service_id = :id
