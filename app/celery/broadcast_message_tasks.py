@@ -200,7 +200,7 @@ def send_broadcast_provider_message(self, broadcast_event_id, provider):
                 previous_provider_messages=broadcast_event.get_earlier_provider_messages(provider),
                 sent=broadcast_event.sent_at_as_cap_datetime_string,
             )
-    except CBCProxyRetryableException as exc:
+    except CBCProxyRetryableException:  # as exc:
         delay = get_retry_delay(self.request.retries)
 
         current_app.logger.exception(
@@ -209,7 +209,7 @@ def send_broadcast_provider_message(self, broadcast_event_id, provider):
         )
 
         self.retry(
-            exc=exc,
+            # exc=exc,
             countdown=delay,
             queue=QueueNames.BROADCASTS,
         )
