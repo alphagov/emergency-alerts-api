@@ -15,6 +15,7 @@ services:
 
   pg:
     image: postgres:14
+    container_name: postgres-for-api-tests
     restart: always
     environment:
       POSTGRES_PASSWORD: root
@@ -38,6 +39,6 @@ networks:
 
 # To start postgres to run tests from local api directory,
 # use the following commands:
-# docker compose -f docker-compose-tests.yml up --force-recreate pg
+# docker compose -f docker-compose-tests.yml up --force-recreate -d pg
 # cd /eas/emergency-alerts-api && . /venv/eas-api/bin/activate && make test
 # docker compose -f docker-compose-tests.yml down

@@ -169,57 +169,55 @@ class CBCProxyClientBase(ABC):
         result = self._invoke_lambda(self.primary_lambda, payload)
         if result:
             return True
-        current_app.logger.info(f"Failed to invoke lambda {self.primary_lambda} routing to site {self.CBC_A}")
+        self._log_lambda_info(f"Lambda {self.primary_lambda} to {self.CBC_A} failed")
 
         payload["cbc_target"] = self.CBC_B
         result = self._invoke_lambda(self.primary_lambda, payload)
         if result:
             return True
-        current_app.logger.info(f"Failed to invoke lambda {self.primary_lambda} routing to site {self.CBC_B}")
+        self._log_lambda_info(f"Lambda {self.primary_lambda} to {self.CBC_B} failed")
 
         if self.secondary_lambda is None:
-            return False
+            raise CBCProxyRetryableException(f"{self.primary_lambda} failed (secondary lambda is unavailable)")
 
         payload["cbc_target"] = self.CBC_A
         result = self._invoke_lambda(self.secondary_lambda, payload)
         if result:
             return True
-        current_app.logger.info(f"Failed to invoke lambda {self.secondary_lambda} routing to site {self.CBC_A}")
+        self._log_lambda_info(f"Lambda {self.secondary_lambda} to {self.CBC_A} failed")
 
         payload["cbc_target"] = self.CBC_B
         result = self._invoke_lambda(self.secondary_lambda, payload)
         if result:
             return True
-        current_app.logger.info(f"Failed to invoke lambda {self.secondary_lambda} routing to site {self.CBC_B}")
+        self._log_lambda_info(f"Lambda {self.secondary_lambda} to {self.CBC_B} failed")
 
-        current_app.logger.error("Lambda invocation failed on all routes.")
-        raise CBCProxyRetryableException("Lambda failed for all routes")
-
-        return False
+        error_message = f"{self.primary_lambda} and {self.secondary_lambda} lambdas failed"
+        current_app.logger.error(error_message)
+        raise CBCProxyRetryableException(error_message)
 
     def _invoke_lambda(self, lambda_name, payload):
         payload_bytes = bytes(json.dumps(payload), encoding="utf8")
         try:
-            current_app.logger.info(f"Calling lambda {lambda_name} with payload {str(payload)[:1000]}")
-
+            self._log_lambda_info(f"Calling lambda {lambda_name} with payload {str(payload)[:1000]}")
             result = self._lambda_client.invoke(
                 FunctionName=f"{self._arn_prefix}{lambda_name}",
                 InvocationType="RequestResponse",
                 Payload=payload_bytes,
             )
         except botocore.exceptions.ClientError:
-            current_app.logger.error(f"Boto ClientError calling lambda {lambda_name}")
+            current_app.logger.error(f"Boto3 ClientError on lambda {lambda_name}")
             success = False
             return success
 
         if result["StatusCode"] > 299:
-            current_app.logger.info(
+            self._log_lambda_info(
                 f"Error calling lambda {lambda_name} with status code { result['StatusCode']}, {result.get('Payload')}"
             )
             success = False
 
         elif "FunctionError" in result:
-            current_app.logger.info(
+            self._log_lambda_info(
                 f"Error calling lambda {lambda_name} with function error { result['Payload'].read() }"
             )
             success = False
@@ -233,6 +231,24 @@ class CBCProxyClientBase(ABC):
         if non_gsm_characters(content):
             return self.LANGUAGE_WELSH
         return self.LANGUAGE_ENGLISH
+
+    def _log_lambda_info(self, msg):
+        current_app.logger.info(
+            {
+                "source": "eas-app-api",
+                "module": __name__,
+                "message": msg,
+            }
+        )
+
+    def _log_lambda_error(self, msg):
+        current_app.logger.error(
+            {
+                "source": "eas-app-api",
+                "module": __name__,
+                "message": msg,
+            }
+        )
 
 
 class CBCProxyOne2ManyClient(CBCProxyClientBase):

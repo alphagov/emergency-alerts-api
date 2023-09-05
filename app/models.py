@@ -44,6 +44,7 @@ from app.utils import (
     DATETIME_FORMAT,
     DATETIME_FORMAT_NO_TIMEZONE,
     get_dt_string_or_none,
+    get_interval_seconds_or_none,
     get_uuid_string_or_none,
 )
 
@@ -2233,9 +2234,11 @@ class BroadcastMessage(db.Model):
         db.String, db.ForeignKey("broadcast_status_type.name"), nullable=False, default=BroadcastStatusType.DRAFT
     )
 
+    duration = db.Column(db.Interval, nullable=True)  # isn't updated if user cancels
+
     # these times are related to the actual broadcast, rather than auditing purposes
     starts_at = db.Column(db.DateTime, nullable=True)
-    finishes_at = db.Column(db.DateTime, nullable=True)  # isn't updated if user cancels
+    finishes_at = db.Column(db.DateTime, nullable=True)  # also isn't updated if user cancels
 
     # these times correspond to when
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
@@ -2286,6 +2289,7 @@ class BroadcastMessage(db.Model):
             "content": self.content,
             "areas": self.areas,
             "status": self.status,
+            "duration": get_interval_seconds_or_none(self.duration),
             "starts_at": get_dt_string_or_none(self.starts_at),
             "finishes_at": get_dt_string_or_none(self.finishes_at),
             "created_at": get_dt_string_or_none(self.created_at),
