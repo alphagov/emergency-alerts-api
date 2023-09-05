@@ -135,7 +135,7 @@ def send_broadcast_event(broadcast_event_id):
     name="send-broadcast-provider-message",
     autoretry_for=(CBCProxyRetryableException,),
     retry_backoff=True,
-    max_retries=None,
+    max_retries=5,
 )
 def send_broadcast_provider_message(self, broadcast_event_id, provider):
     if not current_app.config["CBC_PROXY_ENABLED"]:
