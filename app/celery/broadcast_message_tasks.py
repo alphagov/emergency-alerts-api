@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 
 from flask import current_app
@@ -20,19 +21,6 @@ from app.utils import format_sequential_number
 
 class BroadcastIntegrityError(Exception):
     pass
-
-
-def get_retry_delay(retry_count):
-    """
-    Given a count of retries so far, return a delay for the next one.
-    `retry_count` should be 0 the first time a task fails.
-    """
-    # TODO: replace with celery's built in exponential backoff
-
-    # 2 to the power of x. 1, 2, 4, 8, 16, 32, ...
-    delay = 2**retry_count
-    # never wait longer than 4 minutes
-    return min(delay, 240)
 
 
 def check_event_is_authorised_to_be_sent(broadcast_event, provider):
@@ -139,7 +127,7 @@ def send_broadcast_event(broadcast_event_id):
 )
 def send_broadcast_provider_message(self, broadcast_event_id, provider):
     if not current_app.config["CBC_PROXY_ENABLED"]:
-        current_app.logger.info(
+        logging.getLogger("celery").info(
             "CBC Proxy disabled, not sending broadcast_provider_message for "
             f"broadcast_event_id {broadcast_event_id} with provider {provider}"
         )
@@ -159,7 +147,7 @@ def send_broadcast_provider_message(self, broadcast_event_id, provider):
     if provider == BroadcastProvider.VODAFONE:
         formatted_message_number = format_sequential_number(broadcast_provider_message.message_number)
 
-    current_app.logger.info(
+    logging.getLogger("celery").info(
         f"Invoking cbc proxy to send broadcast_provider_message with ID of {broadcast_provider_message.id} "
         f"and broadcast_event ID of {broadcast_event_id} "
         f"msgType {broadcast_event.message_type}"
@@ -206,18 +194,6 @@ def send_broadcast_provider_message(self, broadcast_event_id, provider):
             previous_provider_messages=broadcast_event.get_earlier_provider_messages(provider),
             sent=broadcast_event.sent_at_as_cap_datetime_string,
         )
-    # except CBCProxyRetryableException as exc:
-    #     delay = get_retry_delay(self.request.retries)
-    #     current_app.logger.exception(
-    #         f"Retrying send_broadcast_provider_message for broadcast event {broadcast_event_id}, "
-    #         f"provider message {broadcast_provider_message.id}, provider {provider} in {delay} seconds"
-    #     )
-
-    #     self.retry(
-    #         exc=exc,
-    #         countdown=delay,
-    #         queue=QueueNames.BROADCASTS,
-    #     )
 
     update_broadcast_provider_message_status(broadcast_provider_message, status=BroadcastProviderMessageStatus.ACK)
 

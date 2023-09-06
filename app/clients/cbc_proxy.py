@@ -5,9 +5,6 @@ from abc import ABC, abstractmethod
 
 import boto3
 import botocore
-
-# from botocore.exceptions import ClientError
-# from emergency_alerts_utils.structured_logging import LogData
 from emergency_alerts_utils.template import non_gsm_characters
 from flask import current_app
 from sqlalchemy.schema import Sequence
@@ -132,38 +129,6 @@ class CBCProxyClientBase(ABC):
     ):
         pass
 
-    # def _deprecated_invoke_lambda_with_failover(self, payload):
-    #     result = self._invoke_lambda(self.lambda_name, payload)
-
-    #     if not result:
-    #         try:
-    #             logData = LogData(source="eas-app-api", module="cbc_proxy", method="_invoke_lambda_with_failover")
-    #             logData.addData(
-    #                 "LambdaError",
-    #                 f"Primary Lambda {self.lambda_name} failed. Invoking failover {self.failover_lambda_name}",
-    #             )
-    #             logData.log_to_cloudwatch()
-    #         except ClientError as e:
-    #             current_app.logger.info("Error writing to CloudWatch: %s", e)
-
-    #         if self.failover_lambda_name is not None:
-    #             failover_result = self._invoke_lambda(self.failover_lambda_name, payload)
-    #             if not failover_result:
-    #                 try:
-    #                     logData = LogData(
-    #                         source="eas-app-api", module="cbc_proxy", method="_invoke_lambda_with_failover"
-    #                     )
-    #                     logData.addData("LambdaError", f"Secondary Lambda {self.lambda_name} failed")
-    #                     logData.log_to_cloudwatch()
-    #                 except ClientError as e:
-    #                     current_app.logger.info("Error writing to CloudWatch: %s", e)
-
-    #                 raise CBCProxyRetryableException(
-    #                     f"Lambda failed for both {self.lambda_name} and {self.failover_lambda_name}"
-    #                 )
-
-    #     return result
-
     def _invoke_lambdas_with_routing(self, payload):
         payload["cbc_target"] = self.CBC_A
         result = self._invoke_lambda(self.primary_lambda, payload)
@@ -193,7 +158,7 @@ class CBCProxyClientBase(ABC):
         self._log_lambda_info(f"Lambda {self.secondary_lambda} to {self.CBC_B} failed")
 
         error_message = f"{self.primary_lambda} and {self.secondary_lambda} lambdas failed"
-        current_app.logger.error(error_message)
+        self._log_lambda_error(error_message)
         raise CBCProxyRetryableException(error_message)
 
     def _invoke_lambda(self, lambda_name, payload):
@@ -206,7 +171,7 @@ class CBCProxyClientBase(ABC):
                 Payload=payload_bytes,
             )
         except botocore.exceptions.ClientError:
-            current_app.logger.error(f"Boto3 ClientError on lambda {lambda_name}")
+            self._log_lambda_error(f"Boto3 ClientError on lambda {lambda_name}")
             success = False
             return success
 

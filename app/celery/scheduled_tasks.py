@@ -1,3 +1,4 @@
+import logging
 import time
 from datetime import datetime, timedelta
 
@@ -25,7 +26,7 @@ def run_health_check():
         with open("/eas/emergency-alerts-api/celery-beat-healthcheck", mode="w") as file:
             file.write(str(time_stamp))
     except Exception:
-        current_app.logger.exception("Unable to generate health-check timestamp")
+        logging.getLogger("celery").exception("Unable to generate health-check timestamp")
         raise
 
 
@@ -34,11 +35,11 @@ def delete_verify_codes():
     try:
         start = datetime.utcnow()
         deleted = delete_codes_older_created_more_than_a_day_ago()
-        current_app.logger.info(
+        logging.getLogger("celery").info(
             "Delete job started {} finished {} deleted {} verify codes".format(start, datetime.utcnow(), deleted)
         )
     except SQLAlchemyError:
-        current_app.logger.exception("Failed to delete verify codes")
+        logging.getLogger("celery").exception("Failed to delete verify codes")
         raise
 
 
@@ -48,11 +49,11 @@ def delete_invitations():
         start = datetime.utcnow()
         deleted_invites = delete_invitations_created_more_than_two_days_ago()
         deleted_invites += delete_org_invitations_created_more_than_two_days_ago()
-        current_app.logger.info(
+        logging.getLogger("celery").info(
             "Delete job started {} finished {} deleted {} invitations".format(start, datetime.utcnow(), deleted_invites)
         )
     except SQLAlchemyError:
-        current_app.logger.exception("Failed to delete invitations")
+        logging.getLogger("celery").exception("Failed to delete invitations")
         raise
 
 
@@ -92,6 +93,6 @@ def delete_old_records_from_events_table():
 
     deleted_count = event_query.delete()
 
-    current_app.logger.info(f"Deleted {deleted_count} historical events from before {delete_events_before}.")
+    logging.getLogger("celery").info(f"Deleted {deleted_count} historical events from before {delete_events_before}.")
 
     db.session.commit()

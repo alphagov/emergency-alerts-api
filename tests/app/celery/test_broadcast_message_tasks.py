@@ -8,7 +8,6 @@ from freezegun import freeze_time
 from app.celery.broadcast_message_tasks import (
     BroadcastIntegrityError,
     check_event_makes_sense_in_sequence,
-    get_retry_delay,
     send_broadcast_event,
     send_broadcast_provider_message,
     trigger_link_test,
@@ -553,22 +552,6 @@ def test_trigger_link_tests_invokes_cbc_proxy_client(
 
     trigger_link_test(provider)
     assert mock_send_link_test.called_once()
-
-
-@pytest.mark.parametrize(
-    "retry_count, expected_delay",
-    [
-        (0, 1),
-        (1, 2),
-        (2, 4),
-        (7, 128),
-        (8, 240),
-        (9, 240),
-        (1000, 240),
-    ],
-)
-def test_get_retry_delay_has_capped_backoff(retry_count, expected_delay):
-    assert get_retry_delay(retry_count) == expected_delay
 
 
 @freeze_time("2021-01-01 12:00")
