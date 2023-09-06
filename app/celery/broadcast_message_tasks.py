@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 
 from flask import current_app
@@ -133,7 +134,8 @@ def send_broadcast_event(broadcast_event_id):
 @notify_celery.task(bind=True, name="send-broadcast-provider-message", max_retries=None)
 def send_broadcast_provider_message(self, broadcast_event_id, provider):
     if not current_app.config["CBC_PROXY_ENABLED"]:
-        current_app.logger.info(
+        # current_app.logger.info(
+        logging.getLogger("celery").info(
             "CBC Proxy disabled, not sending broadcast_provider_message for "
             f"broadcast_event_id {broadcast_event_id} with provider {provider}"
         )
@@ -153,7 +155,7 @@ def send_broadcast_provider_message(self, broadcast_event_id, provider):
     if provider == BroadcastProvider.VODAFONE:
         formatted_message_number = format_sequential_number(broadcast_provider_message.message_number)
 
-    current_app.logger.info(
+    logging.getLogger("celery").info(
         f"Invoking cbc proxy to send broadcast_provider_message with ID of {broadcast_provider_message.id} "
         f"and broadcast_event ID of {broadcast_event_id} "
         f"msgType {broadcast_event.message_type}"
@@ -203,7 +205,7 @@ def send_broadcast_provider_message(self, broadcast_event_id, provider):
     except CBCProxyRetryableException as exc:
         delay = get_retry_delay(self.request.retries)
 
-        current_app.logger.exception(
+        logging.getLogger("celery").exception(
             f"Retrying send_broadcast_provider_message for broadcast event {broadcast_event_id}, "
             f"provider message {broadcast_provider_message.id}, provider {provider} in {delay} seconds"
         )
