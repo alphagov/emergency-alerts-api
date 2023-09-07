@@ -18,6 +18,8 @@ from app.models import (
 )
 from app.utils import format_sequential_number
 
+celery_logger = logging.getLogger("celery")
+
 
 class BroadcastIntegrityError(Exception):
     pass
@@ -127,7 +129,7 @@ def send_broadcast_event(broadcast_event_id):
 )
 def send_broadcast_provider_message(self, broadcast_event_id, provider):
     if not current_app.config["CBC_PROXY_ENABLED"]:
-        logging.getLogger("celery").info(
+        celery_logger.info(
             "CBC Proxy disabled, not sending broadcast_provider_message for "
             f"broadcast_event_id {broadcast_event_id} with provider {provider}"
         )
@@ -147,7 +149,7 @@ def send_broadcast_provider_message(self, broadcast_event_id, provider):
     if provider == BroadcastProvider.VODAFONE:
         formatted_message_number = format_sequential_number(broadcast_provider_message.message_number)
 
-    logging.getLogger("celery").info(
+    celery_logger.info(
         f"Invoking cbc proxy to send broadcast_provider_message with ID of {broadcast_provider_message.id} "
         f"and broadcast_event ID of {broadcast_event_id} "
         f"msgType {broadcast_event.message_type}"

@@ -18,6 +18,8 @@ from app.dao.invited_user_dao import (
 from app.dao.users_dao import delete_codes_older_created_more_than_a_day_ago
 from app.models import BroadcastMessage, BroadcastStatusType, Event
 
+celery_logger = logging.getLogger("celery")
+
 
 @notify_celery.task(name="run-health-check")
 def run_health_check():
@@ -26,7 +28,7 @@ def run_health_check():
         with open("/eas/emergency-alerts-api/celery-beat-healthcheck", mode="w") as file:
             file.write(str(time_stamp))
     except Exception:
-        logging.getLogger("celery").exception("Unable to generate health-check timestamp")
+        celery_logger.exception("Unable to generate health-check timestamp")
         raise
 
 
@@ -35,11 +37,11 @@ def delete_verify_codes():
     try:
         start = datetime.utcnow()
         deleted = delete_codes_older_created_more_than_a_day_ago()
-        logging.getLogger("celery").info(
+        celery_logger.info(
             "Delete job started {} finished {} deleted {} verify codes".format(start, datetime.utcnow(), deleted)
         )
     except SQLAlchemyError:
-        logging.getLogger("celery").exception("Failed to delete verify codes")
+        celery_logger.exception("Failed to delete verify codes")
         raise
 
 
@@ -49,11 +51,11 @@ def delete_invitations():
         start = datetime.utcnow()
         deleted_invites = delete_invitations_created_more_than_two_days_ago()
         deleted_invites += delete_org_invitations_created_more_than_two_days_ago()
-        logging.getLogger("celery").info(
+        celery_logger.info(
             "Delete job started {} finished {} deleted {} invitations".format(start, datetime.utcnow(), deleted_invites)
         )
     except SQLAlchemyError:
-        logging.getLogger("celery").exception("Failed to delete invitations")
+        celery_logger.exception("Failed to delete invitations")
         raise
 
 
@@ -93,6 +95,6 @@ def delete_old_records_from_events_table():
 
     deleted_count = event_query.delete()
 
-    logging.getLogger("celery").info(f"Deleted {deleted_count} historical events from before {delete_events_before}.")
+    celery_logger.info(f"Deleted {deleted_count} historical events from before {delete_events_before}.")
 
     db.session.commit()
