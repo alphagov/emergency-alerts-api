@@ -1,6 +1,6 @@
+import logging as base_logging
 import time
 from datetime import datetime, timedelta
-from logging import logging as base_logging
 
 from emergency_alerts_utils import logging
 from flask import current_app
