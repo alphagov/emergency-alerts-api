@@ -1,7 +1,8 @@
-import logging
 import time
 from datetime import datetime, timedelta
+from logging import logging as base_logging
 
+from emergency_alerts_utils import logging
 from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -18,7 +19,8 @@ from app.dao.invited_user_dao import (
 from app.dao.users_dao import delete_codes_older_created_more_than_a_day_ago
 from app.models import BroadcastMessage, BroadcastStatusType, Event
 
-celery_logger = logging.getLogger("celery")
+logger = base_logging.getLogger(__name__)
+logging.configure_notraceback_logger(current_app, logger)
 
 
 @notify_celery.task(name="run-health-check")
@@ -28,7 +30,7 @@ def run_health_check():
         with open("/eas/emergency-alerts-api/celery-beat-healthcheck", mode="w") as file:
             file.write(str(time_stamp))
     except Exception:
-        celery_logger.exception("Unable to generate health-check timestamp")
+        logger.exception("Unable to generate health-check timestamp")
         raise
 
 
@@ -37,11 +39,11 @@ def delete_verify_codes():
     try:
         start = datetime.utcnow()
         deleted = delete_codes_older_created_more_than_a_day_ago()
-        celery_logger.info(
+        logger.info(
             "Delete job started {} finished {} deleted {} verify codes".format(start, datetime.utcnow(), deleted)
         )
     except SQLAlchemyError:
-        celery_logger.exception("Failed to delete verify codes")
+        logger.exception("Failed to delete verify codes")
         raise
 
 
@@ -51,11 +53,11 @@ def delete_invitations():
         start = datetime.utcnow()
         deleted_invites = delete_invitations_created_more_than_two_days_ago()
         deleted_invites += delete_org_invitations_created_more_than_two_days_ago()
-        celery_logger.info(
+        logger.info(
             "Delete job started {} finished {} deleted {} invitations".format(start, datetime.utcnow(), deleted_invites)
         )
     except SQLAlchemyError:
-        celery_logger.exception("Failed to delete invitations")
+        logger.exception("Failed to delete invitations")
         raise
 
 
@@ -95,6 +97,6 @@ def delete_old_records_from_events_table():
 
     deleted_count = event_query.delete()
 
-    celery_logger.info(f"Deleted {deleted_count} historical events from before {delete_events_before}.")
+    logger.info(f"Deleted {deleted_count} historical events from before {delete_events_before}.")
 
     db.session.commit()

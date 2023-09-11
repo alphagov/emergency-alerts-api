@@ -1,6 +1,7 @@
-import logging
 from datetime import datetime
+from logging import logging as base_logging
 
+from emergency_alerts_utils import logging
 from flask import current_app
 
 from app import cbc_proxy_client, notify_celery
@@ -18,7 +19,8 @@ from app.models import (
 )
 from app.utils import format_sequential_number
 
-celery_logger = logging.getLogger("celery")
+logger = base_logging.getLogger(__name__)
+logging.configure_notraceback_logger(current_app, logger)
 
 
 class BroadcastIntegrityError(Exception):
@@ -129,7 +131,7 @@ def send_broadcast_event(broadcast_event_id):
 )
 def send_broadcast_provider_message(self, broadcast_event_id, provider):
     if not current_app.config["CBC_PROXY_ENABLED"]:
-        celery_logger.info(
+        logger.info(
             "CBC Proxy disabled, not sending broadcast_provider_message for "
             f"broadcast_event_id {broadcast_event_id} with provider {provider}"
         )
@@ -149,7 +151,7 @@ def send_broadcast_provider_message(self, broadcast_event_id, provider):
     if provider == BroadcastProvider.VODAFONE:
         formatted_message_number = format_sequential_number(broadcast_provider_message.message_number)
 
-    celery_logger.info(
+    logger.info(
         f"Invoking cbc proxy to send broadcast_provider_message with ID of {broadcast_provider_message.id} "
         f"and broadcast_event ID of {broadcast_event_id} "
         f"msgType {broadcast_event.message_type}"
