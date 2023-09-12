@@ -203,7 +203,7 @@ def send_broadcast_provider_message(self, broadcast_event_id, provider):
     except CBCProxyRetryableException as exc:
         delay = get_retry_delay(self.request.retries)
         current_app.logger.exception(
-            msg=f"Retrying send_broadcast_provider_message for broadcast event {broadcast_event_id}, "
+            f"Retrying send_broadcast_provider_message for broadcast event {broadcast_event_id}, "
             f"provider message {broadcast_provider_message.id}, provider {provider} in {delay} seconds",
             exc_info=False,
         )
