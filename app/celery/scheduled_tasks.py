@@ -20,7 +20,7 @@ from app.dao.users_dao import delete_codes_older_created_more_than_a_day_ago
 from app.models import BroadcastMessage, BroadcastStatusType, Event
 
 logger = base_logging.getLogger(__name__)
-logging.configure_notraceback_logger(current_app, logger)
+logging.configure_notraceback_logger(base_logging.INFO, logger)
 
 
 @notify_celery.task(name="run-health-check")
