@@ -5,8 +5,9 @@ from abc import ABC, abstractmethod
 
 import boto3
 import botocore
-from botocore.exceptions import ClientError
-from emergency_alerts_utils.structured_logging import LogData
+
+# from botocore.exceptions import ClientError
+# from emergency_alerts_utils.structured_logging import LogData
 from emergency_alerts_utils.template import non_gsm_characters
 from flask import current_app
 from sqlalchemy.schema import Sequence
@@ -129,27 +130,39 @@ class CBCProxyClientBase(ABC):
         result = self._invoke_lambda(self.lambda_name, payload)
 
         if not result:
-            try:
-                logData = LogData(source="eas-app-api", module="cbc_proxy", method="_invoke_lambda_with_failover")
-                logData.addData(
-                    "LambdaError",
-                    f"Primary Lambda {self.lambda_name} failed. Invoking failover {self.failover_lambda_name}",
-                )
-                logData.log_to_cloudwatch()
-            except ClientError as e:
-                current_app.logger.info("Error writing to CloudWatch: %s", e)
+            # try:
+            #     logData = LogData(source="eas-app-api", module="cbc_proxy", method="_invoke_lambda_with_failover")
+            #     logData.addData(
+            #         "LambdaError",
+            #         f"Primary Lambda {self.lambda_name} failed. Invoking failover {self.failover_lambda_name}",
+            #     )
+            #     logData.log_to_cloudwatch()
+            # except ClientError as error:
+            #     current_app.logger.info(f"Error writing to CloudWatch: {error}")
+
+            current_app.logger.info(
+                {
+                    "source": "api",
+                    "module": __name__,
+                    "message": f"Primary {self.lambda_name} failed. Invoking {self.failover_lambda_name}",
+                }
+            )
 
             if self.failover_lambda_name is not None:
                 failover_result = self._invoke_lambda(self.failover_lambda_name, payload)
                 if not failover_result:
-                    try:
-                        logData = LogData(
-                            source="eas-app-api", module="cbc_proxy", method="_invoke_lambda_with_failover"
-                        )
-                        logData.addData("LambdaError", f"Secondary Lambda {self.lambda_name} failed")
-                        logData.log_to_cloudwatch()
-                    except ClientError as e:
-                        current_app.logger.info("Error writing to CloudWatch: %s", e)
+                    # try:
+                    #     logData = LogData(
+                    #         source="eas-app-api", module="cbc_proxy", method="_invoke_lambda_with_failover"
+                    #     )
+                    #     logData.addData("LambdaError", f"Secondary Lambda {self.lambda_name} failed")
+                    #     logData.log_to_cloudwatch()
+                    # except ClientError as error:
+                    #     current_app.logger.info(f"Error writing to CloudWatch: {error}")
+
+                    current_app.logger.info(
+                        {"source": "api", "module": __name__, "message": f"Secondary Lambda {self.lambda_name} failed"}
+                    )
 
                     raise CBCProxyRetryableException(
                         f"Lambda failed for both {self.lambda_name} and {self.failover_lambda_name}"
@@ -160,27 +173,51 @@ class CBCProxyClientBase(ABC):
     def _invoke_lambda(self, lambda_name, payload):
         payload_bytes = bytes(json.dumps(payload), encoding="utf8")
         try:
-            current_app.logger.info(f"Calling lambda {lambda_name} with payload {str(payload)[:1000]}")
+            current_app.logger.info(
+                {
+                    "source": "api",
+                    "module": __name__,
+                    "message": f"Calling lambda {lambda_name} with payload {str(payload)[:400]} ...",
+                }
+            )
 
             result = self._lambda_client.invoke(
                 FunctionName=f"{self._arn_prefix}{lambda_name}",
                 InvocationType="RequestResponse",
                 Payload=payload_bytes,
             )
-        except botocore.exceptions.ClientError:
-            current_app.logger.error(f"Boto ClientError calling lambda {lambda_name}")
+        except botocore.exceptions.ClientError as error:
+            current_app.logger.error(
+                {
+                    "source": "api",
+                    "module": __name__,
+                    "message": f"Boto ClientError calling lambda {lambda_name}",
+                    "error": error,
+                }
+            )
             success = False
             return success
 
         if result["StatusCode"] > 299:
             current_app.logger.info(
-                f"Error calling lambda {lambda_name} with status code { result['StatusCode']}, {result.get('Payload')}"
+                {
+                    "source": "api",
+                    "module": __name__,
+                    "message": f"Error calling lambda {lambda_name}",
+                    "status_code": result["StatusCode"],
+                    "result_payload": result.get("Payload"),
+                }
             )
             success = False
 
         elif "FunctionError" in result:
             current_app.logger.info(
-                f"Error calling lambda {lambda_name} with function error { result['Payload'].read() }"
+                {
+                    "source": "api",
+                    "module": __name__,
+                    "message": f"FunctionError calling lambda {lambda_name}",
+                    "result": result.get("Payload"),
+                }
             )
             success = False
 
