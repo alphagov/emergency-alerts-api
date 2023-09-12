@@ -192,7 +192,7 @@ class CBCProxyClientBase(ABC):
                     "source": "api",
                     "module": __name__,
                     "message": f"Boto ClientError calling lambda {lambda_name}",
-                    "error": error,
+                    "error": str(error),
                 }
             )
             success = False
@@ -204,8 +204,8 @@ class CBCProxyClientBase(ABC):
                     "source": "api",
                     "module": __name__,
                     "message": f"Error calling lambda {lambda_name}",
-                    "status_code": result["StatusCode"],
-                    "result_payload": result.get("Payload"),
+                    "status_code": str(result["StatusCode"]),
+                    "result_payload": str(result.get("Payload")),
                 }
             )
             success = False
@@ -216,7 +216,7 @@ class CBCProxyClientBase(ABC):
                     "source": "api",
                     "module": __name__,
                     "message": f"FunctionError calling lambda {lambda_name}",
-                    "result": result.get("Payload"),
+                    "result_payload": str(result.get("Payload")),
                 }
             )
             success = False
