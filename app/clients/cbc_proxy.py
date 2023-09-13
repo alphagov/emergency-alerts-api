@@ -375,4 +375,6 @@ def setup_loggers(logger, *args, **kwargs):
     handler = base_logging.StreamHandler(sys.stdout)
     handler.setLevel(base_logging.getLevelName(current_app.config["NOTIFY_LOG_LEVEL"]))
     handler.setFormatter(JsonFormatter())
+    logger.addHandler(handler)
+    logger.setLevel(base_logging.getLevelName(current_app.config["NOTIFY_LOG_LEVEL"]))
     logger.propagate = False
