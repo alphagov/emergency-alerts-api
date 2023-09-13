@@ -187,6 +187,7 @@ class CBCProxyClientBase(ABC):
     def _invoke_lambda(self, lambda_name, payload):
         payload_bytes = bytes(json.dumps(payload), encoding="utf8")
         try:
+            current_app.logger.propagate = False
             current_app.logger.info(
                 {
                     "source": "api",
