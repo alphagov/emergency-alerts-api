@@ -1,12 +1,15 @@
+import logging as base_logging
 import os
 import random
 import string
+import sys
 import time
 import uuid
 from time import monotonic
 
 import boto3
 from celery import current_task
+from celery.signals import after_setup_logger
 from emergency_alerts_utils import logging, request_helper
 from emergency_alerts_utils.celery import NotifyCelery
 from emergency_alerts_utils.clients.encryption.encryption_client import (
@@ -28,6 +31,7 @@ from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy as _SQLAlchemy
 from gds_metrics import GDSMetrics
 from gds_metrics.metrics import Gauge, Histogram
+from pythonjsonlogger.jsonlogger import JsonFormatter
 from sqlalchemy import event
 from werkzeug.exceptions import HTTPException as WerkzeugHTTPException
 from werkzeug.local import LocalProxy
@@ -426,3 +430,11 @@ def setup_sqlalchemy_events(app):
                 ).observe(duration)
             except Exception:
                 current_app.logger.exception("Exception caught for checkin event.")
+
+
+@after_setup_logger.connect
+def setup_loggers(logger, *args, **kwargs):
+    handler = base_logging.StreamHandler(sys.stdout)
+    handler.setLevel(base_logging.getLevelName(current_app.config["NOTIFY_LOG_LEVEL"]))
+    handler.setFormatter(JsonFormatter())
+    logger.propagate = False
