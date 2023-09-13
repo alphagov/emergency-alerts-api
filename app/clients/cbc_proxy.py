@@ -1,16 +1,17 @@
 import json
 import logging as base_logging
 import os
+import sys
 import uuid
 from abc import ABC, abstractmethod
 
 import boto3
 import botocore
+from celery.signals import after_setup_logger
 from emergency_alerts_utils import logging
-
-# from botocore.exceptions import ClientError
-# from emergency_alerts_utils.structured_logging import LogData
 from emergency_alerts_utils.template import non_gsm_characters
+from flask import current_app
+from pythonjsonlogger.jsonlogger import JsonFormatter
 from sqlalchemy.schema import Sequence
 
 from app.config import BroadcastProvider
@@ -366,11 +367,11 @@ class CBCProxyVodafone(CBCProxyClientBase):
         self._invoke_lambda_with_failover(payload=payload)
 
 
-# @after_setup_logger.connect
-# def setup_loggers(logger, *args, **kwargs):
-#     handler = base_logging.StreamHandler(sys.stdout)
-#     handler.setLevel(base_logging.getLevelName(current_app.config["NOTIFY_LOG_LEVEL"]))
-#     handler.setFormatter(JsonFormatter())
-#     logger.addHandler(handler)
-#     logger.setLevel(base_logging.getLevelName(current_app.config["NOTIFY_LOG_LEVEL"]))
-#     logger.propagate = False
+@after_setup_logger.connect
+def setup_loggers(logger, *args, **kwargs):
+    handler = base_logging.StreamHandler(sys.stdout)
+    handler.setLevel(base_logging.getLevelName(current_app.config["NOTIFY_LOG_LEVEL"]))
+    handler.setFormatter(JsonFormatter())
+    logger.addHandler(handler)
+    logger.setLevel(base_logging.getLevelName(current_app.config["NOTIFY_LOG_LEVEL"]))
+    logger.propagate = False
