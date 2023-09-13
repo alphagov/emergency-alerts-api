@@ -147,11 +147,12 @@ class CBCProxyClientBase(ABC):
             #     current_app.logger.info(f"Error writing to CloudWatch: {error}")
 
             logger.info(
-                message={
+                "%s",
+                {
                     "source": "api",
                     "module": __name__,
                     "message": f"Primary {self.lambda_name} failed. Invoking {self.failover_lambda_name}",
-                }
+                },
             )
 
             if self.failover_lambda_name is not None:
@@ -167,11 +168,12 @@ class CBCProxyClientBase(ABC):
                     #     current_app.logger.info(f"Error writing to CloudWatch: {error}")
 
                     logger.info(
-                        message={
+                        "%s",
+                        {
                             "source": "api",
                             "module": __name__,
                             "message": f"Secondary Lambda {self.lambda_name} failed",
-                        }
+                        },
                     )
 
                     raise CBCProxyRetryableException(
@@ -184,11 +186,12 @@ class CBCProxyClientBase(ABC):
         payload_bytes = bytes(json.dumps(payload), encoding="utf8")
         try:
             logger.info(
-                message={
+                "%s",
+                {
                     "source": "api",
                     "module": __name__,
                     "message": f"Calling lambda {lambda_name} with payload {str(payload)[:400]} ...",
-                }
+                },
             )
 
             result = self._lambda_client.invoke(
@@ -198,36 +201,39 @@ class CBCProxyClientBase(ABC):
             )
         except botocore.exceptions.ClientError as error:
             logger.error(
-                message={
+                "%s",
+                {
                     "source": "api",
                     "module": __name__,
                     "message": f"Boto ClientError calling lambda {lambda_name}",
                     "error": str(error),
-                }
+                },
             )
             success = False
             return success
 
         if result["StatusCode"] > 299:
             logger.info(
-                message={
+                "%s",
+                {
                     "source": "api",
                     "module": __name__,
                     "message": f"Error calling lambda {lambda_name}",
                     "status_code": str(result["StatusCode"]),
                     "result_payload": result["Payload"].read().decode("utf-8"),
-                }
+                },
             )
             success = False
 
         elif "FunctionError" in result:
             logger.info(
-                message={
+                "%s",
+                {
                     "source": "api",
                     "module": __name__,
                     "message": f"FunctionError calling lambda {lambda_name}",
                     "result_payload": result["Payload"].read().decode("utf-8"),
-                }
+                },
             )
             success = False
 
