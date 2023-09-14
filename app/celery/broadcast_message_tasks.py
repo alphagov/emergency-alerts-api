@@ -133,10 +133,10 @@ def send_broadcast_event(broadcast_event_id):
 @notify_celery.task(bind=True, name="send-broadcast-provider-message", max_retries=None)
 def send_broadcast_provider_message(self, broadcast_event_id, provider):
     if not current_app.config["CBC_PROXY_ENABLED"]:
-        current_app.logger.info(
-            "CBC Proxy disabled, not sending broadcast_provider_message for "
-            f"broadcast_event_id {broadcast_event_id} with provider {provider}"
-        )
+        # current_app.logger.info(
+        #     "CBC Proxy disabled, not sending broadcast_provider_message for "
+        #     f"broadcast_event_id {broadcast_event_id} with provider {provider}"
+        # )
         return
 
     broadcast_event = dao_get_broadcast_event_by_id(broadcast_event_id)
@@ -153,11 +153,11 @@ def send_broadcast_provider_message(self, broadcast_event_id, provider):
     if provider == BroadcastProvider.VODAFONE:
         formatted_message_number = format_sequential_number(broadcast_provider_message.message_number)
 
-    current_app.logger.info(
-        f"Invoking cbc proxy to send broadcast_provider_message with ID of {broadcast_provider_message.id} "
-        f"and broadcast_event ID of {broadcast_event_id} "
-        f"msgType {broadcast_event.message_type}"
-    )
+    # current_app.logger.info(
+    #     f"Invoking cbc proxy to send broadcast_provider_message with ID of {broadcast_provider_message.id} "
+    #     f"and broadcast_event ID of {broadcast_event_id} "
+    #     f"msgType {broadcast_event.message_type}"
+    # )
 
     areas = [{"polygon": polygon} for polygon in broadcast_event.transmitted_areas["simple_polygons"]]
 
@@ -202,11 +202,11 @@ def send_broadcast_provider_message(self, broadcast_event_id, provider):
             )
     except CBCProxyRetryableException as exc:
         delay = get_retry_delay(self.request.retries)
-        current_app.logger.exception(
-            f"Retrying send_broadcast_provider_message for broadcast event {broadcast_event_id}, "
-            f"provider message {broadcast_provider_message.id}, provider {provider} in {delay} seconds",
-            exc_info=False,
-        )
+        # current_app.logger.exception(
+        #     f"Retrying send_broadcast_provider_message for broadcast event {broadcast_event_id}, "
+        #     f"provider message {broadcast_provider_message.id}, provider {provider} in {delay} seconds",
+        #     exc_info=False,
+        # )
 
         self.retry(
             exc=exc,

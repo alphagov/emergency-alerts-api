@@ -25,34 +25,36 @@ def run_health_check():
         with open("/eas/emergency-alerts-api/celery-beat-healthcheck", mode="w") as file:
             file.write(str(time_stamp))
     except Exception:
-        current_app.logger.exception("Unable to generate health-check timestamp")
+        # current_app.logger.exception("Unable to generate health-check timestamp")
         raise
 
 
 @notify_celery.task(name="delete-verify-codes")
 def delete_verify_codes():
     try:
-        start = datetime.utcnow()
-        deleted = delete_codes_older_created_more_than_a_day_ago()
-        current_app.logger.info(
-            f"Delete job started {start} finished {datetime.utcnow()} deleted {deleted} verify codes"
-        )
+        # start = datetime.utcnow()
+        # deleted =
+        delete_codes_older_created_more_than_a_day_ago()
+
+        # current_app.logger.info(
+        #     f"Delete job started {start} finished {datetime.utcnow()} deleted {deleted} verify codes"
+        # )
     except SQLAlchemyError:
-        current_app.logger.exception("Failed to delete verify codes")
+        # current_app.logger.exception("Failed to delete verify codes")
         raise
 
 
 @notify_celery.task(name="delete-invitations")
 def delete_invitations():
     try:
-        start = datetime.utcnow()
+        # start = datetime.utcnow()
         deleted_invites = delete_invitations_created_more_than_two_days_ago()
         deleted_invites += delete_org_invitations_created_more_than_two_days_ago()
-        current_app.logger.info(
-            f"Delete job started {start} finished {datetime.utcnow()} deleted {deleted_invites} invitations"
-        )
+        # current_app.logger.info(
+        #     f"Delete job started {start} finished {datetime.utcnow()} deleted {deleted_invites} invitations"
+        # )
     except SQLAlchemyError:
-        current_app.logger.exception("Failed to delete invitations")
+        # current_app.logger.exception("Failed to delete invitations")
         raise
 
 
@@ -88,10 +90,11 @@ def remove_yesterdays_planned_tests_on_govuk_alerts():
 @cronitor("delete-old-records-from-events-table")
 def delete_old_records_from_events_table():
     delete_events_before = datetime.utcnow() - timedelta(weeks=52)
-    event_query = Event.query.filter(Event.created_at < delete_events_before)
+    # event_query =
+    Event.query.filter(Event.created_at < delete_events_before)
 
-    deleted_count = event_query.delete()
+    # deleted_count = event_query.delete()
 
-    current_app.logger.info(f"Deleted {deleted_count} historical events from before {delete_events_before}.")
+    # current_app.logger.info(f"Deleted {deleted_count} historical events from before {delete_events_before}.")
 
     db.session.commit()

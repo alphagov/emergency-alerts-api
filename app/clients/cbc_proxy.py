@@ -6,7 +6,8 @@ from abc import ABC, abstractmethod
 import boto3
 import botocore
 from emergency_alerts_utils.template import non_gsm_characters
-from flask import current_app
+
+# from flask import current_app
 from sqlalchemy.schema import Sequence
 
 from app.config import BroadcastProvider
@@ -137,13 +138,13 @@ class CBCProxyClientBase(ABC):
             # except ClientError as error:
             #     current_app.logger.info(f"Error writing to CloudWatch: {error}")
 
-            current_app.logger.info(
-                f"Primary {self.lambda_name} failed. Invoking {self.failover_lambda_name}",
-                extra={
-                    "source": current_app.name,
-                    "module": __name__,
-                },
-            )
+            # current_app.logger.info(
+            #     f"Primary {self.lambda_name} failed. Invoking {self.failover_lambda_name}",
+            #     extra={
+            #         "source": current_app.name,
+            #         "module": __name__,
+            #     },
+            # )
 
             if self.failover_lambda_name is not None:
                 failover_result = self._invoke_lambda(self.failover_lambda_name, payload)
@@ -157,13 +158,13 @@ class CBCProxyClientBase(ABC):
                     # except ClientError as error:
                     #     current_app.logger.info(f"Error writing to CloudWatch: {error}")
 
-                    current_app.logger.info(
-                        f"Secondary Lambda {self.lambda_name} failed",
-                        extra={
-                            "source": current_app.name,
-                            "module": __name__,
-                        },
-                    )
+                    # current_app.logger.info(
+                    #     f"Secondary Lambda {self.lambda_name} failed",
+                    #     extra={
+                    #         "source": current_app.name,
+                    #         "module": __name__,
+                    #     },
+                    # )
 
                     raise CBCProxyRetryableException(
                         f"Lambda failed for both {self.lambda_name} and {self.failover_lambda_name}"
@@ -174,54 +175,54 @@ class CBCProxyClientBase(ABC):
     def _invoke_lambda(self, lambda_name, payload):
         payload_bytes = bytes(json.dumps(payload), encoding="utf8")
         try:
-            current_app.logger.propagate = False
-            current_app.logger.info(
-                f"Calling lambda {lambda_name}",
-                extra={
-                    "source": current_app.name,
-                    "module": __name__,
-                    "payload": str(payload)[:400],
-                },
-            )
+            # current_app.logger.propagate = False
+            # current_app.logger.info(
+            #     f"Calling lambda {lambda_name}",
+            #     extra={
+            #         "source": current_app.name,
+            #         "module": __name__,
+            #         "payload": str(payload)[:400],
+            #     },
+            # )
 
             result = self._lambda_client.invoke(
                 FunctionName=f"{self._arn_prefix}{lambda_name}",
                 InvocationType="RequestResponse",
                 Payload=payload_bytes,
             )
-        except botocore.exceptions.ClientError as error:
-            current_app.logger.error(
-                f"Boto ClientError calling lambda {lambda_name}",
-                extra={
-                    "source": current_app.name,
-                    "module": __name__,
-                    "error": str(error),
-                },
-            )
+        except botocore.exceptions.ClientError:  # as error:
+            # current_app.logger.error(
+            #     f"Boto ClientError calling lambda {lambda_name}",
+            #     extra={
+            #         "source": current_app.name,
+            #         "module": __name__,
+            #         "error": str(error),
+            #     },
+            # )
             success = False
             return success
 
         if result["StatusCode"] > 299:
-            current_app.logger.info(
-                f"Error calling lambda {lambda_name}",
-                extra={
-                    "source": current_app.name,
-                    "module": __name__,
-                    "status_code": str(result["StatusCode"]),
-                    "result_payload": result["Payload"].read().decode("utf-8"),
-                },
-            )
+            # current_app.logger.info(
+            #     f"Error calling lambda {lambda_name}",
+            #     extra={
+            #         "source": current_app.name,
+            #         "module": __name__,
+            #         "status_code": str(result["StatusCode"]),
+            #         "result_payload": result["Payload"].read().decode("utf-8"),
+            #     },
+            # )
             success = False
 
         elif "FunctionError" in result:
-            current_app.logger.info(
-                f"FunctionError calling lambda {lambda_name}",
-                extra={
-                    "source": current_app.name,
-                    "module": __name__,
-                    "result_payload": result["Payload"].read().decode("utf-8"),
-                },
-            )
+            # current_app.logger.info(
+            #     f"FunctionError calling lambda {lambda_name}",
+            #     extra={
+            #         "source": current_app.name,
+            #         "module": __name__,
+            #         "result_payload": result["Payload"].read().decode("utf-8"),
+            #     },
+            # )
             success = False
 
         else:
