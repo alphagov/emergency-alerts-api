@@ -138,8 +138,8 @@ class CBCProxyClientBase(ABC):
             #     current_app.logger.info(f"Error writing to CloudWatch: {error}")
 
             current_app.logger.info(
-                f"Primary {self.lambda_name} failed. Invoking {self.failover_lambda_name}",
                 {
+                    "message": f"Primary {self.lambda_name} failed. Invoking {self.failover_lambda_name}",
                     "source": "api",
                     "module": __name__,
                 },
@@ -158,8 +158,8 @@ class CBCProxyClientBase(ABC):
                     #     current_app.logger.info(f"Error writing to CloudWatch: {error}")
 
                     current_app.logger.info(
-                        f"Secondary Lambda {self.lambda_name} failed",
                         {
+                            "message": f"Secondary Lambda {self.lambda_name} failed",
                             "source": "api",
                             "module": __name__,
                         },
@@ -176,8 +176,8 @@ class CBCProxyClientBase(ABC):
         try:
             current_app.logger.propagate = False
             current_app.logger.info(
-                f"Calling lambda {lambda_name} with payload {str(payload)[:400]} ...",
                 {
+                    "message": f"Calling lambda {lambda_name} with payload {str(payload)[:400]} ...",
                     "source": "api",
                     "module": __name__,
                 },
@@ -190,8 +190,8 @@ class CBCProxyClientBase(ABC):
             )
         except botocore.exceptions.ClientError as error:
             current_app.logger.error(
-                f"Boto ClientError calling lambda {lambda_name}",
                 {
+                    "message": f"Boto ClientError calling lambda {lambda_name}",
                     "source": "api",
                     "module": __name__,
                     "error": str(error),
@@ -202,8 +202,8 @@ class CBCProxyClientBase(ABC):
 
         if result["StatusCode"] > 299:
             current_app.logger.info(
-                f"Error calling lambda {lambda_name}",
                 {
+                    "message": f"Error calling lambda {lambda_name}",
                     "source": "api",
                     "module": __name__,
                     "status_code": str(result["StatusCode"]),
@@ -214,8 +214,8 @@ class CBCProxyClientBase(ABC):
 
         elif "FunctionError" in result:
             current_app.logger.info(
-                f"FunctionError calling lambda {lambda_name}",
                 {
+                    "message": f"FunctionError calling lambda {lambda_name}",
                     "source": "api",
                     "module": __name__,
                     "result_payload": result["Payload"].read().decode("utf-8"),
