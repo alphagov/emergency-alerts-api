@@ -1,21 +1,12 @@
 import json
-
-# import logging as base_logging
 import os
-
-# import sys
 import uuid
 from abc import ABC, abstractmethod
 
 import boto3
 import botocore
-
-# from celery.signals import after_setup_logger
-# from emergency_alerts_utils import logging
 from emergency_alerts_utils.template import non_gsm_characters
 from flask import current_app
-
-# rom pythonjsonlogger.jsonlogger import JsonFormatter
 from sqlalchemy.schema import Sequence
 
 from app.config import BroadcastProvider
@@ -36,10 +27,6 @@ from app.utils import DATETIME_FORMAT, format_sequential_number
 # previous_provider_messages is a list of previous events (models.py::BroadcastProviderMessage)
 # ie a Cancel message would have a unique event but have the event of
 #    the preceeding Alert message in the previous_provider_messages field
-
-
-# logger = base_logging.getLogger(__name__)
-# logging.configure_json_logger(base_logging.INFO, logger)
 
 
 class CBCProxyRetryableException(Exception):
@@ -151,7 +138,7 @@ class CBCProxyClientBase(ABC):
             #     current_app.logger.info(f"Error writing to CloudWatch: {error}")
 
             current_app.logger.info(
-                {
+                message={
                     "source": "api",
                     "module": __name__,
                     "message": f"Primary {self.lambda_name} failed. Invoking {self.failover_lambda_name}",
@@ -171,10 +158,10 @@ class CBCProxyClientBase(ABC):
                     #     current_app.logger.info(f"Error writing to CloudWatch: {error}")
 
                     current_app.logger.info(
+                        f"Secondary Lambda {self.lambda_name} failed",
                         {
                             "source": "api",
                             "module": __name__,
-                            "message": f"Secondary Lambda {self.lambda_name} failed",
                         },
                     )
 
@@ -189,10 +176,10 @@ class CBCProxyClientBase(ABC):
         try:
             current_app.logger.propagate = False
             current_app.logger.info(
+                f"Calling lambda {lambda_name} with payload {str(payload)[:400]} ...",
                 {
                     "source": "api",
                     "module": __name__,
-                    "message": f"Calling lambda {lambda_name} with payload {str(payload)[:400]} ...",
                 },
             )
 
@@ -203,10 +190,10 @@ class CBCProxyClientBase(ABC):
             )
         except botocore.exceptions.ClientError as error:
             current_app.logger.error(
+                f"Boto ClientError calling lambda {lambda_name}",
                 {
                     "source": "api",
                     "module": __name__,
-                    "message": f"Boto ClientError calling lambda {lambda_name}",
                     "error": str(error),
                 },
             )
@@ -215,10 +202,10 @@ class CBCProxyClientBase(ABC):
 
         if result["StatusCode"] > 299:
             current_app.logger.info(
+                f"Error calling lambda {lambda_name}",
                 {
                     "source": "api",
                     "module": __name__,
-                    "message": f"Error calling lambda {lambda_name}",
                     "status_code": str(result["StatusCode"]),
                     "result_payload": result["Payload"].read().decode("utf-8"),
                 },
@@ -227,10 +214,10 @@ class CBCProxyClientBase(ABC):
 
         elif "FunctionError" in result:
             current_app.logger.info(
+                f"FunctionError calling lambda {lambda_name}",
                 {
                     "source": "api",
                     "module": __name__,
-                    "message": f"FunctionError calling lambda {lambda_name}",
                     "result_payload": result["Payload"].read().decode("utf-8"),
                 },
             )
@@ -374,13 +361,3 @@ class CBCProxyVodafone(CBCProxyClientBase):
             "sent": sent,
         }
         self._invoke_lambda_with_failover(payload=payload)
-
-
-# @after_setup_logger.connect
-# def setup_loggers(logger, *args, **kwargs):
-#     handler = base_logging.StreamHandler(sys.stdout)
-#     handler.setLevel(base_logging.getLevelName(current_app.config["NOTIFY_LOG_LEVEL"]))
-#     handler.setFormatter(JsonFormatter())
-#     logger.addHandler(handler)
-#     logger.setLevel(base_logging.getLevelName(current_app.config["NOTIFY_LOG_LEVEL"]))
-#     logger.propagate = False

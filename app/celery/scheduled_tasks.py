@@ -1,8 +1,6 @@
-# import logging as base_logging
 import time
 from datetime import datetime, timedelta
 
-# from emergency_alerts_utils import logging
 from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -18,9 +16,6 @@ from app.dao.invited_user_dao import (
 )
 from app.dao.users_dao import delete_codes_older_created_more_than_a_day_ago
 from app.models import BroadcastMessage, BroadcastStatusType, Event
-
-# logger = base_logging.getLogger(__name__)
-# logging.configure_notraceback_logger(base_logging.INFO, logger)
 
 
 @notify_celery.task(name="run-health-check")
@@ -40,7 +35,7 @@ def delete_verify_codes():
         start = datetime.utcnow()
         deleted = delete_codes_older_created_more_than_a_day_ago()
         current_app.logger.info(
-            "Delete job started {} finished {} deleted {} verify codes".format(start, datetime.utcnow(), deleted)
+            f"Delete job started {start} finished {datetime.utcnow()} deleted {deleted} verify codes"
         )
     except SQLAlchemyError:
         current_app.logger.exception("Failed to delete verify codes")
@@ -54,7 +49,7 @@ def delete_invitations():
         deleted_invites = delete_invitations_created_more_than_two_days_ago()
         deleted_invites += delete_org_invitations_created_more_than_two_days_ago()
         current_app.logger.info(
-            "Delete job started {} finished {} deleted {} invitations".format(start, datetime.utcnow(), deleted_invites)
+            f"Delete job started {start} finished {datetime.utcnow()} deleted {deleted_invites} invitations"
         )
     except SQLAlchemyError:
         current_app.logger.exception("Failed to delete invitations")
