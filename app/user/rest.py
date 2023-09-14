@@ -308,8 +308,8 @@ def create_2fa_code(template_id, code_type, user_to_send_to, secret_code, recipi
     response = notify_send(notification)
 
     if response is HTTPError:
-        current_app.logger.error(response)
-    current_app.logger.info(response)
+        current_app.logger.error("Error sending 2FA notification", extra=response)
+    current_app.logger.info("2FA notification sent", extra=response)
 
 
 @user_blueprint.route("/<uuid:user_id>/change-email-verification", methods=["POST"])
