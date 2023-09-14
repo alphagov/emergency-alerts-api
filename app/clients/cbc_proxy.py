@@ -138,10 +138,10 @@ class CBCProxyClientBase(ABC):
             #     current_app.logger.info(f"Error writing to CloudWatch: {error}")
 
             current_app.logger.info(
-                message={
+                f"Primary {self.lambda_name} failed. Invoking {self.failover_lambda_name}",
+                {
                     "source": "api",
                     "module": __name__,
-                    "message": f"Primary {self.lambda_name} failed. Invoking {self.failover_lambda_name}",
                 },
             )
 
