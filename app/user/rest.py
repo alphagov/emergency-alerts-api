@@ -290,7 +290,7 @@ def send_user_email_code(user_to_send_to, data):
 
 def create_2fa_code(template_id, code_type, user_to_send_to, secret_code, recipient, personalisation):
     current_app.logger.info(
-        f"Create_2fa_code for template {template_id}", extra={"source": current_app.name, "module": __name__}
+        f"Create_2fa_code for template {template_id}", extra={"source": current_app.name, "python_module": __name__}
     )
 
     # save the code in the VerifyCode table
