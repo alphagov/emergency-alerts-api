@@ -245,7 +245,7 @@ def send_user_2fa_code(user_id, code_type):
         current_app.logger.warning(f"Too many verify codes created for user {user_to_send_to.id}")
     else:
         data = request.get_json()
-        current_app.logger.info("2FA code requested", extra={**data, "module": "break it", "python_module": __name__})
+        current_app.logger.info("2FA code requested", extra={**data, "python_module": __name__})
         if code_type == SMS_TYPE:
             validate(data, post_send_user_sms_code_schema)
             send_user_sms_code(user_to_send_to, data)
