@@ -311,11 +311,11 @@ def create_2fa_code(template_id, code_type, user_to_send_to, secret_code, recipi
 
     if response is HTTPError:
         current_app.logger.error(
-            "Error sending 2FA notification", extra={**response, "source": current_app.name, "module": __name__}
+            "Error sending 2FA notification", extra={**response, "source": current_app.name, "python_module": __name__}
         )
     else:
         current_app.logger.info(
-            "2FA notification sent", extra={**response, "source": current_app.name, "module": __name__}
+            "2FA notification sent", extra={**response, "source": current_app.name, "python_module": __name__}
         )
 
 
