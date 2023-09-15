@@ -242,7 +242,7 @@ def send_user_2fa_code(user_id, code_type):
 
     if count_user_verify_codes(user_to_send_to) >= current_app.config.get("MAX_VERIFY_CODE_COUNT"):
         # Prevent more than `MAX_VERIFY_CODE_COUNT` active verify codes at a time
-        current_app.logger.warning("Too many verify codes created for user {}".format(user_to_send_to.id))
+        current_app.logger.warning(f"Too many verify codes created for user {user_to_send_to.id}")
     else:
         data = request.get_json()
         current_app.logger.info(data)
@@ -289,7 +289,9 @@ def send_user_email_code(user_to_send_to, data):
 
 
 def create_2fa_code(template_id, code_type, user_to_send_to, secret_code, recipient, personalisation):
-    current_app.logger.info(f"Create_2fa_code for template {template_id}")
+    current_app.logger.info(
+        f"Create_2fa_code for template {template_id}", extra={"source": current_app.name, "module": __name__}
+    )
 
     # save the code in the VerifyCode table
     create_user_code(user_to_send_to, secret_code, code_type)
@@ -308,8 +310,13 @@ def create_2fa_code(template_id, code_type, user_to_send_to, secret_code, recipi
     response = notify_send(notification)
 
     if response is HTTPError:
-        current_app.logger.error("Error sending 2FA notification", extra=response)
-    current_app.logger.info("2FA notification sent", extra=response)
+        current_app.logger.error(
+            "Error sending 2FA notification", extra={**response, "source": current_app.name, "module": __name__}
+        )
+    else:
+        current_app.logger.info(
+            "2FA notification sent", extra={**response, "source": current_app.name, "module": __name__}
+        )
 
 
 @user_blueprint.route("/<uuid:user_id>/change-email-verification", methods=["POST"])
