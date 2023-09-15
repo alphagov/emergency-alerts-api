@@ -198,7 +198,7 @@ class CBCProxyClientBase(ABC):
             current_app.logger.info(
                 f"FunctionError calling lambda {lambda_name}",
                 extra={
-                    "module": __name__,
+                    "python_module": __name__,
                     "result_payload": result["Payload"].read().decode("utf-8"),
                 },
             )
