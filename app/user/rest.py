@@ -289,9 +289,7 @@ def send_user_email_code(user_to_send_to, data):
 
 
 def create_2fa_code(template_id, code_type, user_to_send_to, secret_code, recipient, personalisation):
-    current_app.logger.info(
-        f"Create_2fa_code for template {template_id}", extra={"source": current_app.name, "python_module": __name__}
-    )
+    current_app.logger.info(f"Create_2fa_code for template {template_id}", extra={"python_module": __name__})
 
     # save the code in the VerifyCode table
     create_user_code(user_to_send_to, secret_code, code_type)
@@ -310,13 +308,9 @@ def create_2fa_code(template_id, code_type, user_to_send_to, secret_code, recipi
     response = notify_send(notification)
 
     if response is HTTPError:
-        current_app.logger.error(
-            "Error sending 2FA notification", extra={**response, "source": current_app.name, "python_module": __name__}
-        )
+        current_app.logger.error("Error sending 2FA notification", extra={**response, "python_module": __name__})
     else:
-        current_app.logger.info(
-            "2FA notification sent", extra={**response, "source": current_app.name, "python_module": __name__}
-        )
+        current_app.logger.info("2FA notification sent", extra={**response, "python_module": __name__})
 
 
 @user_blueprint.route("/<uuid:user_id>/change-email-verification", methods=["POST"])
