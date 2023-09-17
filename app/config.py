@@ -149,7 +149,6 @@ class Config(object):
         ],
         "worker_max_tasks_per_child": 10,
         "worker_hijack_root_logger": False,
-        # "worker_log_format": f"Celery ({SERVICE}) [%(levelname)s] %(message)s",
         "task_queues": [Queue(QUEUE_NAME, Exchange("default"), routing_key=QUEUE_NAME)],
         "beat_schedule": {
             "run-health-check": {
