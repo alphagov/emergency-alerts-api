@@ -127,16 +127,6 @@ class CBCProxyClientBase(ABC):
         result = self._invoke_lambda(self.lambda_name, payload)
 
         if not result:
-            # try:
-            #     logData = LogData(source="eas-app-api", module="cbc_proxy", method="_invoke_lambda_with_failover")
-            #     logData.addData(
-            #         "LambdaError",
-            #         f"Primary Lambda {self.lambda_name} failed. Invoking failover {self.failover_lambda_name}",
-            #     )
-            #     logData.log_to_cloudwatch()
-            # except ClientError as error:
-            #     current_app.logger.info(f"Error writing to CloudWatch: {error}")
-
             current_app.logger.info(
                 f"Primary {self.lambda_name} failed. Invoking {self.failover_lambda_name}",
                 extra={"python_module": __name__},
@@ -145,15 +135,6 @@ class CBCProxyClientBase(ABC):
             if self.failover_lambda_name is not None:
                 failover_result = self._invoke_lambda(self.failover_lambda_name, payload)
                 if not failover_result:
-                    # try:
-                    #     logData = LogData(
-                    #         source="eas-app-api", module="cbc_proxy", method="_invoke_lambda_with_failover"
-                    #     )
-                    #     logData.addData("LambdaError", f"Secondary Lambda {self.lambda_name} failed")
-                    #     logData.log_to_cloudwatch()
-                    # except ClientError as error:
-                    #     current_app.logger.info(f"Error writing to CloudWatch: {error}")
-
                     current_app.logger.info(
                         f"Secondary Lambda {self.lambda_name} failed", extra={"python_module": __name__}
                     )
