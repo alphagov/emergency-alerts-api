@@ -170,7 +170,7 @@ class CBCProxyClientBase(ABC):
                 extra={
                     "python_module": __name__,
                     "status_code": str(result["StatusCode"]),
-                    "result_payload": result["Payload"].read().decode("utf-8"),
+                    "result_payload": result.get("Payload"),
                 },
             )
             success = False
@@ -180,7 +180,7 @@ class CBCProxyClientBase(ABC):
                 f"FunctionError calling lambda {lambda_name}",
                 extra={
                     "python_module": __name__,
-                    "result_payload": result["Payload"].read().decode("utf-8"),
+                    "result_payload": result.get("Payload"),
                 },
             )
             success = False

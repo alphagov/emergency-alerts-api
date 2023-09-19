@@ -249,7 +249,7 @@ def send_user_2fa_code(user_id, code_type):
         )
     else:
         data = request.get_json()
-        current_app.logger.info("2FA code requested", extra={**data, "python_module": __name__})
+        current_app.logger.info("2FA code requested", extra={"request_data": data, "python_module": __name__})
         if code_type == SMS_TYPE:
             validate(data, post_send_user_sms_code_schema)
             send_user_sms_code(user_to_send_to, data)
@@ -312,9 +312,11 @@ def create_2fa_code(template_id, code_type, user_to_send_to, secret_code, recipi
     response = notify_send(notification)
 
     if response is HTTPError:
-        current_app.logger.error("Error sending 2FA notification", extra={**response, "python_module": __name__})
+        current_app.logger.error(
+            "Error sending 2FA notification", extra={"notify_response": response, "python_module": __name__}
+        )
     else:
-        current_app.logger.info("2FA notification sent", extra={**response, "python_module": __name__})
+        current_app.logger.info("2FA notification sent", extra={"notify_response": response, "python_module": __name__})
 
 
 @user_blueprint.route("/<uuid:user_id>/change-email-verification", methods=["POST"])
