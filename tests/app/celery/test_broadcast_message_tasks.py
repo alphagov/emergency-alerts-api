@@ -480,55 +480,9 @@ def test_send_broadcast_provider_message_errors(mocker, sample_broadcast_service
         expires=event.transmitted_finishes_at_as_cap_datetime_string,
         channel="severe",
     )
-    mock_retry.assert_called_once_with(countdown=1, exc=mock_create_broadcast.side_effect, queue="broadcast-tasks")
+    mock_retry.assert_called_once_with(exc=mock_create_broadcast.side_effect, countdown=ANY)
     broadcast_provider_message = event.get_provider_message(provider)
     assert broadcast_provider_message.status == BroadcastProviderMessageStatus.SENDING
-
-
-@pytest.mark.parametrize(
-    "num_retries, expected_countdown",
-    [
-        (0, 1),
-        (5, 32),
-        (20, 240),
-    ],
-)
-def test_send_broadcast_provider_message_delays_retry_exponentially(
-    mocker, sample_broadcast_service, num_retries, expected_countdown
-):
-    template = create_template(sample_broadcast_service, BROADCAST_TYPE)
-
-    broadcast_message = create_broadcast_message(template, status=BroadcastStatusType.BROADCASTING)
-    event = create_broadcast_event(broadcast_message)
-
-    mock_create_broadcast = mocker.patch(
-        "app.clients.cbc_proxy.CBCProxyEE.create_and_send_broadcast",
-        side_effect=CBCProxyRetryableException("oh no"),
-    )
-    mock_retry = mocker.patch(
-        "app.celery.broadcast_message_tasks.send_broadcast_provider_message.retry", side_effect=Retry
-    )
-
-    # patch celery request context as shown here: https://stackoverflow.com/a/59870468
-    mock_celery_task_request_context = mocker.patch("celery.app.task.Task.request")
-    mock_celery_task_request_context.retries = num_retries
-
-    with pytest.raises(Retry):
-        send_broadcast_provider_message(provider="ee", broadcast_event_id=str(event.id))
-
-    mock_create_broadcast.assert_called_once_with(
-        identifier=ANY,
-        message_number=mocker.ANY,
-        headline="GOV.UK Emergency Alert",
-        description="this is an emergency broadcast message",
-        areas=[],
-        sent=event.sent_at_as_cap_datetime_string,
-        expires=event.transmitted_finishes_at_as_cap_datetime_string,
-        channel="severe",
-    )
-    mock_retry.assert_called_once_with(
-        countdown=expected_countdown, exc=mock_create_broadcast.side_effect, queue="broadcast-tasks"
-    )
 
 
 @pytest.mark.parametrize(

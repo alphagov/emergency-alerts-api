@@ -22,10 +22,10 @@ def get_notify_client():
     try:
         api_key = os.environ.get("NOTIFY_CLIENT_API_KEY", "empty_key")
         __notify.client = NotificationsAPIClient(api_key)
-    except TypeError as e:
-        current_app.logger.error(f"NotificationsAPIClient API key required: {e}")
-    except AssertionError as e:
-        current_app.logger.error(f"Invalid API key format: {e}")
+    except TypeError:
+        current_app.logger.exception("NotificationsAPIClient API key required", extra={"python_module": __name__})
+    except AssertionError:
+        current_app.logger.exception("Invalid API key format", extra={"python_module": __name__})
 
 
 def get_notify_template(id):
@@ -65,7 +65,7 @@ def notify_send(notification):
                 personalisation=notification["personalisation"],
                 email_reply_to_id=notification["reply_to"],
             )
-    except Exception as e:
-        current_app.logger.error(f"Error sending notification: {e}")
+    except Exception:
+        current_app.logger.exception("Error sending notification", extra={"python_module": __name__})
 
     return response

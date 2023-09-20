@@ -134,56 +134,69 @@ class CBCProxyClientBase(ABC):
         result = self._invoke_lambda(self.primary_lambda, payload)
         if result:
             return True
-        self._log_lambda_info(f"Lambda {self.primary_lambda} to {self.CBC_A} failed")
 
         payload["cbc_target"] = self.CBC_B
         result = self._invoke_lambda(self.primary_lambda, payload)
         if result:
             return True
-        self._log_lambda_info(f"Lambda {self.primary_lambda} to {self.CBC_B} failed")
 
-        if self.secondary_lambda is None:
-            raise CBCProxyRetryableException(f"{self.primary_lambda} failed (secondary lambda is unavailable)")
+        # if self.secondary_lambda is None:
+        #     raise CBCProxyRetryableException(f"{self.primary_lambda} failed (secondary lambda is unavailable)")
 
         payload["cbc_target"] = self.CBC_A
         result = self._invoke_lambda(self.secondary_lambda, payload)
         if result:
             return True
-        self._log_lambda_info(f"Lambda {self.secondary_lambda} to {self.CBC_A} failed")
 
         payload["cbc_target"] = self.CBC_B
         result = self._invoke_lambda(self.secondary_lambda, payload)
         if result:
             return True
-        self._log_lambda_info(f"Lambda {self.secondary_lambda} to {self.CBC_B} failed")
 
         error_message = f"{self.primary_lambda} and {self.secondary_lambda} lambdas failed"
-        self._log_lambda_error(error_message)
+        current_app.logger.info(error_message, extra={"python_module": __name__})
         raise CBCProxyRetryableException(error_message)
 
     def _invoke_lambda(self, lambda_name, payload):
         payload_bytes = bytes(json.dumps(payload), encoding="utf8")
         try:
-            self._log_lambda_info(f"Calling lambda {lambda_name} with payload {str(payload)[:1000]}")
+            current_app.logger.info(
+                f"Calling lambda {lambda_name}",
+                extra={
+                    "lambda_payload": str(payload)[:1000],
+                    "lambda_invocation_type": "RequestResponse",
+                    "lambda_arn": f"{self._arn_prefix}{lambda_name}",
+                },
+            )
             result = self._lambda_client.invoke(
                 FunctionName=f"{self._arn_prefix}{lambda_name}",
                 InvocationType="RequestResponse",
                 Payload=payload_bytes,
             )
         except botocore.exceptions.ClientError:
-            self._log_lambda_error(f"Boto3 ClientError on lambda {lambda_name}")
+            current_app.logger.error(f"Boto3 ClientError on lambda {lambda_name}", extra={"python_module": __name__})
             success = False
             return success
 
         if result["StatusCode"] > 299:
-            self._log_lambda_info(
-                f"Error calling lambda {lambda_name} with status code { result['StatusCode']}, {result.get('Payload')}"
+            current_app.logger.info(
+                f"Error calling lambda {lambda_name}",
+                extra={
+                    "python_module": __name__,
+                    "status_code": result["StatusCode"],
+                    "result_payload": result.get("Payload"),
+                },
             )
             success = False
 
         elif "FunctionError" in result:
-            self._log_lambda_info(
-                f"Error calling lambda {lambda_name} with function error { result['Payload'].read() }"
+            current_app.logger.info(
+                f"FunctionError calling lambda {lambda_name}",
+                extra={
+                    "python_module": __name__,
+                    "status_code": result["StatusCode"],
+                    "result_payload": result.get("Payload"),
+                },
             )
             success = False
 
@@ -196,24 +209,6 @@ class CBCProxyClientBase(ABC):
         if non_gsm_characters(content):
             return self.LANGUAGE_WELSH
         return self.LANGUAGE_ENGLISH
-
-    def _log_lambda_info(self, msg):
-        current_app.logger.info(
-            {
-                "source": "eas-app-api",
-                "module": __name__,
-                "message": msg,
-            }
-        )
-
-    def _log_lambda_error(self, msg):
-        current_app.logger.error(
-            {
-                "source": "eas-app-api",
-                "module": __name__,
-                "message": msg,
-            }
-        )
 
 
 class CBCProxyOne2ManyClient(CBCProxyClientBase):

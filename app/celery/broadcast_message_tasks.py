@@ -126,8 +126,12 @@ def send_broadcast_event(broadcast_event_id):
 def send_broadcast_provider_message(self, broadcast_event_id, provider):
     if not current_app.config["CBC_PROXY_ENABLED"]:
         current_app.logger.info(
-            "CBC Proxy disabled, not sending broadcast_provider_message for "
-            f"broadcast_event_id {broadcast_event_id} with provider {provider}"
+            "CBC Proxy disabled, unable to send broadcast_provider_message",
+            extra={
+                "broadcast_event_id": broadcast_event_id,
+                "cbc_provider": provider,
+                "python_module": __name__,
+            },
         )
         return
 
@@ -146,16 +150,19 @@ def send_broadcast_provider_message(self, broadcast_event_id, provider):
         formatted_message_number = format_sequential_number(broadcast_provider_message.message_number)
 
     current_app.logger.info(
-        f"Invoking cbc proxy to send broadcast_provider_message with ID of {broadcast_provider_message.id} "
-        f"and broadcast_event ID of {broadcast_event_id} "
-        f"msgType {broadcast_event.message_type}"
+        "Invoking cbc proxy to send broadcast_provider_message",
+        extra={
+            "broadcast_provider_message_id": broadcast_provider_message.id,
+            "broadcast_event_id": broadcast_event_id,
+            "message_type": broadcast_event.message_type,
+            "python_module": __name__,
+        },
     )
 
     areas = [{"polygon": polygon} for polygon in broadcast_event.transmitted_areas["simple_polygons"]]
 
     cbc_proxy_provider_client = cbc_proxy_client.get_proxy(provider)
 
-    # try:
     if broadcast_event.message_type == BroadcastEventMessageType.ALERT:
         cbc_proxy_provider_client.create_and_send_broadcast(
             identifier=str(broadcast_provider_message.id),
@@ -198,4 +205,5 @@ def send_broadcast_provider_message(self, broadcast_event_id, provider):
 
 @notify_celery.task(name="trigger-link-test")
 def trigger_link_test(provider):
+    current_app.logger.info("trigger_link_test", extra={"python_module": __name__, "target_provider": provider})
     cbc_proxy_client.get_proxy(provider).send_link_test()

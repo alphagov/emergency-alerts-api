@@ -100,8 +100,10 @@ def test_cbc_proxy_send_link_test(mocker, cbc_proxy_ee):
     mock_send_link_test = mocker.patch.object(cbc_proxy_ee, "_send_link_test")
     cbc_proxy_ee.send_link_test()
 
-    mock_send_link_test.assert_any_call(cbc_proxy_ee.lambda_name)
-    mock_send_link_test.assert_any_call(cbc_proxy_ee.failover_lambda_name)
+    mock_send_link_test.assert_any_call(cbc_proxy_ee.primary_lambda, "cbc_a")
+    mock_send_link_test.assert_any_call(cbc_proxy_ee.primary_lambda, "cbc_b")
+    mock_send_link_test.assert_any_call(cbc_proxy_ee.secondary_lambda, "cbc_a")
+    mock_send_link_test.assert_any_call(cbc_proxy_ee.secondary_lambda, "cbc_b")
 
 
 @pytest.mark.parametrize(
@@ -336,7 +338,7 @@ def test_cbc_proxy_vodafone_cancel_invokes_function(mocker, cbc_proxy_vodafone):
 
 
 @pytest.mark.parametrize("cbc", ["ee", "vodafone", "three", "o2"])
-def test_cbc_proxy_will_failover_to_second_lambda_if_boto_client_error(mocker, cbc_proxy_client, cbc):
+def test_cbc_proxy_will_make_four_attempts_to_invoke_lambdas_if_boto_client_error(mocker, cbc_proxy_client, cbc):
     cbc_proxy = cbc_proxy_client.get_proxy(cbc)
 
     ld_client_mock = mocker.patch.object(
@@ -359,11 +361,21 @@ def test_cbc_proxy_will_failover_to_second_lambda_if_boto_client_error(mocker, c
             channel="severe",
         )
 
-    assert e.match(f"Lambda failed for both {cbc}-1-proxy and {cbc}-2-proxy")
+    assert e.match(f"{cbc}-1-proxy and {cbc}-2-proxy lambdas failed")
 
     assert ld_client_mock.invoke.call_args_list == [
         call(
             FunctionName=f"{cbc}-1-proxy",
+            InvocationType="RequestResponse",
+            Payload=mocker.ANY,
+        ),
+        call(
+            FunctionName=f"{cbc}-1-proxy",
+            InvocationType="RequestResponse",
+            Payload=mocker.ANY,
+        ),
+        call(
+            FunctionName=f"{cbc}-2-proxy",
             InvocationType="RequestResponse",
             Payload=mocker.ANY,
         ),
@@ -376,7 +388,7 @@ def test_cbc_proxy_will_failover_to_second_lambda_if_boto_client_error(mocker, c
 
 
 @pytest.mark.parametrize("cbc", ["ee", "vodafone", "three", "o2"])
-def test_cbc_proxy_will_failover_to_second_lambda_if_function_error(mocker, cbc_proxy_client, cbc):
+def test_fourth_lambda_invoked_if_the_first_three_return_function_error(mocker, cbc_proxy_client, cbc):
     cbc_proxy = cbc_proxy_client.get_proxy(cbc)
 
     ld_client_mock = mocker.patch.object(
@@ -386,6 +398,16 @@ def test_cbc_proxy_will_failover_to_second_lambda_if_function_error(mocker, cbc_
     )
 
     ld_client_mock.invoke.side_effect = [
+        {
+            "StatusCode": 200,
+            "FunctionError": "Handled",
+            "Payload": BytesIO(json.dumps({"errorMessage": "", "errorType": "CBCNewConnectionError"}).encode("utf-8")),
+        },
+        {
+            "StatusCode": 200,
+            "FunctionError": "Handled",
+            "Payload": BytesIO(json.dumps({"errorMessage": "", "errorType": "CBCNewConnectionError"}).encode("utf-8")),
+        },
         {
             "StatusCode": 200,
             "FunctionError": "Handled",
@@ -412,6 +434,16 @@ def test_cbc_proxy_will_failover_to_second_lambda_if_function_error(mocker, cbc_
             Payload=mocker.ANY,
         ),
         call(
+            FunctionName=f"{cbc}-1-proxy",
+            InvocationType="RequestResponse",
+            Payload=mocker.ANY,
+        ),
+        call(
+            FunctionName=f"{cbc}-2-proxy",
+            InvocationType="RequestResponse",
+            Payload=mocker.ANY,
+        ),
+        call(
             FunctionName=f"{cbc}-2-proxy",
             InvocationType="RequestResponse",
             Payload=mocker.ANY,
@@ -420,7 +452,7 @@ def test_cbc_proxy_will_failover_to_second_lambda_if_function_error(mocker, cbc_
 
 
 @pytest.mark.parametrize("cbc", ["ee", "vodafone", "three", "o2"])
-def test_cbc_proxy_will_failover_to_second_lambda_if_invoke_error(mocker, cbc_proxy_client, cbc):
+def test_cbc_proxy_will_make_four_attempts_to_invoke_lambdas_if_error(mocker, cbc_proxy_client, cbc):
     cbc_proxy = cbc_proxy_client.get_proxy(cbc)
 
     ld_client_mock = mocker.patch.object(
@@ -429,7 +461,12 @@ def test_cbc_proxy_will_failover_to_second_lambda_if_invoke_error(mocker, cbc_pr
         create=True,
     )
 
-    ld_client_mock.invoke.side_effect = [{"StatusCode": 400}, {"StatusCode": 200}]
+    ld_client_mock.invoke.side_effect = [
+        {"StatusCode": 400},
+        {"StatusCode": 400},
+        {"StatusCode": 400},
+        {"StatusCode": 200},
+    ]
 
     cbc_proxy.create_and_send_broadcast(
         identifier="my-identifier",
@@ -449,6 +486,16 @@ def test_cbc_proxy_will_failover_to_second_lambda_if_invoke_error(mocker, cbc_pr
             Payload=mocker.ANY,
         ),
         call(
+            FunctionName=f"{cbc}-1-proxy",
+            InvocationType="RequestResponse",
+            Payload=mocker.ANY,
+        ),
+        call(
+            FunctionName=f"{cbc}-2-proxy",
+            InvocationType="RequestResponse",
+            Payload=mocker.ANY,
+        ),
+        call(
             FunctionName=f"{cbc}-2-proxy",
             InvocationType="RequestResponse",
             Payload=mocker.ANY,
@@ -457,7 +504,7 @@ def test_cbc_proxy_will_failover_to_second_lambda_if_invoke_error(mocker, cbc_pr
 
 
 @pytest.mark.parametrize("cbc", ["ee", "vodafone", "three", "o2"])
-def test_cbc_proxy_create_and_send_tries_failover_lambda_on_invoke_error_and_raises_if_both_invoke_error(
+def test_cbc_proxy_create_and_send_tries_primary_and_secondary_lambda_on_invoke_error_and_raises_if_both_invoke_error(
     mocker, cbc_proxy_client, cbc
 ):
     cbc_proxy = cbc_proxy_client.get_proxy(cbc)
@@ -484,11 +531,21 @@ def test_cbc_proxy_create_and_send_tries_failover_lambda_on_invoke_error_and_rai
             channel="test",
         )
 
-    assert e.match(f"Lambda failed for both {cbc}-1-proxy and {cbc}-2-proxy")
+    assert e.match(f"{cbc}-1-proxy and {cbc}-2-proxy lambdas failed")
 
     assert ld_client_mock.invoke.call_args_list == [
         call(
             FunctionName=f"{cbc}-1-proxy",
+            InvocationType="RequestResponse",
+            Payload=mocker.ANY,
+        ),
+        call(
+            FunctionName=f"{cbc}-1-proxy",
+            InvocationType="RequestResponse",
+            Payload=mocker.ANY,
+        ),
+        call(
+            FunctionName=f"{cbc}-2-proxy",
             InvocationType="RequestResponse",
             Payload=mocker.ANY,
         ),
@@ -530,11 +587,21 @@ def test_cbc_proxy_create_and_send_tries_failover_lambda_on_function_error_and_r
             channel="severe",
         )
 
-    assert e.match(f"Lambda failed for both {cbc}-1-proxy and {cbc}-2-proxy")
+    assert e.match(f"{cbc}-1-proxy and {cbc}-2-proxy lambdas failed")
 
     assert ld_client_mock.invoke.call_args_list == [
         call(
             FunctionName=f"{cbc}-1-proxy",
+            InvocationType="RequestResponse",
+            Payload=mocker.ANY,
+        ),
+        call(
+            FunctionName=f"{cbc}-1-proxy",
+            InvocationType="RequestResponse",
+            Payload=mocker.ANY,
+        ),
+        call(
+            FunctionName=f"{cbc}-2-proxy",
             InvocationType="RequestResponse",
             Payload=mocker.ANY,
         ),
@@ -562,7 +629,7 @@ def test_cbc_proxy_one_2_many_send_link_test_invokes_function(mocker, cbc_proxy_
         "StatusCode": 200,
     }
 
-    cbc_proxy._send_link_test(lambda_name=f"{cbc}-1-proxy")
+    cbc_proxy._send_link_test(lambda_name=f"{cbc}-1-proxy", cbc_target="cbc_a")
 
     ld_client_mock.invoke.assert_called_once_with(
         FunctionName=f"{cbc}-1-proxy",
@@ -595,7 +662,7 @@ def test_cbc_proxy_vodafone_send_link_test_invokes_function(mocker, cbc_proxy_vo
         "StatusCode": 200,
     }
 
-    cbc_proxy_vodafone._send_link_test(lambda_name="vodafone-1-proxy")
+    cbc_proxy_vodafone._send_link_test(lambda_name="vodafone-1-proxy", cbc_target="cbc_a")
 
     ld_client_mock.invoke.assert_called_once_with(
         FunctionName="vodafone-1-proxy",

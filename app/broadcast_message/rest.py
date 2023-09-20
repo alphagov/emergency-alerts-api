@@ -1,7 +1,4 @@
 import iso8601
-
-# from botocore.exceptions import ClientError
-# from emergency_alerts_utils.structured_logging import LogData
 from emergency_alerts_utils.template import BroadcastMessageTemplate
 from flask import Blueprint, current_app, jsonify, request
 
@@ -143,28 +140,14 @@ def update_broadcast_message_status(service_id, broadcast_message_id):
     validate(data, update_broadcast_message_status_schema)
     broadcast_message = dao_get_broadcast_message_by_id_and_service_id(broadcast_message_id, service_id)
 
-    # try:
-    #     logData = LogData(
-    #         source="eas-app-api",
-    #         module="broadcast_message.rest",
-    #         method="update_broadcast_message_status",
-    #         serviceId=service_id,
-    #         broadcastMessageId=broadcast_message_id,
-    #     )
-    #     logData.addData("status", data["status"])
-    #     logData.log_to_cloudwatch()
-    # except ClientError as e:
-    #     current_app.logger.info("Error writing to CloudWatch: %s", e)
-
     current_app.logger.info(
-        {
-            "source": "eas-app-api",
-            "module": __name__,
-            "method": "update_broadcast_message_status",
+        "update_broadcast_message_status",
+        extra={
+            "python_module": __name__,
             "service_id": service_id,
-            "broadcastMessageId": broadcast_message_id,
+            "broadcast_message_id": broadcast_message_id,
             "status": data["status"],
-        }
+        },
     )
 
     if not broadcast_message.service.active:
