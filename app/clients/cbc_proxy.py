@@ -213,7 +213,8 @@ class CBCProxyClientBase(ABC):
 
 def _convert_lambda_payload_to_json(byte_string):
     json_string = byte_string.decode("utf-8").replace('\\"', "").replace("\\n", "").replace("\\", "")
-    return json.loads(json_string)
+    reduced_whitespace = " ".join(json_string.split())
+    return json.loads(reduced_whitespace)
 
 
 class CBCProxyOne2ManyClient(CBCProxyClientBase):
