@@ -184,7 +184,7 @@ class CBCProxyClientBase(ABC):
                 extra={
                     "python_module": __name__,
                     "status_code": response["StatusCode"],
-                    "result_payload": response.get("Payload").read(),
+                    "result_payload": _convert_lambda_payload_to_json(response.get("Payload").read()),
                 },
             )
             success = False
@@ -195,7 +195,7 @@ class CBCProxyClientBase(ABC):
                 extra={
                     "python_module": __name__,
                     "status_code": response["StatusCode"],
-                    "result_payload": response.get("Payload").read(),
+                    "result_payload": _convert_lambda_payload_to_json(response.get("Payload").read()),
                 },
             )
             success = False
@@ -209,6 +209,11 @@ class CBCProxyClientBase(ABC):
         if non_gsm_characters(content):
             return self.LANGUAGE_WELSH
         return self.LANGUAGE_ENGLISH
+
+
+def _convert_lambda_payload_to_json(byte_string):
+    json_string = byte_string.decode("utf-8").replace(r"\\n", "").replace('\\"', "").replace("\\", "")
+    return json.loads(json_string)
 
 
 class CBCProxyOne2ManyClient(CBCProxyClientBase):

@@ -513,7 +513,7 @@ def test_cbc_proxy_will_make_four_attempts_to_invoke_lambdas_if_error(mocker, cb
 
 
 @pytest.mark.parametrize("cbc", ["ee", "vodafone", "three", "o2"])
-def test_cbc_proxy_create_and_send_tries_primary_and_secondary_lambda_on_invoke_error_and_raises_if_both_invoke_error(
+def test_create_and_send_tries_primary_and_secondary_lambda_raises_exception_if_both_error(
     mocker, cbc_proxy_client, cbc
 ):
     cbc_proxy = cbc_proxy_client.get_proxy(cbc)
@@ -524,12 +524,32 @@ def test_cbc_proxy_create_and_send_tries_primary_and_secondary_lambda_on_invoke_
         create=True,
     )
 
-    ld_client_mock.invoke.return_value = {
-        "StatusCode": 400,
-        "Payload": BytesIO(
-            json.dumps({"errorMessage": "placeholder message", "errorType": "PlaceholderException"}).encode("utf-8")
-        ),
-    }
+    ld_client_mock.invoke.side_effect = [
+        {
+            "StatusCode": 400,
+            "Payload": BytesIO(
+                json.dumps({"errorMessage": "placeholder message", "errorType": "PlaceholderException"}).encode("utf-8")
+            ),
+        },
+        {
+            "StatusCode": 400,
+            "Payload": BytesIO(
+                json.dumps({"errorMessage": "placeholder message", "errorType": "PlaceholderException"}).encode("utf-8")
+            ),
+        },
+        {
+            "StatusCode": 400,
+            "Payload": BytesIO(
+                json.dumps({"errorMessage": "placeholder message", "errorType": "PlaceholderException"}).encode("utf-8")
+            ),
+        },
+        {
+            "StatusCode": 400,
+            "Payload": BytesIO(
+                json.dumps({"errorMessage": "placeholder message", "errorType": "PlaceholderException"}).encode("utf-8")
+            ),
+        },
+    ]
 
     with pytest.raises(CBCProxyRetryableException) as e:
         cbc_proxy.create_and_send_broadcast(
@@ -570,9 +590,7 @@ def test_cbc_proxy_create_and_send_tries_primary_and_secondary_lambda_on_invoke_
 
 
 @pytest.mark.parametrize("cbc", ["ee", "vodafone", "three", "o2"])
-def test_cbc_proxy_create_and_send_tries_failover_lambda_on_function_error_and_raises_if_both_function_error(
-    mocker, cbc_proxy_client, cbc
-):
+def test_create_and_send_raises_error_if_all_functions_error(mocker, cbc_proxy_client, cbc):
     cbc_proxy = cbc_proxy_client.get_proxy(cbc)
 
     ld_client_mock = mocker.patch.object(
@@ -581,11 +599,36 @@ def test_cbc_proxy_create_and_send_tries_failover_lambda_on_function_error_and_r
         create=True,
     )
 
-    ld_client_mock.invoke.return_value = {
-        "StatusCode": 200,
-        "FunctionError": "something",
-        "Payload": BytesIO(json.dumps({"errorMessage": "some message", "errorType": "SomeErrorType"}).encode("utf-8")),
-    }
+    ld_client_mock.invoke.side_effect = [
+        {
+            "StatusCode": 200,
+            "FunctionError": "something",
+            "Payload": BytesIO(
+                json.dumps({"errorMessage": "some message", "errorType": "SomeErrorType"}).encode("utf-8")
+            ),
+        },
+        {
+            "StatusCode": 200,
+            "FunctionError": "something",
+            "Payload": BytesIO(
+                json.dumps({"errorMessage": "some message", "errorType": "SomeErrorType"}).encode("utf-8")
+            ),
+        },
+        {
+            "StatusCode": 200,
+            "FunctionError": "something",
+            "Payload": BytesIO(
+                json.dumps({"errorMessage": "some message", "errorType": "SomeErrorType"}).encode("utf-8")
+            ),
+        },
+        {
+            "StatusCode": 200,
+            "FunctionError": "something",
+            "Payload": BytesIO(
+                json.dumps({"errorMessage": "some message", "errorType": "SomeErrorType"}).encode("utf-8")
+            ),
+        },
+    ]
 
     with pytest.raises(CBCProxyRetryableException) as e:
         cbc_proxy.create_and_send_broadcast(
