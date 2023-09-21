@@ -168,7 +168,7 @@ class CBCProxyClientBase(ABC):
                     "lambda_arn": f"{self._arn_prefix}{lambda_name}",
                 },
             )
-            result = self._lambda_client.invoke(
+            response = self._lambda_client.invoke(
                 FunctionName=f"{self._arn_prefix}{lambda_name}",
                 InvocationType="RequestResponse",
                 Payload=payload_bytes,
@@ -178,24 +178,24 @@ class CBCProxyClientBase(ABC):
             success = False
             return success
 
-        if result["StatusCode"] > 299:
+        if response["StatusCode"] > 299:
             current_app.logger.info(
                 f"Error calling lambda {lambda_name}",
                 extra={
                     "python_module": __name__,
-                    "status_code": result["StatusCode"],
-                    "result_payload": result.get("Payload"),
+                    "status_code": response["StatusCode"],
+                    "result_payload": response.get("Payload").read(),
                 },
             )
             success = False
 
-        elif "FunctionError" in result:
+        elif "FunctionError" in response:
             current_app.logger.info(
                 f"FunctionError calling lambda {lambda_name}",
                 extra={
                     "python_module": __name__,
-                    "status_code": result["StatusCode"],
-                    "result_payload": result.get("Payload"),
+                    "status_code": response["StatusCode"],
+                    "result_payload": response.get("Payload").read(),
                 },
             )
             success = False

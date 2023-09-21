@@ -462,9 +462,18 @@ def test_cbc_proxy_will_make_four_attempts_to_invoke_lambdas_if_error(mocker, cb
     )
 
     ld_client_mock.invoke.side_effect = [
-        {"StatusCode": 400},
-        {"StatusCode": 400},
-        {"StatusCode": 400},
+        {
+            "StatusCode": 400,
+            "Payload": BytesIO(json.dumps({"errorMessage": "", "errorType": "CBCNewConnectionError"}).encode("utf-8")),
+        },
+        {
+            "StatusCode": 400,
+            "Payload": BytesIO(json.dumps({"errorMessage": "", "errorType": "CBCNewConnectionError"}).encode("utf-8")),
+        },
+        {
+            "StatusCode": 400,
+            "Payload": BytesIO(json.dumps({"errorMessage": "", "errorType": "CBCNewConnectionError"}).encode("utf-8")),
+        },
         {"StatusCode": 200},
     ]
 
@@ -517,6 +526,9 @@ def test_cbc_proxy_create_and_send_tries_primary_and_secondary_lambda_on_invoke_
 
     ld_client_mock.invoke.return_value = {
         "StatusCode": 400,
+        "Payload": BytesIO(
+            json.dumps({"errorMessage": "placeholder message", "errorType": "PlaceholderException"}).encode("utf-8")
+        ),
     }
 
     with pytest.raises(CBCProxyRetryableException) as e:
