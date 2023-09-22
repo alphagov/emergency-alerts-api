@@ -140,8 +140,10 @@ class CBCProxyClientBase(ABC):
         if result:
             return True
 
-        # if self.secondary_lambda is None:
-        #     raise CBCProxyRetryableException(f"{self.primary_lambda} failed (secondary lambda is unavailable)")
+        if not self.secondary_lambda:
+            error_message = f"{self.primary_lambda} failed and no secondary lambda defined"
+            current_app.logger.info(error_message, extra={"python_module": __name__})
+            raise CBCProxyRetryableException(error_message)
 
         payload["cbc_target"] = self.CBC_A
         result = self._invoke_lambda(self.secondary_lambda, payload)
@@ -212,7 +214,7 @@ class CBCProxyClientBase(ABC):
 
 
 def _convert_lambda_payload_to_json(byte_string):
-    json_string = byte_string.decode("utf-8").replace('\\"', "").replace("\\n", "").replace("\\", "")
+    json_string = byte_string.decode("utf-8").replace('\\"', "").replace("\\n", "").replace("\\", "").strip()
     reduced_whitespace = " ".join(json_string.split())
     return json.loads(reduced_whitespace)
 
