@@ -34,6 +34,10 @@ legacy-bootstrap: generate-version-file ## Set up everything to run the app
 bootstrap: generate-version-file ## Set up everything to run the app
 	pip3 install -r requirements_local_utils.txt
 
+.PHONY: bootstrap-for-tests
+bootstrap-for-tests: generate-version-file ## Set up everything to run the app
+	pip3 install -r requirements_github_utils.txt
+
 .PHONY: bootstrap-with-docker
 bootstrap-with-docker: ## Build the image to run the app in Docker
 	docker build -f docker/Dockerfile -t emergency-alerts-api .

@@ -38,5 +38,5 @@ jobs:
           export ENVIRONMENT='development'
           export FLASK_APP=application.py
           set -eu
-          make bootstrap
+          make bootstrap-for-tests
           make test
