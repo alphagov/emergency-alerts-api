@@ -32,10 +32,6 @@ legacy-bootstrap: generate-version-file ## Set up everything to run the app
 
 .PHONY: bootstrap
 bootstrap: generate-version-file ## Set up everything to run the app
-	pip3 install -r requirements_github_utils.txt
-
-.PHONY: bootstrap-local
-bootstrap-local: generate-version-file
 	pip3 install -r requirements_local_utils.txt
 
 .PHONY: bootstrap-with-docker
