@@ -22,19 +22,6 @@ class BroadcastIntegrityError(Exception):
     pass
 
 
-def get_retry_delay(retry_count):
-    """
-    Given a count of retries so far, return a delay for the next one.
-    `retry_count` should be 0 the first time a task fails.
-    """
-    # TODO: replace with celery's built in exponential backoff
-
-    # 2 to the power of x. 1, 2, 4, 8, 16, 32, ...
-    delay = 2**retry_count
-    # never wait longer than 4 minutes
-    return min(delay, 240)
-
-
 def check_event_is_authorised_to_be_sent(broadcast_event, provider):
     if not broadcast_event.service.active:
         raise BroadcastIntegrityError(
@@ -129,13 +116,22 @@ def send_broadcast_event(broadcast_event_id):
         )
 
 
-# max_retries=None: retry forever
-@notify_celery.task(bind=True, name="send-broadcast-provider-message", max_retries=None)
+@notify_celery.task(
+    bind=True,
+    name="send-broadcast-provider-message",
+    autoretry_for=(CBCProxyRetryableException,),
+    retry_backoff=True,
+    max_retries=5,
+)
 def send_broadcast_provider_message(self, broadcast_event_id, provider):
     if not current_app.config["CBC_PROXY_ENABLED"]:
         current_app.logger.info(
-            "CBC Proxy disabled, not sending broadcast_provider_message for "
-            f"broadcast_event_id {broadcast_event_id} with provider {provider}"
+            "CBC Proxy disabled, unable to send broadcast_provider_message",
+            extra={
+                "broadcast_event_id": broadcast_event_id,
+                "cbc_provider": provider,
+                "python_module": __name__,
+            },
         )
         return
 
@@ -154,63 +150,54 @@ def send_broadcast_provider_message(self, broadcast_event_id, provider):
         formatted_message_number = format_sequential_number(broadcast_provider_message.message_number)
 
     current_app.logger.info(
-        f"Invoking cbc proxy to send broadcast_provider_message with ID of {broadcast_provider_message.id} "
-        f"and broadcast_event ID of {broadcast_event_id} "
-        f"msgType {broadcast_event.message_type}"
+        "Invoking cbc proxy to send broadcast_provider_message",
+        extra={
+            "broadcast_provider_message_id": broadcast_provider_message.id,
+            "broadcast_event_id": broadcast_event_id,
+            "message_type": broadcast_event.message_type,
+            "python_module": __name__,
+        },
     )
 
     areas = [{"polygon": polygon} for polygon in broadcast_event.transmitted_areas["simple_polygons"]]
 
     cbc_proxy_provider_client = cbc_proxy_client.get_proxy(provider)
 
-    try:
-        if broadcast_event.message_type == BroadcastEventMessageType.ALERT:
-            cbc_proxy_provider_client.create_and_send_broadcast(
-                identifier=str(broadcast_provider_message.id),
-                message_number=formatted_message_number,
-                headline="GOV.UK Emergency Alert",
-                description=broadcast_event.transmitted_content["body"],
-                areas=areas,
-                sent=broadcast_event.sent_at_as_cap_datetime_string,
-                expires=broadcast_event.transmitted_finishes_at_as_cap_datetime_string,
-                channel=broadcast_event.service.broadcast_channel,
-            )
-        elif broadcast_event.message_type == BroadcastEventMessageType.UPDATE:
-            cbc_proxy_provider_client.update_and_send_broadcast(
-                identifier=str(broadcast_provider_message.id),
-                message_number=formatted_message_number,
-                headline="GOV.UK Emergency Alert",
-                description=broadcast_event.transmitted_content["body"],
-                areas=areas,
-                previous_provider_messages=broadcast_event.get_earlier_provider_messages(provider),
-                sent=broadcast_event.sent_at_as_cap_datetime_string,
-                expires=broadcast_event.transmitted_finishes_at_as_cap_datetime_string,
-                # We think an alert update should always go out on the same channel that created the alert
-                # We recognise there is a small risk with this code here that if the services channel was
-                # changed between an alert being sent out and then updated, then something might go wrong
-                # but we are relying on service channels changing almost never, and not mid incident
-                # We may consider in the future, changing this such that we store the channel a broadcast was
-                # sent on on the broadcast message itself and pick the value from there instead of the service
-                channel=broadcast_event.service.broadcast_channel,
-            )
-        elif broadcast_event.message_type == BroadcastEventMessageType.CANCEL:
-            cbc_proxy_provider_client.cancel_broadcast(
-                identifier=str(broadcast_provider_message.id),
-                message_number=formatted_message_number,
-                previous_provider_messages=broadcast_event.get_earlier_provider_messages(provider),
-                sent=broadcast_event.sent_at_as_cap_datetime_string,
-            )
-    except CBCProxyRetryableException as exc:
-        delay = get_retry_delay(self.request.retries)
-        current_app.logger.exception(
-            f"Retrying send_broadcast_provider_message for broadcast event {broadcast_event_id}, "
-            f"provider message {broadcast_provider_message.id}, provider {provider} in {delay} seconds"
+    if broadcast_event.message_type == BroadcastEventMessageType.ALERT:
+        cbc_proxy_provider_client.create_and_send_broadcast(
+            identifier=str(broadcast_provider_message.id),
+            message_number=formatted_message_number,
+            headline="GOV.UK Emergency Alert",
+            description=broadcast_event.transmitted_content["body"],
+            areas=areas,
+            sent=broadcast_event.sent_at_as_cap_datetime_string,
+            expires=broadcast_event.transmitted_finishes_at_as_cap_datetime_string,
+            channel=broadcast_event.service.broadcast_channel,
         )
-
-        self.retry(
-            exc=exc,
-            countdown=delay,
-            queue=QueueNames.BROADCASTS,
+    elif broadcast_event.message_type == BroadcastEventMessageType.UPDATE:
+        cbc_proxy_provider_client.update_and_send_broadcast(
+            identifier=str(broadcast_provider_message.id),
+            message_number=formatted_message_number,
+            headline="GOV.UK Emergency Alert",
+            description=broadcast_event.transmitted_content["body"],
+            areas=areas,
+            previous_provider_messages=broadcast_event.get_earlier_provider_messages(provider),
+            sent=broadcast_event.sent_at_as_cap_datetime_string,
+            expires=broadcast_event.transmitted_finishes_at_as_cap_datetime_string,
+            # We think an alert update should always go out on the same channel that created the alert
+            # We recognise there is a small risk with this code here that if the services channel was
+            # changed between an alert being sent out and then updated, then something might go wrong
+            # but we are relying on service channels changing almost never, and not mid incident
+            # We may consider in the future, changing this such that we store the channel a broadcast was
+            # sent on on the broadcast message itself and pick the value from there instead of the service
+            channel=broadcast_event.service.broadcast_channel,
+        )
+    elif broadcast_event.message_type == BroadcastEventMessageType.CANCEL:
+        cbc_proxy_provider_client.cancel_broadcast(
+            identifier=str(broadcast_provider_message.id),
+            message_number=formatted_message_number,
+            previous_provider_messages=broadcast_event.get_earlier_provider_messages(provider),
+            sent=broadcast_event.sent_at_as_cap_datetime_string,
         )
 
     update_broadcast_provider_message_status(broadcast_provider_message, status=BroadcastProviderMessageStatus.ACK)
@@ -218,4 +205,5 @@ def send_broadcast_provider_message(self, broadcast_event_id, provider):
 
 @notify_celery.task(name="trigger-link-test")
 def trigger_link_test(provider):
+    current_app.logger.info("trigger_link_test", extra={"python_module": __name__, "target_provider": provider})
     cbc_proxy_client.get_proxy(provider).send_link_test()

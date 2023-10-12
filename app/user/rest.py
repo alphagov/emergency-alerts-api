@@ -68,7 +68,9 @@ def handle_integrity_error(exc):
     """
     if "ck_user_has_mobile_or_other_auth" in str(exc):
         # we don't expect this to trip, so still log error
-        current_app.logger.exception("Check constraint ck_user_has_mobile_or_other_auth triggered")
+        current_app.logger.exception(
+            "Check constraint ck_user_has_mobile_or_other_auth triggered", extra={"python_module": __name__}
+        )
         return jsonify(result="error", message="Mobile number must be set if auth_type is set to sms_auth"), 400
 
     raise exc
@@ -242,10 +244,12 @@ def send_user_2fa_code(user_id, code_type):
 
     if count_user_verify_codes(user_to_send_to) >= current_app.config.get("MAX_VERIFY_CODE_COUNT"):
         # Prevent more than `MAX_VERIFY_CODE_COUNT` active verify codes at a time
-        current_app.logger.warning("Too many verify codes created for user {}".format(user_to_send_to.id))
+        current_app.logger.warning(
+            "Too many verify codes created", extra={"user_id": user_to_send_to.id, "python_module": __name__}
+        )
     else:
         data = request.get_json()
-        current_app.logger.info(data)
+        current_app.logger.info("2FA code requested", extra={"request_data": data, "python_module": __name__})
         if code_type == SMS_TYPE:
             validate(data, post_send_user_sms_code_schema)
             send_user_sms_code(user_to_send_to, data)
@@ -289,8 +293,6 @@ def send_user_email_code(user_to_send_to, data):
 
 
 def create_2fa_code(template_id, code_type, user_to_send_to, secret_code, recipient, personalisation):
-    current_app.logger.info(f"Create_2fa_code for template {template_id}")
-
     # save the code in the VerifyCode table
     create_user_code(user_to_send_to, secret_code, code_type)
 
@@ -305,11 +307,16 @@ def create_2fa_code(template_id, code_type, user_to_send_to, secret_code, recipi
         "reply_to": current_app.config["EAS_EMAIL_REPLY_TO_ID"] if code_type == EMAIL_TYPE else None,
     }
 
+    current_app.logger.info("create_2fa_code", extra={"python_module": __name__, "notification": notification})
+
     response = notify_send(notification)
 
     if response is HTTPError:
-        current_app.logger.error(response)
-    current_app.logger.info(response)
+        current_app.logger.error(
+            "Error sending 2FA notification", extra={"notify_response": response, "python_module": __name__}
+        )
+    else:
+        current_app.logger.info("2FA notification sent", extra={"notify_response": response, "python_module": __name__})
 
 
 @user_blueprint.route("/<uuid:user_id>/change-email-verification", methods=["POST"])
@@ -328,6 +335,15 @@ def send_user_confirm_new_email(user_id):
             "feedback_url": current_app.config["ADMIN_EXTERNAL_URL"] + "/support",
         },
     }
+
+    current_app.logger.info(
+        "send_user_confirm_new_email",
+        extra={
+            "python_module": __name__,
+            "user_id": user_id,
+            "notification": notification,
+        },
+    )
 
     notify_send(notification)
 
@@ -355,6 +371,15 @@ def send_new_user_email_verification(user_id):
         },
     }
 
+    current_app.logger.info(
+        "send_new_user_email_verification",
+        extra={
+            "python_module": __name__,
+            "user_id": user_id,
+            "notification": notification,
+        },
+    )
+
     notify_send(notification)
 
     return jsonify({}), 204
@@ -375,6 +400,15 @@ def send_already_registered_email(user_id):
             "feedback_url": current_app.config["ADMIN_EXTERNAL_URL"] + "/support",
         },
     }
+
+    current_app.logger.info(
+        "send_already_registered_email",
+        extra={
+            "python_module": __name__,
+            "user_id": user_id,
+            "notification": notification,
+        },
+    )
 
     notify_send(notification)
 
@@ -403,6 +437,16 @@ def set_permissions(user_id, service_id):
     permission_list = [
         Permission(service_id=service_id, user_id=user_id, permission=p["permission"]) for p in data["permissions"]
     ]
+
+    current_app.logger.info(
+        "set_permissions",
+        extra={
+            "python_module": __name__,
+            "user_id": user_id,
+            "service_id": service_id,
+            "requested_permissions": data["permissions"],
+        },
+    )
 
     permission_dao.set_user_service_permission(user, service, permission_list, _commit=True, replace=True)
 
@@ -471,6 +515,8 @@ def send_user_reset_password():
         },
     }
 
+    current_app.logger.info("send_user_reset_password", extra={"python_module": __name__, "notification": notification})
+
     notify_send(notification)
 
     return jsonify({}), 204
@@ -483,6 +529,8 @@ def update_password(user_id):
     password = req_json.get("_password")
 
     user_update_password_schema_load_json.load(req_json)
+
+    current_app.logger.info("update_password", extra={"python_module": __name__, "user_id": user_id})
 
     update_user_password(user, password)
     return jsonify(data=user.serialize()), 200

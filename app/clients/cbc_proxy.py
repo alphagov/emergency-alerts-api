@@ -5,8 +5,6 @@ from abc import ABC, abstractmethod
 
 import boto3
 import botocore
-from botocore.exceptions import ClientError
-from emergency_alerts_utils.structured_logging import LogData
 from emergency_alerts_utils.template import non_gsm_characters
 from flask import current_app
 from sqlalchemy.schema import Sequence
@@ -66,14 +64,17 @@ class CBCProxyClient:
 
 
 class CBCProxyClientBase(ABC):
+    CBC_A = "cbc_a"
+    CBC_B = "cbc_b"
+
     @property
     @abstractmethod
-    def lambda_name(self):
+    def primary_lambda(self):
         pass
 
     @property
     @abstractmethod
-    def failover_lambda_name(self):
+    def secondary_lambda(self):
         pass
 
     @property
@@ -91,12 +92,15 @@ class CBCProxyClientBase(ABC):
         self._arn_prefix = arn_prefix
 
     def send_link_test(self):
-        self._send_link_test(self.lambda_name)
-        self._send_link_test(self.failover_lambda_name)
+        self._send_link_test(self.primary_lambda, self.CBC_A)
+        self._send_link_test(self.primary_lambda, self.CBC_B)
+        self._send_link_test(self.secondary_lambda, self.CBC_A)
+        self._send_link_test(self.secondary_lambda, self.CBC_B)
 
     def _send_link_test(
         self,
         lambda_name,
+        cbc_target,
     ):
         pass
 
@@ -125,62 +129,76 @@ class CBCProxyClientBase(ABC):
     ):
         pass
 
-    def _invoke_lambda_with_failover(self, payload):
-        result = self._invoke_lambda(self.lambda_name, payload)
+    def _invoke_lambdas_with_routing(self, payload):
+        payload["cbc_target"] = self.CBC_A
+        result = self._invoke_lambda(self.primary_lambda, payload)
+        if result:
+            return True
 
-        if not result:
-            try:
-                logData = LogData(source="eas-app-api", module="cbc_proxy", method="_invoke_lambda_with_failover")
-                logData.addData(
-                    "LambdaError",
-                    f"Primary Lambda {self.lambda_name} failed. Invoking failover {self.failover_lambda_name}",
-                )
-                logData.log_to_cloudwatch()
-            except ClientError as e:
-                current_app.logger.info("Error writing to CloudWatch: %s", e)
+        payload["cbc_target"] = self.CBC_B
+        result = self._invoke_lambda(self.primary_lambda, payload)
+        if result:
+            return True
 
-            if self.failover_lambda_name is not None:
-                failover_result = self._invoke_lambda(self.failover_lambda_name, payload)
-                if not failover_result:
-                    try:
-                        logData = LogData(
-                            source="eas-app-api", module="cbc_proxy", method="_invoke_lambda_with_failover"
-                        )
-                        logData.addData("LambdaError", f"Secondary Lambda {self.lambda_name} failed")
-                        logData.log_to_cloudwatch()
-                    except ClientError as e:
-                        current_app.logger.info("Error writing to CloudWatch: %s", e)
+        if not self.secondary_lambda:
+            error_message = f"{self.primary_lambda} failed and no secondary lambda defined"
+            current_app.logger.info(error_message, extra={"python_module": __name__})
+            raise CBCProxyRetryableException(error_message)
 
-                    raise CBCProxyRetryableException(
-                        f"Lambda failed for both {self.lambda_name} and {self.failover_lambda_name}"
-                    )
+        payload["cbc_target"] = self.CBC_A
+        result = self._invoke_lambda(self.secondary_lambda, payload)
+        if result:
+            return True
 
-        return result
+        payload["cbc_target"] = self.CBC_B
+        result = self._invoke_lambda(self.secondary_lambda, payload)
+        if result:
+            return True
+
+        error_message = f"{self.primary_lambda} and {self.secondary_lambda} lambdas failed"
+        current_app.logger.info(error_message, extra={"python_module": __name__})
+        raise CBCProxyRetryableException(error_message)
 
     def _invoke_lambda(self, lambda_name, payload):
         payload_bytes = bytes(json.dumps(payload), encoding="utf8")
         try:
-            current_app.logger.info(f"Calling lambda {lambda_name} with payload {str(payload)[:1000]}")
-
-            result = self._lambda_client.invoke(
+            current_app.logger.info(
+                f"Calling lambda {lambda_name}",
+                extra={
+                    "lambda_payload": str(payload)[:1000],
+                    "lambda_invocation_type": "RequestResponse",
+                    "lambda_arn": f"{self._arn_prefix}{lambda_name}",
+                },
+            )
+            response = self._lambda_client.invoke(
                 FunctionName=f"{self._arn_prefix}{lambda_name}",
                 InvocationType="RequestResponse",
                 Payload=payload_bytes,
             )
         except botocore.exceptions.ClientError:
-            current_app.logger.error(f"Boto ClientError calling lambda {lambda_name}")
+            current_app.logger.error(f"Boto3 ClientError on lambda {lambda_name}", extra={"python_module": __name__})
             success = False
             return success
 
-        if result["StatusCode"] > 299:
+        if response["StatusCode"] > 299:
             current_app.logger.info(
-                f"Error calling lambda {lambda_name} with status code { result['StatusCode']}, {result.get('Payload')}"
+                f"Error calling lambda {lambda_name}",
+                extra={
+                    "python_module": __name__,
+                    "status_code": response["StatusCode"],
+                    "result_payload": _convert_lambda_payload_to_json(response.get("Payload").read()),
+                },
             )
             success = False
 
-        elif "FunctionError" in result:
+        elif "FunctionError" in response:
             current_app.logger.info(
-                f"Error calling lambda {lambda_name} with function error { result['Payload'].read() }"
+                f"FunctionError calling lambda {lambda_name}",
+                extra={
+                    "python_module": __name__,
+                    "status_code": response["StatusCode"],
+                    "result_payload": _convert_lambda_payload_to_json(response.get("Payload").read()),
+                },
             )
             success = False
 
@@ -195,6 +213,12 @@ class CBCProxyClientBase(ABC):
         return self.LANGUAGE_ENGLISH
 
 
+def _convert_lambda_payload_to_json(byte_string):
+    json_string = byte_string.decode("utf-8").replace('\\"', "").replace("\\n", "").replace("\\", "").strip()
+    reduced_whitespace = " ".join(json_string.split())
+    return json.loads(reduced_whitespace)
+
+
 class CBCProxyOne2ManyClient(CBCProxyClientBase):
     LANGUAGE_ENGLISH = "en-GB"
     LANGUAGE_WELSH = "cy-GB"
@@ -202,12 +226,18 @@ class CBCProxyOne2ManyClient(CBCProxyClientBase):
     def _send_link_test(
         self,
         lambda_name,
+        cbc_target,
     ):
         """
         link test - open up a connection to a specific provider, and send them an xml payload with a <msgType> of
         test.
         """
-        payload = {"message_type": "test", "identifier": str(uuid.uuid4()), "message_format": "cap"}
+        payload = {
+            "message_type": "test",
+            "identifier": str(uuid.uuid4()),
+            "message_format": "cap",
+            "cbc_target": cbc_target,
+        }
 
         self._invoke_lambda(lambda_name=lambda_name, payload=payload)
 
@@ -226,7 +256,7 @@ class CBCProxyOne2ManyClient(CBCProxyClientBase):
             "language": self.infer_language_from(description),
             "channel": channel,
         }
-        self._invoke_lambda_with_failover(payload=payload)
+        self._invoke_lambdas_with_routing(payload=payload)
 
     def cancel_broadcast(self, identifier, previous_provider_messages, sent, message_number=None):
         payload = {
@@ -239,27 +269,27 @@ class CBCProxyOne2ManyClient(CBCProxyClientBase):
             ],
             "sent": sent,
         }
-        self._invoke_lambda_with_failover(payload=payload)
+        self._invoke_lambdas_with_routing(payload=payload)
 
 
 class CBCProxyEE(CBCProxyOne2ManyClient):
-    lambda_name = "ee-1-proxy"
-    failover_lambda_name = "ee-2-proxy" if os.environ.get("ENVIRONMENT") != "staging" else None
+    primary_lambda = "ee-1-proxy"
+    secondary_lambda = "ee-2-proxy" if os.environ.get("ENVIRONMENT") != "staging" else None
 
 
 class CBCProxyThree(CBCProxyOne2ManyClient):
-    lambda_name = "three-1-proxy"
-    failover_lambda_name = "three-2-proxy"
+    primary_lambda = "three-1-proxy"
+    secondary_lambda = "three-2-proxy"
 
 
 class CBCProxyO2(CBCProxyOne2ManyClient):
-    lambda_name = "o2-1-proxy"
-    failover_lambda_name = "o2-2-proxy"
+    primary_lambda = "o2-1-proxy"
+    secondary_lambda = "o2-2-proxy"
 
 
 class CBCProxyVodafone(CBCProxyClientBase):
-    lambda_name = "vodafone-1-proxy"
-    failover_lambda_name = "vodafone-2-proxy"
+    primary_lambda = "vodafone-1-proxy"
+    secondary_lambda = "vodafone-2-proxy"
 
     LANGUAGE_ENGLISH = "English"
     LANGUAGE_WELSH = "Welsh"
@@ -267,6 +297,7 @@ class CBCProxyVodafone(CBCProxyClientBase):
     def _send_link_test(
         self,
         lambda_name,
+        cbc_target,
     ):
         """
         link test - open up a connection to a specific provider, and send them an xml payload with a <msgType> of
@@ -283,6 +314,7 @@ class CBCProxyVodafone(CBCProxyClientBase):
             "identifier": str(uuid.uuid4()),
             "message_number": formatted_seq_number,
             "message_format": "ibag",
+            "cbc_target": cbc_target,
         }
 
         self._invoke_lambda(lambda_name=lambda_name, payload=payload)
@@ -303,7 +335,7 @@ class CBCProxyVodafone(CBCProxyClientBase):
             "language": self.infer_language_from(description),
             "channel": channel,
         }
-        self._invoke_lambda_with_failover(payload=payload)
+        self._invoke_lambdas_with_routing(payload=payload)
 
     def cancel_broadcast(self, identifier, previous_provider_messages, sent, message_number):
         payload = {
@@ -321,4 +353,4 @@ class CBCProxyVodafone(CBCProxyClientBase):
             ],
             "sent": sent,
         }
-        self._invoke_lambda_with_failover(payload=payload)
+        self._invoke_lambdas_with_routing(payload=payload)

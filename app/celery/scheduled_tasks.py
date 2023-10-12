@@ -25,7 +25,7 @@ def run_health_check():
         with open("/eas/emergency-alerts-api/celery-beat-healthcheck", mode="w") as file:
             file.write(str(time_stamp))
     except Exception:
-        current_app.logger.exception("Unable to generate health-check timestamp")
+        current_app.logger.exception("Unable to generate health-check timestamp", extra={"python_module": __name__})
         raise
 
 
@@ -35,10 +35,11 @@ def delete_verify_codes():
         start = datetime.utcnow()
         deleted = delete_codes_older_created_more_than_a_day_ago()
         current_app.logger.info(
-            "Delete job started {} finished {} deleted {} verify codes".format(start, datetime.utcnow(), deleted)
+            f"Delete job started {start} finished {datetime.utcnow()} deleted {deleted} verify codes",
+            extra={"python_module": __name__},
         )
     except SQLAlchemyError:
-        current_app.logger.exception("Failed to delete verify codes")
+        current_app.logger.exception("Failed to delete verify codes", extra={"python_module": __name__})
         raise
 
 
@@ -49,16 +50,20 @@ def delete_invitations():
         deleted_invites = delete_invitations_created_more_than_two_days_ago()
         deleted_invites += delete_org_invitations_created_more_than_two_days_ago()
         current_app.logger.info(
-            "Delete job started {} finished {} deleted {} invitations".format(start, datetime.utcnow(), deleted_invites)
+            f"Delete job started {start} finished {datetime.utcnow()} deleted {deleted_invites} invitations",
+            extra={"python_module": __name__},
         )
     except SQLAlchemyError:
-        current_app.logger.exception("Failed to delete invitations")
+        current_app.logger.exception("Failed to delete invitations", extra={"python_module": __name__})
         raise
 
 
 @notify_celery.task(name="trigger-link-tests")
 def trigger_link_tests():
     if current_app.config["CBC_PROXY_ENABLED"]:
+        current_app.logger.info(
+            "trigger_link_tests", extra={"python_module": __name__, "target_queue": QueueNames.BROADCASTS}
+        )
         for cbc_name in current_app.config["ENABLED_CBCS"]:
             trigger_link_test.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
 
@@ -76,11 +81,27 @@ def auto_expire_broadcast_messages():
     db.session.commit()
 
     if expired_broadcasts:
+        current_app.logger.info(
+            "auto_expire_broadcast_messages",
+            extra={
+                "python_module": __name__,
+                "send_task": TaskNames.PUBLISH_GOVUK_ALERTS,
+                "target_queue": QueueNames.GOVUK_ALERTS,
+            },
+        )
         notify_celery.send_task(name=TaskNames.PUBLISH_GOVUK_ALERTS, queue=QueueNames.GOVUK_ALERTS)
 
 
 @notify_celery.task(name="remove-yesterdays-planned-tests-on-govuk-alerts")
 def remove_yesterdays_planned_tests_on_govuk_alerts():
+    current_app.logger.info(
+        "remove_yesterdays_planned_tests_on_govuk_alerts",
+        extra={
+            "python_module": __name__,
+            "send_task": TaskNames.PUBLISH_GOVUK_ALERTS,
+            "target_queue": QueueNames.GOVUK_ALERTS,
+        },
+    )
     notify_celery.send_task(name=TaskNames.PUBLISH_GOVUK_ALERTS, queue=QueueNames.GOVUK_ALERTS)
 
 
@@ -92,6 +113,8 @@ def delete_old_records_from_events_table():
 
     deleted_count = event_query.delete()
 
-    current_app.logger.info(f"Deleted {deleted_count} historical events from before {delete_events_before}.")
+    current_app.logger.info(
+        f"Deleted {deleted_count} events older than {delete_events_before}.", extra={"python_module": __name__}
+    )
 
     db.session.commit()

@@ -8,7 +8,6 @@ from freezegun import freeze_time
 from app.celery.broadcast_message_tasks import (
     BroadcastIntegrityError,
     check_event_makes_sense_in_sequence,
-    get_retry_delay,
     send_broadcast_event,
     send_broadcast_provider_message,
     trigger_link_test,
@@ -481,55 +480,9 @@ def test_send_broadcast_provider_message_errors(mocker, sample_broadcast_service
         expires=event.transmitted_finishes_at_as_cap_datetime_string,
         channel="severe",
     )
-    mock_retry.assert_called_once_with(countdown=1, exc=mock_create_broadcast.side_effect, queue="broadcast-tasks")
+    mock_retry.assert_called_once_with(exc=mock_create_broadcast.side_effect, countdown=ANY)
     broadcast_provider_message = event.get_provider_message(provider)
     assert broadcast_provider_message.status == BroadcastProviderMessageStatus.SENDING
-
-
-@pytest.mark.parametrize(
-    "num_retries, expected_countdown",
-    [
-        (0, 1),
-        (5, 32),
-        (20, 240),
-    ],
-)
-def test_send_broadcast_provider_message_delays_retry_exponentially(
-    mocker, sample_broadcast_service, num_retries, expected_countdown
-):
-    template = create_template(sample_broadcast_service, BROADCAST_TYPE)
-
-    broadcast_message = create_broadcast_message(template, status=BroadcastStatusType.BROADCASTING)
-    event = create_broadcast_event(broadcast_message)
-
-    mock_create_broadcast = mocker.patch(
-        "app.clients.cbc_proxy.CBCProxyEE.create_and_send_broadcast",
-        side_effect=CBCProxyRetryableException("oh no"),
-    )
-    mock_retry = mocker.patch(
-        "app.celery.broadcast_message_tasks.send_broadcast_provider_message.retry", side_effect=Retry
-    )
-
-    # patch celery request context as shown here: https://stackoverflow.com/a/59870468
-    mock_celery_task_request_context = mocker.patch("celery.app.task.Task.request")
-    mock_celery_task_request_context.retries = num_retries
-
-    with pytest.raises(Retry):
-        send_broadcast_provider_message(provider="ee", broadcast_event_id=str(event.id))
-
-    mock_create_broadcast.assert_called_once_with(
-        identifier=ANY,
-        message_number=mocker.ANY,
-        headline="GOV.UK Emergency Alert",
-        description="this is an emergency broadcast message",
-        areas=[],
-        sent=event.sent_at_as_cap_datetime_string,
-        expires=event.transmitted_finishes_at_as_cap_datetime_string,
-        channel="severe",
-    )
-    mock_retry.assert_called_once_with(
-        countdown=expected_countdown, exc=mock_create_broadcast.side_effect, queue="broadcast-tasks"
-    )
 
 
 @pytest.mark.parametrize(
@@ -553,22 +506,6 @@ def test_trigger_link_tests_invokes_cbc_proxy_client(
 
     trigger_link_test(provider)
     assert mock_send_link_test.called_once()
-
-
-@pytest.mark.parametrize(
-    "retry_count, expected_delay",
-    [
-        (0, 1),
-        (1, 2),
-        (2, 4),
-        (7, 128),
-        (8, 240),
-        (9, 240),
-        (1000, 240),
-    ],
-)
-def test_get_retry_delay_has_capped_backoff(retry_count, expected_delay):
-    assert get_retry_delay(retry_count) == expected_delay
 
 
 @freeze_time("2021-01-01 12:00")
