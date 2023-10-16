@@ -209,7 +209,6 @@ class CBCProxyClientBase(ABC):
                 extra={
                     "python_module": __name__,
                     "status_code": response["StatusCode"],
-                    "result_payload": _convert_lambda_payload_to_json(response.get("Payload").read()),
                 },
             )
             success = True
