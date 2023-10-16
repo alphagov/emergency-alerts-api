@@ -203,6 +203,14 @@ class CBCProxyClientBase(ABC):
             success = False
 
         else:
+            target = payload["cbc_target"]
+            current_app.logger.info(
+                f"Success calling lambda {lambda_name} with CBC target {target}",
+                extra={
+                    "python_module": __name__,
+                    "status_code": response["StatusCode"],
+                },
+            )
             success = True
 
         return success
