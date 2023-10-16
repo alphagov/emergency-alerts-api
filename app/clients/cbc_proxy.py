@@ -205,7 +205,7 @@ class CBCProxyClientBase(ABC):
         else:
             target = payload["cbc_target"]
             current_app.logger.info(
-                f"Success: Lambda {lambda_name}, CBC target {target}",
+                f"Success calling lambda {lambda_name} with CBC target {target}",
                 extra={
                     "python_module": __name__,
                     "status_code": response["StatusCode"],
