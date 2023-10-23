@@ -1,5 +1,5 @@
 #! /bin/sh
-CLUSTER_NAME=eas-app-cluster
+CLUSTER_NAME=$RESOURCE_PREFIX-cluster
 
 while [ $# -gt 0 ]; do
     if [[ $1 == *"--"* ]]; then
@@ -20,7 +20,7 @@ function update_task_defintion(){
         --status ACTIVE \
         --sort DESC \
         --max-items 1 \
-        --family-prefix eas-app-$SERVICE \
+        --family-prefix $RESOURCE_PREFIX-$SERVICE \
         --output json \
     | jq '.taskDefinitionArns[0]' | tr -d '"')
     
@@ -33,7 +33,7 @@ function update_task_defintion(){
         echo "=============== UPDATING SERVICE ==============="
         aws ecs update-service \
         --cluster $CLUSTER_NAME \
-        --service eas-app-$SERVICE \
+        --service $RESOURCE_PREFIX-$SERVICE \
         --task-definition $latest_task_def \
         --force-new-deployment
     fi
