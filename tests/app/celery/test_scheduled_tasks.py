@@ -1,3 +1,4 @@
+import time
 from collections import namedtuple
 from datetime import datetime, timedelta
 from unittest.mock import call
@@ -13,9 +14,10 @@ from app.celery.scheduled_tasks import (
     delete_verify_codes,
     remove_yesterdays_planned_tests_on_govuk_alerts,
     trigger_link_tests,
+    validate_functional_test_account_emails,
 )
 from app.config import QueueNames, TaskNames
-from app.models import BroadcastStatusType, Event
+from app.models import BroadcastStatusType, Event, User
 from tests.app.db import create_broadcast_message
 from tests.conftest import set_config
 
@@ -130,3 +132,30 @@ def test_delete_old_records_from_events_table(notify_db_session):
     events = Event.query.filter(Event.event_type == "test_event").all()
     assert len(events) == 1
     assert events[0].created_at == recent_datetime
+
+
+def test_validate_functional_test_account_emails(notify_db_session):
+    user1 = User(
+        name="Test User 1",
+        email_address="notify-tests-preview+local-broadcast1@digital.cabinet-office.gov.uk",
+        password="password",
+    )
+    user2 = User(
+        name="Test User 2",
+        email_address="notify-tests-preview+local-broadcast2@digital.cabinet-office.gov.uk",
+        password="password",
+    )
+
+    notify_db_session.add(user1)
+    notify_db_session.add(user2)
+    notify_db_session.commit()
+
+    now = datetime.utcnow()
+    time.sleep(1)
+
+    validate_functional_test_account_emails()
+
+    users = User.query.filter(User.email_address.ilike("notify-tests-preview+local-broadcast%")).all()
+
+    assert users[0].email_access_validated_at > now
+    assert users[1].email_access_validated_at > now
