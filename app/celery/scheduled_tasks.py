@@ -14,7 +14,11 @@ from app.dao.invited_org_user_dao import (
 from app.dao.invited_user_dao import (
     delete_invitations_created_more_than_two_days_ago,
 )
-from app.dao.users_dao import delete_codes_older_created_more_than_a_day_ago
+from app.dao.users_dao import (
+    delete_codes_older_created_more_than_a_day_ago,
+    get_user_by_email,
+    save_model_user,
+)
 from app.models import BroadcastMessage, BroadcastStatusType, Event
 
 
@@ -114,7 +118,32 @@ def delete_old_records_from_events_table():
     deleted_count = event_query.delete()
 
     current_app.logger.info(
-        f"Deleted {deleted_count} events older than {delete_events_before}.", extra={"python_module": __name__}
+        f"Deleted {deleted_count} events older than {delete_events_before}.",
+        extra={
+            "python_module": __name__,
+            "celery_task": "delete-old-records-from-events-table",
+            "target_queue": QueueNames.PERIODIC,
+        },
     )
 
     db.session.commit()
+
+
+@notify_celery.task(name="validate-functional-test-account-emails")
+def validate_functional_test_account_emails():
+    try:
+        user1 = get_user_by_email("notify-tests-preview+local-broadcast1@digital.cabinet-office.gov.uk")
+        save_model_user(user1, validated_email_access=True)
+        user2 = get_user_by_email("notify-tests-preview+local-broadcast2@digital.cabinet-office.gov.uk")
+        save_model_user(user2, validated_email_access=True)
+    except SQLAlchemyError as e:
+        current_app.logger.exception(e)
+    else:
+        current_app.logger.info(
+            f"Functional test account emails validated on {datetime.utcnow().date}",
+            extra={
+                "python_module": __name__,
+                "celery_task": "validate-functional-test-account-emails",
+                "target_queue": QueueNames.PERIODIC,
+            },
+        )
