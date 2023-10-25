@@ -139,11 +139,15 @@ def test_validate_functional_test_account_emails(notify_db_session):
         name="Test User 1",
         email_address="notify-tests-preview+local-broadcast1@digital.cabinet-office.gov.uk",
         password="password",
+        auth_type="sms_auth",
+        mobile_number="07700900000",
     )
     user2 = User(
         name="Test User 2",
         email_address="notify-tests-preview+local-broadcast2@digital.cabinet-office.gov.uk",
         password="password",
+        auth_type="sms_auth",
+        mobile_number="07700900000",
     )
 
     notify_db_session.add(user1)
