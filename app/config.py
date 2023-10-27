@@ -191,6 +191,11 @@ class Config(object):
                 "schedule": crontab(hour=3, minute=00),
                 "options": {"queue": QueueNames.PERIODIC},
             },
+            "validate-functional-test-account-emails": {
+                "task": "validate-functional-test-account-emails",
+                "schedule": crontab(day_of_month="1"),
+                "options": {"queue": QueueNames.PERIODIC},
+            },
         },
     }
 
