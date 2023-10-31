@@ -1,5 +1,5 @@
 #! /bin/sh
-
+timestamp_filename='/eas/emergency-alerts-api/celery-beat-healthcheck'
 echo "Start script executing for celery beat.."
 
 function configure_container_role(){
@@ -16,9 +16,17 @@ function run_celery_beat(){
   . $VENV_API/bin/activate && make run-celery-beat
 }
 
+function update_timestamp(){
+    echo $(date +%s) > $timestamp_filename
+}
+
 if [[ ! -z $DEBUG ]]; then
     echo "Starting in debug mode.."
-    while true; do echo 'Debug mode active..'; sleep 30; done
+    while true; do
+        echo 'Debug mode active..';
+        update_timestamp
+        sleep 10;
+    done
 else
   configure_container_role
   run_celery
