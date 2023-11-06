@@ -89,7 +89,7 @@ class Config(object):
     # Default config values ###
     ###########################
 
-    HOST = "development"
+    HOST = "local"
     AWS_REGION = "eu-west-2"
     INVITATION_EXPIRATION_DAYS = 2
     NOTIFY_APP_NAME = "api"
@@ -282,7 +282,7 @@ class Development(Config):
     MMG_INBOUND_SMS_AUTH = ["testkey"]
     MMG_INBOUND_SMS_USERNAME = ["username"]
 
-    HOST = "development"
+    HOST = "hosted"
     NOTIFY_LOG_PATH = "application.log"
     NOTIFY_EMAIL_DOMAIN = "notify.tools"
 
@@ -453,6 +453,7 @@ class Test(Development):
 
 
 configs = {
+    "local": Config,
     "development": Development,
     "hosted": Hosted,
     "test": Test,

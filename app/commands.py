@@ -791,7 +791,7 @@ def populate_annual_billing_with_defaults(year, missing_services_only):
 @click.option("-u", "--user-id", required=True)
 @notify_command(name="local-dev-broadcast-permissions")
 def local_dev_broadcast_permissions(user_id):
-    if os.getenv("HOST", "") not in ["development", "test"]:
+    if os.getenv("HOST", "") not in ["local", "development", "test"]:
         current_app.logger.error("Can only be run in development")
         return
 
@@ -820,7 +820,7 @@ def local_dev_broadcast_permissions(user_id):
 @click.option("-u", "--user-id", required=True)
 @notify_command(name="generate-bulktest-data")
 def generate_bulktest_data(user_id):
-    if os.getenv("HOST", "") not in ["development", "test"]:
+    if os.getenv("HOST", "") not in ["local", "development", "test"]:
         current_app.logger.error("Can only be run in development")
         return
 

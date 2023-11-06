@@ -35,7 +35,7 @@ jobs:
 
       - name: Bootstrap Python app and run tests
         run: |
-          export ENVIRONMENT='development'
+          export ENVIRONMENT='local'
           export FLASK_APP=application.py
           set -eu
           make bootstrap-for-tests
