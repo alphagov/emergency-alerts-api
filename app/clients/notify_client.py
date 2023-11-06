@@ -16,7 +16,7 @@ __notify.client = None
 
 
 def get_notify_client():
-    if current_app.config["NOTIFY_ENVIRONMENT"] == "development":
+    if current_app.config["HOST"] == "development":
         return
 
     try:
@@ -29,7 +29,7 @@ def get_notify_client():
 
 
 def get_notify_template(id):
-    if current_app.config["NOTIFY_ENVIRONMENT"] == "development":
+    if current_app.config["HOST"] == "development":
         return
 
     if __notify.client is None:
@@ -44,7 +44,7 @@ def get_notify_template(id):
 
 
 def notify_send(notification):
-    if current_app.config["NOTIFY_ENVIRONMENT"] == "development":
+    if current_app.config["HOST"] == "development":
         return
 
     if __notify.client is None:

@@ -15,7 +15,7 @@ revision = "0347_add_dvla_volumes_template"
 down_revision = "0346_notify_number_sms_sender"
 
 email_template_id = "11fad854-fd38-4a7c-bd17-805fb13dfc12"
-environment = os.environ["NOTIFY_ENVIRONMENT"]
+environment = os.environ["HOST"]
 
 
 def upgrade():

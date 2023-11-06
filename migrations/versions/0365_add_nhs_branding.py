@@ -12,7 +12,7 @@ from alembic import op
 revision = "0365_add_nhs_branding"
 down_revision = "0364_drop_old_column"
 
-environment = os.environ["NOTIFY_ENVIRONMENT"]
+environment = os.environ["HOST"]
 
 
 def upgrade():

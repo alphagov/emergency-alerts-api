@@ -13,7 +13,7 @@ from alembic import op
 revision = "0331_add_broadcast_org"
 down_revision = "0330_broadcast_invite_email"
 
-environment = os.environ["NOTIFY_ENVIRONMENT"]
+environment = os.environ["HOST"]
 
 organisation_id = "38e4bf69-93b0-445d-acee-53ea53fe02df"
 

@@ -89,7 +89,7 @@ class Config(object):
     # Default config values ###
     ###########################
 
-    NOTIFY_ENVIRONMENT = "development"
+    HOST = "development"
     AWS_REGION = "eu-west-2"
     INVITATION_EXPIRATION_DAYS = 2
     NOTIFY_APP_NAME = "api"
@@ -282,7 +282,7 @@ class Development(Config):
     MMG_INBOUND_SMS_AUTH = ["testkey"]
     MMG_INBOUND_SMS_USERNAME = ["username"]
 
-    NOTIFY_ENVIRONMENT = "development"
+    HOST = "development"
     NOTIFY_LOG_PATH = "application.log"
     NOTIFY_EMAIL_DOMAIN = "notify.tools"
 
@@ -299,7 +299,7 @@ class Development(Config):
 
 
 class Decoupled(Development):
-    NOTIFY_ENVIRONMENT = "decoupled"
+    HOST = "decoupled"
     ADMIN_BASE_URL = "http://admin.ecs.local:6012"
     SUBDOMAIN = f"{os.environ.get('ENVIRONMENT')}." if os.environ.get("ENVIRONMENT") != "production" else ""
     ADMIN_EXTERNAL_URL = f"https://admin.{SUBDOMAIN}emergency-alerts.service.gov.uk"
@@ -330,134 +330,134 @@ class Decoupled(Development):
     DEBUG = True
 
 
-class Test(Development):
-    NOTIFY_EMAIL_DOMAIN = "test.notify.com"
-    FROM_NUMBER = "testing"
-    NOTIFY_ENVIRONMENT = "test"
-    TESTING = True
+# class Test(Development):
+#     NOTIFY_EMAIL_DOMAIN = "test.notify.com"
+#     FROM_NUMBER = "testing"
+#     HOST = "test"
+#     TESTING = True
 
-    HIGH_VOLUME_SERVICE = [
-        "941b6f9a-50d7-4742-8d50-f365ca74bf27",
-        "63f95b86-2d19-4497-b8b2-ccf25457df4e",
-        "7e5950cb-9954-41f5-8376-962b8c8555cf",
-        "10d1b9c9-0072-4fa9-ae1c-595e333841da",
-    ]
+#     HIGH_VOLUME_SERVICE = [
+#         "941b6f9a-50d7-4742-8d50-f365ca74bf27",
+#         "63f95b86-2d19-4497-b8b2-ccf25457df4e",
+#         "7e5950cb-9954-41f5-8376-962b8c8555cf",
+#         "10d1b9c9-0072-4fa9-ae1c-595e333841da",
+#     ]
 
-    CSV_UPLOAD_BUCKET_NAME = "test-notifications-csv-upload"
-    CONTACT_LIST_BUCKET_NAME = "test-contact-list"
-    TEST_LETTERS_BUCKET_NAME = "test-test-letters"
-    DVLA_RESPONSE_BUCKET_NAME = "test.notify.com-ftp"
-    LETTERS_PDF_BUCKET_NAME = "test-letters-pdf"
-    LETTERS_SCAN_BUCKET_NAME = "test-letters-scan"
-    INVALID_PDF_BUCKET_NAME = "test-letters-invalid-pdf"
-    TRANSIENT_UPLOADED_LETTERS = "test-transient-uploaded-letters"
-    LETTER_SANITISE_BUCKET_NAME = "test-letters-sanitise"
+#     CSV_UPLOAD_BUCKET_NAME = "test-notifications-csv-upload"
+#     CONTACT_LIST_BUCKET_NAME = "test-contact-list"
+#     TEST_LETTERS_BUCKET_NAME = "test-test-letters"
+#     DVLA_RESPONSE_BUCKET_NAME = "test.notify.com-ftp"
+#     LETTERS_PDF_BUCKET_NAME = "test-letters-pdf"
+#     LETTERS_SCAN_BUCKET_NAME = "test-letters-scan"
+#     INVALID_PDF_BUCKET_NAME = "test-letters-invalid-pdf"
+#     TRANSIENT_UPLOADED_LETTERS = "test-transient-uploaded-letters"
+#     LETTER_SANITISE_BUCKET_NAME = "test-letters-sanitise"
 
-    # this is overriden in jenkins and on cloudfoundry
-    SQLALCHEMY_DATABASE_URI = os.getenv(
-        "SQLALCHEMY_DATABASE_URI", "postgresql://postgres:root@localhost:5432/test_emergency_alerts"
-    )
-    SQLALCHEMY_RECORD_QUERIES = False
+#     # this is overriden in jenkins and on cloudfoundry
+#     SQLALCHEMY_DATABASE_URI = os.getenv(
+#         "SQLALCHEMY_DATABASE_URI", "postgresql://postgres:root@localhost:5432/test_emergency_alerts"
+#     )
+#     SQLALCHEMY_RECORD_QUERIES = False
 
-    CELERY = {**Config.CELERY, "broker_url": "you-forgot-to-mock-celery-in-your-tests://"}
+#     CELERY = {**Config.CELERY, "broker_url": "you-forgot-to-mock-celery-in-your-tests://"}
 
-    ANTIVIRUS_ENABLED = True
+#     ANTIVIRUS_ENABLED = True
 
-    API_RATE_LIMIT_ENABLED = True
-    API_HOST_NAME = "http://localhost:6011"
+#     API_RATE_LIMIT_ENABLED = True
+#     API_HOST_NAME = "http://localhost:6011"
 
-    SMS_INBOUND_WHITELIST = ["203.0.113.195"]
-    FIRETEXT_INBOUND_SMS_AUTH = ["testkey"]
-    TEMPLATE_PREVIEW_API_HOST = "http://localhost:9999"
+#     SMS_INBOUND_WHITELIST = ["203.0.113.195"]
+#     FIRETEXT_INBOUND_SMS_AUTH = ["testkey"]
+#     TEMPLATE_PREVIEW_API_HOST = "http://localhost:9999"
 
-    MMG_URL = "https://example.com/mmg"
-    FIRETEXT_URL = "https://example.com/firetext"
-    SUBDOMAIN = f"{os.environ.get('ENVIRONMENT')}." if os.environ.get("ENVIRONMENT") != "production" else ""
-    ADMIN_EXTERNAL_URL = f"https://admin.{SUBDOMAIN}emergency-alerts.service.gov.uk"
+#     MMG_URL = "https://example.com/mmg"
+#     FIRETEXT_URL = "https://example.com/firetext"
+#     SUBDOMAIN = f"{os.environ.get('ENVIRONMENT')}." if os.environ.get("ENVIRONMENT") != "production" else ""
+#     ADMIN_EXTERNAL_URL = f"https://admin.{SUBDOMAIN}emergency-alerts.service.gov.uk"
 
-    CBC_PROXY_ENABLED = True
-    DVLA_EMAIL_ADDRESSES = ["success@simulator.amazonses.com", "success+2@simulator.amazonses.com"]
-
-
-class Preview(Config):
-    NOTIFY_EMAIL_DOMAIN = "notify.works"
-    NOTIFY_ENVIRONMENT = "preview"
-    CSV_UPLOAD_BUCKET_NAME = "preview-notifications-csv-upload"
-    CONTACT_LIST_BUCKET_NAME = "preview-contact-list"
-    TEST_LETTERS_BUCKET_NAME = "preview-test-letters"
-    DVLA_RESPONSE_BUCKET_NAME = "notify.works-ftp"
-    LETTERS_PDF_BUCKET_NAME = "preview-letters-pdf"
-    LETTERS_SCAN_BUCKET_NAME = "preview-letters-scan"
-    INVALID_PDF_BUCKET_NAME = "preview-letters-invalid-pdf"
-    TRANSIENT_UPLOADED_LETTERS = "preview-transient-uploaded-letters"
-    LETTER_SANITISE_BUCKET_NAME = "preview-letters-sanitise"
-    FROM_NUMBER = "preview"
-    API_RATE_LIMIT_ENABLED = True
-    CHECK_PROXY_HEADER = False
+#     CBC_PROXY_ENABLED = True
+#     DVLA_EMAIL_ADDRESSES = ["success@simulator.amazonses.com", "success+2@simulator.amazonses.com"]
 
 
-class Staging(Config):
-    NOTIFY_EMAIL_DOMAIN = "staging-notify.works"
-    NOTIFY_ENVIRONMENT = "staging"
-    CSV_UPLOAD_BUCKET_NAME = "staging-notifications-csv-upload"
-    CONTACT_LIST_BUCKET_NAME = "staging-contact-list"
-    TEST_LETTERS_BUCKET_NAME = "staging-test-letters"
-    DVLA_RESPONSE_BUCKET_NAME = "staging-notify.works-ftp"
-    LETTERS_PDF_BUCKET_NAME = "staging-letters-pdf"
-    LETTERS_SCAN_BUCKET_NAME = "staging-letters-scan"
-    INVALID_PDF_BUCKET_NAME = "staging-letters-invalid-pdf"
-    TRANSIENT_UPLOADED_LETTERS = "staging-transient-uploaded-letters"
-    LETTER_SANITISE_BUCKET_NAME = "staging-letters-sanitise"
-    FROM_NUMBER = "stage"
-    API_RATE_LIMIT_ENABLED = True
-    CHECK_PROXY_HEADER = True
+# class Preview(Config):
+#     NOTIFY_EMAIL_DOMAIN = "notify.works"
+#     HOST = "preview"
+#     CSV_UPLOAD_BUCKET_NAME = "preview-notifications-csv-upload"
+#     CONTACT_LIST_BUCKET_NAME = "preview-contact-list"
+#     TEST_LETTERS_BUCKET_NAME = "preview-test-letters"
+#     DVLA_RESPONSE_BUCKET_NAME = "notify.works-ftp"
+#     LETTERS_PDF_BUCKET_NAME = "preview-letters-pdf"
+#     LETTERS_SCAN_BUCKET_NAME = "preview-letters-scan"
+#     INVALID_PDF_BUCKET_NAME = "preview-letters-invalid-pdf"
+#     TRANSIENT_UPLOADED_LETTERS = "preview-transient-uploaded-letters"
+#     LETTER_SANITISE_BUCKET_NAME = "preview-letters-sanitise"
+#     FROM_NUMBER = "preview"
+#     API_RATE_LIMIT_ENABLED = True
+#     CHECK_PROXY_HEADER = False
 
 
-class Production(Config):
-    NOTIFY_EMAIL_DOMAIN = "notifications.service.gov.uk"
-    NOTIFY_ENVIRONMENT = "production"
-    CSV_UPLOAD_BUCKET_NAME = "live-notifications-csv-upload"
-    CONTACT_LIST_BUCKET_NAME = "production-contact-list"
-    TEST_LETTERS_BUCKET_NAME = "production-test-letters"
-    DVLA_RESPONSE_BUCKET_NAME = "notifications.service.gov.uk-ftp"
-    LETTERS_PDF_BUCKET_NAME = "production-letters-pdf"
-    LETTERS_SCAN_BUCKET_NAME = "production-letters-scan"
-    INVALID_PDF_BUCKET_NAME = "production-letters-invalid-pdf"
-    TRANSIENT_UPLOADED_LETTERS = "production-transient-uploaded-letters"
-    LETTER_SANITISE_BUCKET_NAME = "production-letters-sanitise"
-    FROM_NUMBER = "GOVUK"
-    API_RATE_LIMIT_ENABLED = True
-    CHECK_PROXY_HEADER = True
-    SES_STUB_URL = None
-
-    CRONITOR_ENABLED = True
+# class Staging(Config):
+#     NOTIFY_EMAIL_DOMAIN = "staging-notify.works"
+#     HOST = "staging"
+#     CSV_UPLOAD_BUCKET_NAME = "staging-notifications-csv-upload"
+#     CONTACT_LIST_BUCKET_NAME = "staging-contact-list"
+#     TEST_LETTERS_BUCKET_NAME = "staging-test-letters"
+#     DVLA_RESPONSE_BUCKET_NAME = "staging-notify.works-ftp"
+#     LETTERS_PDF_BUCKET_NAME = "staging-letters-pdf"
+#     LETTERS_SCAN_BUCKET_NAME = "staging-letters-scan"
+#     INVALID_PDF_BUCKET_NAME = "staging-letters-invalid-pdf"
+#     TRANSIENT_UPLOADED_LETTERS = "staging-transient-uploaded-letters"
+#     LETTER_SANITISE_BUCKET_NAME = "staging-letters-sanitise"
+#     FROM_NUMBER = "stage"
+#     API_RATE_LIMIT_ENABLED = True
+#     CHECK_PROXY_HEADER = True
 
 
-class CloudFoundryConfig(Config):
-    pass
+# class Production(Config):
+#     NOTIFY_EMAIL_DOMAIN = "notifications.service.gov.uk"
+#     HOST = "production"
+#     CSV_UPLOAD_BUCKET_NAME = "live-notifications-csv-upload"
+#     CONTACT_LIST_BUCKET_NAME = "production-contact-list"
+#     TEST_LETTERS_BUCKET_NAME = "production-test-letters"
+#     DVLA_RESPONSE_BUCKET_NAME = "notifications.service.gov.uk-ftp"
+#     LETTERS_PDF_BUCKET_NAME = "production-letters-pdf"
+#     LETTERS_SCAN_BUCKET_NAME = "production-letters-scan"
+#     INVALID_PDF_BUCKET_NAME = "production-letters-invalid-pdf"
+#     TRANSIENT_UPLOADED_LETTERS = "production-transient-uploaded-letters"
+#     LETTER_SANITISE_BUCKET_NAME = "production-letters-sanitise"
+#     FROM_NUMBER = "GOVUK"
+#     API_RATE_LIMIT_ENABLED = True
+#     CHECK_PROXY_HEADER = True
+#     SES_STUB_URL = None
+
+#     CRONITOR_ENABLED = True
 
 
-# CloudFoundry sandbox
-class Sandbox(CloudFoundryConfig):
-    NOTIFY_EMAIL_DOMAIN = "notify.works"
-    NOTIFY_ENVIRONMENT = "sandbox"
-    CSV_UPLOAD_BUCKET_NAME = "cf-sandbox-notifications-csv-upload"
-    CONTACT_LIST_BUCKET_NAME = "cf-sandbox-contact-list"
-    LETTERS_PDF_BUCKET_NAME = "cf-sandbox-letters-pdf"
-    TEST_LETTERS_BUCKET_NAME = "cf-sandbox-test-letters"
-    DVLA_RESPONSE_BUCKET_NAME = "notify.works-ftp"
-    LETTERS_PDF_BUCKET_NAME = "cf-sandbox-letters-pdf"
-    LETTERS_SCAN_BUCKET_NAME = "cf-sandbox-letters-scan"
-    INVALID_PDF_BUCKET_NAME = "cf-sandbox-letters-invalid-pdf"
-    FROM_NUMBER = "sandbox"
+# class CloudFoundryConfig(Config):
+#     pass
+
+
+# # CloudFoundry sandbox
+# class Sandbox(CloudFoundryConfig):
+#     NOTIFY_EMAIL_DOMAIN = "notify.works"
+#     HOST = "sandbox"
+#     CSV_UPLOAD_BUCKET_NAME = "cf-sandbox-notifications-csv-upload"
+#     CONTACT_LIST_BUCKET_NAME = "cf-sandbox-contact-list"
+#     LETTERS_PDF_BUCKET_NAME = "cf-sandbox-letters-pdf"
+#     TEST_LETTERS_BUCKET_NAME = "cf-sandbox-test-letters"
+#     DVLA_RESPONSE_BUCKET_NAME = "notify.works-ftp"
+#     LETTERS_PDF_BUCKET_NAME = "cf-sandbox-letters-pdf"
+#     LETTERS_SCAN_BUCKET_NAME = "cf-sandbox-letters-scan"
+#     INVALID_PDF_BUCKET_NAME = "cf-sandbox-letters-invalid-pdf"
+#     FROM_NUMBER = "sandbox"
 
 
 configs = {
     "development": Development,
     "decoupled": Decoupled,
-    "test": Test,
-    "production": Production,
-    "staging": Staging,
-    "preview": Preview,
-    "sandbox": Sandbox,
+    # "test": Test,
+    # "production": Production,
+    # "staging": Staging,
+    # "preview": Preview,
+    # "sandbox": Sandbox,
 }

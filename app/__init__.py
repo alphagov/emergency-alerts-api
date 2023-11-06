@@ -83,7 +83,7 @@ CONCURRENT_REQUESTS = Gauge(
 def create_app(application):
     from app.config import configs
 
-    notify_environment = os.environ["NOTIFY_ENVIRONMENT"]
+    notify_environment = os.environ["HOST"]
 
     application.config.from_object(configs[notify_environment])
 
