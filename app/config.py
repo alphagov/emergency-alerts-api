@@ -298,8 +298,8 @@ class Development(Config):
     CBC_PROXY_ENABLED = False
 
 
-class Decoupled(Development):
-    HOST = "decoupled"
+class Hosted(Development):
+    HOST = "hosted"
     ADMIN_BASE_URL = "http://admin.ecs.local:6012"
     SUBDOMAIN = f"{os.environ.get('ENVIRONMENT')}." if os.environ.get("ENVIRONMENT") != "production" else ""
     ADMIN_EXTERNAL_URL = f"https://admin.{SUBDOMAIN}emergency-alerts.service.gov.uk"
@@ -454,7 +454,7 @@ class Decoupled(Development):
 
 configs = {
     "development": Development,
-    "decoupled": Decoupled,
+    "hosted": Hosted,
     # "test": Test,
     # "production": Production,
     # "staging": Staging,
