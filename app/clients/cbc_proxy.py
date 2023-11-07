@@ -49,7 +49,7 @@ class CBCProxyClient:
                     aws_secret_access_key=os.environ.get("AWS_SECRET_ACCESS_KEY"),
                     aws_session_token=os.environ.get("AWS_SESSION_TOKEN"),
                 )
-                if app.config.get("NOTIFY_ENVIRONMENT") == "development"
+                if app.config.get("HOST") == "local"
                 else boto3.client("lambda", region_name="eu-west-2")
             )
 

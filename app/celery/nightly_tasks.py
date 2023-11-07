@@ -194,7 +194,7 @@ def raise_alert_if_letter_notifications_still_sending():
             message += ". Resolve using https://github.com/alphagov/notifications-manuals/wiki/Support-Runbook#deal-with-letters-still-in-sending"  # noqa
 
             ticket = NotifySupportTicket(
-                subject=f"[{current_app.config['NOTIFY_ENVIRONMENT']}] Letters still sending",
+                subject=f"[{current_app.config['HOST']}] Letters still sending",
                 email_ccs=current_app.config["DVLA_EMAIL_ADDRESSES"],
                 message=message,
                 ticket_type=NotifySupportTicket.TYPE_INCIDENT,

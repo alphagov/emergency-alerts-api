@@ -133,8 +133,8 @@ def create_fake_letter_response_file(self, reference):
         )
     )
 
-    # on development we can't trigger SNS callbacks so we need to manually hit the DVLA callback endpoint
-    if current_app.config["NOTIFY_ENVIRONMENT"] == "development":
+    # when not hosted, we can't trigger SNS callbacks so we need to manually hit the DVLA callback endpoint
+    if current_app.config["HOST"] == "local":
         make_request("letter", "dvla", _fake_sns_s3_callback(upload_file_name), None)
 
 

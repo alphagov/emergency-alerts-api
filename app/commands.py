@@ -88,7 +88,7 @@ class notify_command:
 
         # in the test environment the app context is already provided and having
         # another will lead to the test db connection being closed prematurely
-        if os.getenv("NOTIFY_ENVIRONMENT", "") != "test":
+        if os.getenv("HOST", "") != "test":
             # with_appcontext ensures the config is loaded, db connected, etc.
             decorators.insert(0, flask.cli.with_appcontext)
 
@@ -791,7 +791,7 @@ def populate_annual_billing_with_defaults(year, missing_services_only):
 @click.option("-u", "--user-id", required=True)
 @notify_command(name="local-dev-broadcast-permissions")
 def local_dev_broadcast_permissions(user_id):
-    if os.getenv("NOTIFY_ENVIRONMENT", "") not in ["development", "test"]:
+    if os.getenv("HOST", "") not in ["local", "development", "test"]:
         current_app.logger.error("Can only be run in development")
         return
 
@@ -820,7 +820,7 @@ def local_dev_broadcast_permissions(user_id):
 @click.option("-u", "--user-id", required=True)
 @notify_command(name="generate-bulktest-data")
 def generate_bulktest_data(user_id):
-    if os.getenv("NOTIFY_ENVIRONMENT", "") not in ["development", "test"]:
+    if os.getenv("HOST", "") not in ["local", "development", "test"]:
         current_app.logger.error("Can only be run in development")
         return
 

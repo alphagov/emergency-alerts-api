@@ -4,11 +4,11 @@ from flask import Flask
 class NotifyApiFlaskApp(Flask):
     @property
     def is_prod(self):
-        return self.config["NOTIFY_ENVIRONMENT"] == "production"
+        return self.config["HOST"] == "production"
 
     @property
     def is_test(self):
-        return self.config["NOTIFY_ENVIRONMENT"] == "test"
+        return self.config["HOST"] == "test"
 
     @property
     def should_send_zendesk_alerts(self):
