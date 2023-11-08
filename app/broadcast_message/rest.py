@@ -48,8 +48,21 @@ def get_broadcast_message(service_id, broadcast_message_id):
 
 
 @broadcast_message_blueprint.route("/<uuid:broadcast_message_id>/provider-messages", methods=["GET"])
-def get_broadcast_provider_messages(broadcast_message_id):
-    return jsonify(dao_get_broadcast_provider_messages_by_broadcast_message_id(broadcast_message_id))
+def get_broadcast_provider_messages(service_id, broadcast_message_id):
+    messages = dao_get_broadcast_provider_messages_by_broadcast_message_id(broadcast_message_id)
+
+    messages_dict = {
+        "messages": [
+            {
+                "id": message.id,
+                "provider": message.provider,
+                "status": message.status,
+            }
+            for message in messages
+        ]
+    }
+
+    return jsonify(messages_dict)
 
 
 @broadcast_message_blueprint.route("", methods=["POST"])

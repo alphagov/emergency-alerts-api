@@ -54,9 +54,20 @@ def test_get_broadcast_message(admin_request, sample_broadcast_service):
 
 
 def test_get_broadcast_provider_messages(admin_request, sample_broadcast_service):
-    bm = create_broadcast_message()
-    be = create_broadcast_event()
-    provider_msgs = create_broadcast_provider_message()
+    bm = create_broadcast_message(
+        service=sample_broadcast_service,
+        content="emergency broadcast content",
+        areas={
+            "ids": ["place A", "region B"],
+            "simple_polygons": [[[50.1, 1.2], [50.12, 1.2], [50.13, 1.2]]],
+        },
+    )
+    be = create_broadcast_event(broadcast_message=bm)
+    mnos = ["ee", "o2", "three", "vodafone"]
+    provider_messages = []
+    for mno in mnos:
+        bpm = create_broadcast_provider_message(broadcast_event=be, provider=mno)
+        provider_messages.append({"id": str(bpm.id), "provider": mno})
 
     response = admin_request.get(
         "broadcast_message.get_broadcast_provider_messages",
@@ -65,11 +76,9 @@ def test_get_broadcast_provider_messages(admin_request, sample_broadcast_service
         _expected_status=200,
     )
 
-    print(be, provider_msgs, response)
+    response_items = [{key: item[key] for key in ["id", "provider"]} for item in response["messages"]]
 
-    # assert IDs in response match provider_msgs IDs
-
-    pass
+    assert provider_messages == response_items
 
 
 def test_get_broadcast_message_without_template(admin_request, sample_broadcast_service):
