@@ -46,7 +46,7 @@ def dao_get_broadcast_messages_for_service(service_id):
     )
 
 
-def dao_get_broadcast_provider_message_ids_by_broadcast_message_id(broadcast_message_id):
+def dao_get_broadcast_provider_messages_by_broadcast_message_id(broadcast_message_id):
     return (
         db.session.query(
             BroadcastProviderMessage.id,
