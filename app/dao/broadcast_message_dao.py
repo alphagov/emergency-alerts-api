@@ -46,6 +46,19 @@ def dao_get_broadcast_messages_for_service(service_id):
     )
 
 
+def dao_get_broadcast_provider_messages_by_broadcast_message_id(broadcast_message_id):
+    return (
+        db.session.query(
+            BroadcastProviderMessage.id,
+            BroadcastProviderMessage.provider,
+            BroadcastProviderMessage.status,
+        )
+        .join(BroadcastEvent, BroadcastEvent.id == BroadcastProviderMessage.broadcast_event_id)
+        .filter(BroadcastEvent.broadcast_message_id == broadcast_message_id)
+        .all()
+    )
+
+
 def dao_get_all_broadcast_messages():
     return (
         db.session.query(
