@@ -1,5 +1,3 @@
-import os
-
 from app.commands import (
     insert_inbound_numbers_from_file,
     local_dev_broadcast_permissions,
@@ -32,7 +30,6 @@ def test_local_dev_broadcast_permissions(
     assert len(user.get_permissions(sample_service.id)) == 0
     assert len(user.get_permissions(sample_broadcast_service.id)) == 0
 
-    print("ENVIRONMENT is: " + os.environ.get["ENVIRONMENT"])
     notify_api.test_cli_runner().invoke(local_dev_broadcast_permissions, ["-u", user.id])
 
     assert len(user.get_permissions(sample_service.id)) == 6

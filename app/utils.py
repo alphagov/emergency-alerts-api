@@ -162,7 +162,7 @@ def is_cloud_host():
 
 
 def is_private_environment():
-    return os.environ.get["ENVIRONMENT"] in ["local", "development", "preview"]
+    return os.environ.get("ENVIRONMENT") in ["local", "development", "preview"]
 
 
 def is_public_environment():
