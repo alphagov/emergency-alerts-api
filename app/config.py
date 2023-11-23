@@ -32,6 +32,28 @@ class BroadcastProvider:
     PROVIDERS = [EE, VODAFONE, THREE, O2]
 
 
+"""
+IMPORTANT NOTES ON CONFIGURING ENVIRONMENT VARIABLES
+
+The HOST variable is used to distinguish between running locally and on the hosted infrastructure (i.e. AWS).
+This variable can therefore take one of two values:
+
+HOST = [ local | hosted ]
+
+The environment variable ENVIRONMENT is used to tell the service which set of config values to take up,
+and can be set to one of the following values:
+
+ENVIRONMENT = [ local | development | preview | staging | production ]
+
+A value of "local" indicates that the service will be running on the development machine. A value corresponding
+to any of the others in the above set maps directly to the name of the environment hosted in AWS.
+
+The development environment hosted on AWS will now configure the above variables as follows:
+HOST=hosted & ENVIRONMENT=development
+
+"""
+
+
 class Config(object):
     ADMIN_BASE_URL = "http://localhost:6012"
     API_HOST_NAME = "http://localhost:6011"
