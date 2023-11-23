@@ -5,6 +5,7 @@ from notifications_python_client.errors import APIError
 from notifications_python_client.notifications import NotificationsAPIClient
 
 from app.models import EMAIL_TYPE, SMS_TYPE
+from app.utils import is_local_host
 
 
 class Notify:
@@ -16,7 +17,7 @@ __notify.client = None
 
 
 def get_notify_client():
-    if current_app.config["HOST"] == "local":
+    if is_local_host():
         return
 
     try:
@@ -29,7 +30,7 @@ def get_notify_client():
 
 
 def get_notify_template(id):
-    if current_app.config["HOST"] == "local":
+    if is_local_host():
         return
 
     if __notify.client is None:
@@ -44,7 +45,7 @@ def get_notify_template(id):
 
 
 def notify_send(notification):
-    if current_app.config["HOST"] == "local":
+    if is_local_host():
         return
 
     if __notify.client is None:

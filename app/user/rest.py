@@ -55,7 +55,7 @@ from app.user.users_schema import (
     post_verify_code_schema,
     post_verify_webauthn_schema,
 )
-from app.utils import url_with_token
+from app.utils import is_local_host, url_with_token
 
 user_blueprint = Blueprint("user", __name__)
 register_errors(user_blueprint)
@@ -296,7 +296,7 @@ def create_2fa_code(template_id, code_type, user_to_send_to, secret_code, recipi
     # save the code in the VerifyCode table
     create_user_code(user_to_send_to, secret_code, code_type)
 
-    if current_app.config["HOST"] == "local":
+    if is_local_host():
         print(f"Development environment 2fa code: {secret_code}")
 
     notification = {

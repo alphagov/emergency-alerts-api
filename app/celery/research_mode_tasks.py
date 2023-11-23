@@ -11,6 +11,7 @@ from app.aws.s3 import file_exists
 from app.celery.process_ses_receipts_tasks import process_ses_results
 from app.config import QueueNames
 from app.models import SMS_TYPE
+from app.utils import is_local_host
 
 temp_fail = "7700900003"
 perm_fail = "7700900002"
@@ -134,7 +135,7 @@ def create_fake_letter_response_file(self, reference):
     )
 
     # when not hosted, we can't trigger SNS callbacks so we need to manually hit the DVLA callback endpoint
-    if current_app.config["HOST"] == "local":
+    if is_local_host():
         make_request("letter", "dvla", _fake_sns_s3_callback(upload_file_name), None)
 
 
