@@ -21,9 +21,11 @@ To run the API you will need appropriate AWS credentials. See the [Wiki](https:/
 
 ### Environment Variables and Hosting
 
-The HOST variable is used to distinguish between running locally and on the hosted infrastructure (i.e. AWS). This variable can therefore take one of two values:
+The HOST variable is used to distinguish between running locally and on the hosted infrastructure (i.e. AWS). This variable can therefore take one of the following values:
 
-HOST = [ local | hosted ]
+HOST = [ local | hosted | test ]
+
+"local" indicates that the service will be configured for running on a local machine. "hosted" is intended for use when the service is running on the AWS-hosted infrastructure. "test" provides a special set of configuration values that are used by the unit, integration and functional tests.
 
 The environment variable ENVIRONMENT is used to tell the service which set of config values to take up, and can be set to one of the following values:
 
