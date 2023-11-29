@@ -11,7 +11,7 @@ from app.broadcast_message.broadcast_message_schema import (
 from app.dao.broadcast_message_dao import (
     dao_get_broadcast_message_by_id_and_service_id,
     dao_get_broadcast_messages_for_service,
-    dao_get_broadcast_provider_message_ids_by_broadcast_message_id,
+    dao_get_broadcast_provider_messages_by_broadcast_message_id,
 )
 from app.dao.dao_utils import dao_save_object
 from app.dao.services_dao import dao_fetch_service_by_id
@@ -48,8 +48,21 @@ def get_broadcast_message(service_id, broadcast_message_id):
 
 
 @broadcast_message_blueprint.route("/<uuid:broadcast_message_id>/provider-messages", methods=["GET"])
-def get_broadcast_provider_messages(broadcast_message_id):
-    return jsonify(dao_get_broadcast_provider_message_ids_by_broadcast_message_id(broadcast_message_id))
+def get_broadcast_provider_messages(service_id, broadcast_message_id):
+    messages = dao_get_broadcast_provider_messages_by_broadcast_message_id(broadcast_message_id)
+
+    messages_dict = {
+        "messages": [
+            {
+                "id": message.id,
+                "provider": message.provider,
+                "status": message.status,
+            }
+            for message in messages
+        ]
+    }
+
+    return jsonify(messages_dict)
 
 
 @broadcast_message_blueprint.route("", methods=["POST"])
