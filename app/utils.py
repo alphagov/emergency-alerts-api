@@ -153,9 +153,7 @@ def format_sequential_number(sequential_number):
     return format(sequential_number, "x").zfill(8)
 
 
-def is_local_host(app=None):
-    if app:
-        return app.config["HOST"] == "local"
+def is_local_host():
     return current_app.config["HOST"] == "local"
 
 
