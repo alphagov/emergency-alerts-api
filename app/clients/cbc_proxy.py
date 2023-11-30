@@ -49,7 +49,7 @@ class CBCProxyClient:
                     aws_secret_access_key=os.environ.get("AWS_SECRET_ACCESS_KEY"),
                     aws_session_token=os.environ.get("AWS_SESSION_TOKEN"),
                 )
-                if is_local_host()
+                if is_local_host(app)
                 else boto3.client("lambda", region_name="eu-west-2")
             )
 
