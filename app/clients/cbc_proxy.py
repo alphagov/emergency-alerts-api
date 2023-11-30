@@ -10,7 +10,7 @@ from flask import current_app
 from sqlalchemy.schema import Sequence
 
 from app.config import BroadcastProvider
-from app.utils import DATETIME_FORMAT, format_sequential_number, is_local_host
+from app.utils import DATETIME_FORMAT, format_sequential_number
 
 # The variable names in this file have specific meaning in a CAP message
 #
@@ -49,7 +49,7 @@ class CBCProxyClient:
                     aws_secret_access_key=os.environ.get("AWS_SECRET_ACCESS_KEY"),
                     aws_session_token=os.environ.get("AWS_SESSION_TOKEN"),
                 )
-                if is_local_host()
+                if app.config.get("HOST") == "local"
                 else boto3.client("lambda", region_name="eu-west-2")
             )
 
