@@ -110,7 +110,7 @@ applications:
       NOTIFY_LOG_PATH: /home/vcap/logs/app.log
       SQLALCHEMY_POOL_SIZE: {{ app.get('sqlalchemy_pool_size', 1) }}
       FLASK_APP: application.py
-      NOTIFY_ENVIRONMENT: {{ environment }}
+      HOST: {{ environment }}
 
       # Credentials variables
       ADMIN_BASE_URL: '{{ ADMIN_BASE_URL }}'

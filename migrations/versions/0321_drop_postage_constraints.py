@@ -11,7 +11,7 @@ from alembic import op
 
 revision = "0321_drop_postage_constraints"
 down_revision = "0320_optimise_notifications"
-environment = os.environ["NOTIFY_ENVIRONMENT"]
+environment = os.environ["HOST"]
 
 
 def upgrade():

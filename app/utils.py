@@ -1,3 +1,4 @@
+import os
 from datetime import datetime, timedelta
 
 import pytz
@@ -9,7 +10,7 @@ from emergency_alerts_utils.template import (
 )
 from emergency_alerts_utils.timezones import convert_bst_to_utc
 from emergency_alerts_utils.url_safe_token import generate_token
-from flask import url_for
+from flask import current_app, url_for
 from sqlalchemy import func
 
 DATETIME_FORMAT_NO_TIMEZONE = "%Y-%m-%d %H:%M:%S.%f"
@@ -150,3 +151,19 @@ def get_uuid_string_or_none(val):
 
 def format_sequential_number(sequential_number):
     return format(sequential_number, "x").zfill(8)
+
+
+def is_local_host():
+    return current_app.config["HOST"] == "local"
+
+
+def is_cloud_host():
+    return not is_local_host()
+
+
+def is_private_environment():
+    return os.environ.get("ENVIRONMENT") in ["local", "development", "preview"]
+
+
+def is_public_environment():
+    return not is_private_environment()

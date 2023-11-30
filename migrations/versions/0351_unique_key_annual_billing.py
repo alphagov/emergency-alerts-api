@@ -12,7 +12,7 @@ from alembic import op
 revision = "0351_unique_key_annual_billing"
 down_revision = "0350_update_rates"
 
-environment = os.environ["NOTIFY_ENVIRONMENT"]
+environment = os.environ["HOST"]
 
 
 def upgrade():
