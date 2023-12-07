@@ -36,6 +36,8 @@ jobs:
       - name: Bootstrap Python app and run tests
         run: |
           export ENVIRONMENT='local'
+          export DANGEROUS_SALT='dev-notify-salt'
+          export SECRET_KEY='dev-notify-secret-key'
           export FLASK_APP=application.py
           set -eu
           make bootstrap-for-tests
