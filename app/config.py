@@ -76,8 +76,8 @@ class Config(object):
         GOVUK_ALERTS_CLIENT_ID: ["govuk-alerts-secret-key"],
     }
 
-    SECRET_KEY = "dev-notify-secret-key"
-    DANGEROUS_SALT = "dev-notify-salt"
+    SECRET_KEY = os.environ.get("SECRET_KEY")
+    DANGEROUS_SALT = os.environ.get("DANGEROUS_SALT")
 
     SQLALCHEMY_DATABASE_URI = "postgresql://postgres:root@localhost/emergency_alerts"
 
