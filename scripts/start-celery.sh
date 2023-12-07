@@ -16,7 +16,7 @@ function run_celery_beat(){
   . $VENV_API/bin/activate && make run-celery-beat
 }
 
-if [[ ! -z $DEBUG ]]; then
+if [[ $DEBUG == "true" ]]; then
     echo "Starting in debug mode.."
     while true; do echo 'Debug mode active..'; sleep 30; done
 else

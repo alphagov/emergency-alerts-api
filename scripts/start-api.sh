@@ -34,7 +34,7 @@ function run_api(){
     . $VENV_API/bin/activate && flask run -p 6011 --host=0.0.0.0
 }
 
-if [[ ! -z $DEBUG ]]; then
+if [[ $DEBUG == "true" ]]; then
     echo "Starting in debug mode.."
     while true; do echo 'Debug mode active..'; sleep 30; done
 else
