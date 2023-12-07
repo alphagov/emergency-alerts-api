@@ -72,7 +72,7 @@ class Config(object):
     GOVUK_ALERTS_CLIENT_ID = "govuk-alerts"
 
     INTERNAL_CLIENT_API_KEYS = {
-        ADMIN_CLIENT_ID: ["dev-notify-secret-key"],
+        ADMIN_CLIENT_ID: [os.environ.get("ADMIN_CLIENT_SECRET")],
         GOVUK_ALERTS_CLIENT_ID: ["govuk-alerts-secret-key"],
     }
 
