@@ -59,6 +59,16 @@ HOST=hosted & ENVIRONMENT=development
 
 
 class Config(object):
+    # secrets that internal apps, such as the admin app or document download, must use to authenticate with the API
+    ADMIN_CLIENT_ID = "notify-admin"
+    GOVUK_ALERTS_CLIENT_ID = "govuk-alerts"
+    INTERNAL_CLIENT_API_KEYS = {
+        ADMIN_CLIENT_ID: [os.environ.get("ENCRYPTION_SECRET_KEY")],
+        GOVUK_ALERTS_CLIENT_ID: ["govuk-alerts-secret-key"],
+    }
+    SECRET_KEY = os.environ.get("ENCRYPTION_SECRET_KEY")
+    DANGEROUS_SALT = os.environ.get("ENCRYPTION_DANGEROUS_SALT")
+
     ADMIN_BASE_URL = "http://localhost:6012"
     API_HOST_NAME = "http://localhost:6011"
     API_RATE_LIMIT_ENABLED = True
@@ -66,18 +76,6 @@ class Config(object):
     CBC_ACCOUNT_NUMBER = os.getenv("CBC_ACCOUNT_NUMBER")
     CBC_PROXY_ENABLED = True
     ENABLED_CBCS = {BroadcastProvider.EE, BroadcastProvider.THREE, BroadcastProvider.O2, BroadcastProvider.VODAFONE}
-
-    # secrets that internal apps, such as the admin app or document download, must use to authenticate with the API
-    ADMIN_CLIENT_ID = "notify-admin"
-    GOVUK_ALERTS_CLIENT_ID = "govuk-alerts"
-
-    INTERNAL_CLIENT_API_KEYS = {
-        ADMIN_CLIENT_ID: [os.environ.get("ADMIN_CLIENT_SECRET")],
-        GOVUK_ALERTS_CLIENT_ID: ["govuk-alerts-secret-key"],
-    }
-
-    SECRET_KEY = os.environ.get("SECRET_KEY")
-    DANGEROUS_SALT = os.environ.get("DANGEROUS_SALT")
 
     SQLALCHEMY_DATABASE_URI = "postgresql://postgres:root@localhost/emergency_alerts"
 
@@ -301,7 +299,8 @@ class Hosted(Config):
             )
         )
     CBC_PROXY_ENABLED = True
-    DEBUG = True
+
+    DEBUG = False
 
 
 class Test(Config):
