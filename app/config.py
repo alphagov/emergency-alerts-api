@@ -63,11 +63,14 @@ class Config(object):
     ADMIN_CLIENT_ID = "notify-admin"
     GOVUK_ALERTS_CLIENT_ID = "govuk-alerts"
     INTERNAL_CLIENT_API_KEYS = {
-        ADMIN_CLIENT_ID: [os.environ.get("ENCRYPTION_SECRET_KEY")],
+        ADMIN_CLIENT_ID: [os.environ.get("ADMIN_CLIENT_SECRET")],
         GOVUK_ALERTS_CLIENT_ID: ["govuk-alerts-secret-key"],
     }
-    SECRET_KEY = os.environ.get("ENCRYPTION_SECRET_KEY")
-    DANGEROUS_SALT = os.environ.get("ENCRYPTION_DANGEROUS_SALT")
+    SECRET_KEY = os.environ.get("SECRET_KEY")
+    DANGEROUS_SALT = os.environ.get("DANGEROUS_SALT")
+
+    ENCRYPTION_SECRET_KEY = os.environ.get("ENCRYPTION_SECRET_KEY")
+    ENCRYPTION_DANGEROUS_SALT = os.environ.get("ENCRYPTION_DANGEROUS_SALT")
 
     ADMIN_BASE_URL = "http://localhost:6012"
     API_HOST_NAME = "http://localhost:6011"
