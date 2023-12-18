@@ -54,6 +54,11 @@ export RDS_HOST='localhost'
 export RDS_PORT=5432
 export RDS_USER='eas-user'
 export RDS_REGION='eu-west-2'
+
+export SECRET_KEY='dev-notify-secret-key'
+export ENCRYPTION_DANGEROUS_SALT='dev-notify-salt'
+export ENCRYPTION_SECRET_KEY='dev-notify-secret-key'
+export ADMIN_CLIENT_SECRET='dev-notify-secret-key'
 "> environment.sh
 ```
 
