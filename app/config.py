@@ -87,7 +87,11 @@ class Config(object):
     FIRETEXT_INTERNATIONAL_API_KEY = os.getenv("FIRETEXT_INTERNATIONAL_API_KEY", "placeholder")
 
     # Prefix to identify queues in SQS
-    NOTIFICATION_QUEUE_PREFIX = f"{os.getenv('ENVIRONMENT')}-"
+    NOTIFICATION_QUEUE_PREFIX = (
+        f"{os.getenv('NOTIFICATION_QUEUE_PREFIX')}-"
+        if os.getenv("NOTIFICATION_QUEUE_PREFIX")
+        else f"{os.getenv('ENVIRONMENT')}-"
+    )
 
     REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
     REDIS_ENABLED = os.getenv("REDIS_ENABLED") == "1"
