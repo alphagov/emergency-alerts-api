@@ -94,7 +94,7 @@ def dao_purge_old_broadcast_messages(days_older_than=30, service=None):
     else:
         try:
             _ = uuid.UUID(service)
-            if Service.query(Service.name).where(Service.id == service).one():
+            if Service.query(Service.name).filter(Service.id == service).one():
                 service_id = service
         except ValueError:
             service_id = Service.query(Service.id).filter(Service.name == service).one()
