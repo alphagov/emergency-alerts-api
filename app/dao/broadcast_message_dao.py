@@ -86,7 +86,6 @@ def dao_get_all_broadcast_messages():
     )
 
 
-@autocommit
 def dao_purge_old_broadcast_messages(days_older_than=30, service=None):
     service_id = None
     session = db.session
@@ -121,7 +120,7 @@ def dao_purge_old_broadcast_messages(days_older_than=30, service=None):
     print(messages)
 
     for message in messages:
-        transaction = session.begin()
+        #  transaction = session.begin()
         try:
             bms = session.query(BroadcastMessage).filter_by(id=message.id)
             print(bms)
@@ -141,9 +140,9 @@ def dao_purge_old_broadcast_messages(days_older_than=30, service=None):
             print(bes)
             session.query(BroadcastEvent).filter_by(broadcast_message_id=message.id).delete(synchronize_session=False)
 
-            transaction.commit()
+            session.commit()
         except Exception as e:
-            transaction.rollback()
+            session.rollback()
             raise e
 
 
