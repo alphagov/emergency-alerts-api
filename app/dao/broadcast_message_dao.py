@@ -90,13 +90,11 @@ def dao_get_all_broadcast_messages():
 def dao_purge_old_broadcast_messages(days_older_than=30, service=None):
     service_id = None
     if service is None:
-        # service_name = current_app.config["FUNCTIONAL_TESTS_BROADCAST_SERVICE_NAME"]
-        # service_id = Service.query(Service.id).filter(Service.name == service_name).one()
         service_id = current_app.config["FUNCTIONAL_TESTS_BROADCAST_SERVICE_ID"]
     else:
         try:
             _ = uuid.UUID(service)
-            if db.session.exists(Service).where(Service.id == service).scalar():
+            if Service.query(Service.name).where(Service.id == service).one():
                 service_id = service
         except ValueError:
             service_id = Service.query(Service.id).filter(Service.name == service).one()
