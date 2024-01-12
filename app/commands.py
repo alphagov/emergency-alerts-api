@@ -971,11 +971,18 @@ def generate_bulktest_data(user_id):
     type=int,
     help="""Alerts older than the provided value (in days) will be purged from the database""",
 )
+@click.option(
+    "-s",
+    "--service",
+    required=False,
+    default=None,
+    help="""Service identifier - can be either the service UUID or the service name""",
+)
 @notify_command(name="purge-alerts")
-def purge_alerts_from_db(older_than):
+def purge_alerts_from_db(older_than, service_identifier):
     if os.environ.get("ENVIRONMENT") != "preview":
         print("Alerts can only be removed from the database db in development and preview environments")
 
     print("Purging alerts over {older_than} days old...")
-    dao_purge_old_broadcast_messages(days_older_than=older_than)
+    dao_purge_old_broadcast_messages(days_older_than=older_than, service=service_identifier)
     print("Purge complete")
