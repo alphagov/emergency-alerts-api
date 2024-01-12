@@ -1,6 +1,7 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 
+from config import config
 from sqlalchemy import desc
 
 from app import db
@@ -13,6 +14,7 @@ from app.models import (
     BroadcastProviderMessageNumber,
     BroadcastProviderMessageStatus,
     BroadcastStatusType,
+    Service,
     ServiceBroadcastSettings,
 )
 
@@ -82,6 +84,41 @@ def dao_get_all_broadcast_messages():
         .order_by(desc(BroadcastMessage.starts_at))
         .all()
     )
+
+
+@autocommit
+def dao_purge_old_broadcast_messages(days_older_than=30):
+    service_name = config["broadcast_service"]["service_name"]
+    service_id = Service.query(Service.id).filter(Service.name == service_name).one()
+    session = db.session
+
+    messages = (
+        session.query(
+            BroadcastMessage.id,
+        )
+        .filter(
+            BroadcastMessage.service_id == service_id,
+            BroadcastMessage.created_at <= datetime.now() - timedelta(days=days_older_than),
+            BroadcastMessage.status.in_(BroadcastStatusType.PRE_BROADCAST_STATUSES + BroadcastStatusType.LIVE_STATUSES),
+        )
+        .all()
+    )
+
+    for message in messages:
+        transaction = session.begin()
+        try:
+            BroadcastMessage.query.filter_by(id=message.id).delete(synchronize_session=False)
+
+            BroadcastProviderMessage.query.join(
+                BroadcastEvent, BroadcastProviderMessage.broadcast_event_id == BroadcastEvent.id
+            ).filter(BroadcastEvent.broadcast_message_id == message.id).delete(synchronize_session=False)
+
+            BroadcastEvent.query.filter_by(broadcast_message_id=message.id).delete(synchronize_session=False)
+
+            transaction.commit()
+        except Exception as e:
+            transaction.rollback()
+            raise e
 
 
 def get_earlier_events_for_broadcast_event(broadcast_event_id):

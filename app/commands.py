@@ -26,6 +26,7 @@ from app.dao.annual_billing_dao import (
     dao_create_or_update_annual_billing_for_year,
     set_default_free_allowance_for_service,
 )
+from app.dao.broadcast_message_dao import dao_purge_old_broadcast_messages
 from app.dao.fact_billing_dao import (
     delete_billing_data_for_services_for_day,
     fetch_billing_data_for_day,
@@ -961,3 +962,20 @@ def generate_bulktest_data(user_id):
     pprint("Committing...")
     db.session.commit()
     pprint("Finished.")
+
+
+@click.option(
+    "-o",
+    "--older-than",
+    required=False,
+    type=int,
+    help="""Alerts older than the provided value (in days) will be purged from the database""",
+)
+@notify_command(name="purge-alerts")
+def purge_alerts_from_db(older_than):
+    if os.environ.get("ENVIRONMENT") != "preview":
+        print("Alerts can only be removed from the database db in development and preview environments")
+
+    print("Purging alerts over {older_than} days old...")
+    dao_purge_old_broadcast_messages(days_older_than=older_than)
+    print("Purge complete")
