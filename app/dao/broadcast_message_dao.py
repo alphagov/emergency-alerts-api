@@ -87,11 +87,23 @@ def dao_get_all_broadcast_messages():
 
 
 @autocommit
-def dao_purge_old_broadcast_messages(days_older_than=30):
-    service_name = config["broadcast_service"]["service_name"]
-    service_id = Service.query(Service.id).filter(Service.name == service_name).one()
-    session = db.session
+def dao_purge_old_broadcast_messages(days_older_than=30, service=None):
+    service_id = None
+    if service is None:
+        service_name = config["broadcast_service"]["service_name"]
+        service_id = Service.query(Service.id).filter(Service.name == service_name).one()
+    else:
+        try:
+            _ = uuid.UUID(service)
+            if db.session.exists(Service).where(Service.id == service).scalar():
+                service_id = service
+        except ValueError:
+            service_id = Service.query(Service.id).filter(Service.name == service).one()
 
+    if service_id is None:
+        raise "Unable to find service ID"
+
+    session = db.session
     messages = (
         session.query(
             BroadcastMessage.id,
