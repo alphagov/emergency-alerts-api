@@ -103,6 +103,8 @@ def dao_purge_old_broadcast_messages(days_older_than=30, service=None):
     if service_id is None:
         raise "Unable to find service ID"
 
+    print(f"Purging alerts for service {service_id}")
+
     messages = (
         session.query(
             BroadcastMessage.id,
@@ -115,16 +117,29 @@ def dao_purge_old_broadcast_messages(days_older_than=30, service=None):
         .all()
     )
 
+    print(f"Messages associated with service {service_id}:")
+    print(messages)
+
     for message in messages:
         transaction = session.begin()
         try:
-            BroadcastMessage.query.filter_by(id=message.id).delete(synchronize_session=False)
+            bms = session.query(BroadcastMessage).filter_by(id=message.id)
+            print(bms)
+            session.query(BroadcastMessage).filter_by(id=message.id).delete(synchronize_session=False)
 
-            BroadcastProviderMessage.query.join(
+            bpms = (
+                session.query(BroadcastProviderMessage)
+                .join(BroadcastEvent, BroadcastProviderMessage.broadcast_event_id == BroadcastEvent.id)
+                .filter(BroadcastEvent.broadcast_message_id == message.id)
+            )
+            print(bpms)
+            session.query(BroadcastProviderMessage).join(
                 BroadcastEvent, BroadcastProviderMessage.broadcast_event_id == BroadcastEvent.id
             ).filter(BroadcastEvent.broadcast_message_id == message.id).delete(synchronize_session=False)
 
-            BroadcastEvent.query.filter_by(broadcast_message_id=message.id).delete(synchronize_session=False)
+            bes = session.query(BroadcastEvent).filter_by(broadcast_message_id=message.id)
+            print(bes)
+            session.query(BroadcastEvent).filter_by(broadcast_message_id=message.id).delete(synchronize_session=False)
 
             transaction.commit()
         except Exception as e:
