@@ -964,6 +964,7 @@ def generate_bulktest_data(user_id):
     pprint("Finished.")
 
 
+@notify_command(name="purge-alerts")
 @click.option(
     "-o",
     "--older-than",
@@ -978,7 +979,6 @@ def generate_bulktest_data(user_id):
     default=None,
     help="""Service identifier - can be either the service UUID or the service name""",
 )
-@notify_command(name="purge-alerts")
 def purge_alerts_from_db(older_than, service_identifier):
     if os.environ.get("ENVIRONMENT") != "preview":
         print("Alerts can only be removed from the database db in development and preview environments")
