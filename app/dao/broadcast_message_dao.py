@@ -120,25 +120,22 @@ def dao_purge_old_broadcast_messages(days_older_than=30, service=None):
     print(messages)
 
     for message in messages:
-        #  transaction = session.begin()
         try:
-            bms = session.query(BroadcastMessage).filter_by(id=message.id)
-            print(bms)
-            session.query(BroadcastMessage).filter_by(id=message.id).delete(synchronize_session=False)
-
-            bpms = (
+            broadcast_provider_messages = (
                 session.query(BroadcastProviderMessage)
                 .join(BroadcastEvent, BroadcastProviderMessage.broadcast_event_id == BroadcastEvent.id)
                 .filter(BroadcastEvent.broadcast_message_id == message.id)
             )
-            print(bpms)
-            session.query(BroadcastProviderMessage).join(
-                BroadcastEvent, BroadcastProviderMessage.broadcast_event_id == BroadcastEvent.id
-            ).filter(BroadcastEvent.broadcast_message_id == message.id).delete(synchronize_session=False)
+            print(broadcast_provider_messages)
+            broadcast_provider_messages.delete(synchronize_session=False)
 
-            bes = session.query(BroadcastEvent).filter_by(broadcast_message_id=message.id)
-            print(bes)
-            session.query(BroadcastEvent).filter_by(broadcast_message_id=message.id).delete(synchronize_session=False)
+            broadcast_events = session.query(BroadcastEvent).filter_by(broadcast_message_id=message.id)
+            print(broadcast_events)
+            broadcast_events.delete(synchronize_session=False)
+
+            broadcast_messages = session.query(BroadcastMessage).filter_by(id=message.id)
+            print(broadcast_messages)
+            broadcast_messages.delete(synchronize_session=False)
 
             session.commit()
         except Exception as e:
