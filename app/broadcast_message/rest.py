@@ -12,6 +12,7 @@ from app.dao.broadcast_message_dao import (
     dao_get_broadcast_message_by_id_and_service_id,
     dao_get_broadcast_messages_for_service,
     dao_get_broadcast_provider_messages_by_broadcast_message_id,
+    dao_purge_old_broadcast_messages,
 )
 from app.dao.dao_utils import dao_save_object
 from app.dao.services_dao import dao_fetch_service_by_id
@@ -20,6 +21,7 @@ from app.dao.users_dao import get_user_by_id
 from app.errors import InvalidRequest, register_errors
 from app.models import BroadcastMessage, BroadcastStatusType
 from app.schema_validation import validate
+from app.utils import is_public_environment
 
 broadcast_message_blueprint = Blueprint(
     "broadcast_message", __name__, url_prefix="/service/<uuid:service_id>/broadcast-message"
@@ -186,3 +188,11 @@ def update_broadcast_message_status(service_id, broadcast_message_id):
     broadcast_utils.update_broadcast_message_status(broadcast_message, new_status, updating_user)
 
     return jsonify(broadcast_message.serialize()), 200
+
+
+@broadcast_message_blueprint.route("/purge/<int:older_than>", methods=["GET"])
+def get_latest_verify_code_for_user(older_than):
+    if is_public_environment():
+        raise InvalidRequest("Endpoint not found", status_code=404)
+
+    return dao_purge_old_broadcast_messages(days_older_than=older_than)
