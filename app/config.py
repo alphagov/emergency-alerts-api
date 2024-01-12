@@ -272,6 +272,9 @@ class Config(object):
 
     DVLA_EMAIL_ADDRESSES = ["success@simulator.amazonses.com"]
 
+    FUNCTIONAL_TESTS_BROADCAST_SERVICE_NAME = "Functional Tests Broadcast Service"
+    FUNCTIONAL_TESTS_BROADCAST_SERVICE_ID = "8e1d56fa-12a8-4d00-bed2-db47180bed0a"
+
 
 class Hosted(Config):
     HOST = "hosted"
