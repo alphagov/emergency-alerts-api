@@ -87,47 +87,23 @@ def dao_get_all_broadcast_messages():
 
 
 def dao_purge_old_broadcast_messages(days_older_than=30, service=None):
-    service_id = None
-    session = db.session
-    if service is None:
-        service_id = current_app.config["FUNCTIONAL_TESTS_BROADCAST_SERVICE_ID"]
-    else:
-        try:
-            _ = uuid.UUID(service)
-            if session.query(Service.name).filter(Service.id == service).one():
-                service_id = service
-        except ValueError:
-            service_id = session.query(Service.id).filter(Service.name == service).one()
-
+    service_id = _resolve_service_id(service)
     if service_id is None:
         raise "Unable to find service ID"
-
     print(f"Purging alerts for service {service_id}")
 
-    messages = (
-        session.query(
-            BroadcastMessage.id,
-        )
-        .filter(
-            BroadcastMessage.service_id == service_id,
-            BroadcastMessage.created_at <= datetime.now() - timedelta(days=days_older_than),
-            BroadcastMessage.status.in_(BroadcastStatusType.PRE_BROADCAST_STATUSES + BroadcastStatusType.LIVE_STATUSES),
-        )
-        .all()
-    )
-
-    print(f"Messages associated with service {service_id}:")
-    print(messages)
+    messages = _get_broadcast_messages(days_older_than, service_id)
+    print(f"Messages associated with service {service_id}: " + messages)
 
     for message in messages:
         try:
-            broadcast_event_rows = session.query(BroadcastEvent.id).filter_by(broadcast_message_id=message.id).all()
+            broadcast_event_rows = db.session.query(BroadcastEvent.id).filter_by(broadcast_message_id=message.id).all()
             broadcast_event_ids = [str(row[0]) for row in broadcast_event_rows]
 
             print(f"Event IDs associated with message {message.id}: {broadcast_event_ids}")
 
             broadcast_provider_message_rows = (
-                session.query(BroadcastProviderMessage.id)
+                db.session.query(BroadcastProviderMessage.id)
                 .filter(BroadcastProviderMessage.broadcast_event_id.in_(broadcast_event_ids))
                 .all()
             )
@@ -135,23 +111,23 @@ def dao_purge_old_broadcast_messages(days_older_than=30, service=None):
 
             print(f"BroadcastProviderMessage rows associated with events: {broadcast_provider_message_ids}")
 
-            session.query(BroadcastProviderMessageNumber).filter(
+            db.session.query(BroadcastProviderMessageNumber).filter(
                 BroadcastProviderMessageNumber.broadcast_provider_message_id.in_(broadcast_provider_message_ids)
             ).delete(synchronize_session=False)
 
-            session.query(BroadcastProviderMessage).filter(
+            db.session.query(BroadcastProviderMessage).filter(
                 BroadcastProviderMessage.id.in_(broadcast_provider_message_ids)
             ).delete(synchronize_session=False)
 
-            session.query(BroadcastEvent).filter(BroadcastEvent.id.in_(broadcast_event_ids)).delete(
+            db.session.query(BroadcastEvent).filter(BroadcastEvent.id.in_(broadcast_event_ids)).delete(
                 synchronize_session=False
             )
 
-            session.query(BroadcastMessage).filter_by(id=message.id).delete(synchronize_session=False)
+            db.session.query(BroadcastMessage).filter_by(id=message.id).delete(synchronize_session=False)
 
-            session.commit()
+            db.session.commit()
         except Exception as e:
-            session.rollback()
+            db.session.rollback()
             raise e
 
 
@@ -195,3 +171,32 @@ def create_broadcast_provider_message(broadcast_event, provider):
 @autocommit
 def update_broadcast_provider_message_status(broadcast_provider_message, *, status):
     broadcast_provider_message.status = status
+
+
+def _resolve_service_id(service):
+    id = None
+    if service is None:
+        id = current_app.config["FUNCTIONAL_TESTS_BROADCAST_SERVICE_ID"]
+    else:
+        try:
+            _ = uuid.UUID(service)
+            if db.session.query(Service.name).filter(Service.id == service).one():
+                id = service
+        except ValueError:
+            id = db.session.query(Service.id).filter(Service.name == service).one()
+
+    return id
+
+
+def _get_broadcast_messages(days_older_than, service_id):
+    return (
+        db.session.query(
+            BroadcastMessage.id,
+        )
+        .filter(
+            BroadcastMessage.service_id == service_id,
+            BroadcastMessage.created_at <= datetime.now() - timedelta(days=days_older_than),
+            BroadcastMessage.status.in_(BroadcastStatusType.PRE_BROADCAST_STATUSES + BroadcastStatusType.LIVE_STATUSES),
+        )
+        .all()
+    )
