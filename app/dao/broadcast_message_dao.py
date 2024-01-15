@@ -93,7 +93,8 @@ def dao_purge_old_broadcast_messages(days_older_than=30, service=None):
     print(f"Purging alerts for service {service_id}")
 
     messages = _get_broadcast_messages(days_older_than, service_id)
-    print(f"Messages associated with service {service_id}: " + messages)
+    print(f"Messages associated with service {service_id}:")
+    print(messages)
 
     for message in messages:
         try:
