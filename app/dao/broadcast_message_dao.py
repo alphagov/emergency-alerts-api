@@ -124,7 +124,7 @@ def dao_purge_old_broadcast_messages(days_older_than=30, service=None):
             broadcast_event_ids = session.query(BroadcastEvent.id).filter_by(id=message.id).all()
             print(f"Event IDs associated with message {message.id}: {broadcast_event_ids}")
             session.query(BroadcastProviderMessage).filter(
-                BroadcastProviderMessage.c.broadcast_event_id.in_(broadcast_event_ids)
+                BroadcastProviderMessage.broadcast_event_id.in_(broadcast_event_ids)
             ).delete(synchronize_session=False)
 
             # broadcast_provider_messages = (
@@ -135,7 +135,7 @@ def dao_purge_old_broadcast_messages(days_older_than=30, service=None):
             # print(broadcast_provider_messages)
             # broadcast_provider_messages.delete(synchronize_session=False)
 
-            session.query(BroadcastEvent).filter(BroadcastEvent.c.id.in_(broadcast_event_ids)).delete(
+            session.query(BroadcastEvent).filter(BroadcastEvent.id.in_(broadcast_event_ids)).delete(
                 synchronize_session=False
             )
 
