@@ -121,20 +121,29 @@ def dao_purge_old_broadcast_messages(days_older_than=30, service=None):
 
     for message in messages:
         try:
-            broadcast_provider_messages = (
-                session.query(BroadcastProviderMessage)
-                .join(BroadcastEvent, BroadcastProviderMessage.broadcast_event_id == BroadcastEvent.id)
-                .filter(BroadcastEvent.broadcast_message_id == message.id)
+            broadcast_event_ids = session.query(BroadcastEvent.id).filter_by(id=message.id).all()
+            print(f"Event IDs associated with message {message.id}: {broadcast_event_ids}")
+            session.query(BroadcastProviderMessage).filter(
+                BroadcastProviderMessage.c.broadcast_event_id.in_(broadcast_event_ids)
+            ).delete(synchronize_session=False)
+
+            # broadcast_provider_messages = (
+            #     session.query(BroadcastProviderMessage)
+            #     .join(BroadcastEvent, BroadcastProviderMessage.broadcast_event_id == BroadcastEvent.id)
+            #     .filter(BroadcastEvent.broadcast_message_id == message.id)
+            # )
+            # print(broadcast_provider_messages)
+            # broadcast_provider_messages.delete(synchronize_session=False)
+
+            session.query(BroadcastEvent).filter(BroadcastEvent.c.id.in_(broadcast_event_ids)).delete(
+                synchronize_session=False
             )
-            print(broadcast_provider_messages)
-            broadcast_provider_messages.delete(synchronize_session=False)
 
-            broadcast_events = session.query(BroadcastEvent).filter_by(broadcast_message_id=message.id)
-            print(broadcast_events)
-            broadcast_events.delete(synchronize_session=False)
+            # broadcast_events = session.query(BroadcastEvent).filter_by(broadcast_message_id=message.id)
+            # print(broadcast_events)
+            # broadcast_events.delete(synchronize_session=False)
 
-            broadcast_messages = session.query(BroadcastMessage).filter_by(id=message.id)
-            print(broadcast_messages)
+            broadcast_messages = session.query(BroadcastMessage).filter(id=message.id)
             broadcast_messages.delete(synchronize_session=False)
 
             session.commit()
