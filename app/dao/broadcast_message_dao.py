@@ -143,7 +143,7 @@ def dao_purge_old_broadcast_messages(days_older_than=30, service=None):
             # print(broadcast_events)
             # broadcast_events.delete(synchronize_session=False)
 
-            broadcast_messages = session.query(BroadcastMessage).filter(id=message.id)
+            broadcast_messages = session.query(BroadcastMessage).filter_by(id=message.id)
             broadcast_messages.delete(synchronize_session=False)
 
             session.commit()
