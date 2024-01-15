@@ -983,6 +983,6 @@ def purge_alerts_from_db(older_than, service):
     if os.environ.get("ENVIRONMENT") != "preview":
         print("Alerts can only be removed from the database db in development and preview environments")
 
-    print("Purging alerts over {older_than} days old...")
+    print(f"Purging alerts over {older_than} days old...")
     dao_purge_old_broadcast_messages(days_older_than=older_than, service=service)
     print("Purge complete")
