@@ -3,8 +3,8 @@ version: 0.2
 phases:
   pre_build:
     commands:
-      - echo Checking out to api_${ENVIRONMENT}_latest tag...
-      - git checkout tags/api_${ENVIRONMENT}_latest
+      - echo Checking out to migrations_${ENVIRONMENT}_latest tag...
+      - git checkout tags/migrations_${ENVIRONMENT}_latest
 
   build:
     commands:
@@ -12,12 +12,12 @@ phases:
       - echo Deployment started on `date`
 
       - |
-        api_network_config=$(aws ecs describe-services --services ${ECR_RESOURCE_PREFIX:-eas-app}-api --cluster ${ECR_RESOURCE_PREFIX:-eas-app}-cluster | jq .services[0].networkConfiguration.awsvpcConfiguration)
+        api_network_config=$(aws ecs describe-services --services ${RESOURCE_PREFIX:-eas-app}-api --cluster ${RESOURCE_PREFIX:-eas-app}-cluster | jq .services[0].networkConfiguration.awsvpcConfiguration)
 
         subnets=$(echo $api_network_config | jq .subnets)
         security_groups=$(echo $api_network_config | jq .securityGroups)
 
-        taskdef_arn=$(aws ecs list-task-definitions --family-prefix ${ECR_RESOURCE_PREFIX:-eas-app}-migrations --status active --max-items 1 --sort DESC | jq .taskDefinitionArns[0] | tr -d '"')
+        taskdef_arn=$(aws ecs list-task-definitions --family-prefix ${RESOURCE_PREFIX:-eas-app}-migrations --status active --max-items 1 --sort DESC | jq .taskDefinitionArns[0] | tr -d '"')
 
       - |
         echo "Subnets: $subnets"
@@ -27,7 +27,7 @@ phases:
         echo '
         aws ecs run-task \
           --task-definition $taskdef_arn \
-          --cluster ${ECR_RESOURCE_PREFIX:-eas-app}-cluster \
+          --cluster ${RESOURCE_PREFIX:-eas-app}-cluster \
           --launch-type="FARGATE" \
           --enable-execute-command \
           --network-configuration "{ \"awsvpcConfiguration\": { \"securityGroups\": $security_groups, \"subnets\": $subnets}}"
