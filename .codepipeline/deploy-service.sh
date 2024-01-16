@@ -8,7 +8,8 @@ while [ $# -gt 0 ]; do
     shift
 done
 
-CLUSTER_NAME="${RESOURCE_PREFIX}-cluster"
+PREFIX="${RESOURCE_PREFIX:-eas-app}"
+CLUSTER_NAME="${PREFIX}-cluster"
 
 update_task_defintion(){
     if [ -z "$SERVICE" ]; then
@@ -21,7 +22,7 @@ update_task_defintion(){
         --status ACTIVE \
         --sort DESC \
         --max-items 1 \
-        --family-prefix "${RESOURCE_PREFIX}-${SERVICE}" \
+        --family-prefix "${PREFIX}-${SERVICE}" \
         --output json \
     | jq '.taskDefinitionArns[0]' | tr -d '"')
 
@@ -34,7 +35,7 @@ update_task_defintion(){
         echo "=============== UPDATING SERVICE ==============="
         aws ecs update-service \
         --cluster "$CLUSTER_NAME" \
-        --service "${RESOURCE_PREFIX}-${SERVICE}" \
+        --service "${PREFIX}-${SERVICE}" \
         --task-definition "$latest_task_def" \
         --force-new-deployment
     fi

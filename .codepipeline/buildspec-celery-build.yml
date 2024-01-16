@@ -14,7 +14,7 @@ phases:
       - echo Build started on `date`
       - echo Building Docker image...
       - docker build -t $REPOSITORY_URI:latest -t $REPOSITORY_URI:pipeline_$EXECUTION_ID -t $REPOSITORY_URI:commit_$COMMIT_ID
-        -f Dockerfile.eas-celery --build-arg ECS_ACCOUNT_NUMBER=$ACCOUNT_NUMBER RESOURCE_PREFIX=$ECR_RESOURCE_PREFIX --no-cache
+        -f Dockerfile.eas-celery --build-arg ECS_ACCOUNT_NUMBER=$ACCOUNT_NUMBER RESOURCE_PREFIX=${ECR_RESOURCE_PREFIX:-eas-app} --no-cache
         .
   post_build:
     commands:
