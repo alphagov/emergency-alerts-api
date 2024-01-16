@@ -979,10 +979,17 @@ def generate_bulktest_data(user_id):
     default=None,
     help="""Service identifier - can be either the service UUID or the service name""",
 )
-def purge_alerts_from_db(older_than, service):
+@click.option(
+    "-d",
+    "--dry-run",
+    required=False,
+    type=bool,
+    help="""Show the IDs of the DB items selected only. The items will not be deleted""",
+)
+def purge_alerts_from_db(older_than, service, dry_run):
     if os.environ.get("ENVIRONMENT") != "preview":
         print("Alerts can only be removed from the database db in development and preview environments")
 
     print(f"Purging alerts over {older_than} days old...")
-    dao_purge_old_broadcast_messages(days_older_than=older_than, service=service)
+    dao_purge_old_broadcast_messages(days_older_than=older_than, service=service, dry_run=dry_run)
     print("Purge complete")
