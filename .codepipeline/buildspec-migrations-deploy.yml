@@ -1,6 +1,11 @@
 version: 0.2
 
 phases:
+  pre_build:
+    commands:
+      - echo Checking out to api_${ENVIRONMENT}_latest tag...
+      - git checkout tags/api_${ENVIRONMENT}_latest
+
   build:
     commands:
       - COMMIT_ID=$(echo $COMMIT_ID | cut -c 1-7)
