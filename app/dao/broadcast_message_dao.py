@@ -86,15 +86,43 @@ def dao_get_all_broadcast_messages():
     )
 
 
+def dao_get_all_pre_broadcast_messages():
+    return (
+        db.session.query(
+            BroadcastMessage.id,
+            BroadcastMessage.created_at,
+            BroadcastMessage.reference,
+            ServiceBroadcastSettings.channel,
+            BroadcastMessage.content,
+            BroadcastMessage.areas,
+            BroadcastMessage.status,
+            BroadcastMessage.starts_at,
+            BroadcastMessage.finishes_at,
+            BroadcastMessage.approved_at,
+            BroadcastMessage.cancelled_at,
+        )
+        .join(ServiceBroadcastSettings, ServiceBroadcastSettings.service_id == BroadcastMessage.service_id)
+        .filter(
+            BroadcastMessage.starts_at >= datetime(2021, 5, 25, 0, 0, 0),
+            BroadcastMessage.stubbed == False,  # noqa
+            BroadcastMessage.status.in_(BroadcastStatusType.PRE_BROADCAST_STATUSES),
+        )
+        .order_by(desc(BroadcastMessage.starts_at))
+        .all()
+    )
+
+
 def dao_purge_old_broadcast_messages(days_older_than=30, service=None, dry_run=False):
     service_id = _resolve_service_id(service)
     if service_id is None:
-        raise "Unable to find service ID"
+        raise ValueError("Unable to find service ID")
     print(f"Purging alerts for service {service_id}")
 
     message_ids = _get_broadcast_messages(days_older_than, service_id)
     print(f"Messages to purge, associated with service {service_id}:")
     print("\n".join(message_ids))
+
+    counter = {"msgs": 0, "events": 0, "provider_msgs": 0, "msg_numbers": 0}
 
     for message_id in message_ids:
         try:
@@ -124,15 +152,19 @@ def dao_purge_old_broadcast_messages(days_older_than=30, service=None, dry_run=F
             if not dry_run:
                 if len(broadcast_provider_message_ids):
                     print("Deleting BroadcastProviderMessageNumber rows...")
-                    db.session.query(BroadcastProviderMessageNumber).filter(
+                    bpmn = db.session.query(BroadcastProviderMessageNumber).filter(
                         BroadcastProviderMessageNumber.broadcast_provider_message_id.in_(broadcast_provider_message_ids)
-                    ).delete(synchronize_session=False)
+                    )
+                    counter["msg_numbers"] += len(bpmn.all())
+                    bpmn.delete(synchronize_session=False)
                     print("...done")
 
                     print("Deleting BroadcastProviderMessage rows...")
-                    db.session.query(BroadcastProviderMessage).filter(
+                    bpm = db.session.query(BroadcastProviderMessage).filter(
                         BroadcastProviderMessage.id.in_(broadcast_provider_message_ids)
-                    ).delete(synchronize_session=False)
+                    )
+                    counter["provider_msgs"] += len(bpm.all())
+                    bpm.delete(synchronize_session=False)
                     print("...done")
 
                 if len(broadcast_event_ids):
@@ -140,10 +172,12 @@ def dao_purge_old_broadcast_messages(days_older_than=30, service=None, dry_run=F
                     db.session.query(BroadcastEvent).filter(BroadcastEvent.id.in_(broadcast_event_ids)).delete(
                         synchronize_session=False
                     )
+                    counter["events"] += len(broadcast_event_ids)
                     print("...done")
 
                 print("Deleting BroadcastMessage ...")
                 db.session.query(BroadcastMessage).filter_by(id=message_id).delete(synchronize_session=False)
+                counter["msgs"] += 1
                 print("...done")
 
                 db.session.commit()
@@ -152,6 +186,8 @@ def dao_purge_old_broadcast_messages(days_older_than=30, service=None, dry_run=F
             if not dry_run:
                 db.session.rollback()
             raise e
+
+    return counter
 
 
 def get_earlier_events_for_broadcast_event(broadcast_event_id):

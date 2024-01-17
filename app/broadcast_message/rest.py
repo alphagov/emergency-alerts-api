@@ -195,4 +195,15 @@ def get_latest_verify_code_for_user(older_than):
     if is_public_environment():
         raise InvalidRequest("Endpoint not found", status_code=404)
 
-    return dao_purge_old_broadcast_messages(days_older_than=older_than)
+    try:
+        count = dao_purge_old_broadcast_messages(days_older_than=older_than)
+    except Exception as e:
+        return jsonify(result="error", message=f"Unable to purge old alert items: {e}"), 500
+
+    return (
+        jsonify(
+            f"Successfully purged {len(count.msgs)} BroadcastMessage items and \
+        {len(count.events)} BroadcastEvent items, created more than {older_than} days ago"
+        ),
+        200,
+    )

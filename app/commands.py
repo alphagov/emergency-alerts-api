@@ -992,5 +992,8 @@ def purge_alerts_from_db(older_than, service, dry_run):
         print("Alerts can only be removed from the database db in development and preview environments")
 
     print(f">>>>>> Purging alerts over {older_than} days old...")
-    dao_purge_old_broadcast_messages(days_older_than=older_than, service=service, dry_run=dry_run)
-    print("<<<<<< Purge complete")
+    count = dao_purge_old_broadcast_messages(days_older_than=older_than, service=service, dry_run=dry_run)
+    print(
+        f"<<<<<< Successfully purged {len(count.msgs)} BroadcastMessage items and {len(count.events)} \
+        BroadcastEvent items, created more than {older_than} days ago"
+    )
