@@ -15,6 +15,8 @@ if [ $3 == "" ]; then
   exit 1
 fi
 
+RESOURCE_PREFIX="$4"
+
 aws cloudwatch get-metric-data --start-time $2 --end-time $3 --metric-data-queries '[
   {
     "Id": "migrationResults",
@@ -25,11 +27,11 @@ aws cloudwatch get-metric-data --start-time $2 --end-time $3 --metric-data-queri
         "Dimensions": [
           {
             "Name": "ClusterName",
-            "Value": "eas-app-cluster"
+            "Value": "${RESOURCE_PREFIX}-cluster"
           },
           {
             "Name": "ServiceName",
-            "Value": "eas-app-migrations"
+            "Value": "${RESOURCE_PREFIX}-migrations"
           },
           {
             "Name": "Version",

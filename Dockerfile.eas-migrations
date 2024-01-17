@@ -1,5 +1,6 @@
 ARG ECS_ACCOUNT_NUMBER
-FROM ${ECS_ACCOUNT_NUMBER}.dkr.ecr.eu-west-2.amazonaws.com/eas-app-base:latest
+ARG RESOURCE_PREFIX=eas-app
+FROM ${ECS_ACCOUNT_NUMBER}.dkr.ecr.eu-west-2.amazonaws.com/${RESOURCE_PREFIX}-base:latest
 
 # Create root directory and copy repo
 COPY . $DIR_API

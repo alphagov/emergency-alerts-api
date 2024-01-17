@@ -42,7 +42,7 @@ phases:
       - echo "Checking for successful builds of $MIGRATION_VERSION"
 
       - chmod +x ./scripts/get-latest-migrations.sh
-      - SUCCESSFUL_MIGRATIONS=$(./scripts/get-latest-migrations.sh MigrationSuccess 1699194880 1699367680)
+      - SUCCESSFUL_MIGRATIONS=$(./scripts/get-latest-migrations.sh MigrationSuccess 1699194880 1699367680 ${RESOURCE_PREFIX})
       - echo $SUCCESSFUL_MIGRATIONS
       - |
         if [[ $SUCCESSFUL_MIGRATIONS == 0 ]]; then
