@@ -191,7 +191,7 @@ def update_broadcast_message_status(service_id, broadcast_message_id):
 
 
 @broadcast_message_blueprint.route("/purge/<int:older_than>", methods=["GET"])
-def get_latest_verify_code_for_user(older_than):
+def purge_broadcast_messages(older_than):
     if is_public_environment():
         raise InvalidRequest("Endpoint not found", status_code=404)
 
