@@ -10,7 +10,11 @@ from app.dao.broadcast_message_dao import (
 from app.dao.broadcast_service_dao import (
     insert_or_update_service_broadcast_settings,
 )
-from app.models import BROADCAST_TYPE, BroadcastEventMessageType
+from app.models import (
+    BROADCAST_TYPE,
+    BroadcastEventMessageType,
+    BroadcastStatusType,
+)
 from tests.app.db import create_broadcast_event, create_broadcast_message
 from tests.app.db import (
     create_broadcast_provider_message as create_broadcast_provider_message_test,
@@ -151,19 +155,34 @@ def test_dao_purge_old_broadcast_messages(sample_broadcast_service):
 
     broadcast_messages = [
         create_broadcast_message(
-            t, created_at=datetime(2023, 10, 8, 12, 0, 0), starts_at=datetime.now(), status="pending-approval"
+            t,
+            created_at=datetime(2023, 10, 8, 12, 0, 0),
+            starts_at=datetime.now(),
+            status=BroadcastStatusType.PENDING_APPROVAL,
         ),
         create_broadcast_message(
-            t, created_at=datetime(2023, 12, 9, 12, 0, 0), starts_at=datetime.now(), status="pending-approval"
+            t,
+            created_at=datetime(2023, 12, 9, 12, 0, 0),
+            starts_at=datetime.now(),
+            status=BroadcastStatusType.PENDING_APPROVAL,
         ),
         create_broadcast_message(
-            t, created_at=datetime(2024, 1, 10, 12, 0, 0), starts_at=datetime.now(), status="pending-approval"
+            t,
+            created_at=datetime(2024, 1, 10, 12, 0, 0),
+            starts_at=datetime.now(),
+            status=BroadcastStatusType.PENDING_APPROVAL,
         ),
         create_broadcast_message(
-            t, created_at=datetime(2024, 1, 11, 15, 0, 0), starts_at=datetime.now(), status="pending-approval"
+            t,
+            created_at=datetime(2024, 1, 12, 15, 0, 0),
+            starts_at=datetime.now(),
+            status=BroadcastStatusType.PENDING_APPROVAL,
         ),
         create_broadcast_message(
-            t, created_at=datetime(2024, 1, 12, 9, 0, 0), starts_at=datetime.now(), status="pending-approval"
+            t,
+            created_at=datetime(2024, 1, 13, 9, 0, 0),
+            starts_at=datetime.now(),
+            status=BroadcastStatusType.PENDING_APPROVAL,
         ),
     ]
 
@@ -173,7 +192,7 @@ def test_dao_purge_old_broadcast_messages(sample_broadcast_service):
     # purge all messages older than the two most recent
     older_than = (datetime.now() - datetime(2024, 1, 11)).days
 
-    messages_purged_count = dao_purge_old_broadcast_messages(older_than, str(sample_broadcast_service.id))
+    messages_purged_count = dao_purge_old_broadcast_messages(str(sample_broadcast_service.id), older_than)
     remaining_messages = dao_get_all_pre_broadcast_messages()
 
     assert messages_purged_count["msgs"] == test_message_count - len(remaining_messages)
@@ -198,19 +217,34 @@ def test_dao_purge_old_broadcast_messages_and_broadcast_events(sample_broadcast_
 
     broadcast_messages = [
         create_broadcast_message(
-            t, created_at=datetime(2023, 10, 8, 12, 0, 0), starts_at=datetime.now(), status="broadcasting"
+            t,
+            created_at=datetime(2023, 10, 8, 12, 0, 0),
+            starts_at=datetime.now(),
+            status=BroadcastStatusType.BROADCASTING,
         ),
         create_broadcast_message(
-            t, created_at=datetime(2023, 12, 9, 12, 0, 0), starts_at=datetime.now(), status="cancelled"
+            t,
+            created_at=datetime(2023, 12, 9, 12, 0, 0),
+            starts_at=datetime.now(),
+            status=BroadcastStatusType.CANCELLED,
         ),
         create_broadcast_message(
-            t, created_at=datetime(2024, 1, 10, 12, 0, 0), starts_at=datetime.now(), status="broadcasting"
+            t,
+            created_at=datetime(2024, 1, 10, 12, 0, 0),
+            starts_at=datetime.now(),
+            status=BroadcastStatusType.BROADCASTING,
         ),
         create_broadcast_message(
-            t, created_at=datetime(2024, 1, 11, 15, 0, 0), starts_at=datetime.now(), status="broadcasting"
+            t,
+            created_at=datetime(2024, 1, 12, 15, 0, 0),
+            starts_at=datetime.now(),
+            status=BroadcastStatusType.BROADCASTING,
         ),
         create_broadcast_message(
-            t, created_at=datetime(2024, 1, 12, 9, 0, 0), starts_at=datetime.now(), status="broadcasting"
+            t,
+            created_at=datetime(2024, 1, 13, 9, 0, 0),
+            starts_at=datetime.now(),
+            status=BroadcastStatusType.BROADCASTING,
         ),
     ]
 
@@ -235,7 +269,7 @@ def test_dao_purge_old_broadcast_messages_and_broadcast_events(sample_broadcast_
     # purge all messages older than the two most recent
     older_than = (datetime.now() - datetime(2024, 1, 11)).days
 
-    messages_purged_count = dao_purge_old_broadcast_messages(older_than, str(sample_broadcast_service.id))
+    messages_purged_count = dao_purge_old_broadcast_messages(str(sample_broadcast_service.id), older_than)
     remaining_messages = dao_get_all_broadcast_messages()
 
     assert messages_purged_count["msgs"] == test_message_count - len(remaining_messages)
@@ -255,22 +289,40 @@ def test_dao_purge_old_broadcastmessages_events_providermessages_and_providermes
 
     broadcast_messages = [
         create_broadcast_message(
-            t, created_at=datetime(2023, 10, 8, 12, 0, 0), starts_at=datetime.now(), status="broadcasting"
+            t,
+            created_at=datetime(2023, 10, 8, 12, 0, 0),
+            starts_at=datetime.now(),
+            status=BroadcastStatusType.BROADCASTING,
         ),
         create_broadcast_message(
-            t, created_at=datetime(2023, 10, 15, 12, 0, 0), starts_at=datetime.now(), status="cancelled"
+            t,
+            created_at=datetime(2023, 10, 15, 12, 0, 0),
+            starts_at=datetime.now(),
+            status=BroadcastStatusType.CANCELLED,
         ),
         create_broadcast_message(
-            t, created_at=datetime(2023, 12, 9, 12, 0, 0), starts_at=datetime.now(), status="cancelled"
+            t,
+            created_at=datetime(2023, 12, 9, 12, 0, 0),
+            starts_at=datetime.now(),
+            status=BroadcastStatusType.CANCELLED,
         ),
         create_broadcast_message(
-            t, created_at=datetime(2024, 1, 10, 12, 0, 0), starts_at=datetime.now(), status="broadcasting"
+            t,
+            created_at=datetime(2024, 1, 10, 12, 0, 0),
+            starts_at=datetime.now(),
+            status=BroadcastStatusType.BROADCASTING,
         ),
         create_broadcast_message(
-            t, created_at=datetime(2024, 1, 11, 15, 0, 0), starts_at=datetime.now(), status="broadcasting"
+            t,
+            created_at=datetime(2024, 1, 12, 15, 0, 0),
+            starts_at=datetime.now(),
+            status=BroadcastStatusType.BROADCASTING,
         ),
         create_broadcast_message(
-            t, created_at=datetime(2024, 1, 12, 9, 0, 0), starts_at=datetime.now(), status="broadcasting"
+            t,
+            created_at=datetime(2024, 1, 13, 9, 0, 0),
+            starts_at=datetime.now(),
+            status=BroadcastStatusType.BROADCASTING,
         ),
     ]
 
@@ -299,7 +351,7 @@ def test_dao_purge_old_broadcastmessages_events_providermessages_and_providermes
     # purge all messages older than the two most recent
     older_than = (datetime.now() - datetime(2024, 1, 11)).days
 
-    purged_count = dao_purge_old_broadcast_messages(older_than, str(sample_broadcast_service.id))
+    purged_count = dao_purge_old_broadcast_messages(str(sample_broadcast_service.id), older_than)
     remaining_messages = dao_get_all_broadcast_messages()
 
     assert purged_count["msgs"] == test_message_count - len(remaining_messages)

@@ -112,13 +112,17 @@ def dao_get_all_pre_broadcast_messages():
     )
 
 
-def dao_purge_old_broadcast_messages(days_older_than=30, service=None, dry_run=False):
+def dao_purge_old_broadcast_messages(service, days_older_than=30, dry_run=False):
+    if service is None:
+        raise ValueError("Service ID is required")
+
     service_id = _resolve_service_id(service)
     if service_id is None:
         raise ValueError("Unable to find service ID")
-    print(f"Purging alerts for service {service_id}")
 
+    print(f"Purging alerts for service {service_id}")
     message_ids = _get_broadcast_messages(days_older_than, service_id)
+
     print(f"Messages to purge, associated with service {service_id}:")
     print("\n".join(message_ids))
 
@@ -128,57 +132,21 @@ def dao_purge_old_broadcast_messages(days_older_than=30, service=None, dry_run=F
         try:
             print(f">>> Message ID to purge: {message_id}")
 
-            broadcast_event_rows = db.session.query(BroadcastEvent.id).filter_by(broadcast_message_id=message_id).all()
-            broadcast_event_ids = [str(row[0]) for row in broadcast_event_rows]
-            print(f"BroadcastEvent IDs associated with messsage {message_id}:")
-            if len(broadcast_event_ids):
-                print("\n".join(broadcast_event_ids))
-            else:
-                print("None")
-
-            broadcast_provider_message_rows = (
-                db.session.query(BroadcastProviderMessage.id)
-                .filter(BroadcastProviderMessage.broadcast_event_id.in_(broadcast_event_ids))
-                .all()
-            )
-            broadcast_provider_message_ids = [str(row[0]) for row in broadcast_provider_message_rows]
+            broadcast_event_ids = _get_broadcast_event_ids(message_id)
+            broadcast_provider_message_ids = _broadcast_provider_message_ids(broadcast_event_ids)
 
             print("BroadcastProviderMessage IDs associated with BroadcastEvents:")
-            if len(broadcast_provider_message_ids):
-                print("\n".join(broadcast_provider_message_ids))
-            else:
-                print("None")
+            print("\n".join(broadcast_provider_message_ids)) if len(broadcast_provider_message_ids) else print("None")
 
             if not dry_run:
                 if len(broadcast_provider_message_ids):
-                    print("Deleting BroadcastProviderMessageNumber rows...")
-                    bpmn = db.session.query(BroadcastProviderMessageNumber).filter(
-                        BroadcastProviderMessageNumber.broadcast_provider_message_id.in_(broadcast_provider_message_ids)
-                    )
-                    counter["msg_numbers"] += len(bpmn.all())
-                    bpmn.delete(synchronize_session=False)
-                    print("...done")
-
-                    print("Deleting BroadcastProviderMessage rows...")
-                    bpm = db.session.query(BroadcastProviderMessage).filter(
-                        BroadcastProviderMessage.id.in_(broadcast_provider_message_ids)
-                    )
-                    counter["provider_msgs"] += len(bpm.all())
-                    bpm.delete(synchronize_session=False)
-                    print("...done")
+                    counter["msg_numbers"] += _delete_broadcast_provider_message_numbers(broadcast_provider_message_ids)
+                    counter["provider_msgs"] += _delete_broadcast_provider_messages(broadcast_provider_message_ids)
 
                 if len(broadcast_event_ids):
-                    print("Deleting BroadcastEvent rows...")
-                    db.session.query(BroadcastEvent).filter(BroadcastEvent.id.in_(broadcast_event_ids)).delete(
-                        synchronize_session=False
-                    )
-                    counter["events"] += len(broadcast_event_ids)
-                    print("...done")
+                    counter["events"] += _delete_broadcast_events(broadcast_event_ids)
 
-                print("Deleting BroadcastMessage ...")
-                db.session.query(BroadcastMessage).filter_by(id=message_id).delete(synchronize_session=False)
-                counter["msgs"] += 1
-                print("...done")
+                counter["msgs"] += _delete_broadcast_message(message_id)
 
                 db.session.commit()
 
@@ -233,18 +201,19 @@ def update_broadcast_provider_message_status(broadcast_provider_message, *, stat
 
 
 def _resolve_service_id(service):
-    id = None
     if service is None:
-        id = current_app.config["FUNCTIONAL_TESTS_BROADCAST_SERVICE_ID"]
+        service = uuid.UUID(current_app.config["FUNCTIONAL_TESTS_BROADCAST_SERVICE_ID"])
     else:
-        try:
-            _ = uuid.UUID(service)
-            if db.session.query(Service.name).filter(Service.id == service).one():
-                id = service
-        except ValueError:
-            id = db.session.query(Service.id).filter(Service.name == service).one()
+        if not isinstance(service, uuid.UUID):
+            try:
+                service = uuid.UUID(service)
+            except ValueError:
+                return None
 
-    return id
+    if db.session.query(Service).filter(Service.id == service).one():
+        return str(service)
+
+    return None
 
 
 def _get_broadcast_messages(days_older_than, service_id):
@@ -260,3 +229,68 @@ def _get_broadcast_messages(days_older_than, service_id):
         .all()
     )
     return [str(row[0]) for row in messages]
+
+
+def _get_broadcast_event_ids(message_id):
+    broadcast_event_rows = db.session.query(BroadcastEvent.id).filter_by(broadcast_message_id=message_id).all()
+    broadcast_event_ids = [str(row[0]) for row in broadcast_event_rows]
+    print(f"BroadcastEvent IDs associated with messsage {message_id}:")
+    if len(broadcast_event_ids):
+        print("\n".join(broadcast_event_ids))
+    else:
+        print("None")
+
+    return broadcast_event_ids
+
+
+def _broadcast_provider_message_ids(broadcast_event_ids):
+    broadcast_provider_message_rows = (
+        db.session.query(BroadcastProviderMessage.id)
+        .filter(BroadcastProviderMessage.broadcast_event_id.in_(broadcast_event_ids))
+        .all()
+    )
+    broadcast_provider_message_ids = [str(row[0]) for row in broadcast_provider_message_rows]
+
+    return broadcast_provider_message_ids
+
+
+def _delete_broadcast_provider_message_numbers(broadcast_provider_message_ids):
+    print("Deleting BroadcastProviderMessageNumber rows...")
+    bpmn = db.session.query(BroadcastProviderMessageNumber).filter(
+        BroadcastProviderMessageNumber.broadcast_provider_message_id.in_(broadcast_provider_message_ids)
+    )
+    item_count = len(bpmn.all())
+    bpmn.delete(synchronize_session=False)
+    print("...done")
+
+    return item_count
+
+
+def _delete_broadcast_provider_messages(broadcast_provider_message_ids):
+    print("Deleting BroadcastProviderMessage rows...")
+    bpm = db.session.query(BroadcastProviderMessage).filter(
+        BroadcastProviderMessage.id.in_(broadcast_provider_message_ids)
+    )
+    item_count = len(bpm.all())
+    bpm.delete(synchronize_session=False)
+    print("...done")
+
+    return item_count
+
+
+def _delete_broadcast_events(broadcast_event_ids):
+    print("Deleting BroadcastEvent rows...")
+    db.session.query(BroadcastEvent).filter(BroadcastEvent.id.in_(broadcast_event_ids)).delete(
+        synchronize_session=False
+    )
+    print("...done")
+
+    return len(broadcast_event_ids)
+
+
+def _delete_broadcast_message(message_id):
+    print("Deleting BroadcastMessage ...")
+    db.session.query(BroadcastMessage).filter_by(id=message_id).delete(synchronize_session=False)
+    print("...done")
+
+    return 1

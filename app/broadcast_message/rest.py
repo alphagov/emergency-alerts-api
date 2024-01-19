@@ -191,19 +191,21 @@ def update_broadcast_message_status(service_id, broadcast_message_id):
 
 
 @broadcast_message_blueprint.route("/purge/<int:older_than>", methods=["GET"])
-def purge_broadcast_messages(older_than):
+def purge_broadcast_messages(service_id, older_than):
     if is_public_environment():
         raise InvalidRequest("Endpoint not found", status_code=404)
 
     try:
-        count = dao_purge_old_broadcast_messages(days_older_than=older_than)
+        count = dao_purge_old_broadcast_messages(service=service_id, days_older_than=older_than)
     except Exception as e:
         return jsonify(result="error", message=f"Unable to purge old alert items: {e}"), 500
 
     return (
         jsonify(
-            f"Successfully purged {len(count.msgs)} BroadcastMessage items and \
-        {len(count.events)} BroadcastEvent items, created more than {older_than} days ago"
+            {
+                "message": f"Purged {count['msgs']} BroadcastMessage items and {count['events']} "
+                f"BroadcastEvent items, created more than {older_than} days ago"
+            }
         ),
         200,
     )
