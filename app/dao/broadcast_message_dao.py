@@ -123,31 +123,26 @@ def dao_purge_old_broadcast_messages(service, days_older_than=30, dry_run=False)
     print(f"Purging alerts for service {service_id}")
     message_ids = _get_broadcast_messages(days_older_than, service_id)
 
-    print(f"Messages to purge, associated with service {service_id}:")
-    print("\n".join(message_ids))
-
     counter = {"msgs": 0, "events": 0, "provider_msgs": 0, "msg_numbers": 0}
-
     for message_id in message_ids:
         try:
-            print(f">>> Message ID to purge: {message_id}")
-
             broadcast_event_ids = _get_broadcast_event_ids(message_id)
             broadcast_provider_message_ids = _broadcast_provider_message_ids(broadcast_event_ids)
 
-            print("BroadcastProviderMessage IDs associated with BroadcastEvents:")
-            print("\n".join(broadcast_provider_message_ids)) if len(broadcast_provider_message_ids) else print("None")
+            if len(broadcast_provider_message_ids):
+                counter["msg_numbers"] += _delete_broadcast_provider_message_numbers(
+                    broadcast_provider_message_ids, dry_run=dry_run
+                )
+                counter["provider_msgs"] += _delete_broadcast_provider_messages(
+                    broadcast_provider_message_ids, dry_run=dry_run
+                )
+
+            if len(broadcast_event_ids):
+                counter["events"] += _delete_broadcast_events(broadcast_event_ids, dry_run=dry_run)
+
+            counter["msgs"] += _delete_broadcast_message(message_id, dry_run=dry_run)
 
             if not dry_run:
-                if len(broadcast_provider_message_ids):
-                    counter["msg_numbers"] += _delete_broadcast_provider_message_numbers(broadcast_provider_message_ids)
-                    counter["provider_msgs"] += _delete_broadcast_provider_messages(broadcast_provider_message_ids)
-
-                if len(broadcast_event_ids):
-                    counter["events"] += _delete_broadcast_events(broadcast_event_ids)
-
-                counter["msgs"] += _delete_broadcast_message(message_id)
-
                 db.session.commit()
 
         except Exception as e:
@@ -254,43 +249,35 @@ def _broadcast_provider_message_ids(broadcast_event_ids):
     return broadcast_provider_message_ids
 
 
-def _delete_broadcast_provider_message_numbers(broadcast_provider_message_ids):
-    print("Deleting BroadcastProviderMessageNumber rows...")
+def _delete_broadcast_provider_message_numbers(broadcast_provider_message_ids, dry_run=False):
     bpmn = db.session.query(BroadcastProviderMessageNumber).filter(
         BroadcastProviderMessageNumber.broadcast_provider_message_id.in_(broadcast_provider_message_ids)
     )
     item_count = len(bpmn.all())
-    bpmn.delete(synchronize_session=False)
-    print("...done")
-
+    if not dry_run:
+        bpmn.delete(synchronize_session=False)
     return item_count
 
 
-def _delete_broadcast_provider_messages(broadcast_provider_message_ids):
-    print("Deleting BroadcastProviderMessage rows...")
+def _delete_broadcast_provider_messages(broadcast_provider_message_ids, dry_run=False):
     bpm = db.session.query(BroadcastProviderMessage).filter(
         BroadcastProviderMessage.id.in_(broadcast_provider_message_ids)
     )
     item_count = len(bpm.all())
-    bpm.delete(synchronize_session=False)
-    print("...done")
-
+    if not dry_run:
+        bpm.delete(synchronize_session=False)
     return item_count
 
 
-def _delete_broadcast_events(broadcast_event_ids):
-    print("Deleting BroadcastEvent rows...")
-    db.session.query(BroadcastEvent).filter(BroadcastEvent.id.in_(broadcast_event_ids)).delete(
-        synchronize_session=False
-    )
-    print("...done")
-
+def _delete_broadcast_events(broadcast_event_ids, dry_run=False):
+    be = db.session.query(BroadcastEvent).filter(BroadcastEvent.id.in_(broadcast_event_ids))
+    if not dry_run:
+        be.delete(synchronize_session=False)
     return len(broadcast_event_ids)
 
 
-def _delete_broadcast_message(message_id):
-    print("Deleting BroadcastMessage ...")
-    db.session.query(BroadcastMessage).filter_by(id=message_id).delete(synchronize_session=False)
-    print("...done")
-
+def _delete_broadcast_message(message_id, dry_run=False):
+    bm = db.session.query(BroadcastMessage).filter_by(id=message_id)
+    if not dry_run:
+        bm.delete(synchronize_session=False)
     return 1
