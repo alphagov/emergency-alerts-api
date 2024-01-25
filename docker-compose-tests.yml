@@ -5,8 +5,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.eas-api
-    environment:
-      SQLALCHEMY_DATABASE_URI: 'postgresql://postgres:root@pg:5432/test_emergency_alerts'
     command: bash -c 'cd /eas/emergency-alerts-api && . /venv/eas-api/bin/activate && make test'
     depends_on:
       - pg
