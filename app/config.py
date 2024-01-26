@@ -345,8 +345,9 @@ class Test(Config):
     TRANSIENT_UPLOADED_LETTERS = "test-transient-uploaded-letters"
     LETTER_SANITISE_BUCKET_NAME = "test-letters-sanitise"
 
-    SQLALCHEMY_DATABASE_URI = "postgresql://{user}:root@{host}:{port}/{database}".format(
+    SQLALCHEMY_DATABASE_URI = "postgresql://{user}:{password}@{host}:{port}/{database}".format(
         user=os.environ.get("TEST_RDS_USER", "postgres"),
+        password=os.environ.get("TEST_RDS_PASSWORD", "root"),
         host=os.environ.get("TEST_RDS_HOST", "pg"),
         port=os.environ.get("TEST_RDS_PORT", 5432),
         database=os.environ.get("TEST_DATABASE", "test_emergency_alerts"),
