@@ -988,8 +988,8 @@ def generate_bulktest_data(user_id):
     help="""Show the IDs of the DB items selected only. The items will not be deleted""",
 )
 def purge_alerts_from_db(older_than, service, dry_run):
-    if os.environ.get("ENVIRONMENT") != "preview":
-        print("Alerts can only be removed from the database db in development and preview environments")
+    if os.environ.get("ENVIRONMENT") not in ["local", "development", "preview"]:
+        print("Alerts can only be removed from the database db in local, development and preview environments")
 
     print(f"Purging alerts over {older_than} days old...")
     count = dao_purge_old_broadcast_messages(service=service, days_older_than=older_than, dry_run=dry_run)
