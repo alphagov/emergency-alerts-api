@@ -8,7 +8,7 @@ Contains:
 ## Setting Up to run the API Server locally
 
 ### Local Development Environment Setup
-Ensure that you have first followed all of the local development environment setup steps, that can be found [here](https://gds-ea.atlassian.net/wiki/spaces/EA/pages/221216772/Local+Development+Environment+Setup+-+Updated+instructions), before attempting to run the API Server locally.
+Ensure that you have first followed all of the local development environment setup steps, that can be found [here](https://gds-ea.atlassian.net/wiki/spaces/EA/pages/3211265/Mac+Setup), before attempting to run the API Server locally.
 
 ### Python version
 
