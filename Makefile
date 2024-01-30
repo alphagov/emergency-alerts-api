@@ -55,8 +55,7 @@ run-celery: ## Run celery
 		--prefetch-multiplier=1 \
 		--loglevel=WARNING \
 		--concurrency=1 \
-		--autoscale=1,1 \
-		--hostname=0.0.0.0
+		--autoscale=1,1
 
 .PHONY: run-celery-with-docker
 run-celery-with-docker: ## Run celery in Docker container (useful if you can't install pycurl locally)
