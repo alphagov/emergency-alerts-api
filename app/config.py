@@ -275,12 +275,13 @@ class Config(object):
 
 class Hosted(Config):
     HOST = "hosted"
-    ADMIN_BASE_URL = "http://admin.ecs.local:6012"
+    TENANT = f"{os.environ.get('TENANT')}." if os.environ.get("TENANT") is not None else ""
     SUBDOMAIN = f"{os.environ.get('ENVIRONMENT')}." if os.environ.get("ENVIRONMENT") != "production" else ""
-    ADMIN_EXTERNAL_URL = f"https://admin.{SUBDOMAIN}emergency-alerts.service.gov.uk"
-    REDIS_URL = "redis://api.ecs.local:6379/0"
-    API_HOST_NAME = "http://api.ecs.local:6011"
-    TEMPLATE_PREVIEW_API_HOST = "http://api.ecs.local:6013"
+    ADMIN_BASE_URL = f"http://admin.{TENANT}ecs.local:6012"
+    ADMIN_EXTERNAL_URL = f"https://{TENANT}admin.{SUBDOMAIN}emergency-alerts.service.gov.uk"
+    REDIS_URL = f"redis://api.{TENANT}ecs.local:6379/0"
+    API_HOST_NAME = f"http://api.{TENANT}ecs.local:6011"
+    TEMPLATE_PREVIEW_API_HOST = f"http://api.{TENANT}ecs.local:6013"
     if os.getenv("MASTER_USERNAME"):
         print("Using master credentials for db connection")
         filtered_password = os.environ.get("MASTER_PASSWORD").replace("%", "%%")
@@ -348,8 +349,9 @@ class Test(Config):
 
     MMG_URL = "https://example.com/mmg"
     FIRETEXT_URL = "https://example.com/firetext"
+    TENANT = f"{os.environ.get('TENANT')}." if os.environ.get("TENANT") is not None else ""
     SUBDOMAIN = f"{os.environ.get('ENVIRONMENT')}." if os.environ.get("ENVIRONMENT") != "production" else ""
-    ADMIN_EXTERNAL_URL = f"https://admin.{SUBDOMAIN}emergency-alerts.service.gov.uk"
+    ADMIN_EXTERNAL_URL = f"https://{TENANT}admin.{SUBDOMAIN}emergency-alerts.service.gov.uk"
 
     CBC_PROXY_ENABLED = True
     DVLA_EMAIL_ADDRESSES = ["success@simulator.amazonses.com", "success+2@simulator.amazonses.com"]
