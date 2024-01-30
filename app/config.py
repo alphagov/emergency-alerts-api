@@ -80,7 +80,23 @@ class Config(object):
     CBC_PROXY_ENABLED = True
     ENABLED_CBCS = {BroadcastProvider.EE, BroadcastProvider.THREE, BroadcastProvider.O2, BroadcastProvider.VODAFONE}
 
-    SQLALCHEMY_DATABASE_URI = "postgresql://postgres:root@localhost/emergency_alerts"
+    if os.environ.get("MASTER_USERNAME"):
+        print("Using master credentials for db connection")
+        SQLALCHEMY_DATABASE_URI = "postgresql://{user}:{password}@{host}:{port}/{database}".format(
+            user=os.environ.get("MASTER_USERNAME", "root"),
+            password=os.environ.get("MASTER_PASSWORD"),
+            host=os.environ.get("RDS_HOST", "localhost"),
+            port=os.environ.get("RDS_PORT", 5432),
+            database=os.environ.get("DATABASE", "emergency_alerts"),
+        )
+    else:
+        print("Using no credentials for db connection")
+        SQLALCHEMY_DATABASE_URI = "postgresql://{user}@{host}:{port}/{database}".format(
+            user=os.environ.get("RDS_USER", "root"),
+            host=os.environ.get("RDS_HOST", "localhost"),
+            port=os.environ.get("RDS_PORT", 5432),
+            database=os.environ.get("DATABASE", "emergency_alerts"),
+        )
 
     MMG_API_KEY = os.getenv("MMG_API_KEY")
     FIRETEXT_API_KEY = os.getenv("FIRETEXT_API_KEY")
@@ -296,7 +312,7 @@ class Hosted(Config):
         )
     else:
         SQLALCHEMY_DATABASE_URI = (
-            "postgresql://{user}:password@{host}:{port}/{database}?sslmode=verify-full&sslrootcert={cert}".format(
+            "postgresql://{user}@{host}:{port}/{database}?sslmode=verify-full&sslrootcert={cert}".format(
                 user=os.environ.get("RDS_USER"),
                 host=os.environ.get("RDS_HOST"),
                 port=os.environ.get("RDS_PORT"),
@@ -332,9 +348,12 @@ class Test(Config):
     TRANSIENT_UPLOADED_LETTERS = "test-transient-uploaded-letters"
     LETTER_SANITISE_BUCKET_NAME = "test-letters-sanitise"
 
-    # this is overriden in jenkins and on cloudfoundry
-    SQLALCHEMY_DATABASE_URI = os.getenv(
-        "SQLALCHEMY_DATABASE_URI", "postgresql://postgres:root@localhost:5432/test_emergency_alerts"
+    SQLALCHEMY_DATABASE_URI = "postgresql://{user}:{password}@{host}:{port}/{database}".format(
+        user=os.environ.get("TEST_RDS_USER", "postgres"),
+        password=os.environ.get("TEST_RDS_PASSWORD", "root"),
+        host=os.environ.get("TEST_RDS_HOST", "pg"),
+        port=os.environ.get("TEST_RDS_PORT", 5432),
+        database=os.environ.get("TEST_DATABASE", "test_emergency_alerts"),
     )
     SQLALCHEMY_RECORD_QUERIES = False
 
