@@ -1,3 +1,4 @@
+import re
 import uuid
 
 import pytest
@@ -651,3 +652,16 @@ def test_update_broadcast_message_status_rejects_approval_from_user_not_on_that_
 
     assert mock_task.called is False
     assert "cannot update broadcast" in response["message"]
+
+
+def test_purge_broadcast_messages(admin_request, sample_broadcast_service, mocker):
+    response = admin_request.get(
+        "broadcast_message.purge_broadcast_messages",
+        service_id=sample_broadcast_service.id,
+        older_than=100,
+        _expected_status=200,
+    )
+
+    print(response["message"])
+
+    assert re.match(r"Purged (\d+) BroadcastMessage items (.*)", response["message"])

@@ -1160,6 +1160,7 @@ def create_broadcast_message(
     areas=None,
     stubbed=False,
     cap_event=None,
+    created_at=None,  # only used for testing
 ):
     if template:
         service = template.service
@@ -1188,6 +1189,7 @@ def create_broadcast_message(
         content=content,
         stubbed=stubbed,
         cap_event=cap_event,
+        created_at=created_at,
     )
     db.session.add(broadcast_message)
     db.session.commit()

@@ -1,20 +1,25 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from app.dao.broadcast_message_dao import (
     create_broadcast_provider_message,
     dao_get_all_broadcast_messages,
+    dao_get_all_pre_broadcast_messages,
+    dao_purge_old_broadcast_messages,
     get_earlier_events_for_broadcast_event,
 )
 from app.dao.broadcast_service_dao import (
     insert_or_update_service_broadcast_settings,
 )
-from app.models import BROADCAST_TYPE, BroadcastEventMessageType
-from tests.app.db import (
-    create_broadcast_event,
-    create_broadcast_message,
-    create_service,
-    create_template,
+from app.models import (
+    BROADCAST_TYPE,
+    BroadcastEventMessageType,
+    BroadcastStatusType,
 )
+from tests.app.db import create_broadcast_event, create_broadcast_message
+from tests.app.db import (
+    create_broadcast_provider_message as create_broadcast_provider_message_test,
+)
+from tests.app.db import create_service, create_template
 
 
 def test_get_earlier_events_for_broadcast_event(sample_service):
@@ -141,3 +146,221 @@ def test_dao_get_all_broadcast_messages(sample_broadcast_service):
             None,
         ),
     ]
+
+
+def test_dao_purge_old_broadcast_messages(sample_broadcast_service):
+    t = create_template(sample_broadcast_service, BROADCAST_TYPE)
+
+    baseline_message_count = len(dao_get_all_pre_broadcast_messages())
+
+    broadcast_messages = [
+        create_broadcast_message(
+            t,
+            created_at=datetime(2023, 10, 8, 12, 0, 0),
+            starts_at=datetime.now(),
+            status=BroadcastStatusType.PENDING_APPROVAL,
+        ),
+        create_broadcast_message(
+            t,
+            created_at=datetime(2023, 12, 9, 12, 0, 0),
+            starts_at=datetime.now(),
+            status=BroadcastStatusType.PENDING_APPROVAL,
+        ),
+        create_broadcast_message(
+            t,
+            created_at=datetime(2024, 1, 10, 12, 0, 0),
+            starts_at=datetime.now(),
+            status=BroadcastStatusType.PENDING_APPROVAL,
+        ),
+        create_broadcast_message(
+            t,
+            created_at=datetime(2024, 1, 12, 15, 0, 0),
+            starts_at=datetime.now(),
+            status=BroadcastStatusType.PENDING_APPROVAL,
+        ),
+        create_broadcast_message(
+            t,
+            created_at=datetime(2024, 1, 13, 9, 0, 0),
+            starts_at=datetime.now(),
+            status=BroadcastStatusType.PENDING_APPROVAL,
+        ),
+    ]
+
+    test_message_count = len(dao_get_all_pre_broadcast_messages())
+    assert test_message_count == baseline_message_count + 5
+
+    # purge all messages older than the two most recent
+    older_than = (datetime.now() - datetime(2024, 1, 11)).days
+
+    messages_purged_count = dao_purge_old_broadcast_messages(str(sample_broadcast_service.id), older_than)
+    remaining_messages = dao_get_all_pre_broadcast_messages()
+
+    assert messages_purged_count["msgs"] == test_message_count - len(remaining_messages)
+    assert messages_purged_count["events"] == 0  # no events yet for pre-broadcast messages
+
+    # expect that the first 3 of our test messages have been purged
+    expected_remaining_messages_ids = [str(broadcast_messages[3].id), str(broadcast_messages[4].id)]
+
+    # To get ID, we need to cast the first element of the row tuple to a string
+    # [
+    #     (UUID('d8946a4e-f7a2-4c39-9187-e15f328590d3'), datetime.datetime(2024, 1, 12, 9, 0), ... ),
+    #     (UUID('03cf5d86-7da2-4300-b3cc-ed92612e8cfd'), datetime.datetime(2024, 1, 11, 15, 0), ...)
+    # ]
+    assert str(remaining_messages[0][0]) in expected_remaining_messages_ids
+    assert str(remaining_messages[1][0]) in expected_remaining_messages_ids
+
+
+def test_dao_purge_old_broadcast_messages_and_broadcast_events(sample_broadcast_service):
+    t = create_template(sample_broadcast_service, BROADCAST_TYPE)
+
+    baseline_message_count = len(dao_get_all_broadcast_messages())
+
+    broadcast_messages = [
+        create_broadcast_message(
+            t,
+            created_at=datetime(2023, 10, 8, 12, 0, 0),
+            starts_at=datetime.now(),
+            status=BroadcastStatusType.BROADCASTING,
+        ),
+        create_broadcast_message(
+            t,
+            created_at=datetime(2023, 12, 9, 12, 0, 0),
+            starts_at=datetime.now(),
+            status=BroadcastStatusType.CANCELLED,
+        ),
+        create_broadcast_message(
+            t,
+            created_at=datetime(2024, 1, 10, 12, 0, 0),
+            starts_at=datetime.now(),
+            status=BroadcastStatusType.BROADCASTING,
+        ),
+        create_broadcast_message(
+            t,
+            created_at=datetime(2024, 1, 12, 15, 0, 0),
+            starts_at=datetime.now(),
+            status=BroadcastStatusType.BROADCASTING,
+        ),
+        create_broadcast_message(
+            t,
+            created_at=datetime(2024, 1, 13, 9, 0, 0),
+            starts_at=datetime.now(),
+            status=BroadcastStatusType.BROADCASTING,
+        ),
+    ]
+
+    for bm in broadcast_messages:
+        create_broadcast_event(
+            bm,
+            sent_at=bm.starts_at + timedelta(minutes=1),
+            message_type=BroadcastEventMessageType.ALERT,
+            transmitted_content={"body": "Initial content"},
+        )
+        if bm.status == "cancelled":
+            create_broadcast_event(
+                bm,
+                sent_at=bm.starts_at + timedelta(minutes=2),
+                message_type=BroadcastEventMessageType.CANCEL,
+                transmitted_finishes_at=bm.starts_at + timedelta(minutes=2),
+            )
+
+    test_message_count = len(dao_get_all_broadcast_messages())
+    assert test_message_count == baseline_message_count + 5
+
+    # purge all messages older than the two most recent
+    older_than = (datetime.now() - datetime(2024, 1, 11)).days
+
+    messages_purged_count = dao_purge_old_broadcast_messages(str(sample_broadcast_service.id), older_than)
+    remaining_messages = dao_get_all_broadcast_messages()
+
+    assert messages_purged_count["msgs"] == test_message_count - len(remaining_messages)
+    assert messages_purged_count["events"] == 4
+
+    # expect that the first 3 of our test messages have been purged
+    expected_remaining_messages_ids = [str(broadcast_messages[3].id), str(broadcast_messages[4].id)]
+
+    assert str(remaining_messages[0][0]) in expected_remaining_messages_ids
+    assert str(remaining_messages[1][0]) in expected_remaining_messages_ids
+
+
+def test_dao_purge_old_broadcastmessages_events_providermessages_and_providermessagenumbers(sample_broadcast_service):
+    t = create_template(sample_broadcast_service, BROADCAST_TYPE)
+
+    baseline_message_count = len(dao_get_all_broadcast_messages())
+
+    broadcast_messages = [
+        create_broadcast_message(
+            t,
+            created_at=datetime(2023, 10, 8, 12, 0, 0),
+            starts_at=datetime.now(),
+            status=BroadcastStatusType.BROADCASTING,
+        ),
+        create_broadcast_message(
+            t,
+            created_at=datetime(2023, 10, 15, 12, 0, 0),
+            starts_at=datetime.now(),
+            status=BroadcastStatusType.CANCELLED,
+        ),
+        create_broadcast_message(
+            t,
+            created_at=datetime(2023, 12, 9, 12, 0, 0),
+            starts_at=datetime.now(),
+            status=BroadcastStatusType.CANCELLED,
+        ),
+        create_broadcast_message(
+            t,
+            created_at=datetime(2024, 1, 10, 12, 0, 0),
+            starts_at=datetime.now(),
+            status=BroadcastStatusType.BROADCASTING,
+        ),
+        create_broadcast_message(
+            t,
+            created_at=datetime(2024, 1, 12, 15, 0, 0),
+            starts_at=datetime.now(),
+            status=BroadcastStatusType.BROADCASTING,
+        ),
+        create_broadcast_message(
+            t,
+            created_at=datetime(2024, 1, 13, 9, 0, 0),
+            starts_at=datetime.now(),
+            status=BroadcastStatusType.BROADCASTING,
+        ),
+    ]
+
+    for bm in broadcast_messages:
+        be1 = create_broadcast_event(
+            bm,
+            sent_at=bm.starts_at + timedelta(minutes=1),
+            message_type=BroadcastEventMessageType.ALERT,
+            transmitted_content={"body": "Initial content"},
+        )
+        create_broadcast_provider_message_test(be1, "ee", status="returned-ack")
+        create_broadcast_provider_message_test(be1, "vodafone", status="returned-ack")
+        if bm.status == "cancelled":
+            be2 = create_broadcast_event(
+                bm,
+                sent_at=bm.starts_at + timedelta(minutes=2),
+                message_type=BroadcastEventMessageType.CANCEL,
+                transmitted_finishes_at=bm.starts_at + timedelta(minutes=2),
+            )
+            create_broadcast_provider_message_test(be2, "ee", status="returned-ack")
+            create_broadcast_provider_message_test(be2, "vodafone", status="returned-ack")
+
+    test_message_count = len(dao_get_all_broadcast_messages())
+    assert test_message_count == baseline_message_count + 6
+
+    # purge all messages older than the two most recent
+    older_than = (datetime.now() - datetime(2024, 1, 11)).days
+
+    purged_count = dao_purge_old_broadcast_messages(str(sample_broadcast_service.id), older_than)
+    remaining_messages = dao_get_all_broadcast_messages()
+
+    assert purged_count["msgs"] == test_message_count - len(remaining_messages)
+    assert purged_count["events"] == 6
+    assert purged_count["provider_msgs"] == 12
+    assert purged_count["msg_numbers"] == 6
+
+    # expect that the first 3 of our test messages have been purged
+    expected_remaining_messages_ids = [str(broadcast_messages[4].id), str(broadcast_messages[5].id)]
+
+    assert str(remaining_messages[0][0]) in expected_remaining_messages_ids
+    assert str(remaining_messages[1][0]) in expected_remaining_messages_ids

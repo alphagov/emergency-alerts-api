@@ -39,6 +39,8 @@ networks:
 
 # To start postgres to run tests from local api directory,
 # use the following commands:
+# cd /eas/emergency-alerts-api && . /venv/eas-api/bin/activate
 # docker compose -f docker-compose-tests.yml up --force-recreate -d pg
-# cd /eas/emergency-alerts-api && . /venv/eas-api/bin/activate && make test
+# . ./environment.sh && make test
+# Optional:
 # docker compose -f docker-compose-tests.yml down
