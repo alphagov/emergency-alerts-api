@@ -136,6 +136,8 @@ def validate_functional_test_account_emails():
         save_model_user(user1, validated_email_access=True)
         user2 = get_user_by_email("notify-tests-preview+local-broadcast2@digital.cabinet-office.gov.uk")
         save_model_user(user2, validated_email_access=True)
+        user3 = get_user_by_email("notify-tests-preview+local-broadcast3@digital.cabinet-office.gov.uk")
+        save_model_user(user3, validated_email_access=True)
     except SQLAlchemyError as e:
         current_app.logger.exception(e)
     else:

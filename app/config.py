@@ -220,7 +220,7 @@ class Config(object):
             },
             "validate-functional-test-account-emails": {
                 "task": "validate-functional-test-account-emails",
-                "schedule": crontab(day_of_month="1"),
+                "schedule": crontab(day_of_month="5"),
                 "options": {"queue": QueueNames.PERIODIC},
             },
         },
