@@ -26,6 +26,7 @@ from app.dao.annual_billing_dao import (
     dao_create_or_update_annual_billing_for_year,
     set_default_free_allowance_for_service,
 )
+from app.dao.broadcast_message_dao import dao_purge_old_broadcast_messages
 from app.dao.fact_billing_dao import (
     delete_billing_data_for_services_for_day,
     fetch_billing_data_for_day,
@@ -961,3 +962,44 @@ def generate_bulktest_data(user_id):
     pprint("Committing...")
     db.session.commit()
     pprint("Finished.")
+
+
+@notify_command(name="purge-alerts")
+@click.option(
+    "-o",
+    "--older-than",
+    required=False,
+    type=int,
+    help="""Alerts older than the provided value (in days) will be purged from the database""",
+)
+@click.option(
+    "-s",
+    "--service",
+    required=False,
+    default=None,
+    help="""Service identifier - can be either the service UUID or the service name""",
+)
+@click.option(
+    "-d",
+    "--dry-run",
+    required=False,
+    default=False,
+    type=bool,
+    help="""Show the IDs of the DB items selected only. The items will not be deleted""",
+)
+def purge_alerts_from_db(older_than, service, dry_run):
+    if os.environ.get("ENVIRONMENT") not in ["local", "development", "preview"]:
+        print("Alerts can only be removed from the database db in local, development and preview environments")
+
+    print(f"Purging alerts over {older_than} days old...")
+    count = dao_purge_old_broadcast_messages(service=service, days_older_than=older_than, dry_run=dry_run)
+    if dry_run:
+        print(
+            f"Items found for purging:\n \
+            BroadcastMessage: {count['msgs']}\n \
+            BroadcastEvent: {count['events']}\n \
+            BroadcastProviderMessage: {count['provider_msgs']}\n \
+            BroadcastProviderMessageNumber: {count['msg_numbers']}"
+        )
+    else:
+        print(f"Successfully purged {count['msgs']} broadcast messages")
