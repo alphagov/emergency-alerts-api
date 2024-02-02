@@ -143,6 +143,7 @@ def send_broadcast_provider_message(self, broadcast_event_id, provider):
 
     # the broadcast_provider_message may already exist if we retried previously
     broadcast_provider_message = broadcast_event.get_provider_message(provider)
+    sqs_retry = broadcast_provider_message is not None
     if broadcast_provider_message is None:
         broadcast_provider_message = create_broadcast_provider_message(broadcast_event, provider)
 
@@ -156,6 +157,7 @@ def send_broadcast_provider_message(self, broadcast_event_id, provider):
             "broadcast_provider_message_id": broadcast_provider_message.id,
             "broadcast_event_id": broadcast_event_id,
             "message_type": broadcast_event.message_type,
+            "sqs_retry": sqs_retry,
             "python_module": __name__,
         },
     )
