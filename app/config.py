@@ -168,7 +168,7 @@ class Config(object):
             # "visibility_timeout": 310,    # Configured in Terraform
             "queue_name_prefix": NOTIFICATION_QUEUE_PREFIX,
             "is_secure": True,
-            "task_acks_late": False,
+            "task_acks_late": True,
         },
         "timezone": "UTC",
         "imports": [
