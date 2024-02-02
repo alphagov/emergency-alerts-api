@@ -7,9 +7,10 @@ function configure_container_role(){
 }
 
 function run_celery(){
+  echo "$(date +%s)" > "/eas/emergency-alerts-api/celery-beat-healthcheck"
+  chmod +w "/eas/emergency-alerts-api/celery-beat-healthcheck"
   cd $DIR_API;
   . $VENV_API/bin/activate && make run-celery &
-  echo "$(date +%s)" > "/eas/emergency-alerts-api/celery-beat-healthcheck"
 }
 
 function run_celery_beat(){
