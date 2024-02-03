@@ -40,6 +40,6 @@ if [[ ! -z $DEBUG ]]; then
 else
     configure_container_role
     run_api
-    is_expected_migration_greater_than_db
     run_celery
+    # is_expected_migration_greater_than_db  # TODO: Needs some work for migrations pipeline
 fi
