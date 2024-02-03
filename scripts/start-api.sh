@@ -39,7 +39,7 @@ if [[ ! -z $DEBUG ]]; then
     while true; do echo 'Debug mode active..'; sleep 30; done
 else
     configure_container_role
-    run_api
     run_celery
+    run_api
     # is_expected_migration_greater_than_db  # TODO: Needs some work for migrations pipeline
 fi
