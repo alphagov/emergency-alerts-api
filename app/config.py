@@ -299,7 +299,13 @@ class Config(object):
 class Hosted(Config):
     HOST = "hosted"
     TENANT = f"{os.environ.get('TENANT')}." if os.environ.get("TENANT") is not None else ""
-    SUBDOMAIN = f"{os.environ.get('ENVIRONMENT')}." if os.environ.get("ENVIRONMENT") != "production" else ""
+    SUBDOMAIN = (
+        f"{os.environ.get('ENVIRONMENT')}."
+        if os.environ.get("ENVIRONMENT") != "production"
+        else "dev."
+        if os.environ.get("ENVIRONMENT") == "development"
+        else ""
+    )
     ADMIN_BASE_URL = f"http://admin.{TENANT}ecs.local:6012"
     ADMIN_EXTERNAL_URL = f"https://{TENANT}admin.{SUBDOMAIN}emergency-alerts.service.gov.uk"
     REDIS_URL = f"redis://api.{TENANT}ecs.local:6379/0"
@@ -376,7 +382,13 @@ class Test(Config):
     MMG_URL = "https://example.com/mmg"
     FIRETEXT_URL = "https://example.com/firetext"
     TENANT = f"{os.environ.get('TENANT')}." if os.environ.get("TENANT") is not None else ""
-    SUBDOMAIN = f"{os.environ.get('ENVIRONMENT')}." if os.environ.get("ENVIRONMENT") != "production" else ""
+    SUBDOMAIN = (
+        f"{os.environ.get('ENVIRONMENT')}."
+        if os.environ.get("ENVIRONMENT") != "production"
+        else "dev."
+        if os.environ.get("ENVIRONMENT") == "development"
+        else ""
+    )
     ADMIN_EXTERNAL_URL = f"https://{TENANT}admin.{SUBDOMAIN}emergency-alerts.service.gov.uk"
 
     CBC_PROXY_ENABLED = True
