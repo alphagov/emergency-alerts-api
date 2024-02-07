@@ -120,7 +120,8 @@ def send_broadcast_event(broadcast_event_id):
     bind=True,
     name="send-broadcast-provider-message",
     autoretry_for=(CBCProxyRetryableException,),
-    retry_backoff=True,
+    retry_backoff=3,
+    retry_jitter=True,
     max_retries=5,
 )
 def send_broadcast_provider_message(self, broadcast_event_id, provider):
@@ -142,6 +143,7 @@ def send_broadcast_provider_message(self, broadcast_event_id, provider):
 
     # the broadcast_provider_message may already exist if we retried previously
     broadcast_provider_message = broadcast_event.get_provider_message(provider)
+    is_retry = broadcast_provider_message is not None
     if broadcast_provider_message is None:
         broadcast_provider_message = create_broadcast_provider_message(broadcast_event, provider)
 
@@ -155,6 +157,7 @@ def send_broadcast_provider_message(self, broadcast_event_id, provider):
             "broadcast_provider_message_id": broadcast_provider_message.id,
             "broadcast_event_id": broadcast_event_id,
             "message_type": broadcast_event.message_type,
+            "is_retry": is_retry,
             "python_module": __name__,
         },
     )
