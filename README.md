@@ -40,87 +40,13 @@ HOST=hosted & ENVIRONMENT=development
 
 The instructions on setting up the `environment.sh` file can be found [here](https://gds-ea.atlassian.net/wiki/spaces/EA/pages/192217089/Setting+up+Local+Development+Environment#Getting-API-setup).
 
-
-## Running the Admin and Api services with Postgres
-
-Please refer to the README in the /emergency-alerts-tooling repository, in the /emergency-alerts-tooling/compose folder.
-
-
-## THE FOLLOWING INSTRUCTIONS ARE DEPRECATED AND SHOULD BE USED FOR HISTORICAL REFERENCE ONLY
-(This section will be removed in the future, as the Emergency Alerts app is fully decoupled from Notify)
-
-
-### Redis
-
-To switch redis on you'll need to install it locally. On a Mac you can do:
-
-```
-# assuming you use Homebrew
-brew install redis
-brew services start redis
-```
-
-To use redis caching you need to switch it on with an environment variable:
-
-```
-export REDIS_ENABLED=1
-```
-
-### Pre-commit
-
-We use [pre-commit](https://pre-commit.com/) to ensure that committed code meets basic standards for formatting, and will make basic fixes for you to save time and aggravation.
-
-Install pre-commit system-wide with, eg `brew install pre-commit`. Then, install the hooks in this repository with `pre-commit install --install-hooks`.
-
-##  To run the application
-
-See [here](https://gds-ea.atlassian.net/wiki/spaces/EA/pages/192217089/Setting+up+Local+Development+Environment#Run-the-API-Server) for instructions on running the API server locally.
-
-###  Running application with Celery
-
-```
-
-# run the background tasks
-make run-celery
-
-# run scheduled tasks (optional)
-make run-celery-beat
-```
-
-We've had problems running Celery locally due to one of its dependencies: pycurl. Due to the complexity of the issue, we also support running Celery via Docker:
-
-```
-# install dependencies, etc.
-make bootstrap-with-docker
-
-# run the background tasks
-make run-celery-with-docker
-
-# run scheduled tasks
-make run-celery-beat-with-docker
-```
-
 ##  To test the application
 
 See [here](https://gds-ea.atlassian.net/wiki/spaces/EA/pages/192217089/Setting+up+Local+Development+Environment#Running-the-Unit-Tests) for instructions on running unit tests.
 
-## To run one off tasks
+## Running the Admin and Api services with Postgres
 
-Tasks are run through the `flask` command - run `flask --help` for more information. There are two sections we need to
-care about: `flask db` contains alembic migration commands, and `flask command` contains all of our custom commands. For
-example, to purge all dynamically generated functional test data, do the following:
-
-Locally
-```
-flask command purge_functional_test_data -u <functional tests user name prefix>
-```
-
-On the server
-```
-cf run-task notify-api "flask command purge_functional_test_data -u <functional tests user name prefix>"
-```
-
-All commands and command options have a --help command if you need more information.
+Please refer to the README in the /emergency-alerts-tooling repository, in the /emergency-alerts-tooling/compose folder.
 
 ## Further documentation
 
