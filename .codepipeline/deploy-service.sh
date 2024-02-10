@@ -14,7 +14,7 @@ function update_task_defintion(){
         echo "SERVICE is required."
         exit
     fi;
-    
+
     echo "=============== GETTING LATEST TASK DEFINITION ==============="
     latest_task_def=$(aws ecs list-task-definitions \
         --status ACTIVE \
@@ -23,7 +23,7 @@ function update_task_defintion(){
         --family-prefix eas-app-$SERVICE \
         --output json \
     | jq '.taskDefinitionArns[0]' | tr -d '"')
-    
+
     if [ -z "$latest_task_def" ]; then
         echo "Unable to retrieve the latest task definition."
         exit
