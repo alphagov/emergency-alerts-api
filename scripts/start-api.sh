@@ -5,10 +5,10 @@ echo "Start script executing for api.."
 function run_db_upgrade(){
     cd $DIR_API;
     . $VENV_API/bin/activate
-    
+
     local head=$(flask db heads | tail -1)
     local current=$(flask db current | tail -1)
-    
+
     # Checking if the database upgrade has been previously been completed to avoid running multiple times.
     if [[ $head != $current ]]; then
         echo "Run DB migration"
@@ -16,7 +16,7 @@ function run_db_upgrade(){
     else
         echo "DB is up to date"
     fi
-    
+
     echo $(flask db current)
 }
 

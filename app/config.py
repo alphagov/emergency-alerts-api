@@ -103,7 +103,11 @@ class Config(object):
     FIRETEXT_INTERNATIONAL_API_KEY = os.getenv("FIRETEXT_INTERNATIONAL_API_KEY", "placeholder")
 
     # Prefix to identify queues in SQS
-    NOTIFICATION_QUEUE_PREFIX = f"{os.getenv('ENVIRONMENT')}-"
+    NOTIFICATION_QUEUE_PREFIX = (
+        f"{os.getenv('NOTIFICATION_QUEUE_PREFIX')}-"
+        if os.getenv("NOTIFICATION_QUEUE_PREFIX")
+        else f"{os.getenv('ENVIRONMENT')}-"
+    )
 
     REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
     REDIS_ENABLED = os.getenv("REDIS_ENABLED") == "1"
@@ -294,12 +298,19 @@ class Config(object):
 
 class Hosted(Config):
     HOST = "hosted"
-    ADMIN_BASE_URL = "http://admin.ecs.local:6012"
-    SUBDOMAIN = f"{os.environ.get('ENVIRONMENT')}." if os.environ.get("ENVIRONMENT") != "production" else ""
-    ADMIN_EXTERNAL_URL = f"https://admin.{SUBDOMAIN}emergency-alerts.service.gov.uk"
-    REDIS_URL = "redis://api.ecs.local:6379/0"
-    API_HOST_NAME = "http://api.ecs.local:6011"
-    TEMPLATE_PREVIEW_API_HOST = "http://api.ecs.local:6013"
+    TENANT = f"{os.environ.get('TENANT')}." if os.environ.get("TENANT") is not None else ""
+    SUBDOMAIN = (
+        "dev."
+        if os.environ.get("ENVIRONMENT") == "development"
+        else f"{os.environ.get('ENVIRONMENT')}."
+        if os.environ.get("ENVIRONMENT") != "production"
+        else ""
+    )
+    ADMIN_BASE_URL = f"http://admin.{TENANT}ecs.local:6012"
+    ADMIN_EXTERNAL_URL = f"https://{TENANT}admin.{SUBDOMAIN}emergency-alerts.service.gov.uk"
+    REDIS_URL = f"redis://api.{TENANT}ecs.local:6379/0"
+    API_HOST_NAME = f"http://api.{TENANT}ecs.local:6011"
+    TEMPLATE_PREVIEW_API_HOST = f"http://api.{TENANT}ecs.local:6013"
     if os.getenv("MASTER_USERNAME"):
         print("Using master credentials for db connection")
         filtered_password = os.environ.get("MASTER_PASSWORD").replace("%", "%%")
@@ -370,8 +381,15 @@ class Test(Config):
 
     MMG_URL = "https://example.com/mmg"
     FIRETEXT_URL = "https://example.com/firetext"
-    SUBDOMAIN = f"{os.environ.get('ENVIRONMENT')}." if os.environ.get("ENVIRONMENT") != "production" else ""
-    ADMIN_EXTERNAL_URL = f"https://admin.{SUBDOMAIN}emergency-alerts.service.gov.uk"
+    TENANT = f"{os.environ.get('TENANT')}." if os.environ.get("TENANT") is not None else ""
+    SUBDOMAIN = (
+        "dev."
+        if os.environ.get("ENVIRONMENT") == "development"
+        else f"{os.environ.get('ENVIRONMENT')}."
+        if os.environ.get("ENVIRONMENT") != "production"
+        else ""
+    )
+    ADMIN_EXTERNAL_URL = f"https://{TENANT}admin.{SUBDOMAIN}emergency-alerts.service.gov.uk"
 
     CBC_PROXY_ENABLED = True
     DVLA_EMAIL_ADDRESSES = ["success@simulator.amazonses.com", "success+2@simulator.amazonses.com"]

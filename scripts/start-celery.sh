@@ -7,6 +7,8 @@ function configure_container_role(){
 }
 
 function run_celery(){
+  echo "$(date +%s)" > "/eas/emergency-alerts-api/celery-beat-healthcheck"
+  chown easuser:easuser "/eas/emergency-alerts-api/celery-beat-healthcheck"
   cd $DIR_API;
   . $VENV_API/bin/activate && make run-celery &
 }
@@ -24,4 +26,3 @@ else
   run_celery
   run_celery_beat
 fi
-
