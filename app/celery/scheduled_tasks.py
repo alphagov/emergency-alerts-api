@@ -132,12 +132,16 @@ def delete_old_records_from_events_table():
 @notify_celery.task(name="validate-functional-test-account-emails")
 def validate_functional_test_account_emails():
     try:
-        user1 = get_user_by_email("notify-tests-preview+local-broadcast1@digital.cabinet-office.gov.uk")
+        user1 = get_user_by_email("preview-broadcast1@digital.cabinet-office.gov.uk")
         save_model_user(user1, validated_email_access=True)
-        user2 = get_user_by_email("notify-tests-preview+local-broadcast2@digital.cabinet-office.gov.uk")
+        user2 = get_user_by_email("preview-broadcast2@digital.cabinet-office.gov.uk")
         save_model_user(user2, validated_email_access=True)
-        user3 = get_user_by_email("notify-tests-preview+local-broadcast3@digital.cabinet-office.gov.uk")
+        user3 = get_user_by_email("preview-broadcast3@digital.cabinet-office.gov.uk")
         save_model_user(user3, validated_email_access=True)
+        user4 = get_user_by_email("preview-broadcast4@digital.cabinet-office.gov.uk")
+        save_model_user(user4, validated_email_access=True)
+        admin = get_user_by_email("preview-admin@digital.cabinet-office.gov.uk")
+        save_model_user(admin, validated_email_access=True)
     except SQLAlchemyError as e:
         current_app.logger.exception(e)
     else:

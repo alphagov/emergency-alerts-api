@@ -137,14 +137,14 @@ def test_delete_old_records_from_events_table(notify_db_session):
 def test_validate_functional_test_account_emails(notify_db_session):
     user1 = User(
         name="Test User 1",
-        email_address="notify-tests-preview+local-broadcast1@digital.cabinet-office.gov.uk",
+        email_address="preview-broadcast1@digital.cabinet-office.gov.uk",
         password="password",
         auth_type="sms_auth",
         mobile_number="07700900000",
     )
     user2 = User(
         name="Test User 2",
-        email_address="notify-tests-preview+local-broadcast2@digital.cabinet-office.gov.uk",
+        email_address="preview-broadcast2@digital.cabinet-office.gov.uk",
         password="password",
         auth_type="sms_auth",
         mobile_number="07700900000",
@@ -159,7 +159,7 @@ def test_validate_functional_test_account_emails(notify_db_session):
 
     validate_functional_test_account_emails()
 
-    users = User.query.filter(User.email_address.ilike("notify-tests-preview+local-broadcast%")).all()
+    users = User.query.filter(User.email_address.ilike("preview-broadcast%")).all()
 
     assert users[0].email_access_validated_at > now
     assert users[1].email_access_validated_at > now
