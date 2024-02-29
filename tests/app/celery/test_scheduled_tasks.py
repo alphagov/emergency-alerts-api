@@ -159,7 +159,7 @@ def test_validate_functional_test_account_emails(notify_db_session):
 
     validate_functional_test_account_emails()
 
-    users = User.query.filter(User.email_address.ilike("preview-broadcast%")).all()
+    users = User.query.filter(User.email_address.ilike("emergency-alerts-tests%")).all()
 
     assert users[0].email_access_validated_at > now
     assert users[1].email_access_validated_at > now
