@@ -1,7 +1,6 @@
 # Run `make freeze-requirements` to update requirements.txt
 # with package version changes made in requirements.in
 
-awscli==1.27.101
 cffi==1.15.1
 celery[sqs]==5.2.7
 Flask-Bcrypt==1.0.1
@@ -44,6 +43,3 @@ pytest-cov==4.0.0
 pytest-xdist==2.5.0
 freezegun==1.2.2
 requests-mock==1.10.0
-
-# used for creating manifest file locally
-jinja2-cli[yaml]==0.8.2

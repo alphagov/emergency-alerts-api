@@ -80,7 +80,9 @@ class Config(object):
     CBC_PROXY_ENABLED = True
     ENABLED_CBCS = {BroadcastProvider.EE, BroadcastProvider.THREE, BroadcastProvider.O2, BroadcastProvider.VODAFONE}
 
-    if os.environ.get("MASTER_USERNAME"):
+    if os.environ.get("HOST") == "local":
+        SQLALCHEMY_DATABASE_URI = "postgresql://postgres:root@localhost/emergency_alerts"
+    elif os.environ.get("MASTER_USERNAME"):
         print("Using master credentials for db connection")
         SQLALCHEMY_DATABASE_URI = "postgresql://{user}:{password}@{host}:{port}/{database}".format(
             user=os.environ.get("MASTER_USERNAME", "root"),
