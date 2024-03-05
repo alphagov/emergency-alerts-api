@@ -98,10 +98,6 @@ class Config(object):
             database=os.environ.get("DATABASE", "emergency_alerts"),
         )
 
-    if os.environ.get("HOST") == "local-mac":
-        print("Using local credentials for non-containerised running")
-        SQLALCHEMY_DATABASE_URI = "postgresql://postgres:root@localhost/emergency_alerts"
-
     MMG_API_KEY = os.getenv("MMG_API_KEY")
     FIRETEXT_API_KEY = os.getenv("FIRETEXT_API_KEY")
     FIRETEXT_INTERNATIONAL_API_KEY = os.getenv("FIRETEXT_INTERNATIONAL_API_KEY", "placeholder")
