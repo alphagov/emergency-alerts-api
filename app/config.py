@@ -98,6 +98,10 @@ class Config(object):
             database=os.environ.get("DATABASE", "emergency_alerts"),
         )
 
+    if os.environ.get("SQLALCHEMY_LOCAL_OVERRIDE"):
+        print("Overriding db connection string for local running")
+        SQLALCHEMY_DATABASE_URI = os.environ.get("SQLALCHEMY_LOCAL_OVERRIDE")
+
     MMG_API_KEY = os.getenv("MMG_API_KEY")
     FIRETEXT_API_KEY = os.getenv("FIRETEXT_API_KEY")
     FIRETEXT_INTERNATIONAL_API_KEY = os.getenv("FIRETEXT_INTERNATIONAL_API_KEY", "placeholder")
