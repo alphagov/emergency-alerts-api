@@ -61,7 +61,7 @@ def dao_get_broadcast_provider_messages_by_broadcast_message_id(broadcast_messag
     )
 
 
-def dao_get_all_broadcast_messages():
+def dao_get_all_broadcast_messages(status_filter=BroadcastStatusType.LIVE_STATUSES):
     return (
         db.session.query(
             BroadcastMessage.id,
@@ -79,7 +79,7 @@ def dao_get_all_broadcast_messages():
         .filter(
             BroadcastMessage.starts_at >= datetime(2021, 5, 25, 0, 0, 0),
             BroadcastMessage.stubbed == False,  # noqa
-            BroadcastMessage.status.in_(BroadcastStatusType.LIVE_STATUSES),
+            BroadcastMessage.status.in_(status_filter),
         )
         .order_by(desc(BroadcastMessage.starts_at))
         .all()

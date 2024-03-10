@@ -75,11 +75,13 @@ eventlet==0.33.1
     # via gunicorn
 execnet==1.9.0
     # via pytest-xdist
-flake8==5.0.4
+feedwerk==1.2.0
+    # via -r requirements.in
+flake8==7.0.0
     # via
     #   -r requirements.in
     #   flake8-bugbear
-flake8-bugbear==22.9.23
+flake8-bugbear==22.10.27
     # via -r requirements.in
 flaky==3.7.0
     # via -r requirements.in
@@ -149,6 +151,7 @@ mako==1.2.3
     # via alembic
 markupsafe==2.1.1
     # via
+    #   feedwerk
     #   jinja2
     #   mako
     #   moto
@@ -191,13 +194,13 @@ py==1.11.0
     # via
     #   pytest
     #   pytest-forked
-pycodestyle==2.9.1
+pycodestyle==2.11.1
     # via flake8
 pycparser==2.21
     # via cffi
 pycurl==7.44.1
     # via kombu
-pyflakes==2.5.0
+pyflakes==3.2.0
     # via flake8
 pyjwt==2.5.0
     # via
@@ -297,6 +300,7 @@ webcolors==1.12
     # via jsonschema
 werkzeug==2.2.2
     # via
+    #   feedwerk
     #   flask
     #   moto
 xmltodict==0.13.0

@@ -73,6 +73,7 @@ class Config(object):
     ENCRYPTION_DANGEROUS_SALT = os.environ.get("ENCRYPTION_DANGEROUS_SALT")
 
     ADMIN_BASE_URL = "http://localhost:6012"
+    ADMIN_EXTERNAL_URL = "http://localhost:6012"
     API_HOST_NAME = "http://localhost:6011"
     API_RATE_LIMIT_ENABLED = True
 
