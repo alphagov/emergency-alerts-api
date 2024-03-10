@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta
+
 from feedwerk.atom import AtomFeed
 from flask import Blueprint, current_app, jsonify
 
@@ -35,8 +37,7 @@ def get_broadcasts():
 
 @govuk_alerts_blueprint.route("/govuk-atom")
 def get_atom_feed():
-    # broadcasts = dao_get_all_broadcast_messages(["broadcasting"])
-    broadcasts = dao_get_all_broadcast_messages()
+    broadcasts = dao_get_all_broadcast_messages(get_from=datetime.now() - timedelta(days=30))
 
     url = current_app.config["ADMIN_EXTERNAL_URL"]
     feed_url = url + "/alerts.atom"
@@ -54,5 +55,15 @@ def get_atom_feed():
             updated=broadcast.starts_at,
         )
 
-    # return feed.get_response(), 200
+    # add dummy post, for testing
+    feed.add(
+        "234",
+        "this is some content",
+        content_type="html",
+        author="GOV.UK",
+        url="https://www.gov.uk/alerts/current-alerts",
+        published=datetime.now() - timedelta(days=1),
+        updated=datetime.now() - timedelta(hours=6),
+    )
+
     return feed.get_response(), 200
