@@ -55,10 +55,20 @@ def get_atom_feed():
             updated=broadcast.starts_at,
         )
 
-    # add dummy post, for testing
+    # add dummy posts, for testing
     feed.add(
-        "234",
-        "this is some content",
+        "Title 1",
+        "Alert message goes here",
+        content_type="html",
+        author="GOV.UK",
+        url="https://www.gov.uk/alerts/current-alerts",
+        published=datetime.now() - timedelta(days=10),
+        updated=datetime.now() - timedelta(hours=12),
+    )
+
+    feed.add(
+        "Title 2",
+        "Alert message text",
         content_type="html",
         author="GOV.UK",
         url="https://www.gov.uk/alerts/current-alerts",
