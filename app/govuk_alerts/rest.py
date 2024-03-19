@@ -1,3 +1,4 @@
+import time
 from datetime import datetime, timedelta
 
 from feedwerk.atom import AtomFeed
@@ -39,8 +40,8 @@ def get_broadcasts():
 def get_atom_feed():
     broadcasts = dao_get_all_broadcast_messages(get_from=datetime.now() - timedelta(days=30))
 
-    url = current_app.config["ADMIN_EXTERNAL_URL"]
-    feed_url = url + "/alerts.atom"
+    url = current_app.config["GOVUK_EXTERNAL_URL"]
+    feed_url = current_app.config["GOVUK_EXTERNAL_URL"] + "/alerts.atom"
 
     feed = AtomFeed(title="Emergency Alerts", feed_url=feed_url, url=url)
 
@@ -50,30 +51,30 @@ def get_atom_feed():
             broadcast.content,
             content_type="html",
             author="GOV.UK",
-            url="https://www.gov.uk/alerts/current-alerts",
-            published=broadcast.approved_at,
+            url=url + "/alerts/current-alerts",
+            published=broadcast.starts_at,
             updated=broadcast.starts_at,
         )
 
     # add dummy posts, for testing
     feed.add(
-        "Title 1",
-        "Alert message goes here",
-        content_type="html",
-        author="GOV.UK",
-        url="https://www.gov.uk/alerts/current-alerts",
-        published=datetime.now() - timedelta(days=10),
-        updated=datetime.now() - timedelta(hours=12),
-    )
-
-    feed.add(
-        "Title 2",
+        str(time.time()),
         "Alert message text",
         content_type="html",
         author="GOV.UK",
-        url="https://www.gov.uk/alerts/current-alerts",
-        published=datetime.now() - timedelta(days=1),
-        updated=datetime.now() - timedelta(hours=6),
+        url=url + "/alerts/23-feb-2024",
+        published=datetime.now() - timedelta(minutes=1),
+        updated=datetime.now() - timedelta(minutes=6),
+    )
+
+    feed.add(
+        str(time.time()),
+        "Alert message goes here",
+        content_type="html",
+        author="GOV.UK",
+        url=url + "/alerts/15-feb-2024",
+        published=datetime.now() - timedelta(minutes=10),
+        updated=datetime.now() - timedelta(minutes=12),
     )
 
     return feed.get_response(), 200

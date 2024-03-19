@@ -76,6 +76,7 @@ class Config(object):
     ADMIN_EXTERNAL_URL = "http://localhost:6012"
     API_HOST_NAME = "http://localhost:6011"
     API_RATE_LIMIT_ENABLED = True
+    GOVUK_EXTERNAL_URL = "http://127.0.0.1:6017"
 
     CBC_ACCOUNT_NUMBER = os.getenv("CBC_ACCOUNT_NUMBER")
     CBC_PROXY_ENABLED = True
@@ -316,6 +317,7 @@ class Hosted(Config):
     REDIS_URL = f"redis://api.{TENANT}ecs.local:6379/0"
     API_HOST_NAME = f"http://api.{TENANT}ecs.local:6011"
     TEMPLATE_PREVIEW_API_HOST = f"http://api.{TENANT}ecs.local:6013"
+    # GOVUK_EXTERNAL_URL = f"https://www.{SUBDOMAIN}.publishing.service.gov.uk/alerts"
     if os.getenv("MASTER_USERNAME"):
         print("Using master credentials for db connection")
         filtered_password = os.environ.get("MASTER_PASSWORD").replace("%", "%%")
