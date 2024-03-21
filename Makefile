@@ -24,10 +24,6 @@ PYTHON_EXECUTABLE_PREFIX := $(shell test -d "$${VIRTUALENV_ROOT}" && echo "$${VI
 
 ## DEVELOPMENT
 
-.PHONY: git-init
-git-init:
-	git config core.hooksPath .githooks
-
 .PHONY: legacy-bootstrap
 legacy-bootstrap: generate-version-file ## Set up everything to run the app
 	pip3 install -r requirements_local_utils.txt
@@ -35,7 +31,7 @@ legacy-bootstrap: generate-version-file ## Set up everything to run the app
 	(. environment.sh && flask db upgrade) || true
 
 .PHONY: bootstrap
-bootstrap: git-init generate-version-file ## Set up everything to run the app
+bootstrap: generate-version-file ## Set up everything to run the app
 	pip3 install -r requirements_local_utils.txt
 
 .PHONY: bootstrap-for-tests

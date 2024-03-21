@@ -23,3 +23,10 @@ repos:
   hooks:
     - id: black
       name: black (python)
+- repo: local
+  hooks:
+    - id: check-requirements
+      name: check-requirements
+      entry: ./scripts/check-requirements.sh
+      language: script
+      pass_filenames: false
