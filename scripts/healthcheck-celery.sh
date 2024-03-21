@@ -27,7 +27,7 @@ function compare_timestamps(){
   fi
 }
 
-if [[ ! -z $DEBUG ]]; then
+if [[ $DEBUG == "true" ]]; then
   echo "Debug mode active.."
 else
   compare_timestamps
