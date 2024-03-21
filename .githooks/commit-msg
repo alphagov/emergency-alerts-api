@@ -10,7 +10,6 @@ if [ "$STAGED_FILES" = "" ]; then
     exit 0
 fi
 
-# If requirements.in file has changed, look for requirements.txt file
 for FILE in $STAGED_FILES
 do
     if [ "$FILE" = "requirements.in" ]; then
