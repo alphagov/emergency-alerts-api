@@ -10,6 +10,7 @@ from app.dao.users_dao import get_user_by_id
 from app.models import (
     LETTER_TYPE,
     SECOND_CLASS,
+    BroadcastMessage,
     Template,
     TemplateHistory,
     TemplateRedacted,
@@ -150,3 +151,44 @@ def get_precompiled_letter_template(service_id):
     dao_create_template(template)
 
     return template
+
+
+@autocommit
+def dao_purge_templates_for_service(service_id):
+    templates = Template.query.filter_by(service_id=service_id).all()
+
+    # DELETE
+    # FROM template_redacted
+    # WHERE template_id IN (
+    #     SELECT id
+    #     FROM public.templates
+    #     WHERE service_id = '8e1d56fa-12a8-4d00-bed2-db47180bed0a'
+    # )
+    redacted_templates = TemplateRedacted.query.filter(
+        TemplateRedacted.template_id.in_([x.id for x in templates])
+    ).all()
+    for redacted_template in redacted_templates:
+        db.session.delete(redacted_template)
+
+    # DELETE
+    # FROM public.templates as t
+    # WHERE service_id = '8e1d56fa-12a8-4d00-bed2-db47180bed0a'
+    for template in templates:
+        db.session.delete(template)
+
+    # DELETE
+    # FROM public.templates_history
+    # WHERE id NOT IN (
+    #     SELECT DISTINCT ON (template_id) template_id as id
+    #     FROM public.broadcast_message
+    #     WHERE service_id = '8e1d56fa-12a8-4d00-bed2-db47180bed0a'
+    #         AND template_id IS NOT NULL
+    # )
+    linked_template_ids = (
+        BroadcastMessage.query(BroadcastMessage.template_id)
+        .filter(BroadcastMessage.service_id == service_id, BroadcastMessage.template_id.isnot(None))
+        .distinct()
+    )
+    template_histories = TemplateHistory.query.filter(~TemplateHistory.id.in_(linked_template_ids)).all()
+    for template_history in template_histories:
+        db.session.delete(template_history)

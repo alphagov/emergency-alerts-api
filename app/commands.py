@@ -48,7 +48,12 @@ from app.dao.services_dao import (
     dao_update_service,
     delete_service_and_all_associated_db_objects,
 )
-from app.dao.templates_dao import dao_create_template, dao_get_template_by_id
+from app.dao.template_folder_dao import dao_purge_template_folders_for_service
+from app.dao.templates_dao import (
+    dao_create_template,
+    dao_get_template_by_id,
+    dao_purge_templates_for_service,
+)
 from app.dao.users_dao import (
     delete_model_user,
     delete_user_verify_codes,
@@ -977,7 +982,7 @@ def generate_bulktest_data(user_id):
     "--service",
     required=False,
     default=None,
-    help="""Service identifier - can be either the service UUID or the service name""",
+    help="""Service identifier""",
 )
 @click.option(
     "-d",
@@ -1003,3 +1008,37 @@ def purge_alerts_from_db(older_than, service, dry_run):
         )
     else:
         print(f"Successfully purged {count['msgs']} broadcast messages")
+
+
+@notify_command(name="purge-templates-and-folders")
+@click.option(
+    "-s",
+    "--service",
+    required=True,
+    default=None,
+    help="""Service identifier""",
+)
+def purge_templates_and_folders(service):
+    if os.environ.get("ENVIRONMENT") not in ["local", "development", "preview"]:
+        print(
+            "Templates and folders can only be removed from the database db in local, "
+            "development and preview environments"
+        )
+
+    dao_purge_templates_for_service(service_id=service)
+    dao_purge_template_folders_for_service(service_id=service)
+
+    print(f"Successfully purged templates and folders from service {service}")
+
+
+@notify_command(name="purge-functional-test-services")
+def purge_services_created_by_functional_test_admin():
+    if os.environ.get("ENVIRONMENT") not in ["local", "development", "preview"]:
+        print("Services can only be removed from the database db in local, " "development and preview environments")
+
+    platform_admin = "c3d33860-a967-40cf-8eb4-ec1ee38a4df9"
+    services = dao_fetch_all_services_created_by_user(user_id=platform_admin)
+    for service in services:
+        delete_service_and_all_associated_db_objects(service=service)
+
+    print("Successfully purged services created by functional tests")

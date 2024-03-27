@@ -85,12 +85,14 @@ from app.dao.services_dao import (
     dao_create_service,
     dao_fetch_all_services,
     dao_fetch_all_services_by_user,
+    dao_fetch_all_services_created_by_user,
     dao_fetch_live_services_data,
     dao_fetch_service_by_id,
     dao_fetch_todays_stats_for_all_services,
     dao_fetch_todays_stats_for_service,
     dao_remove_user_from_service,
     dao_update_service,
+    delete_service_and_all_associated_db_objects,
     get_services_by_partial_name,
 )
 from app.dao.users_dao import get_user_by_id
@@ -138,6 +140,7 @@ from app.utils import (
     DATE_FORMAT,
     DATETIME_FORMAT_NO_TIMEZONE,
     get_prev_next_pagination_links,
+    is_public_environment,
     midnight_n_days_ago,
 )
 
@@ -1116,3 +1119,19 @@ def set_as_broadcast_service(service_id):
 
     data = service_schema.dump(service)
     return jsonify(data=data)
+
+
+@service_blueprint.route("/purge-services-created/<uuid:user_id>", methods=["DELETE"])
+def purge_services_created_by(user_id):
+    if is_public_environment():
+        raise InvalidRequest("Endpoint not found", status_code=404)
+
+    try:
+        services = dao_fetch_all_services_created_by_user(user_id=user_id)
+        for service in services:
+            delete_service_and_all_associated_db_objects(service=service)
+    except Exception as e:
+        return jsonify(result="error", message=f"Unable to purge services created by user {user_id}: {e}"), 500
+
+    service_list = ",".join(services)
+    return jsonify({"message": f"Successfully purged services: {service_list}"}), 200
