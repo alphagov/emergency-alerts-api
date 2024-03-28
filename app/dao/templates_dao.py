@@ -188,6 +188,8 @@ def dao_purge_templates_for_service(service_id):
     for template in templates:
         db.session.delete(template)
 
+    db.session.flush()
+
     # DELETE
     # FROM public.templates_history
     # WHERE id NOT IN (
