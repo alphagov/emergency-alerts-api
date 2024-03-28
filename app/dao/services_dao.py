@@ -386,7 +386,8 @@ def delete_service_and_all_associated_db_objects(service):
         query.delete(synchronize_session=False)
         db.session.commit()
 
-    subq = db.session.query(Template.id).filter_by(service=service).subquery()
+    # subq = db.session.query(Template.id).filter_by(service=service).subquery()
+    subq = db.session.query(Template.id).filter_by(service=service).select()
     _delete_commit(TemplateRedacted.query.filter(TemplateRedacted.template_id.in_(subq)))
 
     _delete_commit(ServiceSmsSender.query.filter_by(service=service))
@@ -408,8 +409,13 @@ def delete_service_and_all_associated_db_objects(service):
     verify_codes = VerifyCode.query.join(User).filter(User.id.in_([x.id for x in service.users]))
     list(map(db.session.delete, verify_codes))
     db.session.commit()
+
+    created_by_id = Service.query.filter_by(id=service.id).created_by_id
+
     users = [x for x in service.users]
     for user in users:
+        if user.id == created_by_id:
+            continue
         user.organisations = []
         service.users.remove(user)
     _delete_commit(Service.get_history_model().query.filter_by(id=service.id))
