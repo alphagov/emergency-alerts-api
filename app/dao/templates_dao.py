@@ -179,7 +179,7 @@ def dao_purge_templates_for_service(service_id):
     # )
     query = "DELETE FROM template_folder_map WHERE template_id IN :id_list"
     ids = [str(x.id) for x in templates]
-    id_clause = ", ".join([f"'{id}'" for id in ids])
+    id_clause = ", ".join(ids)
     db.session.execute(query, {"id_list": f"({id_clause})"})
 
     # DELETE
