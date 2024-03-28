@@ -386,8 +386,7 @@ def delete_service_and_all_associated_db_objects(service):
         query.delete(synchronize_session=False)
         db.session.commit()
 
-    # subq = db.session.query(Template.id).filter_by(service=service).subquery()
-    subq = db.session.query(Template.id).filter_by(service=service).select()
+    subq = db.session.query(Template.id).filter_by(service=service).subquery()
     _delete_commit(TemplateRedacted.query.filter(TemplateRedacted.template_id.in_(subq)))
 
     _delete_commit(ServiceSmsSender.query.filter_by(service=service))
