@@ -184,11 +184,11 @@ def dao_purge_templates_for_service(service_id):
     #     WHERE service_id = '8e1d56fa-12a8-4d00-bed2-db47180bed0a'
     #         AND template_id IS NOT NULL
     # )
-    linked_template_ids = (
-        BroadcastMessage.query(BroadcastMessage.template_id)
-        .filter(BroadcastMessage.service_id == service_id, BroadcastMessage.template_id.isnot(None))
-        .distinct()
-    )
-    template_histories = TemplateHistory.query.filter(~TemplateHistory.id.in_(linked_template_ids)).all()
+    messages_from_templates = BroadcastMessage.query.filter(
+        BroadcastMessage.service_id == service_id, BroadcastMessage.template_id.isnot(None)
+    ).distinct()
+    template_histories = TemplateHistory.query.filter(
+        ~TemplateHistory.id.in_([x.template_id for x in messages_from_templates])
+    ).all()
     for template_history in template_histories:
         db.session.delete(template_history)
