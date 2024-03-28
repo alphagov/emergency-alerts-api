@@ -33,7 +33,7 @@ def dao_purge_template_folders_for_service(service_id):
     # DELETE
     # FROM public.user_folder_permissions
     # WHERE service_id = '8e1d56fa-12a8-4d00-bed2-db47180bed0a'
-    query = "DELETE FROM user_folder_permissions WHERE service_id IN :service_id"
+    query = "DELETE FROM user_folder_permissions WHERE service_id = :service_id"
     db.session.execute(query, {"service_id": service_id})
 
     # DELETE
