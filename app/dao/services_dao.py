@@ -409,7 +409,7 @@ def delete_service_and_all_associated_db_objects(service):
     list(map(db.session.delete, verify_codes))
     db.session.commit()
 
-    created_by_id = Service.query.filter_by(id=service.id).created_by_id
+    created_by_id = Service.query.filter_by(id=service.id).one().created_by_id
 
     users = [x for x in service.users]
     for user in users:
