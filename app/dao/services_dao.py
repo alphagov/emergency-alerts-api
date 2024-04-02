@@ -386,8 +386,10 @@ def delete_service_and_all_associated_db_objects(service):
         query.delete(synchronize_session=False)
         db.session.commit()
 
-    subq = db.session.query(Template.id).filter_by(service=service).subquery()
-    _delete_commit(TemplateRedacted.query.filter(TemplateRedacted.template_id.in_(subq)))
+    template_ids = db.session.query(Template.id).filter_by(service=service)
+    _delete_commit(TemplateRedacted.query.filter(TemplateRedacted.template_id.in_(template_ids)))
+
+    print("*** deletion from TemplateRedacted - OK ***")
 
     _delete_commit(ServiceSmsSender.query.filter_by(service=service))
     _delete_commit(ServiceEmailReplyTo.query.filter_by(service=service))
@@ -405,23 +407,44 @@ def delete_service_and_all_associated_db_objects(service):
     _delete_commit(ApiKey.get_history_model().query.filter_by(service_id=service.id))
     _delete_commit(AnnualBilling.query.filter_by(service_id=service.id))
 
+    print("*** deletion from related fields - OK ***")
+
     verify_codes = VerifyCode.query.join(User).filter(User.id.in_([x.id for x in service.users]))
     list(map(db.session.delete, verify_codes))
     db.session.commit()
 
+    print("*** deletion from VerifyCode - OK ***")
+
     created_by_id = Service.query.filter_by(id=service.id).one().created_by_id
 
+    print(f"*** service created by {created_by_id} ***")
+
     users = [x for x in service.users]
+
+    print("*** users connected to service")
+    print(users)
+    print("***")
+
     for user in users:
-        if user.id == created_by_id:
-            continue
-        user.organisations = []
-        service.users.remove(user)
+        if user.id != created_by_id:
+            user.organisations = []
+            service.users.remove(user)
+
+    print("*** users removed ***")
+
     _delete_commit(Service.get_history_model().query.filter_by(id=service.id))
+
+    print("get_history_model objects removed")
+
     db.session.delete(service)
     db.session.commit()
+
+    print(f"service {service} deleted")
+
     for user in users:
-        db.session.delete(user)
+        if user.id != created_by_id:
+            db.session.delete(user)
+
     db.session.commit()
 
 
