@@ -157,47 +157,22 @@ def get_precompiled_letter_template(service_id):
 def dao_purge_templates_for_service(service_id):
     templates = Template.query.filter_by(service_id=service_id).all()
 
-    # DELETE
-    # FROM template_redacted
-    # WHERE template_id IN (
-    #     SELECT id
-    #     FROM public.templates
-    #     WHERE service_id = '8e1d56fa-12a8-4d00-bed2-db47180bed0a'
-    # )
     redacted_templates = TemplateRedacted.query.filter(
         TemplateRedacted.template_id.in_([x.id for x in templates])
     ).all()
     for redacted_template in redacted_templates:
-        db.session.delete(redacted_template).execution_options(synchronize_session=False)
+        db.session.delete(redacted_template)
 
-    # DELETE
-    # FROM public.templates as t
-    # WHERE service_id = '8e1d56fa-12a8-4d00-bed2-db47180bed0a'
     for template in templates:
-        db.session.delete(template).execution_options(synchronize_session=False)
-    # db.session.flush()
+        db.session.delete(template)
+    db.session.flush()
 
-    # DELETE
-    # FROM public.template_folder_map
-    # WHERE template_id IN (
-    #     SELECT id as template_id
-    #     FROM public.templates
-    #     WHERE public.templates.service_id = '8e1d56fa-12a8-4d00-bed2-db47180bed0a'
-    # )
     ids = [f"'{str(x.id)}'" for x in templates]
     ids_string = ", ".join(ids)
     query = f"DELETE FROM template_folder_map WHERE template_id IN ({ids_string})"
-    db.session.execute(query).execution_options(synchronize_session=False)
-    # db.session.flush()
+    db.session.execute(query)
+    db.session.flush()
 
-    # DELETE
-    # FROM public.templates_history
-    # WHERE id NOT IN (
-    #     SELECT DISTINCT ON (template_id) template_id as id
-    #     FROM public.broadcast_message
-    #     WHERE service_id = '8e1d56fa-12a8-4d00-bed2-db47180bed0a'
-    #         AND template_id IS NOT NULL
-    # )
     messages_from_templates = BroadcastMessage.query.filter(
         BroadcastMessage.service_id == service_id, BroadcastMessage.template_id.isnot(None)
     ).distinct()
@@ -205,4 +180,4 @@ def dao_purge_templates_for_service(service_id):
         ~TemplateHistory.id.in_([x.template_id for x in messages_from_templates])
     ).all()
     for template_history in template_histories:
-        db.session.delete(template_history).execution_options(synchronize_session=False)
+        db.session.delete(template_history)
