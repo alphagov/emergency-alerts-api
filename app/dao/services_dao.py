@@ -381,10 +381,11 @@ def dao_remove_user_from_service(service, user):
         db.session.commit()
 
 
+@autocommit
 def delete_service_and_all_associated_db_objects(service):
     def _delete_commit(query):
         query.delete(synchronize_session=False)
-        db.session.commit()
+        # db.session.commit()
 
     template_ids = db.session.query(Template.id).filter_by(service=service)
     _delete_commit(TemplateRedacted.query.filter(TemplateRedacted.template_id.in_(template_ids)))
@@ -411,7 +412,7 @@ def delete_service_and_all_associated_db_objects(service):
 
     verify_codes = VerifyCode.query.join(User).filter(User.id.in_([x.id for x in service.users]))
     list(map(db.session.delete, verify_codes))
-    db.session.commit()
+    # db.session.commit()
 
     print("*** deletion from VerifyCode - OK ***")
 
@@ -437,7 +438,7 @@ def delete_service_and_all_associated_db_objects(service):
     print("get_history_model objects removed")
 
     db.session.delete(service)
-    db.session.commit()
+    # db.session.commit()
 
     print(f"service {service} deleted")
 
@@ -445,7 +446,7 @@ def delete_service_and_all_associated_db_objects(service):
         if user.id != created_by_id:
             db.session.delete(user)
 
-    db.session.commit()
+    # db.session.commit()
 
 
 def dao_fetch_todays_stats_for_service(service_id):

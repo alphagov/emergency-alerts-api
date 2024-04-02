@@ -175,7 +175,7 @@ def dao_purge_templates_for_service(service_id):
     # WHERE service_id = '8e1d56fa-12a8-4d00-bed2-db47180bed0a'
     for template in templates:
         db.session.delete(template)
-    db.session.flush()
+    # db.session.flush()
 
     # DELETE
     # FROM public.template_folder_map
@@ -188,7 +188,7 @@ def dao_purge_templates_for_service(service_id):
     ids_string = ", ".join(ids)
     query = f"DELETE FROM template_folder_map WHERE template_id IN ({ids_string})"
     db.session.execute(query)
-    db.session.flush()
+    # db.session.flush()
 
     # DELETE
     # FROM public.templates_history
