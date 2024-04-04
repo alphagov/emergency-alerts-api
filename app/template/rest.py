@@ -17,6 +17,7 @@ from app.dao.notifications_dao import get_notification_by_id
 from app.dao.services_dao import dao_fetch_service_by_id
 from app.dao.template_folder_dao import (
     dao_get_template_folder_by_id_and_service_id,
+    dao_purge_template_folders_for_service,
 )
 from app.dao.templates_dao import (
     dao_create_template,
@@ -224,10 +225,11 @@ def purge_templates_and_archived_templates_for_service(service_id):
 
     try:
         dao_purge_templates_for_service(service=service_id)
+        dao_purge_template_folders_for_service(service=service_id)
     except Exception as e:
-        return jsonify(result="error", message=f"Unable to purge templates: {e}"), 500
+        return jsonify(result="error", message=f"Unable to purge templates and folders: {e}"), 500
 
-    return jsonify({"message": f"Purged templates and archived templates from service {service_id}."}), 200
+    return jsonify({"message": f"Purged templates, archived templates and folders from service {service_id}."}), 200
 
 
 def _template_has_not_changed(current_data, updated_template):

@@ -12,7 +12,6 @@ from app.dao.template_folder_dao import (
     dao_create_template_folder,
     dao_delete_template_folder,
     dao_get_template_folder_by_id_and_service_id,
-    dao_purge_template_folders_for_service,
     dao_update_template_folder,
 )
 from app.dao.templates_dao import dao_get_template_by_id_and_service_id
@@ -24,7 +23,6 @@ from app.template_folder.template_folder_schema import (
     post_move_template_folder_schema,
     post_update_template_folder_schema,
 )
-from app.utils import is_public_environment
 
 template_folder_blueprint = Blueprint(
     "template_folder", __name__, url_prefix="/service/<uuid:service_id>/template-folder"
@@ -148,16 +146,3 @@ def _validate_folder_move(target_template_folder, target_template_folder_id, tem
     if target_template_folder and template_folder.is_parent_of(target_template_folder):
         msg = "You cannot move a folder to one of its subfolders"
         raise InvalidRequest(msg, status_code=400)
-
-
-@template_folder_blueprint.route("/purge", methods=["DELETE"])
-def purge_templates_and_archived_templates_for_service(service_id):
-    if is_public_environment():
-        raise InvalidRequest("Endpoint not found", status_code=404)
-
-    try:
-        dao_purge_template_folders_for_service(service=service_id)
-    except Exception as e:
-        return jsonify(result="error", message=f"Unable to purge template folders: {e}"), 500
-
-    return jsonify({"message": f"Purged all template folders from service {service_id}."}), 200
