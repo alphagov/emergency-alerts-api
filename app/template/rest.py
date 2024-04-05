@@ -219,7 +219,7 @@ def get_template_versions(service_id, template_id):
 
 
 @template_blueprint.route("/purge", methods=["DELETE"])
-def purge_templates_and_archived_templates_for_service(service_id):
+def purge_templates_and_folders_for_service(service_id):
     if is_public_environment():
         raise InvalidRequest("Endpoint not found", status_code=404)
 
