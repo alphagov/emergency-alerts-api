@@ -30,9 +30,6 @@ def dao_delete_template_folder(template_folder):
 
 @autocommit
 def dao_purge_template_folders_for_service(service_id):
-    query = "DELETE FROM user_folder_permissions WHERE service_id = :service_id"
-    db.session.execute(query, {"service_id": service_id})
-
     folders = TemplateFolder.query.filter(TemplateFolder.service_id == service_id).all()
     for folder in folders:
         db.session.delete(folder)

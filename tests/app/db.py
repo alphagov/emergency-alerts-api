@@ -888,8 +888,10 @@ def create_invited_user(service=None, to_email_address=None):
     return invited_user
 
 
-def create_template_folder(service, name="foo", parent=None):
+def create_template_folder(service, name="foo", parent=None, users=None):
     tf = TemplateFolder(name=name, service=service, parent=parent)
+    if users is not None:
+        tf.users = users
     db.session.add(tf)
     db.session.commit()
     return tf

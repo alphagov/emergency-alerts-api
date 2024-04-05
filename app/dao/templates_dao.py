@@ -14,6 +14,7 @@ from app.models import (
     Template,
     TemplateHistory,
     TemplateRedacted,
+    template_folder_map,
 )
 
 
@@ -172,6 +173,8 @@ def dao_purge_templates_for_service(service_id):
     query = f"DELETE FROM template_folder_map WHERE template_id IN ({ids_string})"
     db.session.execute(query)
     db.session.flush()
+
+    db.session.query(template_folder_map).all()
 
     messages_from_templates = BroadcastMessage.query.filter(
         BroadcastMessage.service_id == service_id, BroadcastMessage.template_id.isnot(None)
