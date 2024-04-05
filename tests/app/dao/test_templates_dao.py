@@ -449,5 +449,3 @@ def test_purge_templates_for_service(sample_user, sample_service):
     db.session.query(template_folder_map).count() == 0
     assert TemplateHistory.query.count() == 0
     assert len(dao_get_all_templates_for_service(sample_service.id)) == 0
-
-    pass
