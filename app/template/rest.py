@@ -224,8 +224,8 @@ def purge_templates_and_folders_for_service(service_id):
         raise InvalidRequest("Endpoint not found", status_code=404)
 
     try:
-        dao_purge_templates_for_service(service=service_id)
-        dao_purge_template_folders_for_service(service=service_id)
+        dao_purge_templates_for_service(service_id=service_id)
+        dao_purge_template_folders_for_service(service_id=service_id)
     except Exception as e:
         return jsonify(result="error", message=f"Unable to purge templates and folders: {e}"), 500
 
