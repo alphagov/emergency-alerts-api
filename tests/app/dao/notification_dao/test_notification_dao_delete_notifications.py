@@ -5,7 +5,7 @@ import boto3
 import pytest
 from flask import current_app
 from freezegun import freeze_time
-from moto import mock_s3
+from moto import mock_aws
 
 from app.dao.notifications_dao import (
     insert_notification_history_delete_notifications,
@@ -26,7 +26,7 @@ from tests.app.db import (
 )
 
 
-@mock_s3
+@mock_aws
 @freeze_time("2019-09-01 04:30")
 def test_move_notifications_deletes_letters_from_s3(sample_letter_template, mocker):
     s3 = boto3.client("s3", region_name="eu-west-2")
@@ -52,7 +52,7 @@ def test_move_notifications_deletes_letters_from_s3(sample_letter_template, mock
         s3.get_object(Bucket=bucket_name, Key=filename)
 
 
-@mock_s3
+@mock_aws
 @freeze_time("2019-09-01 04:30")
 def test_move_notifications_copes_if_letter_not_in_s3(sample_letter_template, mocker):
     s3 = boto3.client("s3", region_name="eu-west-2")
@@ -110,7 +110,7 @@ def test_move_notifications_deletes_letters_not_sent_and_in_final_state_from_tab
     mock_s3_object.assert_not_called()
 
 
-@mock_s3
+@mock_aws
 @freeze_time("2020-12-24 04:30")
 @pytest.mark.parametrize("notification_status", ["delivered", "returned-letter", "technical-failure"])
 def test_move_notifications_deletes_letters_sent_and_in_final_state_from_table_and_s3(
