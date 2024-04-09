@@ -17,6 +17,7 @@ from app.dao.notifications_dao import get_notification_by_id
 from app.dao.services_dao import dao_fetch_service_by_id
 from app.dao.template_folder_dao import (
     dao_get_template_folder_by_id_and_service_id,
+    dao_purge_template_folders_for_service,
 )
 from app.dao.templates_dao import (
     dao_create_template,
@@ -24,6 +25,7 @@ from app.dao.templates_dao import (
     dao_get_template_by_id,
     dao_get_template_by_id_and_service_id,
     dao_get_template_versions,
+    dao_purge_templates_for_service,
     dao_redact_template,
     dao_update_template,
     dao_update_template_reply_to,
@@ -49,7 +51,7 @@ from app.template.template_schemas import (
     post_create_template_schema,
     post_update_template_schema,
 )
-from app.utils import get_public_notify_type_text
+from app.utils import get_public_notify_type_text, is_public_environment
 
 template_blueprint = Blueprint("template", __name__, url_prefix="/service/<uuid:service_id>/template")
 
@@ -214,6 +216,20 @@ def get_template_versions(service_id, template_id):
         dao_get_template_versions(service_id=service_id, template_id=template_id), many=True
     )
     return jsonify(data=data)
+
+
+@template_blueprint.route("/purge", methods=["DELETE"])
+def purge_templates_and_folders_for_service(service_id):
+    if is_public_environment():
+        raise InvalidRequest("Endpoint not found", status_code=404)
+
+    try:
+        dao_purge_templates_for_service(service_id=service_id)
+        dao_purge_template_folders_for_service(service_id=service_id)
+    except Exception as e:
+        return jsonify(result="error", message=f"Unable to purge templates and folders: {e}"), 500
+
+    return jsonify({"message": f"Purged templates, archived templates and folders from service {service_id}."}), 200
 
 
 def _template_has_not_changed(current_data, updated_template):

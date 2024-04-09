@@ -190,7 +190,7 @@ def update_broadcast_message_status(service_id, broadcast_message_id):
     return jsonify(broadcast_message.serialize()), 200
 
 
-@broadcast_message_blueprint.route("/purge/<int:older_than>", methods=["GET"])
+@broadcast_message_blueprint.route("/purge/<int:older_than>", methods=["DELETE"])
 def purge_broadcast_messages(service_id, older_than):
     if is_public_environment():
         raise InvalidRequest("Endpoint not found", status_code=404)

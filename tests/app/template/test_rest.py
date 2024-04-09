@@ -1659,3 +1659,22 @@ def test_preview_letter_template_precompiled_png_template_preview_pdf_error(
             ] == "Error extracting requested page from PDF file for notification_id {} type " "{} {}".format(
                 notification.id, type(PdfReadError()), error_message
             )
+
+
+def test_purge_templates_and_folders_for_service_removes_db_objects(mocker, sample_service, admin_request):
+    with requests_mock.Mocker():
+        template_purge_mock = mocker.patch("app.dao.templates_dao.dao_purge_templates_for_service")
+        folder_purge_mock = mocker.patch("app.dao.template_folder_dao.dao_purge_template_folders_for_service")
+
+        response = admin_request.delete(
+            "template.purge_templates_and_folders_for_service",
+            service_id=sample_service.id,
+            _expected_status=200,
+        )
+
+        assert (
+            response["message"] == f"Purged templates, archived templates and folders from service {sample_service.id}."
+        )
+
+        assert template_purge_mock.called_once_with(sample_service.id)
+        assert folder_purge_mock.called_once_with(sample_service.id)

@@ -10,6 +10,7 @@ from app.dao.users_dao import get_user_by_id
 from app.models import (
     LETTER_TYPE,
     SECOND_CLASS,
+    BroadcastMessage,
     Template,
     TemplateHistory,
     TemplateRedacted,
@@ -150,3 +151,34 @@ def get_precompiled_letter_template(service_id):
     dao_create_template(template)
 
     return template
+
+
+@autocommit
+def dao_purge_templates_for_service(service_id):
+    templates = Template.query.filter_by(service_id=service_id).all()
+
+    redacted_templates = TemplateRedacted.query.filter(
+        TemplateRedacted.template_id.in_([x.id for x in templates])
+    ).all()
+    for redacted_template in redacted_templates:
+        db.session.delete(redacted_template)
+
+    for template in templates:
+        db.session.delete(template)
+    db.session.flush()
+
+    ids = [f"'{str(x.id)}'" for x in templates]
+    ids_string = ", ".join(ids)
+    if len(ids_string) > 0:
+        query = f"DELETE FROM template_folder_map WHERE template_id IN ({ids_string})"
+        db.session.execute(query)
+        db.session.flush()
+
+    messages_from_templates = BroadcastMessage.query.filter(
+        BroadcastMessage.service_id == service_id, BroadcastMessage.template_id.isnot(None)
+    ).distinct()
+    template_histories = TemplateHistory.query.filter(
+        ~TemplateHistory.id.in_([x.template_id for x in messages_from_templates])
+    ).all()
+    for template_history in template_histories:
+        db.session.delete(template_history)

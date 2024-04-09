@@ -4,17 +4,29 @@ import pytest
 from freezegun import freeze_time
 from sqlalchemy.orm.exc import NoResultFound
 
+from app import db
+from app.dao.service_user_dao import dao_get_service_user
 from app.dao.templates_dao import (
     dao_create_template,
     dao_get_all_templates_for_service,
     dao_get_template_by_id_and_service_id,
     dao_get_template_versions,
+    dao_purge_templates_for_service,
     dao_redact_template,
     dao_update_template,
     dao_update_template_reply_to,
 )
-from app.models import Template, TemplateHistory, TemplateRedacted
-from tests.app.db import create_letter_contact, create_template
+from app.models import (
+    Template,
+    TemplateHistory,
+    TemplateRedacted,
+    template_folder_map,
+)
+from tests.app.db import (
+    create_letter_contact,
+    create_template,
+    create_template_folder,
+)
 
 
 @pytest.mark.parametrize(
@@ -404,3 +416,48 @@ def test_get_template_versions_is_empty_for_hidden_templates(sample_service):
     sample_template = create_template(template_name="Test Template", hidden=True, service=sample_service)
     versions = dao_get_template_versions(service_id=sample_template.service_id, template_id=sample_template.id)
     assert len(versions) == 0
+
+
+def test_purge_templates_for_service(sample_user, sample_service):
+    service_user = dao_get_service_user(sample_user.id, sample_service.id)
+    folder_1 = create_template_folder(sample_service, name="folder_1", users=[service_user])
+
+    data = {
+        "name": "Sample Template 1",
+        "template_type": "broadcast",
+        "subject": "Alert subject 1",
+        "content": "Alert template content",
+        "service": sample_service,
+        "created_by": sample_user,
+        "folder": folder_1,
+    }
+    template = Template(**data)
+    dao_create_template(template)
+
+    data = {
+        "name": "Sample Template 2",
+        "template_type": "broadcast",
+        "subject": "Alert subject 2",
+        "content": "Alert template content",
+        "service": sample_service,
+        "created_by": sample_user,
+    }
+    template = Template(**data)
+    dao_create_template(template)
+
+    service_user = dao_get_service_user(sample_user.id, sample_service.id)
+    folder_1 = create_template_folder(sample_service, name="folder_1", users=[service_user])
+
+    assert Template.query.count() == 2
+    assert TemplateRedacted.query.count() == 2
+    assert db.session.query(template_folder_map).count() == 1
+    assert TemplateHistory.query.count() == 2
+    assert len(dao_get_all_templates_for_service(sample_service.id)) == 2
+
+    dao_purge_templates_for_service(sample_service.id)
+
+    assert Template.query.count() == 0
+    assert TemplateRedacted.query.count() == 0
+    assert db.session.query(template_folder_map).count() == 0
+    assert TemplateHistory.query.count() == 0
+    assert len(dao_get_all_templates_for_service(sample_service.id)) == 0

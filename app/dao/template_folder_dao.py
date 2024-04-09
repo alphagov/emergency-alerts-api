@@ -26,3 +26,10 @@ def dao_update_template_folder(template_folder):
 @autocommit
 def dao_delete_template_folder(template_folder):
     db.session.delete(template_folder)
+
+
+@autocommit
+def dao_purge_template_folders_for_service(service_id):
+    folders = TemplateFolder.query.filter(TemplateFolder.service_id == service_id).all()
+    for folder in folders:
+        db.session.delete(folder)

@@ -655,7 +655,7 @@ def test_update_broadcast_message_status_rejects_approval_from_user_not_on_that_
 
 
 def test_purge_broadcast_messages(admin_request, sample_broadcast_service, mocker):
-    response = admin_request.get(
+    response = admin_request.delete(
         "broadcast_message.purge_broadcast_messages",
         service_id=sample_broadcast_service.id,
         older_than=100,
