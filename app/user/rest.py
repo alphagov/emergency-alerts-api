@@ -8,6 +8,7 @@ from notifications_python_client.errors import HTTPError
 from sqlalchemy.exc import IntegrityError
 
 from app.clients.notify_client import notify_send
+from app.dao.invited_user_dao import get_invited_user_by_email
 from app.dao.permissions_dao import permission_dao
 from app.dao.service_user_dao import (
     dao_get_service_user,
@@ -467,6 +468,15 @@ def fetch_user_by_email():
     email = email_data_request_schema.load(request.get_json())
 
     fetched_user = get_user_by_email(email["email"])
+    result = fetched_user.serialize()
+    return jsonify(data=result)
+
+
+@user_blueprint.route("/invited/email", methods=["POST"])
+def fetch_invited_user_by_email():
+    email = email_data_request_schema.load(request.get_json())
+
+    fetched_user = get_invited_user_by_email(email["email"])
     result = fetched_user.serialize()
     return jsonify(data=result)
 
