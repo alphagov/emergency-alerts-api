@@ -1133,6 +1133,4 @@ def purge_services_created_by(user_id):
     except Exception as e:
         return jsonify(result="error", message=f"Unable to purge services created by user {user_id}: {e}"), 500
 
-    # service_list = ",".join([x["id"] for x in services])
-    # return jsonify({"message": f"Successfully purged services: {service_list}"}), 200
-    return "", 200
+    return jsonify({"message": "Successfully purged services"}), 200
