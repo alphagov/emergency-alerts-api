@@ -24,6 +24,15 @@ def create_invited_user(service_id):
     invited_user = invited_user_schema.load(request_json)
     save_invited_user(invited_user)
 
+    current_app.logger.info(
+        "user_invitation",
+        extra={
+            "python_module": __name__,
+            "invited_user": invited_user.id,
+            "invite_link_host": request_json.get("invite_link_host"),
+        },
+    )
+
     notification = {
         "type": EMAIL_TYPE,
         "template_id": current_app.config["BROADCAST_INVITATION_EMAIL_TEMPLATE_ID"],
