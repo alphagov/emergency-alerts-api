@@ -33,3 +33,8 @@ def delete_invitations_created_more_than_two_days_ago():
     )
     db.session.commit()
     return deleted
+
+
+def delete_invitations_sent_by_user(user_id):
+    db.session.query(InvitedUser).filter_by(user_id=user_id).delete()
+    db.session.commit()

@@ -32,6 +32,7 @@ from app.dao.fact_notification_status_dao import (
     fetch_stats_for_all_services_by_date_range,
 )
 from app.dao.inbound_numbers_dao import dao_allocate_number_for_service
+from app.dao.invited_user_dao import delete_invitations_sent_by_user
 from app.dao.organisation_dao import dao_get_organisation_by_service_id
 from app.dao.returned_letters_dao import (
     fetch_most_recent_returned_letter,
@@ -1130,6 +1131,7 @@ def purge_services_created_by(user_id):
         services = dao_fetch_all_services_created_by_user(user_id=user_id)
         for service in services:
             delete_service_and_all_associated_db_objects(service=service)
+        delete_invitations_sent_by_user(user_id=user_id)
     except Exception as e:
         return jsonify(result="error", message=f"Unable to purge services created by user {user_id}: {e}"), 500
 
