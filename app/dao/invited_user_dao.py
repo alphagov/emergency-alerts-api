@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta
 
+from sqlalchemy import desc
+
 from app import db
 from app.models import InvitedUser
 
@@ -18,7 +20,7 @@ def get_invited_user_by_id(invited_user_id):
 
 
 def get_invited_user_by_email(email):
-    return InvitedUser.query.filter_by(email_address=email).order_by(InvitedUser.created_at).first()
+    return InvitedUser.query.filter_by(email_address=email).order_by(desc(InvitedUser.created_at)).first()
 
 
 def get_invited_users_for_service(service_id):
