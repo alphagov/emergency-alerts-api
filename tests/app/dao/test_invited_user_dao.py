@@ -7,6 +7,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from app import db
 from app.dao.invited_user_dao import (
     delete_invitations_created_more_than_two_days_ago,
+    get_invited_user_by_email,
     get_invited_user_by_id,
     get_invited_user_by_service_and_id,
     get_invited_users_for_service,
@@ -69,6 +70,11 @@ def test_get_invited_user_by_service_and_id(notify_db_session, sample_invited_us
 
 def test_get_invited_user_by_id(notify_db_session, sample_invited_user):
     from_db = get_invited_user_by_id(sample_invited_user.id)
+    assert from_db == sample_invited_user
+
+
+def test_get_invited_user_by_email(notify_db_session, sample_invited_user):
+    from_db = get_invited_user_by_email(sample_invited_user.email_address)
     assert from_db == sample_invited_user
 
 
