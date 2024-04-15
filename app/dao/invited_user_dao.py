@@ -18,7 +18,7 @@ def get_invited_user_by_id(invited_user_id):
 
 
 def get_invited_user_by_email(email):
-    return InvitedUser.query.filter_by(email_address=email).one()
+    return InvitedUser.query.filter_by(email_address=email).order_by(InvitedUser.created_at).first()
 
 
 def get_invited_users_for_service(service_id):
