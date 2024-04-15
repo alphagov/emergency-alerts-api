@@ -1774,6 +1774,17 @@ class InvitedUser(db.Model):
     def get_permissions(self):
         return self.permissions.split(",")
 
+    def serialize(self):
+        return {
+            "id": str(self.id),
+            "email_address": self.email_address,
+            "user_id": str(self.user_id),
+            "service_id": str(self.service_id),
+            "created_at": self.created_at.strftime(DATETIME_FORMAT),
+            "status": self.status,
+            "auth_type": self.auth_type,
+        }
+
 
 class InvitedOrganisationUser(db.Model):
     __tablename__ = "invited_organisation_users"
