@@ -24,15 +24,6 @@ def create_invited_user(service_id):
     invited_user = invited_user_schema.load(request_json)
     save_invited_user(invited_user)
 
-    current_app.logger.info(
-        "user_invitation",
-        extra={
-            "python_module": __name__,
-            "invited_user": invited_user.id,
-            "invite_link_host": request_json.get("invite_link_host"),
-        },
-    )
-
     notification = {
         "type": EMAIL_TYPE,
         "template_id": current_app.config["BROADCAST_INVITATION_EMAIL_TEMPLATE_ID"],
@@ -81,18 +72,6 @@ def invited_user_url(invited_user_id, invite_link_host=None):
 
     if invite_link_host is None:
         invite_link_host = current_app.config["ADMIN_EXTERNAL_URL"]
-
-    a = current_app.config["SECRET_KEY"]
-    b = current_app.config["DANGEROUS_SALT"]
-
-    current_app.logger.info(
-        "invited_user_url",
-        extra={
-            "invited_user_id": str(invited_user_id),
-            "auth": a[0:5] + " " + b[0:5],
-            "invitation_url": "{0}/invitation/{1}".format(invite_link_host, token),
-        },
-    )
 
     return "{0}/invitation/{1}".format(invite_link_host, token)
 
