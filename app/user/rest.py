@@ -472,7 +472,7 @@ def fetch_user_by_email():
     return jsonify(data=result)
 
 
-@user_blueprint.route("/invited/email", methods=["POST"])
+@user_blueprint.route("/invited", methods=["POST"])
 def fetch_invited_user_by_email():
     email = email_data_request_schema.load(request.get_json())
 
