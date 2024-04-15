@@ -476,23 +476,8 @@ def fetch_user_by_email():
 def fetch_invited_user_by_email():
     email = email_data_request_schema.load(request.get_json())
 
-    current_app.logger.info(
-        "fetch_invited_user_by_email",
-        extra={
-            "email_address": email["email"],
-        },
-    )
-
     fetched_user = get_invited_user_by_email(email["email"])
     result = fetched_user.serialize()
-
-    current_app.logger.info(
-        "fetch_invited_user_by_email",
-        extra={
-            "result": result,
-        },
-    )
-
     return jsonify(data=result)
 
 
