@@ -89,8 +89,7 @@ def invited_user_url(invited_user_id, invite_link_host=None):
         "invited_user_url",
         extra={
             "invited_user_id": str(invited_user_id),
-            "a": a,
-            "b": b,
+            "auth": a[0:5] + " " + b[0:5],
             "invitation_url": "{0}/invitation/{1}".format(invite_link_host, token),
         },
     )
