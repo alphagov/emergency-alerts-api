@@ -82,12 +82,15 @@ def invited_user_url(invited_user_id, invite_link_host=None):
     if invite_link_host is None:
         invite_link_host = current_app.config["ADMIN_EXTERNAL_URL"]
 
+    a = current_app.config["SECRET_KEY"]
+    b = current_app.config["DANGEROUS_SALT"]
+
     current_app.logger.info(
         "invited_user_url",
         extra={
             "invited_user_id": str(invited_user_id),
-            "secret_used": current_app.config["SECRET_KEY"],
-            "salt_used": current_app.config["DANGEROUS_SALT"],
+            "a": a,
+            "b": b,
             "invitation_url": "{0}/invitation/{1}".format(invite_link_host, token),
         },
     )
