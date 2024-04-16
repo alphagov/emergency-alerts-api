@@ -1,3 +1,4 @@
+import os
 from flask import Blueprint, jsonify, request
 
 from app import db, version
@@ -19,6 +20,7 @@ def show_api_status():
                 git_commit=version.__git_commit__,
                 build_time=version.__time__,
                 db_version=get_db_version(),
+                app_version=get_app_version(),
             ),
             200,
         )
@@ -57,3 +59,10 @@ def get_db_version():
     query = "SELECT version_num FROM alembic_version"
     full_name = db.session.execute(query).fetchone()[0]
     return full_name
+
+
+def get_app_version():
+    if os.getenv("APP_VERSION") is not None:
+        return os.getenv("APP_VERSION")
+    else:
+        return "0.0.0"
