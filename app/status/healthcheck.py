@@ -39,6 +39,7 @@ def show_celery_status():
                 status="ok",
                 git_commit=version.__git_commit__,
                 build_time=version.__time__,
+                app_version=get_app_version(),
             ),
             200,
         )
