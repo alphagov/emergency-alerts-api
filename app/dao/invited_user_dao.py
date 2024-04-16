@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta
 
+from sqlalchemy import desc
+
 from app import db
 from app.models import InvitedUser
 
@@ -17,6 +19,10 @@ def get_invited_user_by_id(invited_user_id):
     return InvitedUser.query.filter_by(id=invited_user_id).one()
 
 
+def get_invited_user_by_email(email):
+    return InvitedUser.query.filter_by(email_address=email).order_by(desc(InvitedUser.created_at)).first()
+
+
 def get_invited_users_for_service(service_id):
     return InvitedUser.query.filter_by(service_id=service_id).all()
 
@@ -27,3 +33,8 @@ def delete_invitations_created_more_than_two_days_ago():
     )
     db.session.commit()
     return deleted
+
+
+def delete_invitations_sent_by_user(user_id):
+    db.session.query(InvitedUser).filter_by(user_id=user_id).delete()
+    db.session.commit()

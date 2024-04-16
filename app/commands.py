@@ -33,6 +33,7 @@ from app.dao.fact_billing_dao import (
     get_service_ids_that_need_billing_populated,
     update_ft_billing,
 )
+from app.dao.invited_user_dao import delete_invitations_sent_by_user
 from app.dao.notifications_dao import move_notifications_to_notification_history
 from app.dao.organisation_dao import (
     dao_add_service_to_organisation,
@@ -1040,5 +1041,6 @@ def purge_services_created_by_functional_test_admin():
     services = dao_fetch_all_services_created_by_user(user_id=platform_admin)
     for service in services:
         delete_service_and_all_associated_db_objects(service=service)
+    delete_invitations_sent_by_user(user_id=platform_admin)
 
     print("Successfully purged services created by functional tests")
