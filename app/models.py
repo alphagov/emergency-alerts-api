@@ -445,8 +445,6 @@ class Organisation(db.Model):
             "active": self.active,
             "crown": self.crown,
             "organisation_type": self.organisation_type,
-            "letter_branding_id": self.letter_branding_id,
-            "email_branding_id": self.email_branding_id,
             "agreement_signed": self.agreement_signed,
             "agreement_signed_at": self.agreement_signed_at,
             "agreement_signed_by_id": self.agreement_signed_by_id,
