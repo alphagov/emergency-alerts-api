@@ -226,81 +226,81 @@ BRANDING_ORG_BANNER = "org_banner"
 BRANDING_TYPES = [BRANDING_ORG, BRANDING_BOTH, BRANDING_ORG_BANNER]
 
 
-class BrandingTypes(db.Model):
-    __tablename__ = "branding_type"
-    name = db.Column(db.String(255), primary_key=True)
+# class BrandingTypes(db.Model):
+#     __tablename__ = "branding_type"
+#     name = db.Column(db.String(255), primary_key=True)
 
 
-class EmailBranding(db.Model):
-    __tablename__ = "email_branding"
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    colour = db.Column(db.String(7), nullable=True)
-    logo = db.Column(db.String(255), nullable=True)
-    name = db.Column(db.String(255), unique=True, nullable=False)
-    text = db.Column(db.String(255), nullable=True)
-    alt_text = db.Column(db.String(255), nullable=True)
-    brand_type = db.Column(
-        db.String(255), db.ForeignKey("branding_type.name"), index=True, nullable=False, default=BRANDING_ORG
-    )
-    created_at = db.Column(db.DateTime, nullable=True, default=lambda: datetime.datetime.utcnow())
-    created_by = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=True)
-    updated_at = db.Column(db.DateTime, nullable=True, onupdate=lambda: datetime.datetime.utcnow())
-    updated_by = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=True)
+# class EmailBranding(db.Model):
+#     __tablename__ = "email_branding"
+#     id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+#     colour = db.Column(db.String(7), nullable=True)
+#     logo = db.Column(db.String(255), nullable=True)
+#     name = db.Column(db.String(255), unique=True, nullable=False)
+#     text = db.Column(db.String(255), nullable=True)
+#     alt_text = db.Column(db.String(255), nullable=True)
+#     brand_type = db.Column(
+#         db.String(255), db.ForeignKey("branding_type.name"), index=True, nullable=False, default=BRANDING_ORG
+#     )
+#     created_at = db.Column(db.DateTime, nullable=True, default=lambda: datetime.datetime.utcnow())
+#     created_by = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=True)
+#     updated_at = db.Column(db.DateTime, nullable=True, onupdate=lambda: datetime.datetime.utcnow())
+#     updated_by = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=True)
 
-    CONSTRAINT_UNIQUE_NAME = "uq_email_branding_name"
-    CONSTRAINT_CHECK_ONE_OF_ALT_TEXT_TEXT_NULL = "ck_email_branding_one_of_alt_text_or_text_is_null"
-    # one of alt_text or text MUST be supplied
-    __table_args__ = (
-        CheckConstraint(
-            "(text is not null and alt_text is null) or (text is null and alt_text is not null)",
-            name="ck_email_branding_one_of_alt_text_or_text_is_null",
-        ),
-    )
+#     CONSTRAINT_UNIQUE_NAME = "uq_email_branding_name"
+#     CONSTRAINT_CHECK_ONE_OF_ALT_TEXT_TEXT_NULL = "ck_email_branding_one_of_alt_text_or_text_is_null"
+#     # one of alt_text or text MUST be supplied
+#     __table_args__ = (
+#         CheckConstraint(
+#             "(text is not null and alt_text is null) or (text is null and alt_text is not null)",
+#             name="ck_email_branding_one_of_alt_text_or_text_is_null",
+#         ),
+#     )
 
-    def serialize(self):
-        serialized = {
-            "id": str(self.id),
-            "colour": self.colour,
-            "logo": self.logo,
-            "name": self.name,
-            "text": self.text,
-            "brand_type": self.brand_type,
-            "alt_text": self.alt_text,
-        }
+#     def serialize(self):
+#         serialized = {
+#             "id": str(self.id),
+#             "colour": self.colour,
+#             "logo": self.logo,
+#             "name": self.name,
+#             "text": self.text,
+#             "brand_type": self.brand_type,
+#             "alt_text": self.alt_text,
+#         }
 
-        return serialized
-
-
-service_email_branding = db.Table(
-    "service_email_branding",
-    db.Model.metadata,
-    # service_id is a primary key as you can only have one email branding per service
-    db.Column("service_id", UUID(as_uuid=True), db.ForeignKey("services.id"), primary_key=True, nullable=False),
-    db.Column("email_branding_id", UUID(as_uuid=True), db.ForeignKey("email_branding.id"), nullable=False),
-)
+#         return serialized
 
 
-class LetterBranding(db.Model):
-    __tablename__ = "letter_branding"
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    name = db.Column(db.String(255), unique=True, nullable=False)
-    filename = db.Column(db.String(255), unique=True, nullable=False)
-
-    def serialize(self):
-        return {
-            "id": str(self.id),
-            "name": self.name,
-            "filename": self.filename,
-        }
+# service_email_branding = db.Table(
+#     "service_email_branding",
+#     db.Model.metadata,
+#     # service_id is a primary key as you can only have one email branding per service
+#     db.Column("service_id", UUID(as_uuid=True), db.ForeignKey("services.id"), primary_key=True, nullable=False),
+#     db.Column("email_branding_id", UUID(as_uuid=True), db.ForeignKey("email_branding.id"), nullable=False),
+# )
 
 
-service_letter_branding = db.Table(
-    "service_letter_branding",
-    db.Model.metadata,
-    # service_id is a primary key as you can only have one letter branding per service
-    db.Column("service_id", UUID(as_uuid=True), db.ForeignKey("services.id"), primary_key=True, nullable=False),
-    db.Column("letter_branding_id", UUID(as_uuid=True), db.ForeignKey("letter_branding.id"), nullable=False),
-)
+# class LetterBranding(db.Model):
+#     __tablename__ = "letter_branding"
+#     id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+#     name = db.Column(db.String(255), unique=True, nullable=False)
+#     filename = db.Column(db.String(255), unique=True, nullable=False)
+
+#     def serialize(self):
+#         return {
+#             "id": str(self.id),
+#             "name": self.name,
+#             "filename": self.filename,
+#         }
+
+
+# service_letter_branding = db.Table(
+#     "service_letter_branding",
+#     db.Model.metadata,
+#     # service_id is a primary key as you can only have one letter branding per service
+#     db.Column("service_id", UUID(as_uuid=True), db.ForeignKey("services.id"), primary_key=True, nullable=False),
+#     db.Column("letter_branding_id", UUID(as_uuid=True), db.ForeignKey("letter_branding.id"), nullable=False),
+# )
 
 
 INTERNATIONAL_SMS_TYPE = "international_sms"
@@ -399,30 +399,30 @@ class Organisation(db.Model):
     )
 
     # this is default email branding for organisation, not to be confused with email branding pool
-    email_branding = db.relationship("EmailBranding")
-    email_branding_id = db.Column(
-        UUID(as_uuid=True),
-        db.ForeignKey("email_branding.id"),
-        nullable=True,
-    )
+    # email_branding = db.relationship("EmailBranding")
+    # email_branding_id = db.Column(
+    #     UUID(as_uuid=True),
+    #     db.ForeignKey("email_branding.id"),
+    #     nullable=True,
+    # )
 
-    email_branding_pool = db.relationship(
-        "EmailBranding", secondary="email_branding_to_organisation", backref="organisations"
-    )
+    # email_branding_pool = db.relationship(
+    #     "EmailBranding", secondary="email_branding_to_organisation", backref="organisations"
+    # )
 
     # this is default letter branding for organisation
-    letter_branding = db.relationship("LetterBranding")
-    letter_branding_id = db.Column(
-        UUID(as_uuid=True),
-        db.ForeignKey("letter_branding.id"),
-        nullable=True,
-    )
+    # letter_branding = db.relationship("LetterBranding")
+    # letter_branding_id = db.Column(
+    #     UUID(as_uuid=True),
+    #     db.ForeignKey("letter_branding.id"),
+    #     nullable=True,
+    # )
 
-    letter_branding_pool = db.relationship(
-        "LetterBranding",
-        secondary="letter_branding_to_organisation",
-        backref="organisations",
-    )
+    # letter_branding_pool = db.relationship(
+    #     "LetterBranding",
+    #     secondary="letter_branding_to_organisation",
+    #     backref="organisations",
+    # )
 
     notes = db.Column(db.Text, nullable=True)
     purchase_order_number = db.Column(db.String(255), nullable=True)
@@ -472,26 +472,30 @@ class Organisation(db.Model):
         }
 
 
-class OrganisationEmailBranding(db.Model):
-    __tablename__ = "email_branding_to_organisation"
-    organisation_id = db.Column(UUID(as_uuid=True), db.ForeignKey("organisation.id"), primary_key=True)
-    email_branding_id = db.Column(UUID(as_uuid=True), db.ForeignKey("email_branding.id"), primary_key=True)
+# class OrganisationEmailBranding(db.Model):
+#     __tablename__ = "email_branding_to_organisation"
+#     organisation_id = db.Column(UUID(as_uuid=True), db.ForeignKey("organisation.id"), primary_key=True)
+#     email_branding_id = db.Column(UUID(as_uuid=True), db.ForeignKey("email_branding.id"), primary_key=True)
 
-    __table_args__ = (
-        UniqueConstraint("organisation_id", "email_branding_id", name="uix_email_branding_to_organisation"),
-    )
+#     __table_args__ = (
+#         UniqueConstraint("organisation_id", "email_branding_id", name="uix_email_branding_to_organisation"),
+#     )
 
 
-letter_branding_to_organisation = db.Table(
-    "letter_branding_to_organisation",
-    db.Model.metadata,
-    db.Column(
-        "organisation_id", UUID(as_uuid=True), db.ForeignKey("organisation.id"), primary_key=True, nullable=False
-    ),
-    db.Column(
-        "letter_branding_id", UUID(as_uuid=True), db.ForeignKey("letter_branding.id"), primary_key=True, nullable=False
-    ),
-)
+# letter_branding_to_organisation = db.Table(
+#     "letter_branding_to_organisation",
+#     db.Model.metadata,
+#     db.Column(
+#         "organisation_id", UUID(as_uuid=True), db.ForeignKey("organisation.id"), primary_key=True, nullable=False
+#     ),
+#     db.Column(
+#         "letter_branding_id",
+#         UUID(as_uuid=True),
+#         db.ForeignKey("letter_branding.id"),
+#         primary_key=True,
+#         nullable=False
+#     ),
+# )
 
 
 class Service(db.Model, Versioned):
@@ -536,15 +540,18 @@ class Service(db.Model, Versioned):
     billing_contact_email_addresses = db.Column(db.Text, nullable=True)
     billing_reference = db.Column(db.String(255), nullable=True)
 
-    email_branding = db.relationship(
-        "EmailBranding", secondary=service_email_branding, uselist=False, backref=db.backref("services", lazy="dynamic")
-    )
-    letter_branding = db.relationship(
-        "LetterBranding",
-        secondary=service_letter_branding,
-        uselist=False,
-        backref=db.backref("services", lazy="dynamic"),
-    )
+    # email_branding = db.relationship(
+    #     "EmailBranding",
+    #     secondary=service_email_branding,
+    #     uselist=False,
+    #     backref=db.backref("services", lazy="dynamic")
+    # )
+    # letter_branding = db.relationship(
+    #     "LetterBranding",
+    #     secondary=service_letter_branding,
+    #     uselist=False,
+    #     backref=db.backref("services", lazy="dynamic"),
+    # )
 
     allowed_broadcast_provider = association_proxy("service_broadcast_settings", "provider")
     broadcast_channel = association_proxy("service_broadcast_settings", "channel")
