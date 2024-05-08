@@ -28,5 +28,6 @@ def upgrade():
 
     op.drop_table("branding_type")
 
+
 def downgrade():
     pass
