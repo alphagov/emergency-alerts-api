@@ -56,21 +56,3 @@ post_update_invited_org_user_status_schema = {
     "properties": {"status": {"enum": INVITED_USER_STATUS_TYPES}},
     "required": ["status"],
 }
-
-
-# post_update_org_email_branding_pool_schema = {
-#     "$schema": "http://json-schema.org/draft-07/schema#",
-#     "description": "POST update organisation email branding pool schema",
-#     "type": "object",
-#     "properties": {"branding_ids": {"type": "array", "items": uuid}},
-#     "required": ["branding_ids"],
-# }
-
-
-# post_update_org_letter_branding_pool_schema = {
-#     "$schema": "http://json-schema.org/draft-07/schema#",
-#     "description": "POST update organisation letter branding pool schema",
-#     "type": "object",
-#     "properties": {"branding_ids": {"type": "array", "items": uuid}},
-#     "required": ["branding_ids"],
-# }
