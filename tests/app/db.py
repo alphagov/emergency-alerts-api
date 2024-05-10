@@ -1,4 +1,3 @@
-import random
 import uuid
 from datetime import date, datetime, timedelta
 
@@ -6,7 +5,6 @@ import pytest
 
 from app import db
 from app.dao import fact_processing_time_dao
-from app.dao.inbound_sms_dao import dao_create_inbound_sms
 from app.dao.invited_org_user_dao import save_invited_org_user
 from app.dao.invited_user_dao import save_invited_user
 from app.dao.jobs_dao import dao_create_job
@@ -20,10 +18,6 @@ from app.dao.service_callback_api_dao import save_service_callback_api
 from app.dao.service_data_retention_dao import insert_service_data_retention
 from app.dao.service_inbound_api_dao import save_service_inbound_api
 from app.dao.service_permissions_dao import dao_add_service_permission
-from app.dao.service_sms_sender_dao import (
-    dao_update_service_sms_sender,
-    update_existing_sms_sender_with_inbound_number,
-)
 from app.dao.services_dao import dao_add_user_to_service, dao_create_service
 from app.dao.templates_dao import dao_create_template, dao_update_template
 from app.dao.users_dao import save_model_user
@@ -48,8 +42,6 @@ from app.models import (
     FactNotificationStatus,
     FactProcessingTime,
     FeatureToggle,
-    InboundNumber,
-    InboundSms,
     InvitedOrganisationUser,
     InvitedUser,
     Job,
@@ -68,7 +60,6 @@ from app.models import (
     ServiceInboundApi,
     ServiceLetterContact,
     ServicePermission,
-    ServiceSmsSender,
     Template,
     TemplateFolder,
     User,
@@ -156,29 +147,6 @@ def create_service(
     else:
         if user and user not in service.users:
             dao_add_user_to_service(service, user)
-
-    return service
-
-
-def create_service_with_inbound_number(inbound_number="1234567", *args, **kwargs):
-    service = create_service(*args, **kwargs)
-
-    sms_sender = ServiceSmsSender.query.filter_by(service_id=service.id).first()
-    inbound = create_inbound_number(number=inbound_number, service_id=service.id)
-    update_existing_sms_sender_with_inbound_number(
-        service_sms_sender=sms_sender, sms_sender=inbound_number, inbound_number_id=inbound.id
-    )
-
-    return service
-
-
-def create_service_with_defined_sms_sender(sms_sender_value="1234567", *args, **kwargs):
-    service = create_service(*args, **kwargs)
-
-    sms_sender = ServiceSmsSender.query.filter_by(service_id=service.id).first()
-    dao_update_service_sms_sender(
-        service_id=service.id, service_sms_sender_id=sms_sender.id, is_default=True, sms_sender=sms_sender_value
-    )
 
     return service
 
@@ -422,38 +390,6 @@ def create_service_permission(service_id, permission=EMAIL_TYPE):
     return service_permissions
 
 
-def create_inbound_sms(
-    service,
-    notify_number=None,
-    user_number="447700900111",
-    provider_date=None,
-    provider_reference=None,
-    content="Hello",
-    provider="mmg",
-    created_at=None,
-):
-    if not service.inbound_number:
-        create_inbound_number(
-            # create random inbound number
-            notify_number or "07{:09}".format(random.randint(0, 1e9 - 1)),
-            provider=provider,
-            service_id=service.id,
-        )
-
-    inbound = InboundSms(
-        service=service,
-        created_at=created_at or datetime.utcnow(),
-        notify_number=service.get_inbound_number(),
-        user_number=user_number,
-        provider_date=provider_date or datetime.utcnow(),
-        provider_reference=provider_reference or "foo",
-        content=content,
-        provider=provider,
-    )
-    dao_create_inbound_sms(inbound)
-    return inbound
-
-
 def create_service_inbound_api(
     service,
     url="https://something.com",
@@ -517,15 +453,6 @@ def create_api_key(service, key_type=KEY_TYPE_NORMAL, key_name=None):
     return api_key
 
 
-def create_inbound_number(number, provider="mmg", active=True, service_id=None):
-    inbound_number = InboundNumber(
-        id=uuid.uuid4(), number=number, provider=provider, active=active, service_id=service_id
-    )
-    db.session.add(inbound_number)
-    db.session.commit()
-    return inbound_number
-
-
 def create_reply_to_email(service, email_address, is_default=True, archived=False):
     data = {
         "service": service,
@@ -539,22 +466,6 @@ def create_reply_to_email(service, email_address, is_default=True, archived=Fals
     db.session.commit()
 
     return reply_to
-
-
-def create_service_sms_sender(service, sms_sender, is_default=True, inbound_number_id=None, archived=False):
-    data = {
-        "service_id": service.id,
-        "sms_sender": sms_sender,
-        "is_default": is_default,
-        "inbound_number_id": inbound_number_id,
-        "archived": archived,
-    }
-    service_sms_sender = ServiceSmsSender(**data)
-
-    db.session.add(service_sms_sender)
-    db.session.commit()
-
-    return service_sms_sender
 
 
 def create_letter_contact(service, contact_block, is_default=True, archived=False):

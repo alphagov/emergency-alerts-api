@@ -20,11 +20,9 @@ from app.models import (
     ServiceGuestList,
 )
 from tests.app.db import (
-    create_inbound_number,
     create_letter_contact,
     create_notification,
     create_reply_to_email,
-    create_service,
     create_template,
     create_template_folder,
 )
@@ -134,28 +132,6 @@ def test_notification_requires_a_valid_template_version(client, sample_template)
     sample_template.version = 2
     with pytest.raises(IntegrityError):
         create_notification(sample_template)
-
-
-def test_inbound_number_serializes_with_service(client, notify_db_session):
-    service = create_service()
-    inbound_number = create_inbound_number(number="1", service_id=service.id)
-    serialized_inbound_number = inbound_number.serialize()
-    assert serialized_inbound_number.get("id") == str(inbound_number.id)
-    assert serialized_inbound_number.get("service").get("id") == str(inbound_number.service.id)
-    assert serialized_inbound_number.get("service").get("name") == inbound_number.service.name
-
-
-def test_inbound_number_returns_inbound_number(client, notify_db_session):
-    service = create_service()
-    inbound_number = create_inbound_number(number="1", service_id=service.id)
-
-    assert service.get_inbound_number() == inbound_number.number
-
-
-def test_inbound_number_returns_none_when_no_inbound_number(client, notify_db_session):
-    service = create_service()
-
-    assert not service.get_inbound_number()
 
 
 def test_service_get_default_reply_to_email_address(sample_service):

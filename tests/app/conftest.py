@@ -56,7 +56,6 @@ from tests import (
 )
 from tests.app.db import (
     create_api_key,
-    create_inbound_number,
     create_invited_org_user,
     create_job,
     create_letter_contact,
@@ -219,7 +218,6 @@ def _sample_service_full_permissions(notify_db_session):
         service_permissions=set(SERVICE_PERMISSION_TYPES),
         check_if_service_exists=True,
     )
-    create_inbound_number("12345", service_id=service.id)
     return service
 
 
@@ -841,16 +839,6 @@ def sample_service_guest_list(notify_db_session):
     notify_db_session.add(guest_list_user)
     notify_db_session.commit()
     return guest_list_user
-
-
-@pytest.fixture
-def sample_inbound_numbers(sample_service):
-    service = create_service(service_name="sample service 2", check_if_service_exists=True)
-    inbound_numbers = list()
-    inbound_numbers.append(create_inbound_number(number="1", provider="mmg"))
-    inbound_numbers.append(create_inbound_number(number="2", provider="mmg", active=False, service_id=service.id))
-    inbound_numbers.append(create_inbound_number(number="3", provider="firetext", service_id=sample_service.id))
-    return inbound_numbers
 
 
 @pytest.fixture

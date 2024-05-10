@@ -10,7 +10,6 @@ from emergency_alerts_utils.postal_address import (
 from emergency_alerts_utils.recipients import (
     InvalidEmailError,
     InvalidPhoneError,
-    try_validate_and_format_phone_number,
     validate_email_address,
     validate_phone_number,
 )
@@ -429,14 +428,6 @@ class Service(db.Model, Versioned):
 
         return cls(**fields)
 
-    def get_inbound_number(self):
-        if self.inbound_number and self.inbound_number.active:
-            return self.inbound_number.number
-
-    def get_default_sms_sender(self):
-        default_sms_sender = [x for x in self.service_sms_senders if x.is_default]
-        return default_sms_sender[0].sms_sender
-
     def get_default_reply_to_email_address(self):
         default_reply_to = [x for x in self.reply_to_email_addresses if x.is_default]
         return default_reply_to[0].email_address if default_reply_to else None
@@ -502,65 +493,6 @@ class AnnualBilling(db.Model):
             "created_at": self.created_at.strftime(DATETIME_FORMAT),
             "updated_at": get_dt_string_or_none(self.updated_at),
             "service": serialize_service() if self.service else None,
-        }
-
-
-class InboundNumber(db.Model):
-    __tablename__ = "inbound_numbers"
-
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    number = db.Column(db.String(11), unique=True, nullable=False)
-    provider = db.Column(db.String(), nullable=False)
-    service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"), unique=True, index=True, nullable=True)
-    service = db.relationship(Service, backref=db.backref("inbound_number", uselist=False))
-    active = db.Column(db.Boolean, index=False, unique=False, nullable=False, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, nullable=False)
-    updated_at = db.Column(db.DateTime, nullable=True, onupdate=datetime.datetime.utcnow)
-
-    def serialize(self):
-        def serialize_service():
-            return {"id": str(self.service_id), "name": self.service.name}
-
-        return {
-            "id": str(self.id),
-            "number": self.number,
-            "provider": self.provider,
-            "service": serialize_service() if self.service else None,
-            "active": self.active,
-            "created_at": self.created_at.strftime(DATETIME_FORMAT),
-            "updated_at": get_dt_string_or_none(self.updated_at),
-        }
-
-
-class ServiceSmsSender(db.Model):
-    __tablename__ = "service_sms_senders"
-
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    sms_sender = db.Column(db.String(11), nullable=False)
-    service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"), index=True, nullable=False, unique=False)
-    service = db.relationship(Service, backref=db.backref("service_sms_senders", uselist=True))
-    is_default = db.Column(db.Boolean, nullable=False, default=True)
-    archived = db.Column(db.Boolean, nullable=False, default=False)
-    inbound_number_id = db.Column(
-        UUID(as_uuid=True), db.ForeignKey("inbound_numbers.id"), unique=True, index=True, nullable=True
-    )
-    inbound_number = db.relationship(InboundNumber, backref=db.backref("inbound_number", uselist=False))
-    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, nullable=False)
-    updated_at = db.Column(db.DateTime, nullable=True, onupdate=datetime.datetime.utcnow)
-
-    def get_reply_to_text(self):
-        return try_validate_and_format_phone_number(self.sms_sender)
-
-    def serialize(self):
-        return {
-            "id": str(self.id),
-            "sms_sender": self.sms_sender,
-            "service_id": str(self.service_id),
-            "is_default": self.is_default,
-            "archived": self.archived,
-            "inbound_number_id": str(self.inbound_number_id) if self.inbound_number_id else None,
-            "created_at": self.created_at.strftime(DATETIME_FORMAT),
-            "updated_at": get_dt_string_or_none(self.updated_at),
         }
 
 
@@ -871,8 +803,6 @@ class TemplateBase(db.Model):
             return self.service_letter_contact.contact_block if self.service_letter_contact else None
         elif self.template_type == EMAIL_TYPE:
             return self.service.get_default_reply_to_email_address()
-        elif self.template_type == SMS_TYPE:
-            return try_validate_and_format_phone_number(self.service.get_default_sms_sender())
         else:
             return None
 

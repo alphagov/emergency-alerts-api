@@ -234,27 +234,6 @@ def fix_notification_statuses_not_in_sync():
         result = db.session.execute(subq_hist).fetchall()
 
 
-@notify_command(name="insert-inbound-numbers")
-@click.option(
-    "-f",
-    "--file_name",
-    required=True,
-    help="""Full path of the file to upload, file is a contains inbound numbers,
-              one number per line. The number must have the format of 07... not 447....""",
-)
-def insert_inbound_numbers_from_file(file_name):
-    print("Inserting inbound numbers from {}".format(file_name))
-    with open(file_name) as file:
-        sql = "insert into inbound_numbers values('{}', '{}', 'mmg', null, True, now(), null);"
-
-        for line in file:
-            line = line.strip()
-            if line:
-                print(line)
-                db.session.execute(sql.format(uuid.uuid4(), line))
-                db.session.commit()
-
-
 def setup_commands(application):
     application.cli.add_command(command_group)
 

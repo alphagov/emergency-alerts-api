@@ -67,7 +67,6 @@ def test_persist_notification_creates_and_save_to_db(sample_template, sample_api
         job_id=sample_job.id,
         job_row_number=100,
         reference="ref",
-        reply_to_text=sample_template.service.get_default_sms_sender(),
     )
 
     assert Notification.query.get(notification.id) is not None
@@ -89,7 +88,6 @@ def test_persist_notification_creates_and_save_to_db(sample_template, sample_api
     assert notification_from_db.reference == notification.reference
     assert notification_from_db.client_reference == notification.client_reference
     assert notification_from_db.created_by_id == notification.created_by_id
-    assert notification_from_db.reply_to_text == sample_template.service.get_default_sms_sender()
 
 
 def test_persist_notification_throws_exception_when_missing_template(sample_api_key):
