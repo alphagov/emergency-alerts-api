@@ -7,8 +7,6 @@ from freezegun import freeze_time
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.dao.organisation_dao import (
-    dao_add_email_branding_to_organisation_pool,
-    dao_add_letter_branding_list_to_organisation_pool,
     dao_add_service_to_organisation,
     dao_add_user_to_organisation,
 )
@@ -22,9 +20,7 @@ from app.models import (
 from tests.app.db import (
     create_annual_billing,
     create_domain,
-    create_email_branding,
     create_ft_billing,
-    create_letter_branding,
     create_organisation,
     create_service,
     create_template,
@@ -81,8 +77,6 @@ def test_get_organisation_by_id(admin_request, notify_db_session):
         "agreement_signed_version",
         "agreement_signed_on_behalf_of_name",
         "agreement_signed_on_behalf_of_email_address",
-        "letter_branding_id",
-        "email_branding_id",
         "domains",
         "request_to_go_live_notes",
         "count_of_live_services",
@@ -100,8 +94,6 @@ def test_get_organisation_by_id(admin_request, notify_db_session):
     assert response["agreement_signed"] is None
     assert response["agreement_signed_by_id"] is None
     assert response["agreement_signed_version"] is None
-    assert response["letter_branding_id"] is None
-    assert response["email_branding_id"] is None
     assert response["domains"] == []
     assert response["request_to_go_live_notes"] is None
     assert response["count_of_live_services"] == 0
@@ -183,8 +175,6 @@ def test_post_create_organisation(admin_request, notify_db_session, crown):
     assert data["organisation_type"] == response["organisation_type"]
 
     assert len(organisations) == 1
-    # check that for non-nhs orgs, default branding is not set
-    assert organisations[0].email_branding_id is None
 
 
 def test_post_create_organisation_existing_name_raises_400(admin_request, sample_organisation):
@@ -337,32 +327,6 @@ def test_update_other_organisation_attributes_doesnt_clear_domains(
     )
 
     assert [domain.domain for domain in org.domains] == ["example.gov.uk"]
-
-
-def test_update_organisation_default_branding(
-    admin_request,
-    notify_db_session,
-):
-    org = create_organisation(name="Test Organisation")
-
-    email_branding = create_email_branding()
-    letter_branding = create_letter_branding()
-
-    assert org.email_branding is None
-    assert org.letter_branding is None
-
-    admin_request.post(
-        "organisation.update_organisation",
-        _data={
-            "email_branding_id": str(email_branding.id),
-            "letter_branding_id": str(letter_branding.id),
-        },
-        organisation_id=org.id,
-        _expected_status=204,
-    )
-
-    assert org.email_branding == email_branding
-    assert org.letter_branding == letter_branding
 
 
 def test_post_update_organisation_raises_400_on_existing_org_name(admin_request, sample_organisation):
@@ -794,219 +758,3 @@ def test_get_organisation_services_usage_returns_400_if_year_is_empty(admin_requ
         "organisation.get_organisation_services_usage", organisation_id=uuid.uuid4(), _expected_status=400
     )
     assert response["message"] == "No valid year provided"
-
-
-def test_get_organisation_email_branding_pool_returns_email_brandings_for_organisation(
-    admin_request, sample_organisation
-):
-    first_branding = create_email_branding(colour="blue", logo="test_x1.png", name="email_branding_1")
-    second_branding = create_email_branding(colour="indigo", logo="test_x2.png", name="email_branding_2")
-
-    dao_add_email_branding_to_organisation_pool(
-        organisation_id=sample_organisation.id, email_branding_id=first_branding.id
-    )
-    dao_add_email_branding_to_organisation_pool(
-        organisation_id=sample_organisation.id, email_branding_id=second_branding.id
-    )
-
-    response = admin_request.get(
-        "organisation.get_organisation_email_branding_pool",
-        organisation_id=sample_organisation.id,
-        _expected_status=200,
-    )
-
-    assert len(response["data"]) == 2
-    assert response["data"][0]["id"] == str(first_branding.id)
-    assert response["data"][1]["id"] == str(second_branding.id)
-
-
-def test_update_organisation_email_branding_pool_raises_an_error_when_data_not_in_required_format(
-    admin_request,
-    sample_organisation,
-):
-    admin_request.post(
-        "organisation.update_organisation_email_branding_pool",
-        organisation_id=sample_organisation.id,
-        _data="invalid",
-        _expected_status=400,
-    )
-
-
-def test_update_organisation_email_branding_pool_updates_branding_pool(
-    admin_request,
-    sample_organisation,
-):
-    branding_1 = create_email_branding(logo="test_x1.png", name="email_branding_1")
-    branding_2 = create_email_branding(logo="test_x2.png", name="email_branding_2")
-
-    admin_request.post(
-        "organisation.update_organisation_email_branding_pool",
-        organisation_id=sample_organisation.id,
-        _data={"branding_ids": [str(branding_1.id), str(branding_2.id)]},
-        _expected_status=204,
-    )
-    assert len(sample_organisation.email_branding_pool) == 2
-
-
-def test_remove_email_branding_from_organisation_pool(
-    admin_request,
-    sample_organisation,
-):
-    first_branding = create_email_branding(colour="blue", logo="test_x1.png", name="email_branding_1")
-    second_branding = create_email_branding(colour="indigo", logo="test_x2.png", name="email_branding_2")
-
-    dao_add_email_branding_to_organisation_pool(
-        organisation_id=sample_organisation.id, email_branding_id=first_branding.id
-    )
-    dao_add_email_branding_to_organisation_pool(
-        organisation_id=sample_organisation.id, email_branding_id=second_branding.id
-    )
-    assert sample_organisation.email_branding_pool == [first_branding, second_branding]
-
-    admin_request.delete(
-        "organisation.remove_email_branding_from_organisation_pool",
-        organisation_id=sample_organisation.id,
-        email_branding_id=first_branding.id,
-        _expected_status=204,
-    )
-    assert sample_organisation.email_branding_pool == [second_branding]
-
-
-def test_remove_email_branding_from_organisation_pool_cannot_remove_branding_not_in_pool(
-    admin_request,
-    sample_organisation,
-):
-    first_branding = create_email_branding(colour="blue", logo="test_x1.png", name="email_branding_1")
-    second_branding = create_email_branding(colour="indigo", logo="test_x2.png", name="email_branding_2")
-
-    dao_add_email_branding_to_organisation_pool(
-        organisation_id=sample_organisation.id, email_branding_id=first_branding.id
-    )
-    assert sample_organisation.email_branding_pool == [first_branding]
-
-    admin_request.delete(
-        "organisation.remove_email_branding_from_organisation_pool",
-        organisation_id=sample_organisation.id,
-        email_branding_id=second_branding.id,
-        _expected_status=404,
-    )
-    assert sample_organisation.email_branding_pool == [first_branding]
-
-
-def test_remove_email_branding_from_organisation_pool_cannot_remove_default_branding(
-    admin_request,
-    sample_organisation,
-):
-    branding = create_email_branding(colour="blue", logo="test_x1.png", name="email_branding_1")
-
-    dao_add_email_branding_to_organisation_pool(organisation_id=sample_organisation.id, email_branding_id=branding.id)
-    sample_organisation.email_branding_id = branding.id
-
-    admin_request.delete(
-        "organisation.remove_email_branding_from_organisation_pool",
-        organisation_id=sample_organisation.id,
-        email_branding_id=branding.id,
-        _expected_status=400,
-    )
-    assert sample_organisation.email_branding_pool == [branding]
-
-
-def test_get_organisation_letter_branding_pool_returns_letter_brandings_for_organisation(
-    admin_request, sample_organisation
-):
-    branding_1 = create_letter_branding("nhs", "nhs.svg")
-    branding_2 = create_letter_branding("cabinet_office", "cabinet_office.svg")
-
-    dao_add_letter_branding_list_to_organisation_pool(sample_organisation.id, [branding_1.id, branding_2.id])
-
-    response = admin_request.get(
-        "organisation.get_organisation_letter_branding_pool",
-        organisation_id=sample_organisation.id,
-    )
-
-    assert len(response["data"]) == 2
-    assert response["data"][0]["id"] == str(branding_2.id)
-    assert response["data"][1]["id"] == str(branding_1.id)
-
-
-def test_update_organisation_letter_branding_pool_raises_an_error_when_data_not_in_required_format(
-    admin_request,
-    sample_organisation,
-):
-    admin_request.post(
-        "organisation.update_organisation_letter_branding_pool",
-        organisation_id=sample_organisation.id,
-        _data="invalid",
-        _expected_status=400,
-    )
-
-
-def test_update_organisation_letter_branding_pool_updates_branding_pool(
-    admin_request,
-    sample_organisation,
-):
-    branding_1 = create_letter_branding("letter_branding_1", "filename_1")
-    branding_2 = create_letter_branding("letter_branding_2", "filename_2")
-
-    admin_request.post(
-        "organisation.update_organisation_letter_branding_pool",
-        organisation_id=sample_organisation.id,
-        _data={"branding_ids": [str(branding_1.id), str(branding_2.id)]},
-        _expected_status=204,
-    )
-    assert len(sample_organisation.letter_branding_pool) == 2
-
-
-def test_remove_letter_branding_from_organisation_pool(admin_request, sample_organisation):
-    branding_1 = create_letter_branding("letter_branding_1", "filename_1")
-    branding_2 = create_letter_branding("letter_branding_2", "filename_2")
-
-    dao_add_letter_branding_list_to_organisation_pool(sample_organisation.id, [branding_1.id, branding_2.id])
-
-    admin_request.delete(
-        "organisation.remove_letter_branding_from_organisation_pool",
-        organisation_id=sample_organisation.id,
-        letter_branding_id=branding_1.id,
-    )
-    assert sample_organisation.letter_branding_pool == [branding_2]
-
-
-def test_remove_letter_branding_from_organisation_pool_cannot_remove_branding_not_in_pool(
-    admin_request,
-    sample_organisation,
-):
-    branding_1 = create_letter_branding("letter_branding_1", "filename_1")
-    branding_2 = create_letter_branding("letter_branding_2", "filename_2")
-
-    dao_add_letter_branding_list_to_organisation_pool(sample_organisation.id, [branding_1.id])
-
-    assert sample_organisation.letter_branding_pool == [branding_1]
-
-    response = admin_request.delete(
-        "organisation.remove_letter_branding_from_organisation_pool",
-        organisation_id=sample_organisation.id,
-        letter_branding_id=branding_2.id,
-        _expected_status=404,
-    )
-
-    assert response["message"] == f"Letter branding {branding_2.id} not in sample organisation's pool"
-    assert sample_organisation.letter_branding_pool == [branding_1]
-
-
-def test_remove_letter_branding_from_organisation_pool_cannot_remove_default_branding(
-    admin_request,
-    sample_organisation,
-):
-    branding = create_letter_branding("letter_branding_1", "filename_1")
-
-    dao_add_letter_branding_list_to_organisation_pool(sample_organisation.id, [branding.id])
-    sample_organisation.letter_branding_id = branding.id
-
-    response = admin_request.delete(
-        "organisation.remove_letter_branding_from_organisation_pool",
-        organisation_id=sample_organisation.id,
-        letter_branding_id=branding.id,
-        _expected_status=400,
-    )
-    assert response["message"] == "You cannot remove an organisation's default letter branding"
-    assert sample_organisation.letter_branding_pool == [branding]

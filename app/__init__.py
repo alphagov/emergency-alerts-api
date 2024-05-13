@@ -153,15 +153,11 @@ def register_blueprint(application):
     from app.billing.rest import billing_blueprint
     from app.broadcast_message.rest import broadcast_message_blueprint
     from app.complaint.complaint_rest import complaint_blueprint
-    from app.email_branding.rest import email_branding_blueprint
     from app.events.rest import events as events_blueprint
     from app.feature_toggle.rest import feature_toggle_blueprint
     from app.govuk_alerts.rest import govuk_alerts_blueprint
     from app.inbound_number.rest import inbound_number_blueprint
     from app.inbound_sms.rest import inbound_sms as inbound_sms_blueprint
-    from app.letter_branding.letter_branding_rest import (
-        letter_branding_blueprint,
-    )
     from app.notifications.rest import notifications as notifications_blueprint
     from app.organisation.invite_rest import organisation_invite_blueprint
     from app.organisation.rest import organisation_blueprint
@@ -229,9 +225,6 @@ def register_blueprint(application):
     provider_details_blueprint.before_request(requires_admin_auth)
     application.register_blueprint(provider_details_blueprint, url_prefix="/provider-details")
 
-    email_branding_blueprint.before_request(requires_admin_auth)
-    application.register_blueprint(email_branding_blueprint, url_prefix="/email-branding")
-
     billing_blueprint.before_request(requires_admin_auth)
     application.register_blueprint(billing_blueprint)
 
@@ -252,9 +245,6 @@ def register_blueprint(application):
 
     template_folder_blueprint.before_request(requires_admin_auth)
     application.register_blueprint(template_folder_blueprint)
-
-    letter_branding_blueprint.before_request(requires_admin_auth)
-    application.register_blueprint(letter_branding_blueprint)
 
     upload_blueprint.before_request(requires_admin_auth)
     application.register_blueprint(upload_blueprint)

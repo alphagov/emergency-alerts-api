@@ -85,7 +85,6 @@ class SerialisedService(SerialisedModel):
         "research_mode",
         "restricted",
         "prefix_sms",
-        "email_branding",
     }
 
     @classmethod

@@ -6,7 +6,6 @@ import pytest
 
 from app import db
 from app.dao import fact_processing_time_dao
-from app.dao.email_branding_dao import dao_create_email_branding
 from app.dao.inbound_sms_dao import dao_create_inbound_sms
 from app.dao.invited_org_user_dao import save_invited_org_user
 from app.dao.invited_user_dao import save_invited_user
@@ -45,7 +44,6 @@ from app.models import (
     Complaint,
     DailySortedLetter,
     Domain,
-    EmailBranding,
     FactBilling,
     FactNotificationStatus,
     FactProcessingTime,
@@ -55,7 +53,6 @@ from app.models import (
     InvitedOrganisationUser,
     InvitedUser,
     Job,
-    LetterBranding,
     LetterRate,
     Notification,
     NotificationHistory,
@@ -483,24 +480,6 @@ def create_service_callback_api(
     return service_callback_api
 
 
-def create_email_branding(
-    id=None, colour="blue", alt_text=None, logo="test_x2.png", name="test_org_1", text="DisplayName"
-):
-    data = {
-        "colour": colour,
-        "logo": logo,
-        "alt_text": alt_text,
-        "name": name,
-        "text": text,
-    }
-    if id:
-        data["id"] = id
-    email_branding = EmailBranding(**data)
-    dao_create_email_branding(email_branding)
-
-    return email_branding
-
-
 def create_rate(start_date, value, notification_type):
     rate = Rate(id=uuid.uuid4(), valid_from=start_date, rate=value, notification_type=notification_type)
     db.session.add(rate)
@@ -624,8 +603,6 @@ def create_organisation(
     billing_contact_names=None,
     billing_contact_email_addresses=None,
     billing_reference=None,
-    email_branding_id=None,
-    letter_branding_id=None,
 ):
     data = {
         "id": organisation_id,
@@ -636,8 +613,6 @@ def create_organisation(
         "billing_contact_names": billing_contact_names,
         "billing_contact_email_addresses": billing_contact_email_addresses,
         "billing_reference": billing_reference,
-        "email_branding_id": email_branding_id,
-        "letter_branding_id": letter_branding_id,
     }
     organisation = Organisation(**data)
     dao_create_organisation(organisation)
@@ -895,21 +870,6 @@ def create_template_folder(service, name="foo", parent=None, users=None):
     db.session.add(tf)
     db.session.commit()
     return tf
-
-
-def create_letter_branding(name="HM Government", filename="hm-government", id=None):
-    data = {
-        "name": name,
-        "filename": filename,
-    }
-
-    if id:
-        data["id"] = id
-
-    test_domain_branding = LetterBranding(**data)
-    db.session.add(test_domain_branding)
-    db.session.commit()
-    return test_domain_branding
 
 
 def set_up_usage_data(start_date):

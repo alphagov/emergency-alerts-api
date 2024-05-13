@@ -1,20 +1,9 @@
-from flask import current_app
 from sqlalchemy import and_
 from sqlalchemy.sql.expression import func
 
 from app import db
 from app.dao.dao_utils import VersionOptions, autocommit, version_class
-from app.dao.email_branding_dao import dao_get_email_branding_by_id
-from app.dao.letter_branding_dao import dao_get_letter_branding_by_id
-from app.models import (
-    NHS_ORGANISATION_TYPES,
-    AnnualBilling,
-    Domain,
-    EmailBranding,
-    Organisation,
-    Service,
-    User,
-)
+from app.models import AnnualBilling, Domain, Organisation, Service, User
 from app.utils import get_archived_db_column_value
 
 
@@ -79,16 +68,8 @@ def dao_get_organisation_by_service_id(service_id):
 
 @autocommit
 def dao_create_organisation(organisation):
-    if organisation.organisation_type in NHS_ORGANISATION_TYPES:
-        organisation.email_branding_id = current_app.config["NHS_EMAIL_BRANDING_ID"]
-        organisation.letter_branding_id = current_app.config["NHS_LETTER_BRANDING_ID"]
-
     db.session.add(organisation)
     db.session.commit()
-
-    if organisation.organisation_type in NHS_ORGANISATION_TYPES:
-        dao_add_email_branding_to_organisation_pool(organisation.id, organisation.email_branding_id)
-        dao_add_letter_branding_list_to_organisation_pool(organisation.id, [organisation.letter_branding_id])
 
 
 @autocommit
@@ -112,31 +93,7 @@ def dao_update_organisation(organisation_id, **kwargs):
     if "crown" in kwargs:
         _update_organisation_services(organisation, "crown", only_where_none=False)
 
-    if "email_branding_id" in kwargs:
-        _update_organisation_services(organisation, "email_branding")
-
-    if "letter_branding_id" in kwargs:
-        _update_organisation_services(organisation, "letter_branding")
-
-    _add_branding_to_branding_pool(organisation_id, kwargs)
-
     return num_updated
-
-
-def _add_branding_to_branding_pool(organisation_id, kwargs):
-    if kwargs.get("organisation_type") in NHS_ORGANISATION_TYPES:
-        # If we're setting the organisation_type to one of the NHS types we always want to add the NHS branding to the
-        # pool. This should happen regardless of whether we're changing the branding for the org.
-        dao_add_email_branding_to_organisation_pool(organisation_id, current_app.config["NHS_EMAIL_BRANDING_ID"])
-        dao_add_letter_branding_list_to_organisation_pool(
-            organisation_id, [current_app.config["NHS_LETTER_BRANDING_ID"]]
-        )
-    else:
-        if kwargs.get("email_branding_id"):
-            dao_add_email_branding_to_organisation_pool(organisation_id, kwargs["email_branding_id"])
-
-        if kwargs.get("letter_branding_id"):
-            dao_add_letter_branding_list_to_organisation_pool(organisation_id, [kwargs["letter_branding_id"]])
 
 
 @version_class(
@@ -152,9 +109,6 @@ def _update_organisation_services(organisation, attribute, only_where_none=True)
 @autocommit
 def dao_archive_organisation(organisation_id):
     organisation = dao_get_organisation_by_id(organisation_id)
-
-    organisation.email_branding = None
-    organisation.letter_branding = None
 
     Domain.query.filter_by(organisation_id=organisation_id).delete()
 
@@ -198,73 +152,3 @@ def dao_add_user_to_organisation(organisation_id, user_id):
 @autocommit
 def dao_remove_user_from_organisation(organisation, user):
     organisation.users.remove(user)
-
-
-@autocommit
-def dao_add_email_branding_to_organisation_pool(organisation_id, email_branding_id):
-    organisation = dao_get_organisation_by_id(organisation_id)
-    email_branding = EmailBranding.query.filter_by(id=email_branding_id).one()
-    organisation.email_branding_pool.append(email_branding)
-    db.session.add(organisation)
-    return email_branding
-
-
-@autocommit
-def dao_add_email_branding_list_to_organisation_pool(organisation_id, email_branding_ids):
-    organisation = dao_get_organisation_by_id(organisation_id)
-    email_brandings = [dao_get_email_branding_by_id(branding_id) for branding_id in email_branding_ids]
-
-    organisation.email_branding_pool.extend(email_brandings)
-
-
-def dao_get_email_branding_pool_for_organisation(organisation_id):
-    return (
-        db.session.query(EmailBranding)
-        .join(EmailBranding.organisations)
-        .filter(
-            Organisation.id == organisation_id,
-        )
-        .order_by(EmailBranding.name)
-        .all()
-    )
-
-
-@autocommit
-def dao_remove_email_branding_from_organisation_pool(organisation_id, email_branding_id):
-    organisation = dao_get_organisation_by_id(organisation_id)
-    email_branding = EmailBranding.query.filter_by(id=email_branding_id).one()
-
-    if organisation.email_branding_id == email_branding_id:
-        from app.errors import InvalidRequest
-
-        raise InvalidRequest("You cannot remove an organisation's default email branding", status_code=400)
-
-    organisation.email_branding_pool.remove(email_branding)
-    db.session.add(organisation)
-    return email_branding
-
-
-def dao_get_letter_branding_pool_for_organisation(organisation_id):
-    organisation = dao_get_organisation_by_id(organisation_id)
-
-    return sorted(organisation.letter_branding_pool, key=lambda x: x.name)
-
-
-@autocommit
-def dao_add_letter_branding_list_to_organisation_pool(organisation_id, letter_branding_ids):
-    organisation = dao_get_organisation_by_id(organisation_id)
-    letter_brandings = [dao_get_letter_branding_by_id(branding_id) for branding_id in letter_branding_ids]
-
-    organisation.letter_branding_pool.extend(letter_brandings)
-
-    db.session.add(organisation)
-
-
-@autocommit
-def dao_remove_letter_branding_from_organisation_pool(organisation_id, letter_branding_id):
-    organisation = dao_get_organisation_by_id(organisation_id)
-    letter_branding = dao_get_letter_branding_by_id(letter_branding_id)
-
-    organisation.letter_branding_pool.remove(letter_branding)
-
-    return letter_branding

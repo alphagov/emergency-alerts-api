@@ -56,11 +56,9 @@ from tests import (
 )
 from tests.app.db import (
     create_api_key,
-    create_email_branding,
     create_inbound_number,
     create_invited_org_user,
     create_job,
-    create_letter_branding,
     create_letter_contact,
     create_notification,
     create_service,
@@ -158,12 +156,6 @@ def sample_service(sample_user):
             dao_add_user_to_service(service, sample_user)
 
     return service
-
-
-@pytest.fixture(scope="function")
-def sample_service_with_email_branding(sample_service):
-    sample_service.email_branding = create_email_branding(id=uuid.uuid4())
-    return sample_service
 
 
 @pytest.fixture(scope="function")
@@ -876,17 +868,6 @@ def broadcast_organisation(notify_db_session):
         dao_create_organisation(org)
 
     return org
-
-
-@pytest.fixture
-def nhs_letter_branding(notify_db_session):
-    # We wipe the letter_branding table between tests, so we have to recreate this branding
-    # that is normally always present
-    return create_letter_branding(
-        id=current_app.config["NHS_LETTER_BRANDING_ID"],
-        name="NHS",
-        filename="nhs",
-    )
 
 
 @pytest.fixture

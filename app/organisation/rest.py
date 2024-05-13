@@ -6,21 +6,15 @@ from app.dao.dao_utils import transaction
 from app.dao.fact_billing_dao import fetch_usage_for_organisation
 from app.dao.invited_org_user_dao import get_invited_org_users_for_organisation
 from app.dao.organisation_dao import (
-    dao_add_email_branding_list_to_organisation_pool,
-    dao_add_letter_branding_list_to_organisation_pool,
     dao_add_service_to_organisation,
     dao_add_user_to_organisation,
     dao_archive_organisation,
     dao_create_organisation,
-    dao_get_email_branding_pool_for_organisation,
-    dao_get_letter_branding_pool_for_organisation,
     dao_get_organisation_by_email_address,
     dao_get_organisation_by_id,
     dao_get_organisation_services,
     dao_get_organisations,
     dao_get_users_for_organisation,
-    dao_remove_email_branding_from_organisation_pool,
-    dao_remove_letter_branding_from_organisation_pool,
     dao_remove_user_from_organisation,
     dao_update_organisation,
 )
@@ -31,8 +25,6 @@ from app.models import INVITE_PENDING, Organisation
 from app.organisation.organisation_schema import (
     post_create_organisation_schema,
     post_link_service_to_organisation_schema,
-    post_update_org_email_branding_pool_schema,
-    post_update_org_letter_branding_pool_schema,
     post_update_organisation_schema,
 )
 from app.schema_validation import validate
@@ -191,69 +183,3 @@ def remove_user_from_organisation(organisation_id, user_id):
 def get_organisation_users(organisation_id):
     org_users = dao_get_users_for_organisation(organisation_id)
     return jsonify(data=[x.serialize() for x in org_users])
-
-
-@organisation_blueprint.route("/<uuid:organisation_id>/email-branding-pool", methods=["GET"])
-def get_organisation_email_branding_pool(organisation_id):
-    branding_pool = dao_get_email_branding_pool_for_organisation(organisation_id)
-    return jsonify(data=[branding.serialize() for branding in branding_pool])
-
-
-@organisation_blueprint.route("/<uuid:organisation_id>/email-branding-pool", methods=["POST"])
-def update_organisation_email_branding_pool(organisation_id):
-    data = request.get_json()
-    validate(data, post_update_org_email_branding_pool_schema)
-
-    dao_add_email_branding_list_to_organisation_pool(organisation_id, data["branding_ids"])
-
-    return {}, 204
-
-
-@organisation_blueprint.route(
-    "/<uuid:organisation_id>/email-branding-pool/<uuid:email_branding_id>", methods=["DELETE"]
-)
-def remove_email_branding_from_organisation_pool(organisation_id, email_branding_id):
-    organisation = dao_get_organisation_by_id(organisation_id)
-    email_branding_ids = {eb.id for eb in organisation.email_branding_pool}
-
-    if email_branding_id not in email_branding_ids:
-        error = f"Email branding {email_branding_id} not in {organisation}'s pool"
-        raise InvalidRequest(error, status_code=404)
-
-    dao_remove_email_branding_from_organisation_pool(organisation_id, email_branding_id)
-
-    return {}, 204
-
-
-@organisation_blueprint.route("/<uuid:organisation_id>/letter-branding-pool", methods=["GET"])
-def get_organisation_letter_branding_pool(organisation_id):
-    branding_pool = dao_get_letter_branding_pool_for_organisation(organisation_id)
-    return jsonify(data=[branding.serialize() for branding in branding_pool])
-
-
-@organisation_blueprint.route("/<uuid:organisation_id>/letter-branding-pool", methods=["POST"])
-def update_organisation_letter_branding_pool(organisation_id):
-    data = request.get_json()
-    validate(data, post_update_org_letter_branding_pool_schema)
-
-    dao_add_letter_branding_list_to_organisation_pool(organisation_id, data["branding_ids"])
-
-    return {}, 204
-
-
-@organisation_blueprint.route(
-    "/<uuid:organisation_id>/letter-branding-pool/<uuid:letter_branding_id>", methods=["DELETE"]
-)
-def remove_letter_branding_from_organisation_pool(organisation_id, letter_branding_id):
-    organisation = dao_get_organisation_by_id(organisation_id)
-    letter_branding_ids = {branding.id for branding in organisation.letter_branding_pool}
-
-    if letter_branding_id not in letter_branding_ids:
-        raise InvalidRequest(f"Letter branding {letter_branding_id} not in {organisation.name}'s pool", status_code=404)
-
-    if organisation.letter_branding_id == letter_branding_id:
-        raise InvalidRequest("You cannot remove an organisation's default letter branding", status_code=400)
-
-    dao_remove_letter_branding_from_organisation_pool(organisation_id, letter_branding_id)
-
-    return {}, 204
