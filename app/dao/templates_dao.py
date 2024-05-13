@@ -10,7 +10,6 @@ from app.dao.users_dao import get_user_by_id
 from app.models import (
     LETTER_TYPE,
     SECOND_CLASS,
-    BroadcastMessage,
     Template,
     TemplateHistory,
     TemplateRedacted,
@@ -174,11 +173,6 @@ def dao_purge_templates_for_service(service_id):
         db.session.execute(query)
         db.session.flush()
 
-    messages_from_templates = BroadcastMessage.query.filter(
-        BroadcastMessage.service_id == service_id, BroadcastMessage.template_id.isnot(None)
-    ).distinct()
-    template_histories = TemplateHistory.query.filter(
-        ~TemplateHistory.id.in_([x.template_id for x in messages_from_templates])
-    ).all()
+    template_histories = TemplateHistory.query.filter_by(service_id=service_id).all()
     for template_history in template_histories:
         db.session.delete(template_history)
