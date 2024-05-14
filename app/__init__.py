@@ -156,7 +156,6 @@ def register_blueprint(application):
     from app.events.rest import events as events_blueprint
     from app.feature_toggle.rest import feature_toggle_blueprint
     from app.govuk_alerts.rest import govuk_alerts_blueprint
-    from app.inbound_number.rest import inbound_number_blueprint
     from app.inbound_sms.rest import inbound_sms as inbound_sms_blueprint
     from app.notifications.rest import notifications as notifications_blueprint
     from app.organisation.invite_rest import organisation_invite_blueprint
@@ -209,9 +208,6 @@ def register_blueprint(application):
 
     organisation_invite_blueprint.before_request(requires_admin_auth)
     application.register_blueprint(organisation_invite_blueprint)
-
-    inbound_number_blueprint.before_request(requires_admin_auth)
-    application.register_blueprint(inbound_number_blueprint)
 
     inbound_sms_blueprint.before_request(requires_admin_auth)
     application.register_blueprint(inbound_sms_blueprint)

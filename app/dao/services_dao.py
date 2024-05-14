@@ -1,7 +1,6 @@
 import uuid
 from datetime import date, datetime, timedelta
 
-from flask import current_app
 from sqlalchemy import Float, cast
 from sqlalchemy.orm import joinedload
 from sqlalchemy.sql.expression import and_, asc, case, func
@@ -10,7 +9,6 @@ from app import db
 from app.dao.dao_utils import VersionOptions, autocommit, version_class
 from app.dao.date_util import get_current_financial_year
 from app.dao.organisation_dao import dao_get_organisation_by_email_address
-from app.dao.service_sms_sender_dao import insert_service_sms_sender
 from app.dao.service_user_dao import dao_get_service_user
 from app.dao.template_folder_dao import dao_get_valid_template_folders_by_id
 from app.models import (
@@ -28,7 +26,6 @@ from app.models import (
     AnnualBilling,
     ApiKey,
     FactBilling,
-    InboundNumber,
     InvitedUser,
     Job,
     Notification,
@@ -40,7 +37,6 @@ from app.models import (
     ServiceEmailReplyTo,
     ServiceLetterContact,
     ServicePermission,
-    ServiceSmsSender,
     Template,
     TemplateHistory,
     TemplateRedacted,
@@ -202,15 +198,6 @@ def dao_fetch_service_by_id(service_id, only_active=False):
     return query.one()
 
 
-def dao_fetch_service_by_inbound_number(number):
-    inbound_number = InboundNumber.query.filter(InboundNumber.number == number, InboundNumber.active).first()
-
-    if not inbound_number:
-        return None
-
-    return Service.query.filter(Service.id == inbound_number.service_id).first()
-
-
 def dao_fetch_service_by_id_with_api_keys(service_id, only_active=False):
     query = Service.query.filter_by(id=service_id).options(joinedload("api_keys"))
 
@@ -305,9 +292,6 @@ def dao_create_service(
         service_permission = ServicePermission(service_id=service.id, permission=permission)
         service.permissions.append(service_permission)
 
-    # do we just add the default - or will we get a value from FE?
-    insert_service_sms_sender(service, current_app.config["FROM_NUMBER"])
-
     if organisation:
         service.organisation_id = organisation.id
         service.organisation_type = organisation.organisation_type
@@ -375,7 +359,6 @@ def delete_service_and_all_associated_db_objects(service):
     template_ids = db.session.query(Template.id).filter_by(service=service)
     _delete(TemplateRedacted.query.filter(TemplateRedacted.template_id.in_(template_ids)))
 
-    _delete(ServiceSmsSender.query.filter_by(service=service))
     _delete(ServiceEmailReplyTo.query.filter_by(service=service))
     _delete(ServiceLetterContact.query.filter_by(service=service))
     _delete(ServiceContactList.query.filter_by(service=service))

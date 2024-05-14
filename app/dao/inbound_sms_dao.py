@@ -5,13 +5,7 @@ from sqlalchemy.orm import aliased
 
 from app import db
 from app.dao.dao_utils import autocommit
-from app.models import (
-    SMS_TYPE,
-    InboundSms,
-    InboundSmsHistory,
-    Service,
-    ServiceDataRetention,
-)
+from app.models import InboundSms, InboundSmsHistory
 from app.utils import midnight_n_days_ago
 
 
@@ -98,40 +92,6 @@ def _delete_inbound_sms(datetime_to_delete_from, query_filter):
 
         number_deleted = InboundSms.query.filter(InboundSms.id.in_(subquery)).delete(synchronize_session="fetch")
         deleted += number_deleted
-
-    return deleted
-
-
-@autocommit
-def delete_inbound_sms_older_than_retention():
-    current_app.logger.info("Deleting inbound sms for services with flexible data retention")
-
-    flexible_data_retention = (
-        ServiceDataRetention.query.join(ServiceDataRetention.service, Service.inbound_number)
-        .filter(ServiceDataRetention.notification_type == SMS_TYPE)
-        .all()
-    )
-
-    deleted = 0
-
-    for f in flexible_data_retention:
-        n_days_ago = midnight_n_days_ago(f.days_of_retention)
-
-        current_app.logger.info("Deleting inbound sms for service id: {}".format(f.service_id))
-        deleted += _delete_inbound_sms(n_days_ago, query_filter=[InboundSms.service_id == f.service_id])
-
-    current_app.logger.info("Deleting inbound sms for services without flexible data retention")
-
-    seven_days_ago = midnight_n_days_ago(7)
-
-    deleted += _delete_inbound_sms(
-        seven_days_ago,
-        query_filter=[
-            InboundSms.service_id.notin_(x.service_id for x in flexible_data_retention),
-        ],
-    )
-
-    current_app.logger.info("Deleted {} inbound sms".format(deleted))
 
     return deleted
 

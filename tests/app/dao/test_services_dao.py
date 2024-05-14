@@ -8,11 +8,6 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
 
 from app import db
-from app.dao.inbound_numbers_dao import (
-    dao_get_available_inbound_numbers,
-    dao_set_inbound_number_active_flag,
-    dao_set_inbound_number_to_service,
-)
 from app.dao.organisation_dao import dao_add_service_to_organisation
 from app.dao.service_permissions_dao import (
     dao_add_service_permission,
@@ -30,7 +25,6 @@ from app.dao.services_dao import (
     dao_fetch_all_services_by_user,
     dao_fetch_live_services_data,
     dao_fetch_service_by_id,
-    dao_fetch_service_by_inbound_number,
     dao_fetch_todays_stats_for_all_services,
     dao_fetch_todays_stats_for_service,
     dao_find_services_sending_to_tv_numbers,
@@ -73,14 +67,11 @@ from tests.app.db import (
     create_annual_billing,
     create_api_key,
     create_ft_billing,
-    create_inbound_number,
     create_invited_user,
     create_notification,
     create_notification_history,
     create_organisation,
     create_service,
-    create_service_with_defined_sms_sender,
-    create_service_with_inbound_number,
     create_template,
     create_template_folder,
     create_user,
@@ -1098,65 +1089,6 @@ def test_dao_fetch_active_users_for_service_returns_active_only(notify_db_sessio
     users = dao_fetch_active_users_for_service(service.id)
 
     assert len(users) == 1
-
-
-def test_dao_fetch_service_by_inbound_number_with_inbound_number(notify_db_session):
-    foo1 = create_service_with_inbound_number(service_name="a", inbound_number="1")
-    create_service_with_defined_sms_sender(service_name="b", sms_sender_value="2")
-    create_service_with_defined_sms_sender(service_name="c", sms_sender_value="3")
-    create_inbound_number("2")
-    create_inbound_number("3")
-
-    service = dao_fetch_service_by_inbound_number("1")
-
-    assert foo1.id == service.id
-
-
-def test_dao_fetch_service_by_inbound_number_with_inbound_number_not_set(notify_db_session):
-    create_inbound_number("1")
-
-    service = dao_fetch_service_by_inbound_number("1")
-
-    assert service is None
-
-
-def test_dao_fetch_service_by_inbound_number_when_inbound_number_set(notify_db_session):
-    service_1 = create_service_with_inbound_number(inbound_number="1", service_name="a")
-    create_service(service_name="b")
-
-    service = dao_fetch_service_by_inbound_number("1")
-
-    assert service.id == service_1.id
-
-
-def test_dao_fetch_service_by_inbound_number_with_unknown_number(notify_db_session):
-    create_service_with_inbound_number(inbound_number="1", service_name="a")
-
-    service = dao_fetch_service_by_inbound_number("9")
-
-    assert service is None
-
-
-def test_dao_fetch_service_by_inbound_number_with_inactive_number_returns_empty(notify_db_session):
-    service = create_service_with_inbound_number(inbound_number="1", service_name="a")
-    dao_set_inbound_number_active_flag(service_id=service.id, active=False)
-
-    service = dao_fetch_service_by_inbound_number("1")
-
-    assert service is None
-
-
-def test_dao_allocating_inbound_number_shows_on_service(notify_db_session):
-    create_service_with_inbound_number()
-    create_inbound_number(number="07700900003")
-
-    inbound_numbers = dao_get_available_inbound_numbers()
-
-    service = create_service(service_name="test service")
-
-    dao_set_inbound_number_to_service(service.id, inbound_numbers[0])
-
-    assert service.inbound_number.number == inbound_numbers[0].number
 
 
 def _assert_service_permissions(service_permissions, expected):

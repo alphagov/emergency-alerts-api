@@ -6,14 +6,12 @@ from emergency_alerts_utils.clients.zendesk.zendesk_client import (
 from emergency_alerts_utils.timezones import convert_utc_to_bst
 from flask import current_app
 from sqlalchemy import func
-from sqlalchemy.exc import SQLAlchemyError
 
 from app import notify_celery, statsd_client, zendesk_client
 from app.aws import s3
 from app.config import QueueNames
 from app.cronitor import cronitor
 from app.dao.fact_processing_time_dao import insert_update_processing_time
-from app.dao.inbound_sms_dao import delete_inbound_sms_older_than_retention
 from app.dao.jobs_dao import (
     dao_archive_job,
     dao_get_jobs_older_than_data_retention,
@@ -162,22 +160,6 @@ def timeout_notifications():
         current_app.logger.info(
             "Timeout period reached for {} notifications, status has been updated.".format(len(notifications))
         )
-
-
-@notify_celery.task(name="delete-inbound-sms")
-@cronitor("delete-inbound-sms")
-def delete_inbound_sms():
-    try:
-        start = datetime.utcnow()
-        deleted = delete_inbound_sms_older_than_retention()
-        current_app.logger.info(
-            "Delete inbound sms job started {} finished {} deleted {} inbound sms notifications".format(
-                start, datetime.utcnow(), deleted
-            )
-        )
-    except SQLAlchemyError:
-        current_app.logger.exception("Failed to delete inbound sms notifications")
-        raise
 
 
 @notify_celery.task(name="raise-alert-if-letter-notifications-still-sending")
