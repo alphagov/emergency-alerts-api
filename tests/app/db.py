@@ -51,7 +51,6 @@ from app.models import (
     Organisation,
     Permission,
     Rate,
-    ReturnedLetter,
     Service,
     ServiceCallbackApi,
     ServiceContactList,
@@ -978,21 +977,6 @@ def set_up_usage_data(start_date):
         "service_with_sms_within_allowance": service_with_sms_within_allowance,
         "service_with_out_ft_billing_this_year": service_with_out_ft_billing_this_year,
     }
-
-
-def create_returned_letter(service=None, reported_at=None, notification_id=None):
-    if not service:
-        service = create_service(service_name="a - with sms and letter")
-    returned_letter = ReturnedLetter(
-        service_id=service.id,
-        reported_at=reported_at or datetime.utcnow(),
-        notification_id=notification_id or uuid.uuid4(),
-        created_at=datetime.utcnow(),
-    )
-
-    db.session.add(returned_letter)
-    db.session.commit()
-    return returned_letter
 
 
 def create_service_contact_list(

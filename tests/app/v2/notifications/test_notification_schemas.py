@@ -47,7 +47,7 @@ def test_get_notifications_request_invalid_statuses(invalid_statuses, valid_stat
         "is not one of "
         "[cancelled, created, sending, sent, delivered, pending, failed, "
         "technical-failure, temporary-failure, permanent-failure, pending-virus-check, "
-        "validation-failed, virus-scan-failed, returned-letter, accepted, received]"
+        "validation-failed, virus-scan-failed, accepted, received]"
     )
 
     with pytest.raises(ValidationError) as e:
@@ -98,9 +98,7 @@ def test_get_notifications_request_invalid_statuses_and_template_types():
         assert (
             "status {} is not one of [cancelled, created, sending, sent, delivered, "
             "pending, failed, technical-failure, temporary-failure, permanent-failure, "
-            "pending-virus-check, validation-failed, virus-scan-failed, returned-letter, accepted, received]".format(
-                invalid_status
-            )
+            "pending-virus-check, validation-failed, virus-scan-failed, accepted, received]".format(invalid_status)
             in error_messages
         )
 

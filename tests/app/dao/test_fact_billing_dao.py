@@ -353,7 +353,7 @@ def test_fetch_billing_data_for_day_bills_correctly_for_status(notify_db_session
     # we expect as many rows as we check for notification types
     assert 6 == sms_results[0].notifications_sent
     assert 4 == email_results[0].notifications_sent
-    assert 3 == letter_results[0].notifications_sent
+    assert 2 == letter_results[0].notifications_sent
 
 
 def test_get_rates_for_billing(notify_db_session):

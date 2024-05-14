@@ -1066,7 +1066,6 @@ NOTIFICATION_PERMANENT_FAILURE = "permanent-failure"
 NOTIFICATION_PENDING_VIRUS_CHECK = "pending-virus-check"
 NOTIFICATION_VALIDATION_FAILED = "validation-failed"
 NOTIFICATION_VIRUS_SCAN_FAILED = "virus-scan-failed"
-NOTIFICATION_RETURNED_LETTER = "returned-letter"
 
 NOTIFICATION_STATUS_TYPES_FAILED = [
     NOTIFICATION_TECHNICAL_FAILURE,
@@ -1074,7 +1073,6 @@ NOTIFICATION_STATUS_TYPES_FAILED = [
     NOTIFICATION_PERMANENT_FAILURE,
     NOTIFICATION_VALIDATION_FAILED,
     NOTIFICATION_VIRUS_SCAN_FAILED,
-    NOTIFICATION_RETURNED_LETTER,
 ]
 
 NOTIFICATION_STATUS_TYPES_COMPLETED = [
@@ -1084,7 +1082,6 @@ NOTIFICATION_STATUS_TYPES_COMPLETED = [
     NOTIFICATION_TECHNICAL_FAILURE,
     NOTIFICATION_TEMPORARY_FAILURE,
     NOTIFICATION_PERMANENT_FAILURE,
-    NOTIFICATION_RETURNED_LETTER,
     NOTIFICATION_CANCELLED,
 ]
 
@@ -1098,7 +1095,6 @@ NOTIFICATION_STATUS_TYPES_BILLABLE = [
     NOTIFICATION_FAILED,
     NOTIFICATION_TEMPORARY_FAILURE,
     NOTIFICATION_PERMANENT_FAILURE,
-    NOTIFICATION_RETURNED_LETTER,
 ]
 
 NOTIFICATION_STATUS_TYPES_BILLABLE_SMS = [
@@ -1113,7 +1109,6 @@ NOTIFICATION_STATUS_TYPES_BILLABLE_SMS = [
 NOTIFICATION_STATUS_TYPES_BILLABLE_FOR_LETTERS = [
     NOTIFICATION_SENDING,
     NOTIFICATION_DELIVERED,
-    NOTIFICATION_RETURNED_LETTER,
 ]
 # we don't really have a concept of billable emails - however the ft billing table only includes emails that we have
 # actually sent.
@@ -1138,7 +1133,6 @@ NOTIFICATION_STATUS_TYPES = [
     NOTIFICATION_PENDING_VIRUS_CHECK,
     NOTIFICATION_VALIDATION_FAILED,
     NOTIFICATION_VIRUS_SCAN_FAILED,
-    NOTIFICATION_RETURNED_LETTER,
 ]
 
 NOTIFICATION_STATUS_TYPES_NON_BILLABLE = list(set(NOTIFICATION_STATUS_TYPES) - set(NOTIFICATION_STATUS_TYPES_BILLABLE))
@@ -1371,7 +1365,6 @@ class Notification(db.Model):
                 "sending": "Accepted",
                 "created": "Accepted",
                 "delivered": "Received",
-                "returned-letter": "Returned",
             },
         }[self.template.template_type].get(self.status, self.status)
 
@@ -1388,7 +1381,7 @@ class Notification(db.Model):
 
         if self.status in [NOTIFICATION_CREATED, NOTIFICATION_SENDING]:
             return NOTIFICATION_STATUS_LETTER_ACCEPTED
-        elif self.status in [NOTIFICATION_DELIVERED, NOTIFICATION_RETURNED_LETTER]:
+        elif self.status in [NOTIFICATION_DELIVERED]:
             return NOTIFICATION_STATUS_LETTER_RECEIVED
         else:
             # Currently can only be technical-failure OR pending-virus-check OR validation-failed
@@ -1904,18 +1897,6 @@ class ServiceDataRetention(db.Model):
             "created_at": self.created_at.strftime(DATETIME_FORMAT),
             "updated_at": get_dt_string_or_none(self.updated_at),
         }
-
-
-class ReturnedLetter(db.Model):
-    __tablename__ = "returned_letters"
-
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    reported_at = db.Column(db.Date, nullable=False)
-    service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"), unique=False, index=True, nullable=False)
-    service = db.relationship(Service, backref=db.backref("returned_letters"))
-    notification_id = db.Column(UUID(as_uuid=True), unique=True, nullable=False)
-    created_at = db.Column(db.DateTime, nullable=False)
-    updated_at = db.Column(db.DateTime, nullable=True, onupdate=datetime.datetime.utcnow)
 
 
 class ServiceContactList(db.Model):

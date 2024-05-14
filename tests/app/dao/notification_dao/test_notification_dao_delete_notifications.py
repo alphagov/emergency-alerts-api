@@ -112,7 +112,7 @@ def test_move_notifications_deletes_letters_not_sent_and_in_final_state_from_tab
 
 @mock_aws
 @freeze_time("2020-12-24 04:30")
-@pytest.mark.parametrize("notification_status", ["delivered", "returned-letter", "technical-failure"])
+@pytest.mark.parametrize("notification_status", ["delivered", "technical-failure"])
 def test_move_notifications_deletes_letters_sent_and_in_final_state_from_table_and_s3(
     sample_service, mocker, notification_status
 ):
