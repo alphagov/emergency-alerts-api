@@ -1,7 +1,6 @@
 from datetime import datetime
 
 from sqlalchemy.dialects.postgresql import insert
-from sqlalchemy.sql.expression import case
 
 from app import db
 from app.dao.dao_utils import autocommit
@@ -31,32 +30,3 @@ def insert_update_processing_time(processing_time):
         },
     )
     db.session.connection().execute(stmt)
-
-
-def get_processing_time_percentage_for_date_range(start_date, end_date):
-    query = (
-        db.session.query(
-            FactProcessingTime.bst_date.cast(db.Text).label("date"),
-            FactProcessingTime.messages_total,
-            FactProcessingTime.messages_within_10_secs,
-            case(
-                [
-                    (
-                        FactProcessingTime.messages_total > 0,
-                        (
-                            (
-                                FactProcessingTime.messages_within_10_secs
-                                / FactProcessingTime.messages_total.cast(db.Float)
-                            )
-                            * 100
-                        ),
-                    ),
-                    (FactProcessingTime.messages_total == 0, 100.0),
-                ]
-            ).label("percentage"),
-        )
-        .filter(FactProcessingTime.bst_date >= start_date, FactProcessingTime.bst_date <= end_date)
-        .order_by(FactProcessingTime.bst_date)
-    )
-
-    return query.all()
