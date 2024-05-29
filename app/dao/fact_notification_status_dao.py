@@ -431,40 +431,6 @@ def fetch_monthly_template_usage_for_service(start_date, end_date, service_id):
     return query.all()
 
 
-def get_total_notifications_for_date_range(start_date, end_date):
-    query = (
-        db.session.query(
-            FactNotificationStatus.bst_date.cast(db.Text).label("bst_date"),
-            func.sum(
-                case(
-                    [(FactNotificationStatus.notification_type == "email", FactNotificationStatus.notification_count)],
-                    else_=0,
-                )
-            ).label("emails"),
-            func.sum(
-                case(
-                    [(FactNotificationStatus.notification_type == "sms", FactNotificationStatus.notification_count)],
-                    else_=0,
-                )
-            ).label("sms"),
-            func.sum(
-                case(
-                    [(FactNotificationStatus.notification_type == "letter", FactNotificationStatus.notification_count)],
-                    else_=0,
-                )
-            ).label("letters"),
-        )
-        .filter(
-            FactNotificationStatus.key_type != KEY_TYPE_TEST,
-        )
-        .group_by(FactNotificationStatus.bst_date)
-        .order_by(FactNotificationStatus.bst_date)
-    )
-    if start_date and end_date:
-        query = query.filter(FactNotificationStatus.bst_date >= start_date, FactNotificationStatus.bst_date <= end_date)
-    return query.all()
-
-
 def fetch_monthly_notification_statuses_per_service(start_date, end_date):
     return (
         db.session.query(

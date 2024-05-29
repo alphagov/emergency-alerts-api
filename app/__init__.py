@@ -160,7 +160,6 @@ def register_blueprint(application):
     from app.notifications.rest import notifications as notifications_blueprint
     from app.organisation.invite_rest import organisation_invite_blueprint
     from app.organisation.rest import organisation_blueprint
-    from app.performance_dashboard.rest import performance_dashboard_blueprint
     from app.platform_stats.rest import platform_stats_blueprint
     from app.provider_details.rest import (
         provider_details as provider_details_blueprint,
@@ -232,9 +231,6 @@ def register_blueprint(application):
 
     complaint_blueprint.before_request(requires_admin_auth)
     application.register_blueprint(complaint_blueprint)
-
-    performance_dashboard_blueprint.before_request(requires_admin_auth)
-    application.register_blueprint(performance_dashboard_blueprint)
 
     platform_stats_blueprint.before_request(requires_admin_auth)
     application.register_blueprint(platform_stats_blueprint, url_prefix="/platform-stats")
