@@ -35,7 +35,6 @@ from app.models import (
     BroadcastProviderMessage,
     BroadcastProviderMessageNumber,
     BroadcastStatusType,
-    Complaint,
     DailySortedLetter,
     Domain,
     FactBilling,
@@ -642,80 +641,6 @@ def create_service_guest_list(service, email_address=None, mobile_number=None):
     db.session.add(guest_list_user)
     db.session.commit()
     return guest_list_user
-
-
-def create_complaint(service=None, notification=None, created_at=None):
-    if not service:
-        service = create_service()
-    if not notification:
-        template = create_template(service=service, template_type="email")
-        notification = create_notification(template=template)
-
-    complaint = Complaint(
-        notification_id=notification.id,
-        service_id=service.id,
-        ses_feedback_id=str(uuid.uuid4()),
-        complaint_type="abuse",
-        complaint_date=datetime.utcnow(),
-        created_at=created_at if created_at else datetime.now(),
-    )
-    db.session.add(complaint)
-    db.session.commit()
-    return complaint
-
-
-def ses_complaint_callback_malformed_message_id():
-    return {
-        "Signature": "bb",
-        "SignatureVersion": "1",
-        "MessageAttributes": {},
-        "MessageId": "98c6e927-af5d-5f3b-9522-bab736f2cbde",
-        "UnsubscribeUrl": "https://sns.eu-west-2.amazonaws.com",
-        "TopicArn": "arn:ses_notifications",
-        "Type": "Notification",
-        "Timestamp": "2018-06-05T14:00:15.952Z",
-        "Subject": None,
-        "Message": '{"notificationType":"Complaint","complaint":{"complainedRecipients":[{"emailAddress":"recipient1@example.com"}],"timestamp":"2018-06-05T13:59:58.000Z","feedbackId":"ses_feedback_id"},"mail":{"timestamp":"2018-06-05T14:00:15.950Z","source":"\\"Some Service\\" <someservicenotifications.service.gov.uk>","sourceArn":"arn:identity/notifications.service.gov.uk","sourceIp":"52.208.24.161","sendingAccountId":"888450439860","badMessageId":"ref1","destination":["recipient1@example.com"]}}',  # noqa
-        "SigningCertUrl": "https://sns.pem",
-    }
-
-
-def ses_complaint_callback_with_missing_complaint_type():
-    """
-    https://docs.aws.amazon.com/ses/latest/DeveloperGuide/notification-contents.html#complaint-object
-    """
-    return {
-        "Signature": "bb",
-        "SignatureVersion": "1",
-        "MessageAttributes": {},
-        "MessageId": "98c6e927-af5d-5f3b-9522-bab736f2cbde",
-        "UnsubscribeUrl": "https://sns.eu-west-2.amazonaws.com",
-        "TopicArn": "arn:ses_notifications",
-        "Type": "Notification",
-        "Timestamp": "2018-06-05T14:00:15.952Z",
-        "Subject": None,
-        "Message": '{"notificationType":"Complaint","complaint":{"complainedRecipients":[{"emailAddress":"recipient1@example.com"}],"timestamp":"2018-06-05T13:59:58.000Z","feedbackId":"ses_feedback_id"},"mail":{"timestamp":"2018-06-05T14:00:15.950Z","source":"\\"Some Service\\" <someservicenotifications.service.gov.uk>","sourceArn":"arn:identity/notifications.service.gov.uk","sourceIp":"52.208.24.161","sendingAccountId":"888450439860","messageId":"ref1","destination":["recipient1@example.com"]}}',  # noqa
-        "SigningCertUrl": "https://sns.pem",
-    }
-
-
-def ses_complaint_callback():
-    """
-    https://docs.aws.amazon.com/ses/latest/DeveloperGuide/notification-contents.html#complaint-object
-    """
-    return {
-        "Signature": "bb",
-        "SignatureVersion": "1",
-        "MessageAttributes": {},
-        "MessageId": "98c6e927-af5d-5f3b-9522-bab736f2cbde",
-        "UnsubscribeUrl": "https://sns.eu-west-2.amazonaws.com",
-        "TopicArn": "arn:ses_notifications",
-        "Type": "Notification",
-        "Timestamp": "2018-06-05T14:00:15.952Z",
-        "Subject": None,
-        "Message": '{"notificationType":"Complaint","complaint":{"complaintFeedbackType": "abuse", "complainedRecipients":[{"emailAddress":"recipient1@example.com"}],"timestamp":"2018-06-05T13:59:58.000Z","feedbackId":"ses_feedback_id"},"mail":{"timestamp":"2018-06-05T14:00:15.950Z","source":"\\"Some Service\\" <someservicenotifications.service.gov.uk>","sourceArn":"arn:identity/notifications.service.gov.uk","sourceIp":"52.208.24.161","sendingAccountId":"888450439860","messageId":"ref1","destination":["recipient1@example.com"]}}',  # noqa
-        "SigningCertUrl": "https://sns.pem",
-    }
 
 
 def ses_notification_callback():

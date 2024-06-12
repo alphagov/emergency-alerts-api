@@ -259,7 +259,6 @@ class ServiceSchema(BaseSchema, UUIDsAsStringsMixin):
             "annual_billing",
             "api_keys",
             "broadcast_messages",
-            "complaints",
             "contact_list",
             "created_at",
             "crown",

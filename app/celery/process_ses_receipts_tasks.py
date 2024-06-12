@@ -11,10 +11,8 @@ from app.config import QueueNames
 from app.dao import notifications_dao
 from app.models import NOTIFICATION_PENDING, NOTIFICATION_SENDING
 from app.notifications.notifications_ses_callback import (
-    _check_and_queue_complaint_callback_task,
     check_and_queue_callback_task,
     determine_notification_bounce_type,
-    handle_complaint,
 )
 
 
@@ -27,9 +25,6 @@ def process_ses_results(self, response):
 
         if notification_type == "Bounce":
             notification_type, bounce_message = determine_notification_bounce_type(notification_type, ses_message)
-        elif notification_type == "Complaint":
-            _check_and_queue_complaint_callback_task(*handle_complaint(ses_message))
-            return True
 
         aws_response_dict = get_aws_responses(notification_type)
 
