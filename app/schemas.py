@@ -203,22 +203,6 @@ class UserUpdatePasswordSchema(BaseSchema):
                 raise ValidationError("Unknown field name {}".format(key))
 
 
-# class ProviderDetailsSchema(BaseSchema):
-#     created_by = fields.Nested(UserSchema, only=["id", "name", "email_address"], dump_only=True)
-#     updated_at = FlexibleDateTime()
-
-#     class Meta(BaseSchema.Meta):
-#         model = models.ProviderDetails
-
-
-# class ProviderDetailsHistorySchema(BaseSchema):
-#     created_by = fields.Nested(UserSchema, only=["id", "name", "email_address"], dump_only=True)
-#     updated_at = FlexibleDateTime()
-
-#     class Meta(BaseSchema.Meta):
-#         model = models.ProviderDetailsHistory
-
-
 class ServiceSchema(BaseSchema, UUIDsAsStringsMixin):
     created_by = field_for(models.Service, "created_by", required=True)
     organisation_type = field_for(models.Service, "organisation_type")
@@ -794,6 +778,4 @@ service_history_schema = ServiceHistorySchema()
 api_key_history_schema = ApiKeyHistorySchema()
 template_history_schema = TemplateHistorySchema()
 event_schema = EventSchema()
-# provider_details_schema = ProviderDetailsSchema()
-# provider_details_history_schema = ProviderDetailsHistorySchema()
 unarchived_template_schema = UnarchivedTemplateSchema()
