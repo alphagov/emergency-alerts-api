@@ -30,12 +30,6 @@ ses_response_map = {
         "notification_status": "delivered",
         "notification_statistics_status": STATISTICS_DELIVERED,
     },
-    "Complaint": {
-        "message": "Complaint",
-        "success": True,
-        "notification_status": "delivered",
-        "notification_statistics_status": STATISTICS_DELIVERED,
-    },
 }
 
 

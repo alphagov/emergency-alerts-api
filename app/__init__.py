@@ -152,7 +152,6 @@ def register_blueprint(application):
     )
     from app.billing.rest import billing_blueprint
     from app.broadcast_message.rest import broadcast_message_blueprint
-    from app.complaint.complaint_rest import complaint_blueprint
     from app.events.rest import events as events_blueprint
     from app.feature_toggle.rest import feature_toggle_blueprint
     from app.govuk_alerts.rest import govuk_alerts_blueprint
@@ -228,9 +227,6 @@ def register_blueprint(application):
 
     organisation_blueprint.before_request(requires_admin_auth)
     application.register_blueprint(organisation_blueprint, url_prefix="/organisations")
-
-    complaint_blueprint.before_request(requires_admin_auth)
-    application.register_blueprint(complaint_blueprint)
 
     platform_stats_blueprint.before_request(requires_admin_auth)
     application.register_blueprint(platform_stats_blueprint, url_prefix="/platform-stats")

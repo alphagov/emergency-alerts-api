@@ -1847,31 +1847,6 @@ class FactProcessingTime(db.Model):
     updated_at = db.Column(db.DateTime, nullable=True, onupdate=datetime.datetime.utcnow)
 
 
-class Complaint(db.Model):
-    __tablename__ = "complaints"
-
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    notification_id = db.Column(UUID(as_uuid=True), index=True, nullable=False)
-    service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"), unique=False, index=True, nullable=False)
-    service = db.relationship(Service, backref=db.backref("complaints"))
-    ses_feedback_id = db.Column(db.Text, nullable=True)
-    complaint_type = db.Column(db.Text, nullable=True)
-    complaint_date = db.Column(db.DateTime, nullable=True)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
-
-    def serialize(self):
-        return {
-            "id": str(self.id),
-            "notification_id": str(self.notification_id),
-            "service_id": str(self.service_id),
-            "service_name": self.service.name,
-            "ses_feedback_id": str(self.ses_feedback_id),
-            "complaint_type": self.complaint_type,
-            "complaint_date": get_dt_string_or_none(self.complaint_date),
-            "created_at": self.created_at.strftime(DATETIME_FORMAT),
-        }
-
-
 class ServiceDataRetention(db.Model):
     __tablename__ = "service_data_retention"
 

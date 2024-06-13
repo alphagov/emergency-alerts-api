@@ -7,7 +7,6 @@ from app import db
 from app.errors import register_errors
 from app.models import (
     ApiKey,
-    Complaint,
     InboundSms,
     Job,
     Notification,
@@ -42,7 +41,6 @@ FIND_BY_UUID_MODELS = {
     "template_folder": TemplateFolder,
     "service_inbound_api": ServiceInboundApi,
     "service_callback_api": ServiceCallbackApi,
-    "complaint": Complaint,
     "inbound_sms": InboundSms,
 }
 

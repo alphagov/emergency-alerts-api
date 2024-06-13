@@ -36,14 +36,6 @@ def test_should_return_correct_details_for_soft_bounced():
     assert not response_dict["success"]
 
 
-def test_should_return_correct_details_for_complaint():
-    response_dict = get_aws_responses("Complaint")
-    assert response_dict["message"] == "Complaint"
-    assert response_dict["notification_status"] == "delivered"
-    assert response_dict["notification_statistics_status"] == "delivered"
-    assert response_dict["success"]
-
-
 def test_should_be_none_if_unrecognised_status_code():
     with pytest.raises(KeyError) as e:
         get_aws_responses("99")
