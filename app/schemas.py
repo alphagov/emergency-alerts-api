@@ -203,20 +203,20 @@ class UserUpdatePasswordSchema(BaseSchema):
                 raise ValidationError("Unknown field name {}".format(key))
 
 
-class ProviderDetailsSchema(BaseSchema):
-    created_by = fields.Nested(UserSchema, only=["id", "name", "email_address"], dump_only=True)
-    updated_at = FlexibleDateTime()
+# class ProviderDetailsSchema(BaseSchema):
+#     created_by = fields.Nested(UserSchema, only=["id", "name", "email_address"], dump_only=True)
+#     updated_at = FlexibleDateTime()
 
-    class Meta(BaseSchema.Meta):
-        model = models.ProviderDetails
+#     class Meta(BaseSchema.Meta):
+#         model = models.ProviderDetails
 
 
-class ProviderDetailsHistorySchema(BaseSchema):
-    created_by = fields.Nested(UserSchema, only=["id", "name", "email_address"], dump_only=True)
-    updated_at = FlexibleDateTime()
+# class ProviderDetailsHistorySchema(BaseSchema):
+#     created_by = fields.Nested(UserSchema, only=["id", "name", "email_address"], dump_only=True)
+#     updated_at = FlexibleDateTime()
 
-    class Meta(BaseSchema.Meta):
-        model = models.ProviderDetailsHistory
+#     class Meta(BaseSchema.Meta):
+#         model = models.ProviderDetailsHistory
 
 
 class ServiceSchema(BaseSchema, UUIDsAsStringsMixin):
@@ -794,6 +794,6 @@ service_history_schema = ServiceHistorySchema()
 api_key_history_schema = ApiKeyHistorySchema()
 template_history_schema = TemplateHistorySchema()
 event_schema = EventSchema()
-provider_details_schema = ProviderDetailsSchema()
-provider_details_history_schema = ProviderDetailsHistorySchema()
+# provider_details_schema = ProviderDetailsSchema()
+# provider_details_history_schema = ProviderDetailsHistorySchema()
 unarchived_template_schema = UnarchivedTemplateSchema()
