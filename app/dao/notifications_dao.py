@@ -27,7 +27,7 @@ from app.clients.sms.firetext import (
 )
 from app.dao.dao_utils import autocommit
 from app.letters.utils import LetterPDFNotFound, find_letter_pdf_in_s3
-from app.models import (  # NOTIFICATION_DELIVERED,; ProviderDetails,
+from app.models import (
     EMAIL_TYPE,
     KEY_TYPE_NORMAL,
     KEY_TYPE_TEST,

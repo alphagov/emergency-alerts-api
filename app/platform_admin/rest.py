@@ -5,7 +5,7 @@ from sqlalchemy.exc import NoResultFound
 
 from app import db
 from app.errors import register_errors
-from app.models import (  # ProviderDetails,
+from app.models import (
     ApiKey,
     InboundSms,
     Job,
@@ -31,7 +31,6 @@ FIND_BY_UUID_MODELS = {
     "template": Template,
     "notification": Notification,
     "user": User,
-    # "provider": ProviderDetails,
     "reply_to_email": ServiceEmailReplyTo,
     "job": Job,
     "service_contact_list": ServiceContactList,
