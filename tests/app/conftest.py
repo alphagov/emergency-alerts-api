@@ -25,7 +25,7 @@ from app.dao.services_dao import dao_add_user_to_service, dao_create_service
 from app.dao.templates_dao import dao_create_template
 from app.dao.users_dao import create_secret_code, create_user_code
 from app.history_meta import create_history
-from app.models import (  # ProviderDetails,; ProviderDetailsHistory,
+from app.models import (
     BROADCAST_TYPE,
     EMAIL_TYPE,
     KEY_TYPE_NORMAL,
@@ -592,16 +592,6 @@ def fake_uuid():
     return "6ce466d0-fd6a-11e5-82f5-e0accb9d11a6"
 
 
-# @pytest.fixture(scope="function")
-# def ses_provider():
-#     return ProviderDetails.query.filter_by(identifier="ses").one()
-
-
-# @pytest.fixture(scope="function")
-# def mmg_provider():
-#     return ProviderDetails.query.filter_by(identifier="mmg").one()
-
-
 @pytest.fixture(scope="function")
 def mock_firetext_client(mocker):
     client = FiretextClient()
@@ -853,35 +843,6 @@ def broadcast_organisation(notify_db_session):
         dao_create_organisation(org)
 
     return org
-
-
-# @pytest.fixture
-# def restore_provider_details(notify_db_session):
-#     """
-#     We view ProviderDetails as a static in notify_db_session, since we don't modify it... except we do, we updated
-#     priority. This fixture is designed to be used in tests that will knowingly touch provider details, to restore them
-#     to previous state.
-
-#     Note: This doesn't technically require notify_db_session (only notify_db), but kept as a requirement to encourage
-#     good usage - if you're modifying ProviderDetails' state then it's good to clear down the rest of the DB too
-#     """
-#     existing_provider_details = ProviderDetails.query.all()
-#     existing_provider_details_history = ProviderDetailsHistory.query.all()
-#     # make transient removes the objects from the session - since we'll want to delete them later
-#     for epd in existing_provider_details:
-#         make_transient(epd)
-#     for epdh in existing_provider_details_history:
-#         make_transient(epdh)
-
-#     yield
-
-#     # also delete these as they depend on provider_details
-#     ProviderDetails.query.delete()
-#     ProviderDetailsHistory.query.delete()
-#     notify_db_session.commit()
-#     notify_db_session.add_all(existing_provider_details)
-#     notify_db_session.add_all(existing_provider_details_history)
-#     notify_db_session.commit()
 
 
 @pytest.fixture
