@@ -160,9 +160,6 @@ def register_blueprint(application):
     from app.organisation.invite_rest import organisation_invite_blueprint
     from app.organisation.rest import organisation_blueprint
     from app.platform_stats.rest import platform_stats_blueprint
-    from app.provider_details.rest import (
-        provider_details as provider_details_blueprint,
-    )
     from app.service.callback_rest import service_callback_blueprint
     from app.service.rest import service_blueprint
     from app.service_invite.rest import (
@@ -215,9 +212,6 @@ def register_blueprint(application):
 
     events_blueprint.before_request(requires_admin_auth)
     application.register_blueprint(events_blueprint)
-
-    provider_details_blueprint.before_request(requires_admin_auth)
-    application.register_blueprint(provider_details_blueprint, url_prefix="/provider-details")
 
     billing_blueprint.before_request(requires_admin_auth)
     application.register_blueprint(billing_blueprint)

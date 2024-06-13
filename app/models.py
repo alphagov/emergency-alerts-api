@@ -935,38 +935,6 @@ NOTIFICATION_TYPE = [EMAIL_TYPE, SMS_TYPE, LETTER_TYPE]
 notification_types = db.Enum(*NOTIFICATION_TYPE, name="notification_type")
 
 
-class ProviderDetails(db.Model):
-    __tablename__ = "provider_details"
-
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    display_name = db.Column(db.String, nullable=False)
-    identifier = db.Column(db.String, nullable=False)
-    priority = db.Column(db.Integer, nullable=False)
-    notification_type = db.Column(notification_types, nullable=False)
-    active = db.Column(db.Boolean, default=False, nullable=False)
-    version = db.Column(db.Integer, default=1, nullable=False)
-    updated_at = db.Column(db.DateTime, nullable=True, onupdate=datetime.datetime.utcnow)
-    created_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), index=True, nullable=True)
-    created_by = db.relationship("User")
-    supports_international = db.Column(db.Boolean, nullable=False, default=False)
-
-
-class ProviderDetailsHistory(db.Model, HistoryModel):
-    __tablename__ = "provider_details_history"
-
-    id = db.Column(UUID(as_uuid=True), primary_key=True, nullable=False)
-    display_name = db.Column(db.String, nullable=False)
-    identifier = db.Column(db.String, nullable=False)
-    priority = db.Column(db.Integer, nullable=False)
-    notification_type = db.Column(notification_types, nullable=False)
-    active = db.Column(db.Boolean, nullable=False)
-    version = db.Column(db.Integer, primary_key=True, nullable=False)
-    updated_at = db.Column(db.DateTime, nullable=True, onupdate=datetime.datetime.utcnow)
-    created_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), index=True, nullable=True)
-    created_by = db.relationship("User")
-    supports_international = db.Column(db.Boolean, nullable=False, default=False)
-
-
 JOB_STATUS_PENDING = "pending"
 JOB_STATUS_IN_PROGRESS = "in progress"
 JOB_STATUS_FINISHED = "finished"

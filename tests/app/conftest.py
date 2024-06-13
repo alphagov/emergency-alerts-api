@@ -7,7 +7,6 @@ import pytest
 import pytz
 import requests_mock
 from flask import current_app, url_for
-from sqlalchemy.orm.session import make_transient
 
 from app import db
 from app.clients.sms.firetext import FiretextClient
@@ -42,8 +41,6 @@ from app.models import (
     NotificationHistory,
     Organisation,
     Permission,
-    ProviderDetails,
-    ProviderDetailsHistory,
     Service,
     ServiceEmailReplyTo,
     ServiceGuestList,
@@ -596,16 +593,6 @@ def fake_uuid():
 
 
 @pytest.fixture(scope="function")
-def ses_provider():
-    return ProviderDetails.query.filter_by(identifier="ses").one()
-
-
-@pytest.fixture(scope="function")
-def mmg_provider():
-    return ProviderDetails.query.filter_by(identifier="mmg").one()
-
-
-@pytest.fixture(scope="function")
 def mock_firetext_client(mocker):
     client = FiretextClient()
     statsd_client = mocker.Mock()
@@ -856,35 +843,6 @@ def broadcast_organisation(notify_db_session):
         dao_create_organisation(org)
 
     return org
-
-
-@pytest.fixture
-def restore_provider_details(notify_db_session):
-    """
-    We view ProviderDetails as a static in notify_db_session, since we don't modify it... except we do, we updated
-    priority. This fixture is designed to be used in tests that will knowingly touch provider details, to restore them
-    to previous state.
-
-    Note: This doesn't technically require notify_db_session (only notify_db), but kept as a requirement to encourage
-    good usage - if you're modifying ProviderDetails' state then it's good to clear down the rest of the DB too
-    """
-    existing_provider_details = ProviderDetails.query.all()
-    existing_provider_details_history = ProviderDetailsHistory.query.all()
-    # make transient removes the objects from the session - since we'll want to delete them later
-    for epd in existing_provider_details:
-        make_transient(epd)
-    for epdh in existing_provider_details_history:
-        make_transient(epdh)
-
-    yield
-
-    # also delete these as they depend on provider_details
-    ProviderDetails.query.delete()
-    ProviderDetailsHistory.query.delete()
-    notify_db_session.commit()
-    notify_db_session.add_all(existing_provider_details)
-    notify_db_session.add_all(existing_provider_details_history)
-    notify_db_session.commit()
 
 
 @pytest.fixture

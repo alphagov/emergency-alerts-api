@@ -7,7 +7,6 @@ from alembic.command import upgrade
 from alembic.config import Config
 
 from app import create_app, db
-from app.dao.provider_details_dao import get_provider_details_by_identifier
 from app.notify_api_flask_app import NotifyApiFlaskApp
 
 
@@ -96,18 +95,7 @@ def _notify_db(notify_api, worker_id):
 
 
 @pytest.fixture(scope="function")
-def sms_providers(_notify_db):
-    """
-    In production we randomly choose which provider to use based on their priority. To guarantee tests run the same each
-    time, make sure we always choose mmg. You'll need to override them in your tests if you wish to do something
-    different.
-    """
-    get_provider_details_by_identifier("mmg").priority = 100
-    get_provider_details_by_identifier("firetext").priority = 0
-
-
-@pytest.fixture(scope="function")
-def notify_db_session(_notify_db, sms_providers):
+def notify_db_session(_notify_db):
     """
     This fixture clears down all non static data after your test run. It yields the sqlalchemy session variable
     so you can manually add, commit, etc if needed.

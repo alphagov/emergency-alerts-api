@@ -1,12 +1,6 @@
 import pytest
 from marshmallow import ValidationError
-from sqlalchemy import desc
 
-from app.dao.provider_details_dao import (
-    dao_update_provider_details,
-    get_provider_details_by_identifier,
-)
-from app.models import ProviderDetailsHistory
 from tests.app.db import create_api_key
 
 
@@ -104,36 +98,3 @@ def test_user_update_schema_rejects_disallowed_attribute_keys(user_attribute):
         user_update_schema_load_json.load(update_dict)
 
     assert excinfo.value.messages["_schema"][0] == "Unknown field name {}".format(user_attribute)
-
-
-def test_provider_details_schema_returns_user_details(mocker, sample_user, restore_provider_details):
-    from app.schemas import provider_details_schema
-
-    current_sms_provider = get_provider_details_by_identifier("mmg")
-    current_sms_provider.created_by = sample_user
-    data = provider_details_schema.dump(current_sms_provider)
-
-    assert sorted(data["created_by"].keys()) == sorted(["id", "email_address", "name"])
-
-
-def test_provider_details_history_schema_returns_user_details(
-    mocker,
-    sample_user,
-    restore_provider_details,
-):
-    from app.schemas import provider_details_schema
-
-    current_sms_provider = get_provider_details_by_identifier("mmg")
-    current_sms_provider.created_by_id = sample_user.id
-    data = provider_details_schema.dump(current_sms_provider)
-
-    dao_update_provider_details(current_sms_provider)
-
-    current_sms_provider_in_history = (
-        ProviderDetailsHistory.query.filter(ProviderDetailsHistory.id == current_sms_provider.id)
-        .order_by(desc(ProviderDetailsHistory.version))
-        .first()
-    )
-    data = provider_details_schema.dump(current_sms_provider_in_history)
-
-    assert sorted(data["created_by"].keys()) == sorted(["id", "email_address", "name"])
