@@ -167,3 +167,31 @@ def is_private_environment():
 
 def is_public_environment():
     return not is_private_environment()
+
+
+def log_successful_login(user, admin_only=True):
+    if (admin_only and user.platform_admin) or (not admin_only):
+        current_app.logger.info(
+            "LOGIN SUCCESS",
+            extra={
+                "user_id": user.id,
+                "user_name": user.name,
+                "auth_type": user.auth_type,
+                "platform_admin": user.platform_admin,
+                "current_session_id": user.current_session_id,
+            },
+        )
+
+
+def log_failed_login_attempt(user, admin_only=True):
+    if (admin_only and user.platform_admin) or (not admin_only):
+        current_app.logger.info(
+            "LOGIN FAILURE",
+            extra={
+                "user_id": user.id,
+                "user_name": user.name,
+                "auth_type": user.auth_type,
+                "platform_admin": user.platform_admin,
+                "failed_login_count": user.failed_login_count,
+            },
+        )
