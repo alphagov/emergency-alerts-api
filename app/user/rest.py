@@ -166,6 +166,7 @@ def verify_user_password(user_id):
         return jsonify({}), 204
     else:
         increment_failed_login_count(user_to_verify)
+        _log_failed_login_attempt(user_to_verify)
         message = "Incorrect password"
         errors = {"password": [message]}
         raise InvalidRequest(errors, status_code=400)
@@ -184,10 +185,12 @@ def verify_user_code(user_id):
     if not code:
         # only relevant from sms
         increment_failed_login_count(user_to_verify)
+        _log_failed_login_attempt(user_to_verify)
         raise InvalidRequest("Code not found", status_code=404)
     if datetime.utcnow() > code.expiry_datetime or code.code_used:
         # sms and email
         increment_failed_login_count(user_to_verify)
+        _log_failed_login_attempt(user_to_verify)
         raise InvalidRequest("Code has expired", status_code=400)
 
     user_to_verify.current_session_id = str(uuid.uuid4())
@@ -196,6 +199,8 @@ def verify_user_code(user_id):
         user_to_verify.email_access_validated_at = datetime.utcnow()
     user_to_verify.failed_login_count = 0
     save_model_user(user_to_verify)
+
+    _log_successful_login(user_to_verify)
 
     use_user_code(code.id)
     return jsonify({}), 204
@@ -221,7 +226,7 @@ def complete_login_after_webauthn_authentication_attempt(user_id):
     user = get_user_by_id(user_id=user_id)
     successful = data["successful"]
 
-    if user.failed_login_count >= current_app.config.get("MAX_VERIFY_CODE_COUNT"):
+    if user.failed_login_count >= current_app.config.get("MAX_FAILED_LOGIN_COUNT"):
         raise InvalidRequest("Maximum login count exceeded", status_code=403)
 
     if successful:
@@ -229,12 +234,14 @@ def complete_login_after_webauthn_authentication_attempt(user_id):
         user.logged_in_at = datetime.utcnow()
         user.failed_login_count = 0
         save_model_user(user)
+        _log_successful_login(user)
 
         if webauthn_credential_id := data.get("webauthn_credential_id"):
             webauthn_credential = dao_get_webauthn_credential_by_user_and_id(user_id, webauthn_credential_id)
             dao_update_webauthn_credential_logged_in_at(webauthn_credential)
     else:
         increment_failed_login_count(user)
+        _log_failed_login_attempt(user)
 
     return jsonify({}), 204
 
@@ -605,3 +612,30 @@ def get_orgs_and_services(user):
             if service.active
         ],
     }
+
+
+def _log_successful_login(user):
+    if user.platform_admin:
+        current_app.logger.info(
+            "LOGIN SUCCESS - PLATFORM ADMIN",
+            extra={
+                "user_id": user.id,
+                "user_name": user.name,
+                "auth_type": user.auth_type,
+                "current_session_id": user.current_session_id,
+            },
+        )
+
+
+def _log_failed_login_attempt(user):
+    if user.platform_admin:
+        current_app.logger.info(
+            "LOGIN FAILURE - PLATFORM ADMIN",
+            extra={
+                "user_id": user.id,
+                "user_name": user.name,
+                "auth_type": user.auth_type,
+                "platform_admin": user.platform_admin,
+                "failed_login_count": user.failed_login_count,
+            },
+        )
