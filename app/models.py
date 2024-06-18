@@ -29,7 +29,7 @@ from sqlalchemy import (
     and_,
     func,
 )
-from sqlalchemy.dialects.postgresql import JSON, JSONB, UUID
+from sqlalchemy.dialects.postgresql import JSON, JSONB, UUID, INET
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.hybrid import hybrid_property
@@ -2324,3 +2324,17 @@ class FeatureToggle(db.Model):
 
     def serialize(self):
         return {"name": self.name, "is_enabled": self.is_enabled, "display_html": self.display_html}
+
+
+class FailedLoginCountByIP(db.Model):
+    """
+    This table is used to store IP addresses with the count of failed logins.
+    """
+
+    __tablename__ = "failed_login_count_by_ip"
+
+    ip = db.Column(INET, primary_key=True)
+    failed_login_count = db.Column(db.Integer, nullable=False, default=0)
+
+    def serialize(self):
+        return {"ip": self.ip, "failed_login_count": self.failed_login_count}
