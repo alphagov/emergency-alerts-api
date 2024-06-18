@@ -56,12 +56,7 @@ from app.user.users_schema import (
     post_verify_code_schema,
     post_verify_webauthn_schema,
 )
-from app.utils import (
-    is_local_host,
-    log_failed_login_attempt,
-    log_successful_login,
-    url_with_token,
-)
+from app.utils import is_local_host, log_auth_activity, url_with_token
 
 user_blueprint = Blueprint("user", __name__)
 register_errors(user_blueprint)
@@ -171,7 +166,7 @@ def verify_user_password(user_id):
         return jsonify({}), 204
     else:
         increment_failed_login_count(user_to_verify)
-        log_failed_login_attempt(user_to_verify)
+        log_auth_activity(user_to_verify, "Failed login")
         message = "Incorrect password"
         errors = {"password": [message]}
         raise InvalidRequest(errors, status_code=400)
@@ -190,12 +185,12 @@ def verify_user_code(user_id):
     if not code:
         # only relevant from sms
         increment_failed_login_count(user_to_verify)
-        log_failed_login_attempt(user_to_verify)
+        log_auth_activity(user_to_verify, "Failed login")
         raise InvalidRequest("Code not found", status_code=404)
     if datetime.utcnow() > code.expiry_datetime or code.code_used:
         # sms and email
         increment_failed_login_count(user_to_verify)
-        log_failed_login_attempt(user_to_verify)
+        log_auth_activity(user_to_verify, "Failed login")
         raise InvalidRequest("Code has expired", status_code=400)
 
     user_to_verify.current_session_id = str(uuid.uuid4())
@@ -205,7 +200,7 @@ def verify_user_code(user_id):
     user_to_verify.failed_login_count = 0
     save_model_user(user_to_verify)
 
-    log_successful_login(user_to_verify)
+    log_auth_activity(user_to_verify, "Successful login")
 
     use_user_code(code.id)
     return jsonify({}), 204
@@ -239,14 +234,14 @@ def complete_login_after_webauthn_authentication_attempt(user_id):
         user.logged_in_at = datetime.utcnow()
         user.failed_login_count = 0
         save_model_user(user)
-        log_successful_login(user)
+        log_auth_activity(user, "Successful login")
 
         if webauthn_credential_id := data.get("webauthn_credential_id"):
             webauthn_credential = dao_get_webauthn_credential_by_user_and_id(user_id, webauthn_credential_id)
             dao_update_webauthn_credential_logged_in_at(webauthn_credential)
     else:
         increment_failed_login_count(user)
-        log_failed_login_attempt(user)
+        log_auth_activity(user, "Failed login")
 
     return jsonify({}), 204
 
@@ -479,7 +474,12 @@ def set_permissions(user_id, service_id):
 def fetch_user_by_email():
     email = email_data_request_schema.load(request.get_json())
 
-    fetched_user = get_user_by_email(email["email"])
+    try:
+        fetched_user = get_user_by_email(email["email"])
+    except Exception:
+        log_auth_activity(email["email"], "Invalid email", admin_only=False)
+        raise
+
     result = fetched_user.serialize()
     return jsonify(data=result)
 
