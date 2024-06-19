@@ -167,3 +167,10 @@ def is_private_environment():
 
 def is_public_environment():
     return not is_private_environment()
+
+
+def log_user(user, message):
+    current_app.logger.info(
+        message,
+        extra=user,
+    )
