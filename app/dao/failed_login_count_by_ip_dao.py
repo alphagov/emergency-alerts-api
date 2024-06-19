@@ -1,33 +1,30 @@
 from app.models import FailedLoginCountByIP
 from app import db
+import datetime
 
 
-def dao_get_failed_login_counts():
+def dao_get_failed_logins():
     return FailedLoginCountByIP.query.all()
 
 
 def dao_create_failed_login_for_ip(ip):
-    data = FailedLoginCountByIP(ip=ip, failed_login_count=1)
+    if FailedLoginCountByIP.query.filter_by(ip=ip).first():
+        latest_failed_login_count = dao_get_latest_failed_login_by_ip(ip).failed_login_count
+        data = FailedLoginCountByIP(
+            ip=ip,
+            failed_login_count=latest_failed_login_count + 1,
+            attempted_at=datetime.datetime.now(),
+        )
+    else:
+        data = FailedLoginCountByIP(
+            ip=ip,
+            failed_login_count=1,
+            attempted_at=datetime.datetime.now(),
+        )
     db.session.add(data)
     db.session.commit()
     return FailedLoginCountByIP.query.filter_by(ip=ip).first()
 
 
-def dao_get_failed_login_counts_by_ip(ip):
-    if not FailedLoginCountByIP.query.filter_by(ip=ip).first():
-        dao_create_failed_login_for_ip(ip)
-    return FailedLoginCountByIP.query.filter_by(ip=ip).first()
-
-
-def dao_increment_failed_login_counts_by_ip(failed_login):
-    failed_login.failed_login_count += 1
-    db.session.add(failed_login)
-    db.session.commit()
-    return FailedLoginCountByIP.query.filter_by(ip=failed_login.ip).first()
-
-
-def dao_reset_failed_login_counts_by_ip(failed_login):
-    failed_login.failed_login_count = 0
-    db.session.add(failed_login)
-    db.session.commit()
-    return FailedLoginCountByIP.query.filter_by(ip=failed_login.ip).first()
+def dao_get_latest_failed_login_by_ip(ip):
+    return FailedLoginCountByIP.query.filter_by(ip=ip).order_by(FailedLoginCountByIP.attempted_at.desc()).first()

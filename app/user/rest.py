@@ -41,9 +41,8 @@ from app.dao.webauthn_credential_dao import (
 )
 from app.errors import InvalidRequest, register_errors
 from app.failed_login_count_by_ip.rest import (
+    add_failed_login_for_ip,
     check_failed_login_count_for_ip,
-    increment_failed_login_count_for_ip,
-    reset_failed_login_count_for_ip,
 )
 from app.models import EMAIL_TYPE, SMS_TYPE, Permission
 from app.schema_validation import validate
@@ -165,13 +164,12 @@ def verify_user_password(user_id):
         errors = {"password": [message]}
         raise InvalidRequest(errors, status_code=400)
     if user_to_verify.check_password(txt_pwd):
-        reset_failed_login_count_for_ip(request.remote_addr)
         reset_failed_login_count(user_to_verify)
         return jsonify({}), 204
     else:
-        increment_failed_login_count_for_ip(request.remote_addr)
-        check_failed_login_count_for_ip(request.remote_addr)
         increment_failed_login_count(user_to_verify)
+        add_failed_login_for_ip(request.remote_addr)
+        check_failed_login_count_for_ip(request.remote_addr)
         message = "Incorrect password"
         errors = {"password": [message]}
         raise InvalidRequest(errors, status_code=400)

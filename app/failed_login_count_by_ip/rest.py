@@ -1,15 +1,16 @@
+from datetime import timedelta
+import datetime
 import time
 from flask import Blueprint, jsonify
 
 from app.dao.failed_login_count_by_ip_dao import (
-    dao_get_failed_login_counts_by_ip,
-    dao_increment_failed_login_counts_by_ip,
-    dao_reset_failed_login_counts_by_ip,
+    dao_create_failed_login_for_ip,
+    dao_get_latest_failed_login_by_ip,
 )
 from app.errors import InvalidRequest, register_errors
 
 failed_login_count_by_ip_blueprint = Blueprint(
-    "failed_login_count_by_ip",
+    "failed_logins",
     __name__,
     url_prefix="/ip-failed-login-count",
 )
@@ -22,17 +23,16 @@ def get_failed_login_count_by_ip(ip):
     if not ip:
         errors = {"ip": ["Missing data for required field."]}
         raise InvalidRequest(errors, status_code=400)
-    data = dao_get_failed_login_counts_by_ip(ip)
+    data = dao_get_latest_failed_login_by_ip(ip)
     return jsonify(data.serialize() if data else {}), 200
 
 
 @failed_login_count_by_ip_blueprint.route("")
-def increment_failed_login_count_for_ip(ip):
+def add_failed_login_for_ip(ip):
     if not ip:
         errors = {"ip": ["Missing data for required field."]}
         raise InvalidRequest(errors, status_code=400)
-    data = dao_get_failed_login_counts_by_ip(ip)
-    dao_increment_failed_login_counts_by_ip(data)
+    data = dao_create_failed_login_for_ip(ip)
     return jsonify(data.serialize() if data else {}), 200
 
 
@@ -41,18 +41,14 @@ def check_failed_login_count_for_ip(ip):
     if not ip:
         errors = {"ip": ["Missing data for required field."]}
         raise InvalidRequest(errors, status_code=400)
-    data = dao_get_failed_login_counts_by_ip(ip)
-    if data.failed_login_count > 4:
-        time.sleep(120)
-    elif 0 < data.failed_login_count < 4:
-        time.sleep(10 * (2 ** (data.failed_login_count - 1)))
-
-
-@failed_login_count_by_ip_blueprint.route("")
-def reset_failed_login_count_for_ip(ip):
-    if not ip:
-        errors = {"ip": ["Missing data for required field."]}
+    data = dao_get_latest_failed_login_by_ip(ip)
+    failed_login_timestamp = data.attempted_at
+    failed_login_count = data.failed_login_count
+    current_time = datetime.datetime.now()
+    if failed_login_count < 4:
+        delay_period = 10 * (2 ** (failed_login_count - 1))
+    else:
+        delay_period = 120
+    if current_time - failed_login_timestamp < timedelta(seconds=delay_period):
+        errors = {"Login Failed": [f"Last failed login at {failed_login_timestamp}"]}
         raise InvalidRequest(errors, status_code=400)
-    data = dao_get_failed_login_counts_by_ip(ip)
-    dao_reset_failed_login_counts_by_ip(data)
-    return jsonify(data.serialize() if data else {}), 200

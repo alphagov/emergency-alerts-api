@@ -2331,10 +2331,19 @@ class FailedLoginCountByIP(db.Model):
     This table is used to store IP addresses with the count of failed logins.
     """
 
-    __tablename__ = "failed_login_count_by_ip"
+    __tablename__ = "failed_logins"
 
-    ip = db.Column(INET, primary_key=True)
+    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    ip = db.Column(INET)
     failed_login_count = db.Column(db.Integer, nullable=False, default=0)
+    attempted_at = db.Column(
+        db.DateTime, index=False, unique=False, nullable=False, default=datetime.datetime.now(datetime.timezone.utc)
+    )
 
     def serialize(self):
-        return {"ip": self.ip, "failed_login_count": self.failed_login_count}
+        return {
+            "id": self.id,
+            "ip": self.ip,
+            "failed_login_count": self.failed_login_count,
+            "attempted_at": self.attempted_at,
+        }
