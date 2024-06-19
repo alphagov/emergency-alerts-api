@@ -12,6 +12,7 @@ from app.dao.invited_user_dao import (
 from app.errors import InvalidRequest, register_errors
 from app.models import EMAIL_TYPE
 from app.schemas import invited_user_schema
+from app.utils import log_user
 
 service_invite = Blueprint("service_invite", __name__)
 
@@ -23,6 +24,7 @@ def create_invited_user(service_id):
     request_json = request.get_json()
     invited_user = invited_user_schema.load(request_json)
     save_invited_user(invited_user)
+    log_user(invited_user.serialize(), "User invited")
 
     notification = {
         "type": EMAIL_TYPE,

@@ -190,3 +190,10 @@ def log_auth_activity(user, message, admin_only=True):
             message,
             extra=data,
         )
+
+
+def log_user(user, message):
+    current_app.logger.info(
+        message,
+        extra=user,
+    )

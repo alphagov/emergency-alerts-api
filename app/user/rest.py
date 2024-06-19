@@ -56,7 +56,7 @@ from app.user.users_schema import (
     post_verify_code_schema,
     post_verify_webauthn_schema,
 )
-from app.utils import is_local_host, log_auth_activity, url_with_token
+from app.utils import is_local_host, log_auth_activity, log_user, url_with_token
 
 user_blueprint = Blueprint("user", __name__)
 register_errors(user_blueprint)
@@ -84,6 +84,7 @@ def create_user():
 
     save_model_user(user_to_create, password=req_json.get("password"), validated_email_access=True)
     result = user_to_create.serialize()
+    log_user(result, "User created")
     return jsonify(data=result), 201
 
 
