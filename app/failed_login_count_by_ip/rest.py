@@ -1,5 +1,6 @@
-from datetime import timedelta
 import datetime
+from datetime import timedelta
+
 from flask import Blueprint, jsonify
 
 from app.dao.failed_login_count_by_ip_dao import (

@@ -29,7 +29,7 @@ from sqlalchemy import (
     and_,
     func,
 )
-from sqlalchemy.dialects.postgresql import JSON, JSONB, UUID, INET
+from sqlalchemy.dialects.postgresql import INET, JSON, JSONB, UUID
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.hybrid import hybrid_property

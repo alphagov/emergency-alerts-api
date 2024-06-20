@@ -1,6 +1,7 @@
-from app.models import FailedLoginCountByIP
-from app import db
 import datetime
+
+from app import db
+from app.models import FailedLoginCountByIP
 
 
 def dao_get_failed_logins():
