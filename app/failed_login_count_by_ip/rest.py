@@ -1,6 +1,5 @@
 from datetime import timedelta
 import datetime
-import time
 from flask import Blueprint, jsonify
 
 from app.dao.failed_login_count_by_ip_dao import (
@@ -50,5 +49,5 @@ def check_failed_login_count_for_ip(ip):
     else:
         delay_period = 120
     if current_time - failed_login_timestamp < timedelta(seconds=delay_period):
-        errors = {"Login Failed": [f"Last failed login at {failed_login_timestamp}"]}
+        errors = {"password": ["Incorrect password"]}
         raise InvalidRequest(errors, status_code=400)
