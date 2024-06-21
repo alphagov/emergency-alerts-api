@@ -193,6 +193,10 @@ def log_auth_activity(user, message, admin_only=True):
 
 
 def log_user(user, message):
+    # Guards against the reserved keyword under the `info` method.
+    if user.get("name") is not None:
+        user["user_name"] = user.get("name")
+        user.pop("name", None)
     current_app.logger.info(
         message,
         extra=user,
