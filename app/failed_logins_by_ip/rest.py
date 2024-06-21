@@ -54,5 +54,5 @@ def check_failed_login_count_for_ip():
         delay_period = 120
     if current_time - failed_login_timestamp < timedelta(seconds=delay_period):
         errors = {"password": ["Incorrect password"]}
-        print('too soon!')
+        print("too soon!")
         raise InvalidRequest(errors, status_code=400)
