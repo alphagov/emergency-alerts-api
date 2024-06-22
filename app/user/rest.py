@@ -478,7 +478,7 @@ def fetch_user_by_email():
     try:
         fetched_user = get_user_by_email(email["email"])
     except Exception:
-        log_auth_activity(email["email"], "Invalid email", admin_only=False)
+        log_auth_activity(email["email"], "Attempted Login", admin_only=False)
         raise
 
     result = fetched_user.serialize()
