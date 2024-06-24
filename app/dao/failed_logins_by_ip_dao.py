@@ -1,7 +1,7 @@
 import datetime
-
 from app import db
 from app.models import FailedLoginCountByIP
+from sqlalchemy import desc
 
 
 def dao_get_failed_logins():
@@ -28,4 +28,8 @@ def dao_create_failed_login_for_ip(ip):
 
 
 def dao_get_latest_failed_login_by_ip(ip):
-    return FailedLoginCountByIP.query.filter_by(ip=ip).order_by(FailedLoginCountByIP.attempted_at.desc()).first()
+    return (
+        FailedLoginCountByIP.query.filter_by(ip=ip)
+        .order_by(desc(FailedLoginCountByIP.attempted_at))
+        .first()
+    )

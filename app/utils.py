@@ -10,7 +10,7 @@ from emergency_alerts_utils.template import (
 )
 from emergency_alerts_utils.timezones import convert_bst_to_utc
 from emergency_alerts_utils.url_safe_token import generate_token
-from flask import current_app, url_for
+from flask import current_app, request, url_for
 from sqlalchemy import func
 
 DATETIME_FORMAT_NO_TIMEZONE = "%Y-%m-%d %H:%M:%S.%f"
@@ -197,3 +197,19 @@ def log_user(user, message):
         message,
         extra=user,
     )
+
+
+def get_ip_address():
+    ip = None
+    if current_app.config["HOST"] == "local":
+        ip = request.remote_addr
+    elif current_app.config["HOST"] == "hosted":
+        print(request.headers.__dict__)
+        ip = request.headers.get("X_FORWARDED_FOR")[0]
+    elif current_app.config["HOST"] == "test":
+        ip = request.remote_addr
+    return ip
+
+
+def calculate_delay_period(failed_login_count):
+    return 10 * (2 ** (failed_login_count - 1)) if failed_login_count < 4 else 120

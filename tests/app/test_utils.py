@@ -3,6 +3,7 @@ from datetime import date, datetime, timedelta
 import pytest
 from freezegun import freeze_time
 
+from app.models import FailedLoginCountByIP
 from app.utils import (
     format_sequential_number,
     get_interval_seconds_or_none,
@@ -76,3 +77,9 @@ def test_midnight_n_days_ago(current_time, arg, expected_datetime):
 
 def test_format_sequential_number():
     assert format_sequential_number(123) == "0000007b"
+
+
+def create_failed_login_for_test(notify_db_session, ip, failed_login_count):
+    failed_login = FailedLoginCountByIP(ip=ip, failed_login_count=failed_login_count, attempted_at=datetime.now())
+    notify_db_session.add(failed_login)
+    notify_db_session.commit()
