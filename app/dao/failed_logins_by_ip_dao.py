@@ -1,7 +1,9 @@
 import datetime
+
+from sqlalchemy import desc
+
 from app import db
 from app.models import FailedLoginCountByIP
-from sqlalchemy import desc
 
 
 def dao_get_failed_logins():
