@@ -44,7 +44,7 @@ def test_check_failed_login_count_for_ip_raises_invalid_request_failed_login_too
         )
         notify_db_session.add(failed_login_1)
         notify_db_session.commit()
-    response = admin_request.get("failed_logins.get_failed_login_by_ip", ip="127.0.0.1")
+    response = admin_request.get("failed_logins.get_failed_login_by_ip")
     assert len(response) == 1
     with pytest.raises(expected_exception=InvalidRequest) as e:
         check_failed_login_count_for_ip()
