@@ -1,40 +1,45 @@
-from datetime import datetime
-
-from app.models import FailedLoginCountByIP
 from tests.app.test_utils import create_failed_login_for_test
 
 
-def test_create_failed_login_creates_failed_login(notify_db_session, admin_request, mocker):
-    pass
-
-
 def test_get_all_failed_logins_returns_all_records(notify_db_session, admin_request, mocker):
-    failed_login_1 = FailedLoginCountByIP(ip="192.0.2.15", failed_login_count=1, attempted_at=datetime.now())
-    failed_login_2 = FailedLoginCountByIP(ip="192.0.2.30", failed_login_count=2, attempted_at=datetime.now())
-    notify_db_session.add(failed_login_1)
-    notify_db_session.add(failed_login_2)
-    notify_db_session.commit()
+    """
+    Creates 2 failed login records and asserts that the response for get_all_failed_logins
+    route has a length of 2 and that the IPs are the same as the ones just created.
+    """
+    create_failed_login_for_test(notify_db_session, "192.0.2.15", 1)
+    create_failed_login_for_test(notify_db_session, "192.0.2.30", 2)
     response = admin_request.get(
         "failed_logins.get_all_failed_logins",
     )
     assert len(response) == 2
-    assert response[0]["ip"] == "192.0.2.15"
-    assert response[1]["ip"] == "192.0.2.30"
+    assert "ip" in response[0] and response[0]["ip"] == "192.0.2.15"
+    assert "ip" in response[1] and response[1]["ip"] == "192.0.2.30"
 
 
 def test_get_failed_login_by_ip_returns_empty_if_none_found(notify_db_session, admin_request, mocker):
+    """
+    Asserts that the response for the get_failed_login_by_ip is empty when no failed login attempts
+    have been created.
+    """
     response = admin_request.get("failed_logins.get_failed_login_by_ip")
-    assert len(response) == 0
+    assert response == {}
 
 
-def test_get_failed_login_by_ip_returns_only_failed_logins(notify_db_session, admin_request, mocker):
-    # Creating a failed login record for a different IP address
+def test_get_failed_login_by_ip_returns_only_failed_logins_for_ip(notify_db_session, admin_request, mocker):
+    """
+    Creates a failed login record with a specific IP and then asserts that the response
+    from get_failed_login_by_ip route is empty as the IP isn't the same as test IP and thus
+    unable to fetch it.
+    Then creates a failed login record with test IP and asserts that it is returned in the response
+    from get_failed_login_by_ip route.
+    """
     create_failed_login_for_test(notify_db_session, "192.0.2.30", 1)
-    response = admin_request.get("failed_logins.get_failed_login_by_ip")
-    assert len(response) == 0  # Should return 0 as IP for failed login record is different than request IP
 
-    failed_login_2 = FailedLoginCountByIP(ip="127.0.0.1", failed_login_count=1, attempted_at=datetime.now())
-    notify_db_session.add(failed_login_2)
-    notify_db_session.commit()
     response = admin_request.get("failed_logins.get_failed_login_by_ip")
-    assert len(response) == 1
+    assert response == {}
+
+    create_failed_login_for_test(notify_db_session, "127.0.0.1", 1)
+
+    response = admin_request.get("failed_logins.get_failed_login_by_ip")
+    assert "failed_login_count" in response and response["failed_login_count"] == 1
+    assert "ip" in response and response["ip"] == "127.0.0.1"
