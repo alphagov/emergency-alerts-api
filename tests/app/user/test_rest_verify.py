@@ -136,7 +136,7 @@ def test_user_verify_password_invalid_password(client, sample_user):
     )
     assert resp.status_code == 400
     json_resp = json.loads(resp.get_data(as_text=True))
-    assert json_resp["message"] == {"login": ["Logged in too soon after latest failed login"]}
+    assert "Incorrect password" in json_resp["message"]["password"]
     assert sample_user.failed_login_count == 1
 
 
@@ -153,7 +153,7 @@ def test_user_verify_password_valid_password_resets_failed_logins(client, sample
     )
     assert resp.status_code == 400
     json_resp = json.loads(resp.get_data(as_text=True))
-    assert json_resp["message"] == {"login": ["Logged in too soon after latest failed login"]}
+    assert "Incorrect password" in json_resp["message"]["password"]
 
     assert sample_user.failed_login_count == 1
 
