@@ -40,10 +40,7 @@ from app.dao.webauthn_credential_dao import (
     dao_update_webauthn_credential_logged_in_at,
 )
 from app.errors import InvalidRequest, register_errors
-from app.failed_logins_by_ip.rest import (
-    check_failed_login_count_for_ip,
-    create_failed_login_for_ip,
-)
+from app.failed_logins_by_ip.rest import check_failed_login_count_for_ip
 from app.models import EMAIL_TYPE, SMS_TYPE, Permission
 from app.schema_validation import validate
 from app.schemas import (
@@ -170,7 +167,6 @@ def verify_user_password(user_id):
     else:
         increment_failed_login_count(user_to_verify)
         log_auth_activity(user_to_verify, "Failed login")
-        create_failed_login_for_ip()
         check_failed_login_count_for_ip()
         message = "Incorrect password"
         errors = {"password": [message]}
