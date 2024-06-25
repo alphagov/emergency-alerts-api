@@ -38,14 +38,14 @@ def test_get_failed_login_by_ip_returns_none_if_none_found(notify_db_session):
 def test_check_failed_login_count_for_ip_raises_invalid_request_failed_login_too_soon(
     notify_db_session, admin_request, mocker
 ):
+    attempted_at = None
     for i in range(3):
-        failed_login_1 = FailedLoginCountByIP(
-            ip="127.0.0.1", failed_login_count=1 + i, attempted_at=datetime.now() + timedelta(seconds=i * 10)
-        )
+        attempted_at = datetime.now() + timedelta(seconds=i * 10)
+        failed_login_1 = FailedLoginCountByIP(ip="127.0.0.1", failed_login_count=1 + i, attempted_at=attempted_at)
         notify_db_session.add(failed_login_1)
         notify_db_session.commit()
-    response = admin_request.get("failed_logins.get_failed_login_by_ip")
-    assert len(response) == 1
+    response = dao_get_latest_failed_login_by_ip("127.0.0.1")  # Should return only the one record
+    assert response.attempted_at == attempted_at
     with pytest.raises(expected_exception=InvalidRequest) as e:
         check_failed_login_count_for_ip()
     assert e.value.message == {"login": ["Logged in too soon after latest failed login"]}
