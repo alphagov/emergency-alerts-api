@@ -2,7 +2,7 @@
 
 echo "Start script executing for api.."
 
-function run_db_upgrade(){
+function run_db_migrations(){
     cd $DIR_API;
     . $VENV_API/bin/activate
 
@@ -99,7 +99,7 @@ else
     if [[ ! -z $SERVICE_ACTION ]]; then
         if [[ ! -z $MASTER_USERNAME ]] || [[ ! -z $MASTER_PASSWORD ]]; then
             if [[ $SERVICE_ACTION == "run_migrations" ]]; then
-                run_db_upgrade
+                run_db_migrations
             elif [[ $SERVICE_ACTION == "backup_database" ]]; then
                 backup_database
             else
