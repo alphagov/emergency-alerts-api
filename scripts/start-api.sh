@@ -96,22 +96,30 @@ if [[ ! -z $DEBUG ]]; then
 else
     configure_container_role
 
-    if [[ ! -z $SERVICE_ACTION ]]; then
-        if [[ ! -z $MASTER_USERNAME ]] || [[ ! -z $MASTER_PASSWORD ]]; then
-            if [[ $SERVICE_ACTION == "run_migrations" ]]; then
-                run_db_migrations
-            elif [[ $SERVICE_ACTION == "backup_database" ]]; then
-                backup_database
-            else
-                echo "Service action is not valid."
-                exit 1;
-            fi
+    if [[ $SERVICE_ACTION == "run_api" ]]; then
+        run_celery
+        run_api
+
+    elif [[ $SERVICE_ACTION == "run_migrations" ]]; then
+
+        if [[ ! -z $MASTER_USERNAME ]] && [[ ! -z $MASTER_PASSWORD ]]; then
+            run_db_migrations
         else
             echo "Master credentials are required to use the service."
             exit 1;
         fi
+
+    elif [[ $SERVICE_ACTION == "backup_database" ]]; then
+
+        if [[ ! -z $MASTER_USERNAME ]] && [[ ! -z $MASTER_PASSWORD ]]; then
+            backup_database
+        else
+            echo "Master credentials are required to use the service."
+            exit 1;
+        fi
+
     else
-        run_celery
-        run_api
+        echo "Service action is not valid."
+        exit 1;
     fi
 fi
