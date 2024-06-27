@@ -207,10 +207,6 @@ def get_ip_address():
     if current_app.config["HOST"] == "local":
         ip = request.remote_addr
     elif current_app.config["HOST"] == "hosted":
-        with open("requestlogs.txt", "a") as f:
-            req = str(request.__dict__)
-            f.write(f"{req}\n")
-            f.write("--------------\n")
         ip = request.headers.get("X-Forwarded-For")[0]
     elif current_app.config["HOST"] == "test":
         ip = "127.0.0.1"
