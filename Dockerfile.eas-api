@@ -12,6 +12,9 @@ COPY . $DIR_API
 RUN wget https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem -O /etc/ssl/certs/global-bundle.pem && \
     update-ca-certificates
 
+# Install postgresql client to use pg_dump
+RUN apt install -y postgresql-common && YES=yes /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh && apt-get install postgresql-client-16
+
 # Build emergency-alerts-api
 RUN cd $DIR_API && . $VENV_API/bin/activate && python$PYTHON_VERSION -m pip install --upgrade pip wheel setuptools && python$PYTHON_VERSION -m pip install pycurl && make bootstrap
 

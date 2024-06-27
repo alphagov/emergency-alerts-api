@@ -2,7 +2,7 @@
 
 echo "Start script executing for api.."
 
-function run_db_upgrade(){
+function run_db_migrations(){
     cd $DIR_API;
     . $VENV_API/bin/activate
 
@@ -18,6 +18,62 @@ function run_db_upgrade(){
     fi
 
     echo $(flask db current)
+}
+
+function backup_database(){
+    if [[ -z $RDS_HOST  ]]; then
+        echo "RDS_HOST is not provided and required."
+        exit 1;
+    fi
+
+    if [[ -z $RDS_PORT  ]]; then
+        echo "RDS_PORT is not provided and required."
+        exit 1;
+    fi
+
+    if [[ -z $DATABASE  ]]; then
+        echo "DATABASE name is not provided and required."
+        exit 1;
+    fi
+
+    if [[ -z $BACKUP_BUCKET_NAME ]]; then
+        echo "BACKUP_BUCKET_NAME is not provided and required."
+        exit 1;
+    fi
+
+    if [[ -z $ENVIRONMENT ]]; then
+        echo "ENVIRONMENT is not provided and required."
+        exit 1;
+    fi
+
+    SQL_FILENAME=$ENVIRONMENT-$(date -u +"%Y-%m-%d-%H-%M-%S").sql
+    rm -f $SQL_FILENAME
+
+    # To exclude table use: --exclude-table TABLE_NAME
+    PGPASSWORD=$MASTER_PASSWORD pg_dump -h $RDS_HOST -p $RDS_PORT -U $MASTER_USERNAME \
+        --file $SQL_FILENAME \
+        $DATABASE
+
+    if [ $(cat $SQL_FILENAME | grep "PostgreSQL database dump" | wc -l) -lt 2 ]; then
+        echo "There was an issue creating the backup.";
+        exit 1;
+    fi
+
+    ARCHIVE_FILENAME=$SQL_FILENAME.tar.gz
+    tar -czf $ARCHIVE_FILENAME $SQL_FILENAME
+
+    # Upload the backup to S3
+    if aws s3api put-object \
+        --bucket $BACKUP_BUCKET_NAME \
+        --key $ENVIRONMENT/$ARCHIVE_FILENAME \
+        --body $ARCHIVE_FILENAME \
+        --acl private;
+    then
+        echo "Backup created successfully."
+    else
+        echo "Error uploading backup to S3";
+        exit 1;
+    fi
 }
 
 function configure_container_role(){
@@ -39,10 +95,31 @@ if [[ ! -z $DEBUG ]]; then
     while true; do echo 'Debug mode active..'; sleep 30; done
 else
     configure_container_role
-    if [[ ! -z $MASTER_USERNAME ]]; then
-        run_db_upgrade
-    else
+
+    if [[ $SERVICE_ACTION == "run_api" ]]; then
         run_celery
         run_api
+
+    elif [[ $SERVICE_ACTION == "run_migrations" ]]; then
+
+        if [[ ! -z $MASTER_USERNAME ]] && [[ ! -z $MASTER_PASSWORD ]]; then
+            run_db_migrations
+        else
+            echo "Master credentials are required to use the service."
+            exit 1;
+        fi
+
+    elif [[ $SERVICE_ACTION == "backup_database" ]]; then
+
+        if [[ ! -z $MASTER_USERNAME ]] && [[ ! -z $MASTER_PASSWORD ]]; then
+            backup_database
+        else
+            echo "Master credentials are required to use the service."
+            exit 1;
+        fi
+
+    else
+        echo "Service action is not valid."
+        exit 1;
     fi
 fi
