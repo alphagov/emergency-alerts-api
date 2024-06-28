@@ -56,8 +56,9 @@ def check_failed_login_count_for_ip():
     if not ip:
         errors = {"ip": ["Missing data for required field."]}
         raise InvalidRequest(errors, status_code=400)
-
-    if penultimate_failed_login := dao_get_latest_failed_login_by_ip(ip):
+    print(dao_get_latest_failed_login_by_ip(ip).__dict__)
+    if dao_get_latest_failed_login_by_ip(ip) != {}:
+        penultimate_failed_login = dao_get_latest_failed_login_by_ip(ip)
         latest_failed_login = dao_create_failed_login_for_ip(ip)
 
         failed_login_count = penultimate_failed_login.failed_login_count
