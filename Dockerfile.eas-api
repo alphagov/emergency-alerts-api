@@ -12,11 +12,12 @@ COPY . $DIR_API
 RUN wget https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem -O /etc/ssl/certs/global-bundle.pem && \
     update-ca-certificates
 
-# Install postgresql client to use pg_dump
-RUN apt install -y postgresql-common && \
-    /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -i -v 16 \
-    apt-get install postgresql-client-16 \
-    psql --version
+RUN apt-get install lsb-release -y && \
+    sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list' \
+    wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
+
+RUN apt-get update && \
+    apt -y install postgresql-client-16
 
 # Build emergency-alerts-api
 RUN cd $DIR_API && \
