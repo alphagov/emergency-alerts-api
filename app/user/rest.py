@@ -167,10 +167,6 @@ def verify_user_password(user_id):
     else:
         increment_failed_login_count(user_to_verify)
         log_auth_activity(user_to_verify, "Failed login")
-        with open("requestlogs.txt", "a") as f:
-            req = str(request.__dict__)
-            f.write(f"{req}\n")
-            f.write("--------------\n")
         check_failed_login_count_for_ip()
         message = "Incorrect password"
         errors = {"password": [message]}

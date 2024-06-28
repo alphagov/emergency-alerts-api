@@ -58,7 +58,6 @@ def check_failed_login_count_for_ip():
         raise InvalidRequest(errors, status_code=400)
     if dao_get_latest_failed_login_by_ip(ip) is not None:
         penultimate_failed_login = dao_get_latest_failed_login_by_ip(ip)
-        print(penultimate_failed_login.__dict__)
         latest_failed_login = dao_create_failed_login_for_ip(ip)
 
         failed_login_count = penultimate_failed_login.failed_login_count
