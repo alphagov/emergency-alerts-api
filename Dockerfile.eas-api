@@ -12,12 +12,23 @@ COPY . $DIR_API
 RUN wget https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem -O /etc/ssl/certs/global-bundle.pem && \
     update-ca-certificates
 
+<<<<<<< Updated upstream
 # Install postgresql client to use pg_dump
 RUN apt install lsb-release -y && \
     sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list' && \
     curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /etc/apt/trusted.gpg.d/postgresql.gpg && \
     apt install postgresql postgresql-client -y && \
     psql --version
+=======
+RUN apt-get install lsb-release -y && \
+    install -d /usr/share/postgresql-common/pgdg && \
+    curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc && \
+    echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list && \
+    apt update
+
+RUN apt -y install postgresql-client-14 && \
+    echo "POSTGRESQL/PG_DUMP VERSION:" && pg_dump --version
+>>>>>>> Stashed changes
 
 # Build emergency-alerts-api
 RUN cd $DIR_API && \
