@@ -1,3 +1,5 @@
+import ipaddress
+import json
 import os
 from datetime import datetime, timedelta
 
@@ -215,3 +217,10 @@ def get_ip_address():
 
 def calculate_delay_period(failed_login_count):
     return 10 * (2 ** (failed_login_count - 1)) if failed_login_count < 4 else 120
+
+
+def check_ip_should_be_throttled(ip):
+    if cidr_ranges := json.loads(os.environ.get("EXCLUDED_CIDRS", "[]")):
+        return all((ipaddress.ip_address(ip) not in ipaddress.ip_network(range)) for range in cidr_ranges)
+    else:
+        return True

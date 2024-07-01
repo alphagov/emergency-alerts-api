@@ -77,5 +77,5 @@ def test_check_failed_login_count_for_ip_raises_invalid_request_failed_login_too
 
     with pytest.raises(expected_exception=InvalidRequest) as e:
         check_failed_login_count_for_ip()
-    assert e.value.message == {"login": ["Logged in too soon after latest failed login"]}
-    assert e.value.status_code == 400
+    assert e.value.message == "User has sent too many login requests in a given amount of time."
+    assert e.value.status_code == 429

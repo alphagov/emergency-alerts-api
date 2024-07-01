@@ -8,7 +8,11 @@ from app.dao.failed_logins_by_ip_dao import (
     dao_get_latest_failed_login_by_ip,
 )
 from app.errors import InvalidRequest, register_errors
-from app.utils import calculate_delay_period, get_ip_address
+from app.utils import (
+    calculate_delay_period,
+    check_ip_should_be_throttled,
+    get_ip_address,
+)
 
 failed_logins_by_ip_blueprint = Blueprint(
     "failed_logins",
@@ -38,8 +42,9 @@ def get_failed_login_by_ip():
     if not ip:
         errors = {"ip": ["Missing data for required field."]}
         raise InvalidRequest(errors, status_code=400)
-    data = dao_get_latest_failed_login_by_ip(ip)
-    return jsonify(data.serialize() if data else {}), 200
+    if check_ip_should_be_throttled(ip):
+        data = dao_get_latest_failed_login_by_ip(ip)
+        return jsonify(data.serialize() if data else {}), 200
 
 
 @failed_logins_by_ip_blueprint.route("check-failed-login-for-requester-ip")
@@ -56,15 +61,17 @@ def check_failed_login_count_for_ip():
     if not ip:
         errors = {"ip": ["Missing data for required field."]}
         raise InvalidRequest(errors, status_code=400)
-    if dao_get_latest_failed_login_by_ip(ip) is not None:
-        penultimate_failed_login = dao_get_latest_failed_login_by_ip(ip)
-        latest_failed_login = dao_create_failed_login_for_ip(ip)
 
-        failed_login_count = penultimate_failed_login.failed_login_count
+    if check_ip_should_be_throttled(ip):
+        if dao_get_latest_failed_login_by_ip(ip) is not None:
+            last_failed_login = dao_get_latest_failed_login_by_ip(ip)
+            failed_login_count = last_failed_login.failed_login_count
+            current_failed_login = dao_create_failed_login_for_ip(ip)
 
-        delay_period = calculate_delay_period(failed_login_count)
-        if latest_failed_login.attempted_at - penultimate_failed_login.attempted_at < timedelta(seconds=delay_period):
-            errors = {"login": ["Logged in too soon after latest failed login"]}
-            raise InvalidRequest(errors, status_code=400)
-    else:
-        latest_failed_login = dao_create_failed_login_for_ip(ip)
+            delay_period = calculate_delay_period(failed_login_count)
+            if current_failed_login.attempted_at - last_failed_login.attempted_at < timedelta(seconds=delay_period):
+                raise InvalidRequest(
+                    "User has sent too many login requests in a given amount of time.", status_code=429
+                )
+        else:
+            current_failed_login = dao_create_failed_login_for_ip(ip)
