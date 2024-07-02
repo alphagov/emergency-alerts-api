@@ -1,3 +1,4 @@
+import ipaddress
 import os
 from datetime import datetime, timedelta
 
@@ -10,7 +11,7 @@ from emergency_alerts_utils.template import (
 )
 from emergency_alerts_utils.timezones import convert_bst_to_utc
 from emergency_alerts_utils.url_safe_token import generate_token
-from flask import current_app, url_for
+from flask import current_app, request, url_for
 from sqlalchemy import func
 
 DATETIME_FORMAT_NO_TIMEZONE = "%Y-%m-%d %H:%M:%S.%f"
@@ -200,3 +201,24 @@ def log_user(user, message):
         message,
         extra=user,
     )
+
+
+def get_ip_address():
+    ip = None
+    if current_app.config["HOST"] == "local":
+        ip = request.remote_addr
+    elif current_app.config["HOST"] == "hosted":
+        ip = request.headers.get("X-Forwarded-For")
+    elif current_app.config["HOST"] == "test":
+        ip = "127.0.0.1"
+    return ip
+
+
+def calculate_delay_period(failed_login_count):
+    return 10 * (2 ** (failed_login_count - 1)) if failed_login_count < 4 else 120
+
+
+def check_ip_should_be_throttled(ip):
+    if cidr_ranges := os.environ.get("RATE_LIMIT_EXCEPTION_IPS", ""):
+        return all((ipaddress.ip_address(ip) not in ipaddress.ip_network(range)) for range in cidr_ranges.split(","))
+    return True
