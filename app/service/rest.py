@@ -81,7 +81,12 @@ from app.dao.services_dao import (
     delete_service_and_all_associated_db_objects,
     get_services_by_partial_name,
 )
-from app.dao.users_dao import get_user_by_id
+from app.dao.users_dao import (
+    delete_model_user,
+    delete_user_verify_codes,
+    get_user_by_id,
+    get_users_by_partial_email,
+)
 from app.errors import InvalidRequest, register_errors
 from app.letters.utils import letter_print_day
 from app.models import (
@@ -969,3 +974,19 @@ def purge_services_created_by(user_id):
         return jsonify(result="error", message=f"Unable to purge services created by user {user_id}: {e}"), 500
 
     return jsonify({"message": "Successfully purged services"}), 200
+
+
+@service_blueprint.route("/purge-users-created-by-tests", methods=["DELETE"])
+def purge_users_created_by_tests():
+    if is_public_environment():
+        raise InvalidRequest("Endpoint not found", status_code=404)
+
+    try:
+        users = get_users_by_partial_email("emergency-alerts-fake-")
+        for user in users:
+            delete_user_verify_codes(user=user)
+            delete_model_user(user=user)
+    except Exception as e:
+        return jsonify(result="error", message=f"Unable to purge users created by functional tests: {e}"), 500
+
+    return jsonify({"message": "Successfully purged users"}), 200
