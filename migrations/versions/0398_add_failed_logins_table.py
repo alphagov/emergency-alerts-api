@@ -24,6 +24,13 @@ def upgrade():
         sa.PrimaryKeyConstraint("id"),
     )
 
+    op.create_index(
+        op.f("ix_ip"),
+        "failed_logins",
+        ["ip"],
+        unique=False,
+    )
+
 
 def downgrade():
     op.drop_table("failed_logins")
