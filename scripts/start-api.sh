@@ -66,8 +66,7 @@ function backup_database(){
     if aws s3api put-object \
         --bucket $BACKUP_BUCKET_NAME \
         --key $ENVIRONMENT/$ARCHIVE_FILENAME \
-        --body $ARCHIVE_FILENAME \
-        --acl private;
+        --body $ARCHIVE_FILENAME;
     then
         echo "Backup created successfully."
     else
