@@ -12,15 +12,32 @@ COPY . $DIR_API
 RUN wget https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem -O /etc/ssl/certs/global-bundle.pem && \
     update-ca-certificates
 
+RUN apt-get install lsb-release -y && \
+    install -d /usr/share/postgresql-common/pgdg && \
+    curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc && \
+    echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list && \
+    apt update
+
+RUN apt -y install postgresql-client-14 && \
+    echo "POSTGRESQL/PG_DUMP VERSION:" && pg_dump --version
+
 # Build emergency-alerts-api
-RUN cd $DIR_API && . $VENV_API/bin/activate && python$PYTHON_VERSION -m pip install --upgrade pip wheel setuptools && python$PYTHON_VERSION -m pip install pycurl && make bootstrap
+RUN cd $DIR_API && \
+    . $VENV_API/bin/activate && \
+    python$PYTHON_VERSION -m pip install --upgrade pip wheel setuptools && \
+    python$PYTHON_VERSION -m pip install pycurl && \
+    make bootstrap
 
 # Create a blank configuration file
 RUN echo "" > $DIR_API/environment.sh
 
-RUN useradd -ms /bin/bash easuser && chown -R easuser:easuser $DIR_API && chown -R easuser:easuser $DIR_UTILS
+RUN useradd -ms /bin/bash easuser && \
+    chown -R easuser:easuser $DIR_API && \
+    chown -R easuser:easuser $DIR_UTILS
 
 COPY scripts/start-api.sh /
 CMD bash /start-api.sh
 
 EXPOSE 6011 6013
+
+
