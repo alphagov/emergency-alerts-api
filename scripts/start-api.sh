@@ -68,6 +68,8 @@ function backup_database(){
         --key $ENVIRONMENT/$ARCHIVE_FILENAME \
         --body $ARCHIVE_FILENAME;
     then
+        echo "Bucket name: $BACKUP_BUCKET_NAME"
+        echo "Bucket key: $ENVIRONMENT/$ARCHIVE_FILENAME"
         echo "Backup created successfully."
     else
         echo "Error uploading backup to S3";
