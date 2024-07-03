@@ -34,9 +34,7 @@ def test_get_latest_failed_logins_returns_latest_failed_login(notify_db_session)
 
     """
     dao_create_failed_login_for_ip("192.0.2.15")
-    failed_login = create_failed_login(
-        ip="192.0.2.15", failed_login_count=3, attempted_at=datetime.now() + timedelta(seconds=30)
-    )
+    failed_login = create_failed_login(ip="192.0.2.15", attempted_at=datetime.now() + timedelta(seconds=30))
 
     response = dao_get_latest_failed_login_by_ip("192.0.2.15")
     assert response.attempted_at and response.attempted_at == failed_login.attempted_at
@@ -67,12 +65,11 @@ def test_check_failed_login_count_for_ip_raises_invalid_request_failed_login_too
 
     for i in range(3):
         attempted_at = datetime.now() + timedelta(seconds=i * 10)
-        failed_login_1 = FailedLoginCountByIP(ip="127.0.0.1", failed_login_count=1 + i, attempted_at=attempted_at)
+        failed_login_1 = FailedLoginCountByIP(ip="127.0.0.1", attempted_at=attempted_at)
         notify_db_session.add(failed_login_1)
         notify_db_session.commit()
 
     response = dao_get_latest_failed_login_by_ip("127.0.0.1")
-    assert response.failed_login_count and response.failed_login_count == 3
     assert response.ip and response.ip == "127.0.0.1"
 
     with pytest.raises(expected_exception=InvalidRequest) as e:

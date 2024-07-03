@@ -4,6 +4,7 @@ from flask import Blueprint, jsonify
 
 from app.dao.failed_logins_by_ip_dao import (
     dao_create_failed_login_for_ip,
+    dao_get_count_of_all_failed_logins_for_ip,
     dao_get_failed_logins,
     dao_get_latest_failed_login_by_ip,
 )
@@ -64,8 +65,8 @@ def check_failed_login_count_for_ip():
 
     if check_ip_should_be_throttled(ip):
         if dao_get_latest_failed_login_by_ip(ip) is not None:
+            failed_login_count = dao_get_count_of_all_failed_logins_for_ip(ip)
             last_failed_login = dao_get_latest_failed_login_by_ip(ip)
-            failed_login_count = last_failed_login.failed_login_count
             current_failed_login = dao_create_failed_login_for_ip(ip)
 
             delay_period = calculate_delay_period(failed_login_count)

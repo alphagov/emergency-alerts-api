@@ -80,8 +80,8 @@ def test_format_sequential_number():
     assert format_sequential_number(123) == "0000007b"
 
 
-def create_failed_login_for_test(notify_db_session, ip, failed_login_count):
-    failed_login = FailedLoginCountByIP(ip=ip, failed_login_count=failed_login_count, attempted_at=datetime.now())
+def create_failed_login_for_test(notify_db_session, ip):
+    failed_login = FailedLoginCountByIP(ip=ip, attempted_at=datetime.now())
     notify_db_session.add(failed_login)
     notify_db_session.commit()
 

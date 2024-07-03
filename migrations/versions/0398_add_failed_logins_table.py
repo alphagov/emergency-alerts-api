@@ -19,7 +19,6 @@ def upgrade():
         "failed_logins",
         sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("ip", postgresql.INET(), nullable=False),
-        sa.Column("failed_login_count", sa.Integer(), nullable=False),
         sa.Column("attempted_at", sa.DateTime(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )

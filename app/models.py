@@ -2335,7 +2335,6 @@ class FailedLoginCountByIP(db.Model):
 
     id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     ip = db.Column(INET)
-    failed_login_count = db.Column(db.Integer, nullable=False, default=0)
     attempted_at = db.Column(
         db.DateTime, index=False, unique=False, nullable=False, default=datetime.datetime.now(datetime.timezone.utc)
     )
@@ -2344,6 +2343,5 @@ class FailedLoginCountByIP(db.Model):
         return {
             "id": self.id,
             "ip": self.ip,
-            "failed_login_count": self.failed_login_count,
             "attempted_at": self.attempted_at,
         }

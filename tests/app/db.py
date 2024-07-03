@@ -1050,8 +1050,8 @@ def create_feature_toggle(name="feature_toggle", is_enabled=True, display_html=N
     return feature_toggle
 
 
-def create_failed_login(ip, failed_login_count, attempted_at):
-    failed_login = FailedLoginCountByIP(ip=ip, failed_login_count=failed_login_count, attempted_at=attempted_at)
+def create_failed_login(ip, attempted_at):
+    failed_login = FailedLoginCountByIP(ip=ip, attempted_at=attempted_at)
     db.session.add(failed_login)
     db.session.commit()
     return failed_login

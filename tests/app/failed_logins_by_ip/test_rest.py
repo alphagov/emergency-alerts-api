@@ -6,8 +6,8 @@ def test_get_all_failed_logins_returns_all_records(notify_db_session, admin_requ
     Creates 2 failed login records and asserts that the response for get_all_failed_logins
     route has a length of 2 and that the IPs are the same as the ones just created.
     """
-    create_failed_login_for_test(notify_db_session, "192.0.2.15", 1)
-    create_failed_login_for_test(notify_db_session, "192.0.2.30", 2)
+    create_failed_login_for_test(notify_db_session, "192.0.2.15")
+    create_failed_login_for_test(notify_db_session, "192.0.2.30")
     response = admin_request.get(
         "failed_logins.get_all_failed_logins",
     )
@@ -33,13 +33,12 @@ def test_get_failed_login_by_ip_returns_only_failed_logins_for_ip(notify_db_sess
     Then creates a failed login record with test IP and asserts that it is returned in the response
     from get_failed_login_by_ip route.
     """
-    create_failed_login_for_test(notify_db_session, "192.0.2.30", 1)
+    create_failed_login_for_test(notify_db_session, "192.0.2.30")
 
     response = admin_request.get("failed_logins.get_failed_login_by_ip")
     assert response == {}
 
-    create_failed_login_for_test(notify_db_session, "127.0.0.1", 1)
+    create_failed_login_for_test(notify_db_session, "127.0.0.1")
 
     response = admin_request.get("failed_logins.get_failed_login_by_ip")
-    assert "failed_login_count" in response and response["failed_login_count"] == 1
     assert "ip" in response and response["ip"] == "127.0.0.1"
