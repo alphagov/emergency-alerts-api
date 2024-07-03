@@ -33,4 +33,5 @@ def upgrade():
 
 
 def downgrade():
+    op.drop_index(op.f("ix_ip"), table_name="failed_logins")
     op.drop_table("failed_logins")
