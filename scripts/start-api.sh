@@ -2,7 +2,7 @@
 echo "Start script executing for api.."
 
 function put_metric_data(){
-    if [[ $1 != "success" || $1 != "failure" ]]; then
+    if [[ $1 != "success" && $1 != "failure" ]]; then
         echo "Invalid status type (success || failure)."
         exit 1;
     fi
