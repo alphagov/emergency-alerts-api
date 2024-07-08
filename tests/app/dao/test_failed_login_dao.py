@@ -8,7 +8,7 @@ from app.dao.failed_logins_by_ip_dao import (
     dao_get_latest_failed_login_by_ip,
 )
 from app.errors import InvalidRequest
-from app.failed_logins_by_ip.rest import check_failed_login_count_for_ip
+from app.failed_logins_by_ip.rest import check_throttle_for_ip
 from app.models import FailedLoginCountByIP
 from tests.app.db import create_failed_login
 
@@ -47,9 +47,7 @@ def test_get_failed_login_by_ip_returns_none_if_none_found(notify_db_session):
     assert dao_get_failed_logins() == []
 
 
-def test_check_failed_login_count_for_ip_raises_invalid_request_failed_login_too_soon(
-    notify_db_session, admin_request, mocker
-):
+def test_check_throttle_for_ip_raises_invalid_request_failed_login_too_soon(notify_db_session, admin_request, mocker):
     """
     Creates 3 failed login records, each with different values for attempted_at and asserts
     that dao_get_latest_failed_login_by_ip returns the record with the most recent attempted_at
@@ -73,6 +71,7 @@ def test_check_failed_login_count_for_ip_raises_invalid_request_failed_login_too
     assert response.ip and response.ip == "127.0.0.1"
 
     with pytest.raises(expected_exception=InvalidRequest) as e:
-        check_failed_login_count_for_ip()
+        check_throttle_for_ip()
+
     assert e.value.message == "User has sent too many login requests in a given amount of time."
     assert e.value.status_code == 429
