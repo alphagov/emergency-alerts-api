@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from unittest.mock import patch
 
 import pytest
 
@@ -47,6 +48,7 @@ def test_get_failed_login_by_ip_returns_none_if_none_found(notify_db_session):
     assert dao_get_failed_logins() == []
 
 
+@patch("app.utils.get_ip_address", return_value="127.0.0.1")
 def test_check_throttle_for_ip_raises_invalid_request_failed_login_too_soon(notify_db_session, admin_request, mocker):
     """
     Creates 3 failed login records, each with different values for attempted_at and asserts
