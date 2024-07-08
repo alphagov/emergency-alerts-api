@@ -1,6 +1,21 @@
 #! /bin/sh
-
 echo "Start script executing for api.."
+
+function put_metric_data(){
+    if [[ $1 != "success" && $1 != "failure" ]]; then
+        echo "Invalid status type (success || failure)."
+        exit 1;
+    fi
+
+    aws cloudwatch put-metric-data \
+        --namespace Backups \
+        --dimensions Repository=emergency-alerts-api \
+        --metric-name $SERVICE_ACTION \
+        --dimensions Name=JobStatus,Value=$1 \
+        --value 1 \
+        --timestamp $(date -u +"%Y-%m-%dT%H:%M:%S.000Z") \
+        --region eu-west-2
+}
 
 function run_db_migrations(){
     cd $DIR_API;
@@ -23,26 +38,31 @@ function run_db_migrations(){
 function backup_database(){
     if [[ -z $RDS_HOST  ]]; then
         echo "RDS_HOST is not provided and required."
+        put_metric_data "failure"
         exit 1;
     fi
 
     if [[ -z $RDS_PORT  ]]; then
         echo "RDS_PORT is not provided and required."
+        put_metric_data "failure"
         exit 1;
     fi
 
     if [[ -z $DATABASE  ]]; then
         echo "DATABASE name is not provided and required."
+        put_metric_data "failure"
         exit 1;
     fi
 
     if [[ -z $BACKUP_BUCKET_NAME ]]; then
         echo "BACKUP_BUCKET_NAME is not provided and required."
+        put_metric_data "failure"
         exit 1;
     fi
 
     if [[ -z $ENVIRONMENT ]]; then
         echo "ENVIRONMENT is not provided and required."
+        put_metric_data "failure"
         exit 1;
     fi
 
@@ -56,6 +76,7 @@ function backup_database(){
 
     if [ $(cat $SQL_FILENAME | grep "PostgreSQL database dump" | wc -l) -lt 2 ]; then
         echo "There was an issue creating the backup.";
+        put_metric_data "failure"
         exit 1;
     fi
 
@@ -66,12 +87,16 @@ function backup_database(){
     if aws s3api put-object \
         --bucket $BACKUP_BUCKET_NAME \
         --key $ENVIRONMENT/$ARCHIVE_FILENAME \
-        --body $ARCHIVE_FILENAME \
-        --acl private;
+        --body $ARCHIVE_FILENAME;
     then
+        echo "Bucket name: $BACKUP_BUCKET_NAME"
+        echo "Bucket key: $ENVIRONMENT/$ARCHIVE_FILENAME"
         echo "Backup created successfully."
+
+        put_metric_data "success"
     else
         echo "Error uploading backup to S3";
+        put_metric_data "failure"
         exit 1;
     fi
 }
@@ -115,6 +140,7 @@ else
             backup_database
         else
             echo "Master credentials are required to use the service."
+            put_metric_data "failure"
             exit 1;
         fi
 
