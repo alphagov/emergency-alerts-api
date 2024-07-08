@@ -204,12 +204,10 @@ def log_user(user, message):
 
 
 def get_ip_address():
-    if not request.headers.get("X-Forwarded-For"):
-        return request.remote_addr
-    if len(request.headers.get("X-Forwarded-For")) > 1:
-        return request.headers.get("X-Forwarded-For")[0]
+    if x_forwarded_for_ips := request.headers.get("X-Forwarded-For"):
+        return [ip.strip() for ip in x_forwarded_for_ips.split(",")][0]
     else:
-        return request.headers.get("X-Forwarded-For")
+        return request.remote_addr
 
 
 def calculate_delay_period(failed_login_count):
