@@ -222,3 +222,7 @@ def check_ip_should_be_throttled(ip):
     if cidr_ranges := os.environ.get("RATE_LIMIT_EXCEPTION_IPS", ""):
         return all((ipaddress.ip_address(ip) not in ipaddress.ip_network(range)) for range in cidr_ranges.split(","))
     return True
+
+
+def check_request_within_throttle_period(login_attempt, delay_period):
+    return datetime.now() - login_attempt.attempted_at < timedelta(seconds=delay_period)
