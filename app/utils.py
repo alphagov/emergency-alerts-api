@@ -215,7 +215,8 @@ def get_ip_address():
 
 
 def calculate_delay_period(failed_login_count):
-    return 10 * (2 ** (failed_login_count - 1)) if failed_login_count < 4 else 120
+    delay = 10 * (2 ** (failed_login_count - 1))
+    return min(delay, 20 * 60)
 
 
 def check_ip_should_be_throttled(ip):
