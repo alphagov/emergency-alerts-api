@@ -29,6 +29,12 @@ def upgrade():
         ["ip"],
         unique=False,
     )
+    op.create_index(
+        op.f("ix_attempted_at"),
+        "failed_logins",
+        ["attempted_at"],
+        unique=False,
+    )
 
 
 def downgrade():
