@@ -60,6 +60,10 @@ def test_check_throttle_for_ip_raises_invalid_request_failed_login_too_soon(noti
 
     """
     attempted_at = None
+    mock_get_ip = mocker.patch("app.failed_logins_by_ip.rest.get_ip_address", return_value="127.0.0.1")
+    mock_check_request_within_throttle_period = mocker.patch(
+        "app.failed_logins_by_ip.rest.check_request_within_throttle_period"
+    )
 
     for i in range(3):
         attempted_at = datetime.now() + timedelta(seconds=i * 10)
@@ -68,10 +72,11 @@ def test_check_throttle_for_ip_raises_invalid_request_failed_login_too_soon(noti
         notify_db_session.commit()
 
     response = dao_get_latest_failed_login_by_ip("127.0.0.1")
-    assert response.ip and response.ip == "127.0.0.1"
-
+    assert response.ip and response.ip == "127.0.0.1" and response.attempted_at == attempted_at
     with pytest.raises(expected_exception=InvalidRequest) as e:
         check_throttle_for_ip()
 
+    mock_get_ip.assert_called_once()
+    mock_check_request_within_throttle_period.assert_called_once()
     assert e.value.message == "User has sent too many login requests in a given amount of time."
     assert e.value.status_code == 429

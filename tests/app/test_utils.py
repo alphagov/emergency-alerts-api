@@ -87,8 +87,9 @@ def create_failed_login_for_test(notify_db_session, ip):
 
 
 @pytest.mark.parametrize(
-    "ip",
-    ["127.0.0.1", "192.0.2.15", "192.0.2.30"],
+    "ip, is_throttled",
+    [("127.0.0.1", True), ("192.0.2.15", False), ("192.0.2.30", False)],
 )
-def test_check_ip_should_be_throttled(ip):
-    assert check_ip_should_be_throttled(ip) is True
+def test_check_ip_should_be_throttled(ip, is_throttled, mocker):
+    mocker.patch.dict("os.environ", {"RATE_LIMIT_EXCEPTION_IPS": "192.0.2.15/32,192.0.2.30/32"})
+    assert check_ip_should_be_throttled(ip) is is_throttled

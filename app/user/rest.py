@@ -169,9 +169,9 @@ def verify_user_password(user_id):
         reset_failed_login_count(user_to_verify)
         return jsonify({}), 204
     else:
-        add_failed_login_for_ip()
         increment_failed_login_count(user_to_verify)
         log_auth_activity(user_to_verify, "Failed login")
+        add_failed_login_for_ip()
         message = "Incorrect password"
         errors = {"password": [message]}
         raise InvalidRequest(errors, status_code=400)
