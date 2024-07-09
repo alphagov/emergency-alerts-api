@@ -9,7 +9,6 @@ from app.dao.failed_logins_by_ip_dao import (
 from app.errors import InvalidRequest, register_errors
 from app.utils import (
     calculate_delay_period,
-    check_ip_should_be_throttled,
     check_request_within_throttle_period,
     get_ip_address,
 )
@@ -42,9 +41,8 @@ def get_failed_login_by_ip():
     if not ip:
         errors = {"ip": ["Missing data for required field."]}
         raise InvalidRequest(errors, status_code=400)
-    if check_ip_should_be_throttled(ip):
-        data = dao_get_latest_failed_login_by_ip(ip)
-        return jsonify(data.serialize() if data else {}), 200
+    data = dao_get_latest_failed_login_by_ip(ip)
+    return jsonify(data.serialize() if data else {}), 200
 
 
 @failed_logins_by_ip_blueprint.route("check-failed-login-for-requester-ip")
@@ -64,9 +62,6 @@ def check_throttle_for_ip():
     if not ip:
         errors = {"ip": ["Missing data for required field."]}
         raise InvalidRequest(errors, status_code=400)
-
-    if not check_ip_should_be_throttled(ip):
-        return
 
     failed_login_count = dao_get_count_of_all_failed_logins_for_ip(ip)
     if not failed_login_count:

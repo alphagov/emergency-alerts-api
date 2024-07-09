@@ -5,7 +5,6 @@ from freezegun import freeze_time
 
 from app.models import FailedLoginCountByIP
 from app.utils import (
-    check_ip_should_be_throttled,
     format_sequential_number,
     get_interval_seconds_or_none,
     get_london_midnight_in_utc,
@@ -84,12 +83,3 @@ def create_failed_login_for_test(notify_db_session, ip):
     failed_login = FailedLoginCountByIP(ip=ip, attempted_at=datetime.now())
     notify_db_session.add(failed_login)
     notify_db_session.commit()
-
-
-@pytest.mark.parametrize(
-    "ip, is_throttled",
-    [("127.0.0.1", True), ("192.0.2.15", False), ("192.0.2.30", False)],
-)
-def test_check_ip_should_be_throttled(ip, is_throttled, mocker):
-    mocker.patch.dict("os.environ", {"RATE_LIMIT_EXCEPTION_IPS": "192.0.2.15/32,192.0.2.30/32"})
-    assert check_ip_should_be_throttled(ip) is is_throttled
