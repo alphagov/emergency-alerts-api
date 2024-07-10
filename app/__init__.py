@@ -153,7 +153,7 @@ def register_blueprint(application):
     from app.billing.rest import billing_blueprint
     from app.broadcast_message.rest import broadcast_message_blueprint
     from app.events.rest import events as events_blueprint
-    from app.failed_logins.rest import failed_logins_by_ip_blueprint
+    from app.failed_logins.rest import failed_logins_blueprint
     from app.feature_toggle.rest import feature_toggle_blueprint
     from app.govuk_alerts.rest import govuk_alerts_blueprint
     from app.inbound_sms.rest import inbound_sms as inbound_sms_blueprint
@@ -241,8 +241,8 @@ def register_blueprint(application):
     govuk_alerts_blueprint.before_request(requires_govuk_alerts_auth)
     application.register_blueprint(govuk_alerts_blueprint)
 
-    failed_logins_by_ip_blueprint.before_request(requires_admin_auth)
-    application.register_blueprint(failed_logins_by_ip_blueprint)
+    failed_logins_blueprint.before_request(requires_admin_auth)
+    application.register_blueprint(failed_logins_blueprint)
 
 
 def register_v2_blueprints(application):

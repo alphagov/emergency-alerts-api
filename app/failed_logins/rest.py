@@ -13,16 +13,16 @@ from app.utils import (
     get_ip_address,
 )
 
-failed_logins_by_ip_blueprint = Blueprint(
+failed_logins_blueprint = Blueprint(
     "failed_logins",
     __name__,
     url_prefix="/failed-logins",
 )
 
-register_errors(failed_logins_by_ip_blueprint)
+register_errors(failed_logins_blueprint)
 
 
-@failed_logins_by_ip_blueprint.route("fetch-all")
+@failed_logins_blueprint.route("fetch-all")
 def get_all_failed_logins():
     """
     Fetches all failed login records in the table.
@@ -32,7 +32,7 @@ def get_all_failed_logins():
     return jsonify(data or {}), 200
 
 
-@failed_logins_by_ip_blueprint.route("fetch-for-requester")
+@failed_logins_blueprint.route("fetch-for-requester")
 def get_failed_login_for_requester():
     """
     Fetches most recent failed login attempt for specific IP address from the table.
@@ -45,7 +45,7 @@ def get_failed_login_for_requester():
     return jsonify(data.serialize() if data else {}), 200
 
 
-@failed_logins_by_ip_blueprint.route("check-failed-login-for-requester")
+@failed_logins_blueprint.route("check-failed-login-for-requester")
 def check_throttle_for_requester():
     """
     Firstly checks if IP address should be throttled, then retrieves count of all failed login
