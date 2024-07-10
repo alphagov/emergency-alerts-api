@@ -80,7 +80,7 @@ function backup_database(){
         exit 1;
     fi
 
-    ARCHIVE_FILENAME=$SQL_FILENAME.tar.gz
+    ARCHIVE_FILENAME=$SQL_FILENAME.tar
     tar -czf $ARCHIVE_FILENAME $SQL_FILENAME
 
     # Upload the backup to S3
