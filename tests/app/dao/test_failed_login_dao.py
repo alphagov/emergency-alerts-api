@@ -78,5 +78,5 @@ def test_check_throttle_for_ip_raises_invalid_request_failed_login_too_soon(noti
 
     mock_get_ip.assert_called_once()
     mock_check_request_within_throttle_period.assert_called_once()
-    assert e.value.message == "User has sent too many login requests in a given amount of time."
+    assert e.value.message == {"Failed to login": ["User has sent too many login requests in a given amount of time."]}
     assert e.value.status_code == 429

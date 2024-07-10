@@ -170,7 +170,9 @@ def test_user_verify_password_valid_password_resets_failed_logins(client, sample
         )
         assert resp.status_code == 429
         json_resp = json.loads(resp.get_data(as_text=True))
-        assert json_resp["message"] == "User has sent too many login requests in a given amount of time."
+        assert json_resp["message"]["Failed to login"] == [
+            "User has sent too many login requests in a given amount of time."
+        ]
 
         assert sample_user.failed_login_count == 1
         # Delay time so 3rd attempt not throttled
