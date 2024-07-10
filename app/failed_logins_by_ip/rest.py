@@ -32,8 +32,8 @@ def get_all_failed_logins():
     return jsonify(data or {}), 200
 
 
-@failed_logins_by_ip_blueprint.route("fetch-for-requester-ip")
-def get_failed_login_by_ip():
+@failed_logins_by_ip_blueprint.route("fetch-for-requester")
+def get_failed_login_for_requester():
     """
     Fetches most recent failed login attempt for specific IP address from the table.
     """
@@ -45,8 +45,8 @@ def get_failed_login_by_ip():
     return jsonify(data.serialize() if data else {}), 200
 
 
-@failed_logins_by_ip_blueprint.route("check-failed-login-for-requester-ip")
-def check_throttle_for_ip():
+@failed_logins_by_ip_blueprint.route("check-failed-login-for-requester")
+def check_throttle_for_requester():
     """
     Firstly checks if IP address should be throttled, then retrieves count of all failed login
     attempts for set period of time.
@@ -75,7 +75,7 @@ def check_throttle_for_ip():
         raise InvalidRequest(errors, status_code=429)
 
 
-def add_failed_login_for_ip():
+def add_failed_login_for_requester():
     ip = get_ip_address()
     if not ip:
         errors = {"ip": ["Missing data for required field."]}

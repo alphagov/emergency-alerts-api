@@ -41,8 +41,8 @@ from app.dao.webauthn_credential_dao import (
 )
 from app.errors import InvalidRequest, register_errors
 from app.failed_logins_by_ip.rest import (
-    add_failed_login_for_ip,
-    check_throttle_for_ip,
+    add_failed_login_for_requester,
+    check_throttle_for_requester,
 )
 from app.models import EMAIL_TYPE, SMS_TYPE, Permission
 from app.schema_validation import validate
@@ -157,7 +157,7 @@ def user_reset_failed_login_count(user_id):
 
 @user_blueprint.route("/<uuid:user_id>/verify/password", methods=["POST"])
 def verify_user_password(user_id):
-    check_throttle_for_ip()
+    check_throttle_for_requester()
     user_to_verify = get_user_by_id(user_id=user_id)
     try:
         txt_pwd = request.get_json()["password"]
@@ -171,7 +171,7 @@ def verify_user_password(user_id):
     else:
         increment_failed_login_count(user_to_verify)
         log_auth_activity(user_to_verify, "Failed login")
-        add_failed_login_for_ip()
+        add_failed_login_for_requester()
         message = "Incorrect password"
         errors = {"password": [message]}
         raise InvalidRequest(errors, status_code=400)
