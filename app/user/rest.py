@@ -157,8 +157,8 @@ def user_reset_failed_login_count(user_id):
 
 @user_blueprint.route("/<uuid:user_id>/verify/password", methods=["POST"])
 def verify_user_password(user_id):
-    check_throttle_for_requester()
     user_to_verify = get_user_by_id(user_id=user_id)
+    check_throttle_for_requester(user_to_verify)
     try:
         txt_pwd = request.get_json()["password"]
     except KeyError:

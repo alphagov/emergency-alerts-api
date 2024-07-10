@@ -10,7 +10,7 @@ from app.dao.failed_logins_dao import (
 from app.errors import InvalidRequest
 from app.failed_logins.rest import check_throttle_for_requester
 from app.models import FailedLogin
-from tests.app.conftest import test_ip_1
+from tests.app.conftest import sample_user, test_ip_1
 from tests.app.db import create_failed_login
 
 
@@ -78,7 +78,7 @@ def test_check_throttle_for_requester_raises_invalid_request_failed_login_too_so
     response = dao_get_latest_failed_login_by_ip(test_ip_1)
     assert response.ip and response.ip == test_ip_1 and response.attempted_at == attempted_at
     with pytest.raises(expected_exception=InvalidRequest) as e:
-        check_throttle_for_requester()
+        check_throttle_for_requester(sample_user)
 
     mock_get_ip.assert_called_once()
     mock_check_request_within_throttle_period.assert_called_once()
