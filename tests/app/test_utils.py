@@ -3,7 +3,7 @@ from datetime import date, datetime, timedelta
 import pytest
 from freezegun import freeze_time
 
-from app.models import FailedLoginCountByIP
+from app.models import FailedLogin
 from app.utils import (
     format_sequential_number,
     get_interval_seconds_or_none,
@@ -80,6 +80,6 @@ def test_format_sequential_number():
 
 
 def create_failed_login_for_test(notify_db_session, ip):
-    failed_login = FailedLoginCountByIP(ip=ip, attempted_at=datetime.now())
+    failed_login = FailedLogin(ip=ip, attempted_at=datetime.now())
     notify_db_session.add(failed_login)
     notify_db_session.commit()

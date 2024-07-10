@@ -2326,9 +2326,9 @@ class FeatureToggle(db.Model):
         return {"name": self.name, "is_enabled": self.is_enabled, "display_html": self.display_html}
 
 
-class FailedLoginCountByIP(db.Model):
+class FailedLogin(db.Model):
     """
-    This table is used to store IP addresses with the count of failed logins.
+    This table is used to store failed logins.
     """
 
     __tablename__ = "failed_logins"
