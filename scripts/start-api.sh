@@ -80,8 +80,8 @@ function backup_database(){
         exit 1;
     fi
 
-    ARCHIVE_FILENAME=$SQL_FILENAME.tar.gz
-    tar -czf $ARCHIVE_FILENAME $SQL_FILENAME
+    ARCHIVE_FILENAME=$SQL_FILENAME.tar
+    tar -cf $ARCHIVE_FILENAME $SQL_FILENAME
 
     # Upload the backup to S3
     if aws s3api put-object \
