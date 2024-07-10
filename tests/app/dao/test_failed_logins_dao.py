@@ -2,13 +2,13 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from app.dao.failed_logins_by_ip_dao import (
+from app.dao.failed_logins_dao import (
     dao_create_failed_login_for_ip,
     dao_get_failed_logins,
     dao_get_latest_failed_login_by_ip,
 )
 from app.errors import InvalidRequest
-from app.failed_logins_by_ip.rest import check_throttle_for_requester
+from app.failed_logins.rest import check_throttle_for_requester
 from app.models import FailedLogin
 from tests.app.conftest import test_ip_1
 from tests.app.db import create_failed_login
@@ -64,9 +64,9 @@ def test_check_throttle_for_requester_raises_invalid_request_failed_login_too_so
     """
     attempted_at = None
 
-    mock_get_ip = mocker.patch("app.failed_logins_by_ip.rest.get_ip_address", return_value=test_ip_1)
+    mock_get_ip = mocker.patch("app.failed_logins.rest.get_ip_address", return_value=test_ip_1)
     mock_check_request_within_throttle_period = mocker.patch(
-        "app.failed_logins_by_ip.rest.check_request_within_throttle_period"
+        "app.failed_logins.rest.check_request_within_throttle_period"
     )
 
     for i in range(3):

@@ -40,7 +40,7 @@ from app.dao.webauthn_credential_dao import (
     dao_update_webauthn_credential_logged_in_at,
 )
 from app.errors import InvalidRequest, register_errors
-from app.failed_logins_by_ip.rest import (
+from app.failed_logins.rest import (
     add_failed_login_for_requester,
     check_throttle_for_requester,
 )

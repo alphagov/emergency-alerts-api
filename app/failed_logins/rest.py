@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify
 
-from app.dao.failed_logins_by_ip_dao import (
+from app.dao.failed_logins_dao import (
     dao_create_failed_login_for_ip,
     dao_get_count_of_all_failed_logins_for_ip,
     dao_get_failed_logins,
