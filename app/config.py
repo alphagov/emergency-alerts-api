@@ -299,6 +299,8 @@ class Config(object):
     FUNCTIONAL_TESTS_BROADCAST_SERVICE_NAME = "Functional Tests Broadcast Service"
     FUNCTIONAL_TESTS_BROADCAST_SERVICE_ID = "8e1d56fa-12a8-4d00-bed2-db47180bed0a"
 
+    MAX_THROTTLE_PERIOD = 2 * 60
+
 
 class Hosted(Config):
     HOST = "hosted"
@@ -338,6 +340,8 @@ class Hosted(Config):
     CBC_PROXY_ENABLED = True
 
     DEBUG = False
+
+    MAX_THROTTLE_PERIOD = 2 * 60
 
 
 class Test(Config):
@@ -397,6 +401,8 @@ class Test(Config):
 
     CBC_PROXY_ENABLED = True
     DVLA_EMAIL_ADDRESSES = ["success@simulator.amazonses.com", "success+2@simulator.amazonses.com"]
+
+    MAX_THROTTLE_PERIOD = 2 * 60
 
 
 configs = {

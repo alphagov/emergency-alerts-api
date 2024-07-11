@@ -211,7 +211,7 @@ def get_ip_address():
 
 def calculate_delay_period(failed_login_count):
     delay = 10 * (2 ** (failed_login_count - 1))
-    return min(delay, 20 * 60)
+    return min(delay, current_app.config["MAX_THROTTLE_PERIOD"])
 
 
 def check_request_within_throttle_period(login_attempt, delay_period):
