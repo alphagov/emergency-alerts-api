@@ -16,7 +16,7 @@ function put_metric_data(){
         --namespace $1 \
         --dimensions Repository=emergency-alerts-api \
         --metric-name $SERVICE_ACTION \
-        --dimensions Name=JobStatus,Value=$2 \
+        --dimensions Name=status,Value=$2 \
         --value 1 \
         --timestamp $(date -u +"%Y-%m-%dT%H:%M:%S.000Z") \
         --region eu-west-2
