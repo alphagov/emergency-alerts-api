@@ -2,8 +2,8 @@
 echo "Start script executing for api.."
 
 function put_metric_data(){
-    if [[ $1 != "Backup" && $1 != "Migrations" ]]; then
-        echo "A namespace is required (Backup || Migrations)."
+    if [[ $1 != "Backups" && $1 != "Migrations" ]]; then
+        echo "A namespace is required (Backups || Migrations)."
         exit 1;
     fi
 
@@ -46,31 +46,31 @@ function run_db_migrations(){
 function backup_database(){
     if [[ -z $RDS_HOST  ]]; then
         echo "RDS_HOST is not provided and required."
-        put_metric_data "Backup" "failure"
+        put_metric_data "Backups" "failure"
         exit 1;
     fi
 
     if [[ -z $RDS_PORT  ]]; then
         echo "RDS_PORT is not provided and required."
-        put_metric_data "Backup" "failure"
+        put_metric_data "Backups" "failure"
         exit 1;
     fi
 
     if [[ -z $DATABASE  ]]; then
         echo "DATABASE name is not provided and required."
-        put_metric_data "Backup" "failure"
+        put_metric_data "Backups" "failure"
         exit 1;
     fi
 
     if [[ -z $BACKUP_BUCKET_NAME ]]; then
         echo "BACKUP_BUCKET_NAME is not provided and required."
-        put_metric_data "Backup" "failure"
+        put_metric_data "Backups" "failure"
         exit 1;
     fi
 
     if [[ -z $ENVIRONMENT ]]; then
         echo "ENVIRONMENT is not provided and required."
-        put_metric_data "Backup" "failure"
+        put_metric_data "Backups" "failure"
         exit 1;
     fi
 
@@ -84,7 +84,7 @@ function backup_database(){
 
     if [ $(cat $SQL_FILENAME | grep "PostgreSQL database dump" | wc -l) -lt 2 ]; then
         echo "There was an issue creating the backup.";
-        put_metric_data "Backup" "failure"
+        put_metric_data "Backups" "failure"
         exit 1;
     fi
 
@@ -101,10 +101,10 @@ function backup_database(){
         echo "Bucket key: $ENVIRONMENT/$ARCHIVE_FILENAME"
         echo "Backup created successfully."
 
-        put_metric_data "Backup" "success"
+        put_metric_data "Backups" "success"
     else
         echo "Error uploading backup to S3";
-        put_metric_data "Backup" "failure"
+        put_metric_data "Backups" "failure"
         exit 1;
     fi
 }
@@ -148,7 +148,7 @@ else
             backup_database
         else
             echo "Master credentials are required to use the service."
-            put_metric_data "Backup" "failure"
+            put_metric_data "Backups" "failure"
             exit 1;
         fi
 
