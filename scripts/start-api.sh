@@ -2,16 +2,21 @@
 echo "Start script executing for api.."
 
 function put_metric_data(){
-    if [[ $1 != "success" && $1 != "failure" ]]; then
+    if [[ $1 != "Backups" && $1 != "Migrations" ]]; then
+        echo "A namespace is required (Backups || Migrations)."
+        exit 1;
+    fi
+
+    if [[ $2 != "success" && $2 != "failure" ]]; then
         echo "Invalid status type (success || failure)."
         exit 1;
     fi
 
     aws cloudwatch put-metric-data \
-        --namespace Backups \
+        --namespace $1 \
         --dimensions Repository=emergency-alerts-api \
         --metric-name $SERVICE_ACTION \
-        --dimensions Name=JobStatus,Value=$1 \
+        --dimensions Name=status,Value=$2 \
         --value 1 \
         --timestamp $(date -u +"%Y-%m-%dT%H:%M:%S.000Z") \
         --region eu-west-2
@@ -27,42 +32,45 @@ function run_db_migrations(){
     # Checking if the database upgrade has been previously been completed to avoid running multiple times.
     if [[ $head != $current ]]; then
         echo "Run DB migration"
-        flask db upgrade
+        if flask db upgrade; then
+            put_metric_data "Migrations" "success"
+        else
+            put_metric_data "Migrations" "failure"
+        fis
     else
         echo "DB is up to date"
+        put_metric_data "Migrations" "success"
     fi
-
-    echo $(flask db current)
 }
 
 function backup_database(){
     if [[ -z $RDS_HOST  ]]; then
         echo "RDS_HOST is not provided and required."
-        put_metric_data "failure"
+        put_metric_data "Backups" "failure"
         exit 1;
     fi
 
     if [[ -z $RDS_PORT  ]]; then
         echo "RDS_PORT is not provided and required."
-        put_metric_data "failure"
+        put_metric_data "Backups" "failure"
         exit 1;
     fi
 
     if [[ -z $DATABASE  ]]; then
         echo "DATABASE name is not provided and required."
-        put_metric_data "failure"
+        put_metric_data "Backups" "failure"
         exit 1;
     fi
 
     if [[ -z $BACKUP_BUCKET_NAME ]]; then
         echo "BACKUP_BUCKET_NAME is not provided and required."
-        put_metric_data "failure"
+        put_metric_data "Backups" "failure"
         exit 1;
     fi
 
     if [[ -z $ENVIRONMENT ]]; then
         echo "ENVIRONMENT is not provided and required."
-        put_metric_data "failure"
+        put_metric_data "Backups" "failure"
         exit 1;
     fi
 
@@ -76,7 +84,7 @@ function backup_database(){
 
     if [ $(cat $SQL_FILENAME | grep "PostgreSQL database dump" | wc -l) -lt 2 ]; then
         echo "There was an issue creating the backup.";
-        put_metric_data "failure"
+        put_metric_data "Backups" "failure"
         exit 1;
     fi
 
@@ -93,10 +101,10 @@ function backup_database(){
         echo "Bucket key: $ENVIRONMENT/$ARCHIVE_FILENAME"
         echo "Backup created successfully."
 
-        put_metric_data "success"
+        put_metric_data "Backups" "success"
     else
         echo "Error uploading backup to S3";
-        put_metric_data "failure"
+        put_metric_data "Backups" "failure"
         exit 1;
     fi
 }
@@ -140,7 +148,7 @@ else
             backup_database
         else
             echo "Master credentials are required to use the service."
-            put_metric_data "failure"
+            put_metric_data "Backups" "failure"
             exit 1;
         fi
 
