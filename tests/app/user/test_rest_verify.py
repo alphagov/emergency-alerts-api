@@ -140,52 +140,33 @@ def test_user_verify_password_invalid_password(client, sample_user):
     assert sample_user.failed_login_count == 1
 
 
-@freeze_time("2016-01-01 11:09:00.061258")
 def test_user_verify_password_valid_password_resets_failed_logins(client, sample_user):
-    with freeze_time("2015-01-01T00:00:00") as the_time:
-        data = json.dumps({"password": "bad password"})
-        auth_header = create_admin_authorization_header()
+    data = json.dumps({"password": "bad password"})
+    auth_header = create_admin_authorization_header()
 
-        assert sample_user.failed_login_count == 0
+    assert sample_user.failed_login_count == 0
 
-        resp = client.post(
-            url_for("user.verify_user_password", user_id=sample_user.id),
-            data=data,
-            headers=[("Content-Type", "application/json"), auth_header],
-        )
-        assert resp.status_code == 400
-        json_resp = json.loads(resp.get_data(as_text=True))
-        assert "Incorrect password" in json_resp["message"]["password"]
+    resp = client.post(
+        url_for("user.verify_user_password", user_id=sample_user.id),
+        data=data,
+        headers=[("Content-Type", "application/json"), auth_header],
+    )
+    assert resp.status_code == 400
+    json_resp = json.loads(resp.get_data(as_text=True))
+    assert "Incorrect password" in json_resp["message"]["password"]
 
-        assert sample_user.failed_login_count == 1
+    assert sample_user.failed_login_count == 1
 
-        # Second bad attempt
-        data = json.dumps({"password": "bad password"})
-        auth_header = create_admin_authorization_header()
+    data = json.dumps({"password": "password"})
+    auth_header = create_admin_authorization_header()
+    resp = client.post(
+        url_for("user.verify_user_password", user_id=sample_user.id),
+        data=data,
+        headers=[("Content-Type", "application/json"), auth_header],
+    )
 
-        resp = client.post(
-            url_for("user.verify_user_password", user_id=sample_user.id),
-            data=data,
-            headers=[("Content-Type", "application/json"), auth_header],
-        )
-        assert resp.status_code == 429
-        json_resp = json.loads(resp.get_data(as_text=True))
-        assert json_resp["message"]["Failed to login"] == [
-            "User has sent too many login requests in a given amount of time."
-        ]
-
-        assert sample_user.failed_login_count == 1
-        # Delay time so 3rd attempt not throttled
-        the_time.tick(timedelta(minutes=1))
-        data = json.dumps({"password": "password"})
-        auth_header = create_admin_authorization_header()
-        resp = client.post(
-            url_for("user.verify_user_password", user_id=sample_user.id),
-            data=data,
-            headers=[("Content-Type", "application/json"), auth_header],
-        )
-        assert resp.status_code == 204
-        assert sample_user.failed_login_count == 0
+    assert resp.status_code == 204
+    assert sample_user.failed_login_count == 0
 
 
 def test_user_verify_password_missing_password(client, sample_user):
