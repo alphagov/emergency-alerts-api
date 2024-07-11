@@ -8,7 +8,7 @@ function put_metric_data(){
     fi
 
     aws cloudwatch put-metric-data \
-        --namespace Backups \
+        --namespace Administration \
         --dimensions Repository=emergency-alerts-api \
         --metric-name $SERVICE_ACTION \
         --dimensions Name=JobStatus,Value=$1 \
@@ -27,12 +27,15 @@ function run_db_migrations(){
     # Checking if the database upgrade has been previously been completed to avoid running multiple times.
     if [[ $head != $current ]]; then
         echo "Run DB migration"
-        flask db upgrade
+        if flask db upgrade; then
+            put_metric_data "success"
+        else
+            put_metric_data "failure"
+        fis
     else
         echo "DB is up to date"
+        put_metric_data "success"
     fi
-
-    echo $(flask db current)
 }
 
 function backup_database(){
