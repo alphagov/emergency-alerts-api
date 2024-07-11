@@ -202,6 +202,29 @@ def log_user(user, message):
     )
 
 
+def log_throttled_login(user, ip, message):
+    from app.models import User
+
+    if isinstance(user, User):
+        data = {
+            "user_id": user.id,
+            "user_name": user.name,
+            "email_address": user.email_address,
+            "auth_type": user.auth_type,
+            "platform_admin": user.platform_admin,
+            "failed_login_count": user.failed_login_count,
+            "current_session_id": user.current_session_id,
+            "ip": ip,
+            "attempted_at": datetime.now(),
+        }
+    else:
+        data = {"email_address": user, "ip": ip, "attempted_at": datetime.now()}
+    current_app.logger.info(
+        message,
+        extra=data,
+    )
+
+
 def get_ip_address():
     if x_forwarded_for_ips := request.headers.get("X-Forwarded-For"):
         return [ip.strip() for ip in x_forwarded_for_ips.split(",")][0]

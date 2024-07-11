@@ -158,7 +158,6 @@ def user_reset_failed_login_count(user_id):
 @user_blueprint.route("/<uuid:user_id>/verify/password", methods=["POST"])
 def verify_user_password(user_id):
     user_to_verify = get_user_by_id(user_id=user_id)
-    check_throttle_for_requester()
     try:
         txt_pwd = request.get_json()["password"]
     except KeyError:
@@ -479,16 +478,15 @@ def set_permissions(user_id, service_id):
 
 @user_blueprint.route("/email", methods=["POST"])
 def fetch_user_by_email():
-    check_throttle_for_requester()
     email = email_data_request_schema.load(request.get_json())
-
     try:
         fetched_user = get_user_by_email(email["email"])
     except Exception:
+        check_throttle_for_requester(email["email"])
         add_failed_login_for_requester()
         log_auth_activity(email["email"], "Attempted Login", admin_only=False)
         raise
-
+    check_throttle_for_requester(fetched_user)
     result = fetched_user.serialize()
     return jsonify(data=result)
 
