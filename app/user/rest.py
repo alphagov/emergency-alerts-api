@@ -158,7 +158,7 @@ def user_reset_failed_login_count(user_id):
 @user_blueprint.route("/<uuid:user_id>/verify/password", methods=["POST"])
 def verify_user_password(user_id):
     user_to_verify = get_user_by_id(user_id=user_id)
-    check_throttle_for_requester(user_to_verify)
+    check_throttle_for_requester()
     try:
         txt_pwd = request.get_json()["password"]
     except KeyError:
@@ -189,11 +189,13 @@ def verify_user_code(user_id):
         raise InvalidRequest("Code not found", status_code=404)
     if not code:
         # only relevant from sms
+        add_failed_login_for_requester()
         increment_failed_login_count(user_to_verify)
         log_auth_activity(user_to_verify, "Failed login")
         raise InvalidRequest("Code not found", status_code=404)
     if datetime.utcnow() > code.expiry_datetime or code.code_used:
         # sms and email
+        add_failed_login_for_requester()
         increment_failed_login_count(user_to_verify)
         log_auth_activity(user_to_verify, "Failed login")
         raise InvalidRequest("Code has expired", status_code=400)
@@ -477,11 +479,13 @@ def set_permissions(user_id, service_id):
 
 @user_blueprint.route("/email", methods=["POST"])
 def fetch_user_by_email():
+    check_throttle_for_requester()
     email = email_data_request_schema.load(request.get_json())
 
     try:
         fetched_user = get_user_by_email(email["email"])
     except Exception:
+        add_failed_login_for_requester()
         log_auth_activity(email["email"], "Attempted Login", admin_only=False)
         raise
 

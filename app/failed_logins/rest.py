@@ -11,7 +11,6 @@ from app.utils import (
     calculate_delay_period,
     check_request_within_throttle_period,
     get_ip_address,
-    log_auth_activity,
 )
 
 failed_logins_blueprint = Blueprint(
@@ -47,7 +46,7 @@ def get_failed_login_for_requester():
 
 
 @failed_logins_blueprint.route("check-failed-login-for-requester")
-def check_throttle_for_requester(user):
+def check_throttle_for_requester():
     """
     Firstly checks if IP address should be throttled, then retrieves count of all failed login
     attempts for set period of time.
@@ -66,13 +65,11 @@ def check_throttle_for_requester(user):
 
     failed_login_count = dao_get_count_of_all_failed_logins_for_ip(ip)
     if not failed_login_count:
-        dao_create_failed_login_for_ip(ip)
         return
 
     last_failed_login = dao_get_latest_failed_login_by_ip(ip)
     delay_period = calculate_delay_period(failed_login_count)
     if check_request_within_throttle_period(last_failed_login, delay_period):
-        log_auth_activity(user, "User is being throttled.", admin_only=False)
         errors = {"Failed to login": ["User has sent too many login requests in a given amount of time."]}
         raise InvalidRequest(errors, status_code=429)
 
