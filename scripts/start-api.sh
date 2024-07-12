@@ -36,7 +36,7 @@ function run_db_migrations(){
             put_metric_data "Migrations" "success"
         else
             put_metric_data "Migrations" "failure"
-        fis
+        fi
     else
         echo "DB is up to date"
         put_metric_data "Migrations" "success"
