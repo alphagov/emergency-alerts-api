@@ -4,6 +4,7 @@ import pytest
 
 from app.dao.failed_logins_dao import (
     dao_create_failed_login_for_ip,
+    dao_delete_all_failed_logins_for_ip,
     dao_get_failed_logins,
     dao_get_latest_failed_login_by_ip,
 )
@@ -84,3 +85,20 @@ def test_check_throttle_for_requester_raises_invalid_request_failed_login_too_so
     mock_check_request_within_throttle_period.assert_called_once()
     assert e.value.message == {"Failed to login": ["User has sent too many login requests in a given amount of time."]}
     assert e.value.status_code == 429
+
+
+def test_delete_failed_logins_deletes_failed_logins_for_requester_ip(notify_db_session):
+    """
+    Creates 3 failed login records and checks that these are returned by dao_get_failed_logins.
+    These are then deleted and it is asserted that response doesn't include them.
+    """
+    dao_create_failed_login_for_ip(test_ip_1)
+    dao_create_failed_login_for_ip(test_ip_1)
+    dao_create_failed_login_for_ip(test_ip_1)
+    response = dao_get_failed_logins()
+    assert len(response) == 3
+    assert {record.ip for record in response} == {test_ip_1}
+
+    dao_delete_all_failed_logins_for_ip(test_ip_1)
+    response = dao_get_failed_logins()
+    assert len(response) == 0

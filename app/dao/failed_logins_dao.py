@@ -31,3 +31,8 @@ def dao_get_count_of_all_failed_logins_for_ip(ip, time_period=1):
         .filter(FailedLogin.attempted_at >= current_time - timedelta(hours=time_period))
         .count()
     )
+
+
+def dao_delete_all_failed_logins_for_ip(ip):
+    FailedLogin.query.filter_by(ip=ip).delete()
+    db.session.commit()
