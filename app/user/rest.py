@@ -182,6 +182,7 @@ def verify_user_code(user_id):
     validate(data, post_verify_code_schema)
 
     user_to_verify = get_user_by_id(user_id=user_id)
+    check_throttle_for_requester(user_to_verify)
 
     code = get_user_code(user_to_verify, data["code"], data["code_type"])
     if user_to_verify.failed_login_count >= current_app.config.get("MAX_FAILED_LOGIN_COUNT"):
