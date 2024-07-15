@@ -341,8 +341,6 @@ class Hosted(Config):
 
     DEBUG = False
 
-    MAX_THROTTLE_PERIOD = 2 * 60
-
 
 class Test(Config):
     NOTIFY_EMAIL_DOMAIN = "test.notify.com"
@@ -401,8 +399,6 @@ class Test(Config):
 
     CBC_PROXY_ENABLED = True
     DVLA_EMAIL_ADDRESSES = ["success@simulator.amazonses.com", "success+2@simulator.amazonses.com"]
-
-    MAX_THROTTLE_PERIOD = 2 * 60
 
 
 configs = {
