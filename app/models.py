@@ -2336,7 +2336,7 @@ class FailedLogin(db.Model):
     id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     ip = db.Column(INET)
     attempted_at = db.Column(
-        db.DateTime, index=False, unique=False, nullable=False, default=datetime.datetime.now(datetime.timezone.utc)
+        db.DateTime, index=True, unique=False, nullable=False, default=datetime.datetime.now(datetime.timezone.utc)
     )
 
     def serialize(self):
