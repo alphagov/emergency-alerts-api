@@ -157,6 +157,7 @@ def user_reset_failed_login_count(user_id):
 
 @user_blueprint.route("/<uuid:user_id>/verify/password", methods=["POST"])
 def verify_user_password(user_id):
+    check_throttle_for_requester()
     user_to_verify = get_user_by_id(user_id=user_id)
     try:
         txt_pwd = request.get_json()["password"]
@@ -178,11 +179,11 @@ def verify_user_password(user_id):
 
 @user_blueprint.route("/<uuid:user_id>/verify/code", methods=["POST"])
 def verify_user_code(user_id):
+    check_throttle_for_requester()
     data = request.get_json()
     validate(data, post_verify_code_schema)
 
     user_to_verify = get_user_by_id(user_id=user_id)
-    check_throttle_for_requester(user_to_verify)
 
     code = get_user_code(user_to_verify, data["code"], data["code_type"])
     if user_to_verify.failed_login_count >= current_app.config.get("MAX_FAILED_LOGIN_COUNT"):
@@ -479,15 +480,14 @@ def set_permissions(user_id, service_id):
 
 @user_blueprint.route("/email", methods=["POST"])
 def fetch_user_by_email():
+    check_throttle_for_requester()
     email = email_data_request_schema.load(request.get_json())
     try:
         fetched_user = get_user_by_email(email["email"])
     except Exception:
-        check_throttle_for_requester(email["email"])
         add_failed_login_for_requester()
         log_auth_activity(email["email"], "Attempted Login", admin_only=False)
         raise
-    check_throttle_for_requester(fetched_user)
     result = fetched_user.serialize()
     return jsonify(data=result)
 
