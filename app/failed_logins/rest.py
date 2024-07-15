@@ -3,7 +3,6 @@ from flask import Blueprint, jsonify
 from app.dao.failed_logins_dao import (
     dao_create_failed_login_for_ip,
     dao_get_count_of_all_failed_logins_for_ip,
-    dao_get_failed_logins,
     dao_get_latest_failed_login_by_ip,
 )
 from app.errors import InvalidRequest, register_errors
@@ -21,16 +20,6 @@ failed_logins_blueprint = Blueprint(
 )
 
 register_errors(failed_logins_blueprint)
-
-
-@failed_logins_blueprint.route("fetch-all")
-def get_all_failed_logins():
-    """
-    Fetches all failed login records in the table.
-    """
-    data = dao_get_failed_logins()
-    data = [obj.serialize() for obj in data] if data else []
-    return jsonify(data or {}), 200
 
 
 @failed_logins_blueprint.route("fetch-for-requester")
