@@ -5,7 +5,7 @@ import pytest
 from app.dao.failed_logins_dao import (
     dao_create_failed_login_for_ip,
     dao_delete_all_failed_logins_for_ip,
-    dao_get_failed_logins,
+    dao_get_count_of_all_failed_logins_for_ip,
     dao_get_latest_failed_login_by_ip,
 )
 from app.errors import InvalidRequest
@@ -17,14 +17,13 @@ from tests.app.db import create_failed_login
 
 def test_get_failed_logins_returns_all_failed_logins(notify_db_session):
     """
-    Creates 3 failed login records and checks that these are returned by dao_get_failed_logins.
+    Creates 3 failed login records and checks that 3 are returned in dao_get_count_of_all_failed_logins_for_ip.
     """
     dao_create_failed_login_for_ip(test_ip_1)
     dao_create_failed_login_for_ip(test_ip_1)
     dao_create_failed_login_for_ip(test_ip_1)
-    response = dao_get_failed_logins()
-    assert len(response) == 3
-    assert {record.ip for record in response} == {test_ip_1}
+    response = dao_get_count_of_all_failed_logins_for_ip(test_ip_1)
+    assert response == 3
 
 
 def test_get_latest_failed_logins_returns_latest_failed_login(notify_db_session):
@@ -40,13 +39,6 @@ def test_get_latest_failed_logins_returns_latest_failed_login(notify_db_session)
 
     response = dao_get_latest_failed_login_by_ip(test_ip_1)
     assert response.attempted_at and response.attempted_at == failed_login.attempted_at
-
-
-def test_get_failed_logins_returns_none_if_none_found(notify_db_session):
-    """
-    Asserts that dao_get_failed_logins returns an empty list if no records have been added.
-    """
-    assert dao_get_failed_logins() == []
 
 
 def test_check_throttle_for_requester_raises_invalid_request_failed_login_too_soon(
@@ -89,16 +81,17 @@ def test_check_throttle_for_requester_raises_invalid_request_failed_login_too_so
 
 def test_delete_failed_logins_deletes_failed_logins_for_requester_ip(notify_db_session):
     """
-    Creates 3 failed login records and checks that these are returned by dao_get_failed_logins.
-    These are then deleted and it is asserted that response doesn't include them.
+    Creates 3 failed login records and checks that the count of these is returned by
+    dao_get_count_of_all_failed_logins_for_ip. These are then deleted and it is asserted that
+    dao_get_count_of_all_failed_logins_for_ip response doesn't include them as they're no longer in
+    the table.
     """
     dao_create_failed_login_for_ip(test_ip_1)
     dao_create_failed_login_for_ip(test_ip_1)
     dao_create_failed_login_for_ip(test_ip_1)
-    response = dao_get_failed_logins()
-    assert len(response) == 3
-    assert {record.ip for record in response} == {test_ip_1}
+    response = dao_get_count_of_all_failed_logins_for_ip(test_ip_1)
+    assert response == 3
 
     dao_delete_all_failed_logins_for_ip(test_ip_1)
-    response = dao_get_failed_logins()
-    assert len(response) == 0
+    response = dao_get_count_of_all_failed_logins_for_ip(test_ip_1)
+    assert response == 0

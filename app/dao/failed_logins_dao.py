@@ -6,10 +6,6 @@ from app import db
 from app.models import FailedLogin
 
 
-def dao_get_failed_logins():
-    return FailedLogin.query.all()
-
-
 def dao_create_failed_login_for_ip(ip):
     data = FailedLogin(
         ip=ip,
