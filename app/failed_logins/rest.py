@@ -30,7 +30,7 @@ def get_failed_login_for_requester():
     ip = get_ip_address()
     if not ip:
         errors = {"ip": ["Missing data for required field."]}
-        raise InvalidRequest(errors, status_code=400)
+        raise InvalidRequest(errors, status_code=500)
     data = dao_get_latest_failed_login_by_ip(ip)
     return jsonify(data.serialize() if data else {}), 200
 
@@ -51,7 +51,7 @@ def check_throttle_for_requester():
     ip = get_ip_address()
     if not ip:
         errors = {"ip": ["Missing data for required field."]}
-        raise InvalidRequest(errors, status_code=400)
+        raise InvalidRequest(errors, status_code=500)
 
     failed_login_count = dao_get_count_of_all_failed_logins_for_ip(ip)
     if not failed_login_count:
@@ -69,5 +69,5 @@ def add_failed_login_for_requester():
     ip = get_ip_address()
     if not ip:
         errors = {"ip": ["Missing data for required field."]}
-        raise InvalidRequest(errors, status_code=400)
+        raise InvalidRequest(errors, status_code=500)
     dao_create_failed_login_for_ip(ip)
