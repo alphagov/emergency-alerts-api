@@ -1000,7 +1000,7 @@ def purge_failed_logins_created_by_tests():
         raise InvalidRequest("Endpoint not found", status_code=404)
 
     try:
-        functional_test_ips = os.environ.get("FUNCTIONAL_TEST_IPS", "")
+        functional_test_ips = os.environ.get("FUNCTIONAL_TEST_IPS", "").split(",")
         for ip in functional_test_ips:
             dao_delete_all_failed_logins_for_ip(ip)
     except Exception as e:
