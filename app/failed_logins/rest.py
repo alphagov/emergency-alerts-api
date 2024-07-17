@@ -59,7 +59,15 @@ def check_throttle_for_requester():
 
     last_failed_login = dao_get_latest_failed_login_by_ip(ip)
     delay_period = calculate_delay_period(failed_login_count)
+    from datetime import datetime
+
     if check_request_within_throttle_period(last_failed_login, delay_period):
+        print(">>>>>>>>>>>>>")
+        print(ip)
+        print(datetime.now())
+        print(last_failed_login)
+        print(delay_period)
+        print("<<<<<<<<<<<<<")
         log_throttled_login(ip)
         errors = {"Failed to login": ["User has sent too many login requests in a given amount of time."]}
         raise InvalidRequest(errors, status_code=429)
