@@ -1,4 +1,5 @@
 import itertools
+import os
 from datetime import datetime
 
 from emergency_alerts_utils.letter_timings import (
@@ -31,6 +32,7 @@ from app.dao.fact_notification_status_dao import (
     fetch_notification_status_for_service_for_today_and_7_previous_days,
     fetch_stats_for_all_services_by_date_range,
 )
+from app.dao.failed_logins_dao import dao_delete_all_failed_logins_for_ip
 from app.dao.invited_user_dao import delete_invitations_sent_by_user
 from app.dao.organisation_dao import dao_get_organisation_by_service_id
 from app.dao.service_contact_list_dao import (
@@ -990,3 +992,18 @@ def purge_users_created_by_tests():
         return jsonify(result="error", message=f"Unable to purge users created by functional tests: {e}"), 500
 
     return jsonify({"message": "Successfully purged users"}), 200
+
+
+@service_blueprint.route("/purge-failed-logins-created-by-tests", methods=["DELETE"])
+def purge_failed_logins_created_by_tests():
+    if is_public_environment():
+        raise InvalidRequest("Endpoint not found", status_code=404)
+
+    try:
+        functional_test_ips = os.environ.get("FUNCTIONAL_TEST_IPS", "").split(",")
+        for ip in functional_test_ips:
+            dao_delete_all_failed_logins_for_ip(ip)
+    except Exception as e:
+        return jsonify(result="error", message=f"Unable to purge failed logins created by functional tests: {e}"), 500
+
+    return jsonify({"message": "Successfully purged failed logins"}), 200

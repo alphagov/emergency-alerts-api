@@ -76,3 +76,6 @@ celerybeat-schedule
 .cf
 
 /scripts/run_my_tests.sh
+
+# Migrations
+migrations/.current-alembic-head

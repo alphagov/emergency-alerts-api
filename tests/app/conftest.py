@@ -63,6 +63,9 @@ from tests.app.db import (
 )
 
 os.environ["AWS_DEFAULT_REGION"] = "eu-west-2"
+test_ip_1 = "192.0.2.15"
+test_ip_2 = "192.0.2.30"
+test_ip_3 = "127.0.0.1"
 
 
 @pytest.yield_fixture

@@ -141,32 +141,35 @@ def test_user_verify_password_invalid_password(client, sample_user):
 
 
 def test_user_verify_password_valid_password_resets_failed_logins(client, sample_user):
-    data = json.dumps({"password": "bad password"})
-    auth_header = create_admin_authorization_header()
+    with freeze_time("2015-01-01T00:00:00") as the_time:
+        data = json.dumps({"password": "bad password"})
+        auth_header = create_admin_authorization_header()
 
-    assert sample_user.failed_login_count == 0
+        assert sample_user.failed_login_count == 0
 
-    resp = client.post(
-        url_for("user.verify_user_password", user_id=sample_user.id),
-        data=data,
-        headers=[("Content-Type", "application/json"), auth_header],
-    )
-    assert resp.status_code == 400
-    json_resp = json.loads(resp.get_data(as_text=True))
-    assert "Incorrect password" in json_resp["message"]["password"]
+        resp = client.post(
+            url_for("user.verify_user_password", user_id=sample_user.id),
+            data=data,
+            headers=[("Content-Type", "application/json"), auth_header],
+        )
+        assert resp.status_code == 400
+        json_resp = json.loads(resp.get_data(as_text=True))
+        assert "Incorrect password" in json_resp["message"]["password"]
 
-    assert sample_user.failed_login_count == 1
+        assert sample_user.failed_login_count == 1
 
-    data = json.dumps({"password": "password"})
-    auth_header = create_admin_authorization_header()
-    resp = client.post(
-        url_for("user.verify_user_password", user_id=sample_user.id),
-        data=data,
-        headers=[("Content-Type", "application/json"), auth_header],
-    )
+        the_time.tick(timedelta(minutes=1))  # To ensure the new login attempt is not throttled
 
-    assert resp.status_code == 204
-    assert sample_user.failed_login_count == 0
+        data = json.dumps({"password": "password"})
+        auth_header = create_admin_authorization_header()
+        resp = client.post(
+            url_for("user.verify_user_password", user_id=sample_user.id),
+            data=data,
+            headers=[("Content-Type", "application/json"), auth_header],
+        )
+
+        assert resp.status_code == 204
+        assert sample_user.failed_login_count == 0
 
 
 def test_user_verify_password_missing_password(client, sample_user):
@@ -353,6 +356,48 @@ def test_user_verify_user_code_returns_404_when_code_is_right_but_user_account_i
     assert resp.status_code == 404
     assert sample_sms_code.user.failed_login_count == 10
     assert not sample_sms_code.code_used
+
+
+def test_user_verify_user_code_returns_429_when_user_is_throttled(client, sample_sms_code):
+    incorrect_code = json.dumps({"code_type": sample_sms_code.code_type, "code": "12345"})
+    correct_code = json.dumps({"code_type": sample_sms_code.code_type, "code": sample_sms_code.txt_code})
+    resp = client.post(
+        url_for("user.verify_user_code", user_id=sample_sms_code.user.id),
+        data=incorrect_code,
+        headers=[("Content-Type", "application/json"), create_admin_authorization_header()],
+    )
+    resp = client.post(
+        url_for("user.verify_user_code", user_id=sample_sms_code.user.id),
+        data=correct_code,
+        headers=[("Content-Type", "application/json"), create_admin_authorization_header()],
+    )
+    assert resp.status_code == 429
+    assert not sample_sms_code.code_used
+
+
+def test_user_verify_user_code_returns_204_after_throttle_period(client, sample_sms_code):
+    incorrect_code = json.dumps({"code_type": sample_sms_code.code_type, "code": "12345"})
+    correct_code = json.dumps({"code_type": sample_sms_code.code_type, "code": sample_sms_code.txt_code})
+    with freeze_time("2015-01-01T00:00:00") as the_time:
+        client.post(
+            url_for("user.verify_user_code", user_id=sample_sms_code.user.id),
+            data=incorrect_code,
+            headers=[("Content-Type", "application/json"), create_admin_authorization_header()],
+        )
+        resp_2 = client.post(
+            url_for("user.verify_user_code", user_id=sample_sms_code.user.id),
+            data=correct_code,
+            headers=[("Content-Type", "application/json"), create_admin_authorization_header()],
+        )
+        the_time.tick(timedelta(minutes=1))
+        resp_3 = client.post(
+            url_for("user.verify_user_code", user_id=sample_sms_code.user.id),
+            data=correct_code,
+            headers=[("Content-Type", "application/json"), create_admin_authorization_header()],
+        )
+        assert resp_2.status_code == 429
+        assert resp_3.status_code == 204
+        assert sample_sms_code.code_used
 
 
 def test_user_verify_user_code_valid_code_resets_failed_login_count(client, sample_sms_code):

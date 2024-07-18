@@ -40,6 +40,7 @@ from app.models import (
     FactBilling,
     FactNotificationStatus,
     FactProcessingTime,
+    FailedLogin,
     FeatureToggle,
     InvitedOrganisationUser,
     InvitedUser,
@@ -1047,3 +1048,10 @@ def create_feature_toggle(name="feature_toggle", is_enabled=True, display_html=N
     db.session.add(feature_toggle)
     db.session.commit()
     return feature_toggle
+
+
+def create_failed_login(ip, attempted_at):
+    failed_login = FailedLogin(ip=ip, attempted_at=attempted_at)
+    db.session.add(failed_login)
+    db.session.commit()
+    return failed_login

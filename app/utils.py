@@ -10,7 +10,7 @@ from emergency_alerts_utils.template import (
 )
 from emergency_alerts_utils.timezones import convert_bst_to_utc
 from emergency_alerts_utils.url_safe_token import generate_token
-from flask import current_app, url_for
+from flask import current_app, request, url_for
 from sqlalchemy import func
 
 DATETIME_FORMAT_NO_TIMEZONE = "%Y-%m-%d %H:%M:%S.%f"
@@ -200,3 +200,27 @@ def log_user(user, message):
         message,
         extra=user,
     )
+
+
+def log_throttled_login(ip):
+    data = {"ip": ip, "attempted_at": datetime.now()}
+    current_app.logger.info(
+        "User login throttled",
+        extra=data,
+    )
+
+
+def get_ip_address():
+    if x_forwarded_for_ips := request.headers.get("X-Forwarded-For"):
+        return [ip.strip() for ip in x_forwarded_for_ips.split(",")][0]
+    else:
+        return request.remote_addr
+
+
+def calculate_delay_period(failed_login_count):
+    delay = 10 * (2 ** (failed_login_count - 1))
+    return min(delay, current_app.config["MAX_THROTTLE_PERIOD"])
+
+
+def check_request_within_throttle_period(login_attempt, delay_period):
+    return datetime.now() - login_attempt.attempted_at < timedelta(seconds=delay_period)
