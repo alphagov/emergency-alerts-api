@@ -172,7 +172,6 @@ def register_blueprint(application):
     from app.template_statistics.rest import (
         template_statistics as template_statistics_blueprint,
     )
-    from app.upload.rest import upload_blueprint
     from app.user.rest import user_blueprint
     from app.verify.rest import verify_code_blueprint
     from app.webauthn.rest import webauthn_blueprint
@@ -228,9 +227,6 @@ def register_blueprint(application):
 
     template_folder_blueprint.before_request(requires_admin_auth)
     application.register_blueprint(template_folder_blueprint)
-
-    upload_blueprint.before_request(requires_admin_auth)
-    application.register_blueprint(upload_blueprint)
 
     broadcast_message_blueprint.before_request(requires_admin_auth)
     application.register_blueprint(broadcast_message_blueprint)
