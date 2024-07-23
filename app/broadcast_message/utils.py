@@ -2,7 +2,7 @@ import inspect
 from datetime import datetime
 
 from emergency_alerts_utils.clients.zendesk.zendesk_client import (
-    NotifySupportTicket,
+    EASSupportTicket,
 )
 from flask import current_app
 
@@ -88,10 +88,10 @@ def _create_p1_zendesk_alert(broadcast_message):
     """
     )
 
-    ticket = NotifySupportTicket(
+    ticket = EASSupportTicket(
         subject="Live broadcast sent",
         message=message,
-        ticket_type=NotifySupportTicket.TYPE_INCIDENT,
+        ticket_type=EASSupportTicket.TYPE_INCIDENT,
         technical_ticket=True,
         org_id=current_app.config["BROADCAST_ORGANISATION_ID"],
         org_type="central",
