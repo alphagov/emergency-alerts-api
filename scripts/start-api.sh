@@ -12,11 +12,27 @@ function put_metric_data(){
         exit 1;
     fi
 
+    dimension="Status=$2"
+    if [[ $1 == "Migrations" ]]; then
+        if [[ -z $START_TIME ]]; then
+            echo "START_TIME is not provided and required."
+            exit 1;
+        fi
+
+        if [[ -z $PIPELINE_RUN_ID ]]; then
+            echo "PIPELINE_RUN_ID is not provided and required."
+            exit 1;
+        fi
+
+        # For future we should add a version e.g. Version=1112_test
+        dimension="PipelineRunId=$PIPELINE_RUN_ID,StartTime=$START_TIME,Status=success"
+    fi
+
     aws cloudwatch put-metric-data \
         --namespace $1 \
         --dimensions Repository=emergency-alerts-api \
         --metric-name $SERVICE_ACTION \
-        --dimensions Name=status,Value=$2 \
+        --dimensions $dimension \
         --value 1 \
         --timestamp $(date -u +"%Y-%m-%dT%H:%M:%S.000Z") \
         --region eu-west-2
