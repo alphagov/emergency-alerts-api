@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 
 from emergency_alerts_utils.clients.zendesk.zendesk_client import (
-    NotifySupportTicket,
+    EASSupportTicket,
 )
 from emergency_alerts_utils.timezones import convert_utc_to_bst
 from flask import current_app
@@ -175,11 +175,11 @@ def raise_alert_if_letter_notifications_still_sending():
         if current_app.should_send_zendesk_alerts:
             message += ". Resolve using https://github.com/alphagov/notifications-manuals/wiki/Support-Runbook#deal-with-letters-still-in-sending"  # noqa
 
-            ticket = NotifySupportTicket(
+            ticket = EASSupportTicket(
                 subject=f"[{current_app.config['HOST']}] Letters still sending",
                 email_ccs=current_app.config["DVLA_EMAIL_ADDRESSES"],
                 message=message,
-                ticket_type=NotifySupportTicket.TYPE_INCIDENT,
+                ticket_type=EASSupportTicket.TYPE_INCIDENT,
                 technical_ticket=True,
                 ticket_categories=["notify_letters"],
             )
