@@ -178,9 +178,9 @@ def test_create_secret_code_different_subsequent_codes():
     assert code1 != code2
 
 
-def test_create_secret_code_returns_5_digits():
+def test_create_secret_code_returns_7_digits():
     code = create_secret_code()
-    assert len(str(code)) == 5
+    assert len(str(code)) == 7
 
 
 def test_create_secret_code_never_repeats_consecutive_digits(mocker):
@@ -197,9 +197,10 @@ def test_create_secret_code_never_repeats_consecutive_digits(mocker):
             1,  # Repeated allowed if not consecutive
             9,
             9,  # Not called because we have 5 digits now
+            8,
         ],
     )
-    assert create_secret_code() == "12341"
+    assert create_secret_code() == "1234198"
 
 
 @freeze_time("2018-07-07 12:00:00")

@@ -21,7 +21,7 @@ def _remove_values_for_keys_if_present(dict, keys):
 
 
 def create_secret_code():
-    return "".join(get_non_repeating_random_digits(5))
+    return "".join(get_non_repeating_random_digits(7))
 
 
 def get_non_repeating_random_digits(length):
