@@ -28,9 +28,9 @@ function put_metric_data(){
         dimension="PipelineRunId=$PIPELINE_RUN_ID,StartTime=$START_TIME,Status=success"
     fi
 
+    echo "Putting metric $1[$SERVICE_ACTION] with dimension: $dimension"
     aws cloudwatch put-metric-data \
         --namespace $1 \
-        --dimensions Repository=emergency-alerts-api \
         --metric-name $SERVICE_ACTION \
         --dimensions $dimension \
         --value 1 \
