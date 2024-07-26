@@ -13,12 +13,12 @@ function put_metric_data(){
     fi
 
     if [[ -z $START_TIME ]]; then
-        echo "START_TIME is not provided and required."
+        echo "START_TIME is not provided but is required."
         exit 1;
     fi
 
     if [[ -z $PIPELINE_RUN_ID ]]; then
-        echo "PIPELINE_RUN_ID is not provided and required."
+        echo "PIPELINE_RUN_ID is not provided but is required."
         exit 1;
     fi
 
@@ -59,31 +59,31 @@ function run_db_migrations(){
 
 function backup_database(){
     if [[ -z $RDS_HOST  ]]; then
-        echo "RDS_HOST is not provided and required."
+        echo "RDS_HOST is not provided but is required."
         put_metric_data "Backups" "failure"
         exit 1;
     fi
 
     if [[ -z $RDS_PORT  ]]; then
-        echo "RDS_PORT is not provided and required."
+        echo "RDS_PORT is not provided but is required."
         put_metric_data "Backups" "failure"
         exit 1;
     fi
 
     if [[ -z $DATABASE  ]]; then
-        echo "DATABASE name is not provided and required."
+        echo "DATABASE name is not provided but is required."
         put_metric_data "Backups" "failure"
         exit 1;
     fi
 
     if [[ -z $BACKUP_BUCKET_NAME ]]; then
-        echo "BACKUP_BUCKET_NAME is not provided and required."
+        echo "BACKUP_BUCKET_NAME is not provided but is required."
         put_metric_data "Backups" "failure"
         exit 1;
     fi
 
     if [[ -z $ENVIRONMENT ]]; then
-        echo "ENVIRONMENT is not provided and required."
+        echo "ENVIRONMENT is not provided but is required."
         put_metric_data "Backups" "failure"
         exit 1;
     fi
