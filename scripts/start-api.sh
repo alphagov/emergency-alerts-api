@@ -12,25 +12,23 @@ function put_metric_data(){
         exit 1;
     fi
 
-    dimension="Status=$2"
-    if [[ $1 == "Migrations" ]]; then
-        if [[ -z $START_TIME ]]; then
-            echo "START_TIME is not provided and required."
-            exit 1;
-        fi
-
-        if [[ -z $PIPELINE_RUN_ID ]]; then
-            echo "PIPELINE_RUN_ID is not provided and required."
-            exit 1;
-        fi
-
-        # For future we should add a version e.g. Version=1112_test
-        dimension="PipelineRunId=$PIPELINE_RUN_ID,StartTime=$START_TIME,Status=success"
+    if [[ -z $START_TIME ]]; then
+        echo "START_TIME is not provided but is required."
+        exit 1;
     fi
 
+    if [[ -z $PIPELINE_RUN_ID ]]; then
+        echo "PIPELINE_RUN_ID is not provided but is required."
+        exit 1;
+    fi
+
+    # For future we should add a version e.g. Version=1112_test
+    dimension="PipelineRunId=$PIPELINE_RUN_ID,StartTime=$START_TIME,Status=$2"
+
+
+    echo "Putting metric $1[$SERVICE_ACTION] with dimension: $dimension"
     aws cloudwatch put-metric-data \
         --namespace $1 \
-        --dimensions Repository=emergency-alerts-api \
         --metric-name $SERVICE_ACTION \
         --dimensions $dimension \
         --value 1 \
@@ -61,31 +59,31 @@ function run_db_migrations(){
 
 function backup_database(){
     if [[ -z $RDS_HOST  ]]; then
-        echo "RDS_HOST is not provided and required."
+        echo "RDS_HOST is not provided but is required."
         put_metric_data "Backups" "failure"
         exit 1;
     fi
 
     if [[ -z $RDS_PORT  ]]; then
-        echo "RDS_PORT is not provided and required."
+        echo "RDS_PORT is not provided but is required."
         put_metric_data "Backups" "failure"
         exit 1;
     fi
 
     if [[ -z $DATABASE  ]]; then
-        echo "DATABASE name is not provided and required."
+        echo "DATABASE name is not provided but is required."
         put_metric_data "Backups" "failure"
         exit 1;
     fi
 
     if [[ -z $BACKUP_BUCKET_NAME ]]; then
-        echo "BACKUP_BUCKET_NAME is not provided and required."
+        echo "BACKUP_BUCKET_NAME is not provided but is required."
         put_metric_data "Backups" "failure"
         exit 1;
     fi
 
     if [[ -z $ENVIRONMENT ]]; then
-        echo "ENVIRONMENT is not provided and required."
+        echo "ENVIRONMENT is not provided but is required."
         put_metric_data "Backups" "failure"
         exit 1;
     fi
