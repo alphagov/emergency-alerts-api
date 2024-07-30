@@ -481,4 +481,3 @@ def test_request_for_status_returns_allowed_methods(client, sample_broadcast_ser
     assert "OPTIONS" in response.headers["Allow"]
     assert "POST" in response.headers["Allow"]
     assert response.headers["Content-Length"] == "0"
-    assert False
