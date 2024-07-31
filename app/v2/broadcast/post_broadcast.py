@@ -2,7 +2,7 @@ from itertools import chain
 
 from emergency_alerts_utils.polygons import Polygons
 from emergency_alerts_utils.template import BroadcastMessageTemplate
-from flask import current_app, jsonify, request
+from flask import current_app, jsonify, make_response, request
 from sqlalchemy.orm.exc import MultipleResultsFound
 
 from app import api_user, authenticated_service, redis_store
@@ -98,6 +98,15 @@ def create_broadcast():
         )
 
         return jsonify(broadcast_message.serialize()), 201
+
+
+@v2_broadcast_blueprint.route("", methods=["OPTIONS"])
+def return_status():
+    response = make_response()
+    response.headers["Allow"] = "OPTIONS, POST"
+    response.headers["Content-Type"] = "application/json"
+    response.status_code = 200
+    return response
 
 
 def _cancel_or_reject_broadcast(references_to_original_broadcast, service_id):
