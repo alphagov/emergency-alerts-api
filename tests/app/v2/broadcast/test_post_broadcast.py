@@ -468,3 +468,16 @@ def test_invalid_areas_returns_400(client, sample_broadcast_service):
         ],
         "status_code": 400,
     }
+
+
+def test_request_for_status_returns_allowed_methods(client, sample_broadcast_service):
+    auth_header = create_service_authorization_header(service_id=sample_broadcast_service.id)
+    response = client.options(
+        path="/v2/broadcast",
+        headers=[auth_header],
+    )
+
+    assert response.status_code == 200
+    assert "OPTIONS" in response.headers["Allow"]
+    assert "POST" in response.headers["Allow"]
+    assert response.headers["Content-Length"] == "0"
