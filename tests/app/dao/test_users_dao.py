@@ -113,23 +113,23 @@ def test_get_user_by_email_is_case_insensitive(sample_user):
 
 
 def test_should_delete_all_verification_codes_more_than_one_day_old(sample_user):
-    make_verify_code(sample_user, age=timedelta(hours=24), code="54321")
-    make_verify_code(sample_user, age=timedelta(hours=24), code="54321")
+    make_verify_code(sample_user, age=timedelta(hours=24), code="7654321")
+    make_verify_code(sample_user, age=timedelta(hours=24), code="7654321")
     assert VerifyCode.query.count() == 2
     delete_codes_older_created_more_than_a_day_ago()
     assert VerifyCode.query.count() == 0
 
 
 def test_should_not_delete_verification_codes_less_than_one_day_old(sample_user):
-    make_verify_code(sample_user, age=timedelta(hours=23, minutes=59, seconds=59), code="12345")
-    make_verify_code(sample_user, age=timedelta(hours=24), code="54321")
+    make_verify_code(sample_user, age=timedelta(hours=23, minutes=59, seconds=59), code="1234567")
+    make_verify_code(sample_user, age=timedelta(hours=24), code="7654321")
 
     assert VerifyCode.query.count() == 2
     delete_codes_older_created_more_than_a_day_ago()
-    assert VerifyCode.query.one()._code == "12345"
+    assert VerifyCode.query.one()._code == "1234567"
 
 
-def make_verify_code(user, age=None, expiry_age=None, code="12335", code_used=False):
+def make_verify_code(user, age=None, expiry_age=None, code="1233555", code_used=False):
     verify_code = VerifyCode(
         code_type="sms",
         _code=code,
