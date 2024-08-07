@@ -41,6 +41,8 @@ def get_broadcast_messages_for_service(service_id):
     # we might need stuff like template name for showing on the dashboard.
     # TODO: should this paginate or filter on dates or anything?
     broadcast_messages = [o.serialize() for o in dao_get_broadcast_messages_for_service(service_id)]
+    print(request.__dict__)
+    print(request.headers)
     return jsonify(broadcast_messages=broadcast_messages)
 
 
