@@ -75,6 +75,7 @@ def invited_user_url(invited_user_id, invite_link_host=None):
     if invite_link_host is None:
         invite_link_host = current_app.config["ADMIN_EXTERNAL_URL"]
 
+    print("test")
     return "{0}/invitation/{1}".format(invite_link_host, token)
 
 
