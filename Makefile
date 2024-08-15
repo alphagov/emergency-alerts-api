@@ -21,6 +21,67 @@ NOTIFY_CREDENTIALS ?= ~/.notify-credentials
 VIRTUALENV_ROOT := $(shell [ -z $$VIRTUAL_ENV ] && echo $$(pwd)/venv || echo $$VIRTUAL_ENV)
 PYTHON_EXECUTABLE_PREFIX := $(shell test -d "$${VIRTUALENV_ROOT}" && echo "$${VIRTUALENV_ROOT}/bin/" || echo "")
 
+NVM_VERSION := 0.39.7
+NODE_VERSION := 16.14.0
+
+write-source-file:
+	@if [ -f ~/.zshrc ]; then \
+		if [[ $$(cat ~/.zshrc | grep "export NVM") ]]; then \
+			cat ~/.zshrc | grep "export NVM" | sed "s/export//" > ~/.nvm-source; \
+		else \
+			cat ~/.bashrc | grep "export NVM" | sed "s/export//" > ~/.nvm-source; \
+		fi \
+	else \
+		cat ~/.bashrc | grep "export NVM" | sed "s/export//" > ~/.nvm-source; \
+	fi
+
+
+read-source-file: write-source-file
+	@for line in $$(cat ~/.nvm-source); do \
+		export $$line; \
+	done
+
+	@echo '. "$$NVM_DIR/nvm.sh"' >> ~/.nvm-source;
+
+	@current_nvm_version=$$(. ~/.nvm-source && nvm --version); \
+	echo "NVM Versions (current/expected): $$current_nvm_version/$(NVM_VERSION)"; \
+	echo "";
+
+.PHONY: install-nvm
+install-nvm:
+	@echo ""
+	@echo "[Install Node Version Manager]"
+	@echo ""
+
+	@if [ ! -f ~/.nvm-source ]; then \
+		rm -rf $(NVM_DIR); \
+		curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v$(NVM_VERSION)/install.sh | bash; \
+		echo ""; \
+	fi
+
+	@$(MAKE) read-source-file
+
+	@current_nvm_version=$$(. ~/.nvm-source && nvm --version); \
+	if [[ "$(NVM_VERSION)" == "$$current_nvm_version" ]]; then \
+		echo "No need up adjust NVM versions."; \
+	else \
+		rm -rf $(NVM_DIR); \
+		curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v$(NVM_VERSION)/install.sh | bash; \
+		echo ""; \
+	fi
+
+	@$(MAKE) read-source-file
+
+.PHONY: install-node
+install-node: install-nvm
+	@echo ""
+	@echo "[Install Node]"
+	@echo ""
+
+	@. ~/.nvm-source && nvm install $(NODE_VERSION) \
+		&& nvm use $(NODE_VERSION) \
+		&& nvm alias default $(NODE_VERSION);
+
 
 ## DEVELOPMENT
 
@@ -31,11 +92,11 @@ legacy-bootstrap: generate-version-file ## Set up everything to run the app
 	(. environment.sh && flask db upgrade) || true
 
 .PHONY: bootstrap
-bootstrap: generate-version-file ## Set up everything to run the app
+bootstrap: generate-version-file install-node ## Set up everything to run the app
 	pip3 install -r requirements_local_utils.txt
 
 .PHONY: bootstrap-for-tests
-bootstrap-for-tests: generate-version-file ## Set up everything to run the app
+bootstrap-for-tests: generate-version-file install-node ## Set up everything to run the app
 	pip3 install -r requirements_github_utils.txt
 
 .PHONY: bootstrap-with-docker

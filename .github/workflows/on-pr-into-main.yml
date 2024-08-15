@@ -1,8 +1,6 @@
 name: on-pr-into-main
 
 env:
-  NVM_VERSION: 0.39.7
-  NODE_VERSION: 16.14.0
   PYTHON_VERSION: 3.9
 
 on:
@@ -21,22 +19,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install a specific nvm version
-        run: |
-          rm -rf $NVM_DIR
-          curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v${{ env.NVM_VERSION }}/install.sh | bash
-
-          cat ~/.bashrc | grep "NVM" > ~/.non-interactive
-
-      - name: Install a specific node version
-        run: |
-          source ~/.non-interactive
-
-          echo "NVM Version: $(nvm --version)"
-          nvm install ${{ env.NODE_VERSION }}
-          nvm use ${{ env.NODE_VERSION }}
-          nvm alias default ${{ env.NODE_VERSION }}
 
       - name: Verify Docker
         run: |
