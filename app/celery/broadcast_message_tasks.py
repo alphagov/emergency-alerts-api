@@ -121,7 +121,7 @@ def send_broadcast_event(broadcast_event_id):
     name="send-broadcast-provider-message",
     autoretry_for=(CBCProxyRetryableException,),
     retry_backoff=3,
-    retry_jitter=True,
+    retry_jitter=False,
     max_retries=5,
 )
 def send_broadcast_provider_message(self, broadcast_event_id, provider):
