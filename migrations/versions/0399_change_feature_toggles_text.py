@@ -1,6 +1,6 @@
 """
 
-Revision ID: 0399_change_feature_toggles_table
+Revision ID: 0399_change_feature_toggles_text
 Revises: 0398_add_failed_logins_table
 Create Date: 2024-08-20 15:31:10.657408
 
@@ -8,7 +8,7 @@ Create Date: 2024-08-20 15:31:10.657408
 
 from alembic import op
 
-revision = "0399_change_feature_toggles_table"
+revision = "0399_change_feature_toggles_text"
 down_revision = "0398_add_failed_logins_table"
 
 
