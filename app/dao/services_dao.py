@@ -33,10 +33,12 @@ from app.models import (
     Organisation,
     Permission,
     Service,
+    ServiceBroadcastSettings,
     ServiceContactList,
     ServiceEmailReplyTo,
     ServiceLetterContact,
     ServicePermission,
+    ServiceUser,
     Template,
     TemplateHistory,
     TemplateRedacted,
@@ -391,6 +393,17 @@ def delete_service_and_all_associated_db_objects(service):
     for user in users:
         if user.id != created_by_id:
             db.session.delete(user)
+
+
+def delete_service_created_for_functional_testing(service):
+    def _delete(query):
+        query.delete(synchronize_session=False)
+
+    _delete(AnnualBilling.query.filter_by(service_id=service.id))
+    _delete(Permission.query.filter_by(service=service))
+    _delete(ServiceBroadcastSettings.query.filter_by(service_id=service.id))
+    _delete(ServicePermission.query.filter_by(service_id=service.id))
+    _delete(ServiceUser.query.filter_by(service_id=service.id))
 
 
 def dao_fetch_todays_stats_for_service(service_id):
