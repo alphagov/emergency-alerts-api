@@ -66,7 +66,7 @@ from app.dao.service_letter_contact_dao import (
     dao_get_letter_contacts_by_service_id,
     update_letter_contact,
 )
-from app.dao.services_dao import (  # delete_service_and_all_associated_db_objects,
+from app.dao.services_dao import (
     dao_add_user_to_service,
     dao_archive_service,
     dao_create_service,
@@ -970,7 +970,6 @@ def purge_test_services_created_by(user_id):
         services = dao_fetch_all_services_created_by_user(user_id=user_id)
         for service in services:
             delete_service_created_for_functional_testing(service=service)
-        # delete_invitations_sent_by_user(user_id=user_id)
     except Exception as e:
         return jsonify(result="error", message=f"Unable to purge services created by user {user_id}: {e}"), 500
 
