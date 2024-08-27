@@ -404,6 +404,7 @@ def delete_service_created_for_functional_testing(service):
     _delete(ServiceBroadcastSettings.query.filter_by(service_id=service.id))
     _delete(ServicePermission.query.filter_by(service_id=service.id))
     _delete(ServiceUser.query.filter_by(service_id=service.id))
+    db.session.delete(service)
 
 
 def dao_fetch_todays_stats_for_service(service_id):
