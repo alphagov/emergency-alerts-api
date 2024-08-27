@@ -75,7 +75,7 @@ docopt==0.6.2
     # via notifications-python-client
 execnet==1.9.0
     # via pytest-xdist
-flake8==6.0.0
+flake8==6.1.0
     # via
     #   -r requirements.in
     #   flake8-bugbear
@@ -187,13 +187,13 @@ py==1.11.0
     # via
     #   pytest
     #   pytest-forked
-pycodestyle==2.10.0
+pycodestyle==2.11.1
     # via flake8
 pycparser==2.21
     # via cffi
 pycurl==7.44.1
     # via kombu
-pyflakes==3.0.1
+pyflakes==3.1.0
     # via flake8
 pyjwt==2.5.0
     # via
