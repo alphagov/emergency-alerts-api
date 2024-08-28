@@ -19,7 +19,7 @@ def upgrade():
             (name, is_enabled, display_html) \
         VALUES \
             ('service_is_not_live', false, \
-                'This is a trial mode service......')"
+                'This account is in trial mode. You cannot send alerts out to the public.')"
     )
 
 
