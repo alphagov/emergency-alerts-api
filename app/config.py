@@ -270,8 +270,6 @@ class Config(object):
 
     SMS_INBOUND_WHITELIST = json.loads(os.environ.get("SMS_INBOUND_WHITELIST", "[]"))
     FIRETEXT_INBOUND_SMS_AUTH = json.loads(os.environ.get("FIRETEXT_INBOUND_SMS_AUTH", "[]"))
-    MMG_INBOUND_SMS_AUTH = ["testkey"]
-    MMG_INBOUND_SMS_USERNAME = ["username"]
     LOW_INBOUND_SMS_NUMBER_THRESHOLD = 50
     ROUTE_SECRET_KEY_1 = os.environ.get("ROUTE_SECRET_KEY_1", "")
     ROUTE_SECRET_KEY_2 = os.environ.get("ROUTE_SECRET_KEY_2", "")
