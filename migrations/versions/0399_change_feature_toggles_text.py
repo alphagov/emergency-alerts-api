@@ -30,5 +30,5 @@ def downgrade():
             (name, is_enabled, display_html) \
         VALUES \
             ('service_is_not_live', false, \
-                'This service is currently not live. You cannot send alerts out to the public.')"
+                'This is not live. You cannot send alerts out to the public.')"
     )
