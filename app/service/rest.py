@@ -33,7 +33,6 @@ from app.dao.fact_notification_status_dao import (
     fetch_stats_for_all_services_by_date_range,
 )
 from app.dao.failed_logins_dao import dao_delete_all_failed_logins_for_ip
-from app.dao.invited_user_dao import delete_invitations_sent_by_user
 from app.dao.organisation_dao import dao_get_organisation_by_service_id
 from app.dao.service_contact_list_dao import (
     dao_archive_contact_list,
@@ -80,7 +79,7 @@ from app.dao.services_dao import (
     dao_fetch_todays_stats_for_service,
     dao_remove_user_from_service,
     dao_update_service,
-    delete_service_and_all_associated_db_objects,
+    delete_service_created_for_functional_testing,
     get_services_by_partial_name,
 )
 from app.dao.users_dao import (
@@ -963,15 +962,14 @@ def set_as_broadcast_service(service_id):
 
 
 @service_blueprint.route("/purge-services-created/<uuid:user_id>", methods=["DELETE"])
-def purge_services_created_by(user_id):
+def purge_test_services_created_by(user_id):
     if is_public_environment():
         raise InvalidRequest("Endpoint not found", status_code=404)
 
     try:
         services = dao_fetch_all_services_created_by_user(user_id=user_id)
         for service in services:
-            delete_service_and_all_associated_db_objects(service=service)
-        delete_invitations_sent_by_user(user_id=user_id)
+            delete_service_created_for_functional_testing(service=service)
     except Exception as e:
         return jsonify(result="error", message=f"Unable to purge services created by user {user_id}: {e}"), 500
 
