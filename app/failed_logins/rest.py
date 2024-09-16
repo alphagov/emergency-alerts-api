@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify
 
 from app.dao.failed_logins_dao import (
     dao_create_failed_login_for_ip,
+    dao_delete_all_failed_logins_for_ip,
     dao_get_count_of_all_failed_logins_for_ip,
     dao_get_latest_failed_login_by_ip,
 )
@@ -71,3 +72,11 @@ def add_failed_login_for_requester():
         errors = {"ip": ["Missing data for required field."]}
         raise InvalidRequest(errors, status_code=500)
     dao_create_failed_login_for_ip(ip)
+
+
+def delete_failed_logins_for_requester():
+    ip = get_ip_address()
+    if not ip:
+        errors = {"ip": ["Missing data for required field."]}
+        raise InvalidRequest(errors, status_code=500)
+    dao_delete_all_failed_logins_for_ip(ip)

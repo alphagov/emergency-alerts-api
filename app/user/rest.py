@@ -43,6 +43,7 @@ from app.errors import InvalidRequest, register_errors
 from app.failed_logins.rest import (
     add_failed_login_for_requester,
     check_throttle_for_requester,
+    delete_failed_logins_for_requester,
 )
 from app.models import EMAIL_TYPE, SMS_TYPE, Permission
 from app.schema_validation import validate
@@ -87,6 +88,11 @@ def create_user():
     user_to_create = create_user_schema.load(req_json)
 
     save_model_user(user_to_create, password=req_json.get("password"), validated_email_access=True)
+
+    # The check for the new user's email will previously have generated a
+    # failed_login - remove this to avoid an immediate throttling message
+    delete_failed_logins_for_requester()
+
     result = user_to_create.serialize()
     log_user(result, "User created")
     return jsonify(data=result), 201
