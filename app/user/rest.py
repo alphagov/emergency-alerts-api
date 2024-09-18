@@ -43,7 +43,6 @@ from app.errors import InvalidRequest, register_errors
 from app.failed_logins.rest import (
     add_failed_login_for_requester,
     check_throttle_for_requester,
-    delete_failed_logins_for_requester,
 )
 from app.models import EMAIL_TYPE, SMS_TYPE, Permission
 from app.schema_validation import validate
@@ -88,10 +87,6 @@ def create_user():
     user_to_create = create_user_schema.load(req_json)
 
     save_model_user(user_to_create, password=req_json.get("password"), validated_email_access=True)
-
-    # The check for the new user's email will previously have generated a
-    # failed_login - remove this to avoid an immediate throttling message
-    delete_failed_logins_for_requester()
 
     result = user_to_create.serialize()
     log_user(result, "User created")
@@ -152,7 +147,6 @@ def activate_user(user_id):
     user.state = "active"
     user.failed_login_count = 0
     save_model_user(user)
-    delete_failed_logins_for_requester()
     return jsonify(data=user.serialize()), 200
 
 
@@ -175,7 +169,6 @@ def verify_user_password(user_id):
         raise InvalidRequest(errors, status_code=400)
     if user_to_verify.check_password(txt_pwd):
         reset_failed_login_count(user_to_verify)
-        delete_failed_logins_for_requester()
         return jsonify({}), 204
     else:
         increment_failed_login_count(user_to_verify)
@@ -216,7 +209,6 @@ def verify_user_code(user_id):
         user_to_verify.email_access_validated_at = datetime.utcnow()
     user_to_verify.failed_login_count = 0
     save_model_user(user_to_verify)
-    delete_failed_logins_for_requester()
 
     log_auth_activity(user_to_verify, "Successful login")
 
@@ -252,7 +244,6 @@ def complete_login_after_webauthn_authentication_attempt(user_id):
         user.logged_in_at = datetime.utcnow()
         user.failed_login_count = 0
         save_model_user(user)
-        delete_failed_logins_for_requester()
         log_auth_activity(user, "Successful login")
 
         if webauthn_credential_id := data.get("webauthn_credential_id"):
