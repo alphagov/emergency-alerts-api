@@ -87,7 +87,6 @@ def create_user():
     user_to_create = create_user_schema.load(req_json)
 
     save_model_user(user_to_create, password=req_json.get("password"), validated_email_access=True)
-
     result = user_to_create.serialize()
     log_user(result, "User created")
     return jsonify(data=result), 201
@@ -145,7 +144,6 @@ def activate_user(user_id):
         raise InvalidRequest("User already active", status_code=400)
 
     user.state = "active"
-    user.failed_login_count = 0
     save_model_user(user)
     return jsonify(data=user.serialize()), 200
 
