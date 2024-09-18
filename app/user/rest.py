@@ -150,7 +150,9 @@ def activate_user(user_id):
         raise InvalidRequest("User already active", status_code=400)
 
     user.state = "active"
+    user.failed_login_count = 0
     save_model_user(user)
+    delete_failed_logins_for_requester()
     return jsonify(data=user.serialize()), 200
 
 
@@ -173,6 +175,7 @@ def verify_user_password(user_id):
         raise InvalidRequest(errors, status_code=400)
     if user_to_verify.check_password(txt_pwd):
         reset_failed_login_count(user_to_verify)
+        delete_failed_logins_for_requester()
         return jsonify({}), 204
     else:
         increment_failed_login_count(user_to_verify)
@@ -213,6 +216,7 @@ def verify_user_code(user_id):
         user_to_verify.email_access_validated_at = datetime.utcnow()
     user_to_verify.failed_login_count = 0
     save_model_user(user_to_verify)
+    delete_failed_logins_for_requester()
 
     log_auth_activity(user_to_verify, "Successful login")
 
@@ -248,6 +252,7 @@ def complete_login_after_webauthn_authentication_attempt(user_id):
         user.logged_in_at = datetime.utcnow()
         user.failed_login_count = 0
         save_model_user(user)
+        delete_failed_logins_for_requester()
         log_auth_activity(user, "Successful login")
 
         if webauthn_credential_id := data.get("webauthn_credential_id"):
@@ -491,7 +496,8 @@ def fetch_user_by_email():
     try:
         fetched_user = get_user_by_email(email["email"])
     except Exception:
-        add_failed_login_for_requester()
+        if not _pending_registration(email["email"]):
+            add_failed_login_for_requester()
         log_auth_activity(email["email"], "Attempted Login", admin_only=False)
         raise
     result = fetched_user.serialize()
@@ -607,6 +613,11 @@ def _create_2fa_url(user, secret_code, next_redirect, email_auth_link_host):
     if next_redirect:
         full_url += "?{}".format(urlencode({"next": next_redirect}))
     return full_url
+
+
+def _pending_registration(email_address):
+    user = get_invited_user_by_email(email_address)
+    return user is not None and user.status == "pending"
 
 
 def get_orgs_and_services(user):
