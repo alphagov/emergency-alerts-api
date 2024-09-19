@@ -343,16 +343,20 @@ def test_get_user_by_email_bad_url_returns_404(admin_request, sample_user):
     assert json_resp["message"] == "Invalid request. Email query string param required"
 
 
-def test_fetch_user_by_email(admin_request, notify_db_session):
+def test_fetch_user_by_email(admin_request, mocker, notify_db_session):
     user = create_user(email="foo@bar.com")
 
     create_user(email="foo@bar.com.other_email")
     create_user(email="other_email.foo@bar.com")
 
+    mocker.patch("app.user.rest._pending_registration", return_value=False)
+    add_failed_login_for_requester = mocker.patch("app.user.rest.add_failed_login_for_requester")
+
     resp = admin_request.post("user.fetch_user_by_email", _data={"email": user.email_address}, _expected_status=200)
 
     assert resp["data"]["id"] == str(user.id)
     assert resp["data"]["email_address"] == user.email_address
+    add_failed_login_for_requester.assert_not_called()
 
 
 def test_fetch_user_by_email_not_found_returns_404(admin_request, mocker, notify_db_session):
