@@ -241,6 +241,9 @@ def register_blueprint(application):
     failed_logins_blueprint.before_request(requires_admin_auth)
     application.register_blueprint(failed_logins_blueprint)
 
+    password_history_blueprint.before_request(requires_admin_auth)
+    application.register_blueprint(password_history_blueprint)
+
 
 def register_v2_blueprints(application):
     from app.authentication.auth import requires_auth
