@@ -2,6 +2,7 @@ import json
 import uuid
 from datetime import datetime
 from urllib.parse import urlencode
+import pwdpy
 
 from flask import Blueprint, abort, current_app, jsonify, request
 from notifications_python_client.errors import HTTPError
@@ -557,13 +558,15 @@ def update_password(user_id):
     user = get_user_by_id(user_id=user_id)
     req_json = request.get_json()
     password = req_json.get("_password")
+    if pwdpy.entropy(password) > 75:
+        user_update_password_schema_load_json.load(req_json)
 
-    user_update_password_schema_load_json.load(req_json)
+        current_app.logger.info("update_password", extra={"python_module": __name__, "user_id": user_id})
 
-    current_app.logger.info("update_password", extra={"python_module": __name__, "user_id": user_id})
-
-    update_user_password(user, password)
-    return jsonify(data=user.serialize()), 200
+        update_user_password(user, password)
+        return jsonify(data=user.serialize()), 200
+    else:
+        return jsonify({"errors": ['Password does not have enough entropy.']}), 400
 
 
 @user_blueprint.route("/<uuid:user_id>/organisations-and-services", methods=["GET"])
