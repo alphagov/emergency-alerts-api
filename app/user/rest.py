@@ -558,7 +558,7 @@ def update_password(user_id):
     user = get_user_by_id(user_id=user_id)
     req_json = request.get_json()
     password = req_json.get("_password")
-    if pwdpy.entropy(password) > 75:
+    if pwdpy.entropy(password) > 70:
         user_update_password_schema_load_json.load(req_json)
 
         current_app.logger.info("update_password", extra={"python_module": __name__, "user_id": user_id})
