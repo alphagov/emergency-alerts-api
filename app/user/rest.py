@@ -45,6 +45,7 @@ from app.failed_logins.rest import (
     check_throttle_for_requester,
 )
 from app.models import EMAIL_TYPE, SMS_TYPE, Permission
+from app.password_history.rest import add_password_for_user, check_password_for_user_not_already_in_table
 from app.schema_validation import validate
 from app.schemas import (
     create_user_schema,
@@ -89,6 +90,7 @@ def create_user():
     save_model_user(user_to_create, password=req_json.get("password"), validated_email_access=True)
     result = user_to_create.serialize()
     log_user(result, "User created")
+    add_password_for_user(user_to_create.id, req_json.get("password"))
     return jsonify(data=result), 201
 
 
@@ -561,7 +563,9 @@ def update_password(user_id):
     user_update_password_schema_load_json.load(req_json)
 
     current_app.logger.info("update_password", extra={"python_module": __name__, "user_id": user_id})
-
+    if check_password_for_user_not_already_in_table(user_id, password):
+        return jsonify({"errors": ['password used before']}), 500
+    add_password_for_user(user.id, password)
     update_user_password(user, password)
     return jsonify(data=user.serialize()), 200
 
