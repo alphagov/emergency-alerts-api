@@ -119,6 +119,7 @@ class Config(object):
     EXPIRE_CACHE_EIGHT_DAYS = 8 * 24 * 60 * 60
 
     ZENDESK_API_KEY = os.environ.get("ZENDESK_API_KEY")
+    REPORTS_SLACK_WEBHOOK_URL = os.environ.get("REPORTS_SLACK_WEBHOOK_URL")
 
     # Logging
     DEBUG = True
@@ -288,6 +289,8 @@ class Config(object):
     SES_STUB_URL = os.environ.get("SES_STUB_URL")
 
     EAS_EMAIL_REPLY_TO_ID = "591164ac-721d-46e5-b329-fe40f5253241"
+
+    REPORTS_SLACK_WEBHOOK_URL = ""
 
     # as defined in api db migration 0331_add_broadcast_org.py
     BROADCAST_ORGANISATION_ID = "38e4bf69-93b0-445d-acee-53ea53fe02df"
