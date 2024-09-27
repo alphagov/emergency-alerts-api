@@ -343,24 +343,54 @@ def test_get_user_by_email_bad_url_returns_404(admin_request, sample_user):
     assert json_resp["message"] == "Invalid request. Email query string param required"
 
 
-def test_fetch_user_by_email(admin_request, notify_db_session):
-    user = create_user(email="foo@bar.com")
+def test_fetch_user_by_email(admin_request, mocker, notify_db_session):
+    user = create_user(email="foo@bar.test")
 
-    create_user(email="foo@bar.com.other_email")
-    create_user(email="other_email.foo@bar.com")
+    create_user(email="foo@bar.other_email.test")
+    create_user(email="other_email.foo@bar.test")
+
+    mocker.patch("app.user.rest._pending_registration", return_value=False)
+    add_failed_login_for_requester = mocker.patch("app.user.rest.add_failed_login_for_requester")
 
     resp = admin_request.post("user.fetch_user_by_email", _data={"email": user.email_address}, _expected_status=200)
 
     assert resp["data"]["id"] == str(user.id)
     assert resp["data"]["email_address"] == user.email_address
+    add_failed_login_for_requester.assert_not_called()
 
 
-def test_fetch_user_by_email_not_found_returns_404(admin_request, notify_db_session):
-    create_user(email="foo@bar.com.other_email")
+def test_fetch_user_by_email_not_found_returns_404(admin_request, mocker, notify_db_session):
+    create_user(email="foo@bar.other_email.test")
 
-    resp = admin_request.post("user.fetch_user_by_email", _data={"email": "doesnt@exist.com"}, _expected_status=404)
+    mocker.patch("app.failed_logins.rest.add_failed_login_for_requester")
+
+    resp = admin_request.post("user.fetch_user_by_email", _data={"email": "doesnt@exist.test"}, _expected_status=404)
     assert resp["result"] == "error"
     assert resp["message"] == "No result found"
+
+
+def test_email_not_found_for_active_user_logs_failed_login(admin_request, mocker):
+    create_user(email="foo@bar.other_email.test")
+
+    mocker.patch("app.user.rest._pending_registration", return_value=False)
+    add_failed_login_for_requester = mocker.patch("app.user.rest.add_failed_login_for_requester")
+
+    resp = admin_request.post("user.fetch_user_by_email", _data={"email": "doesnt@exist.test"}, _expected_status=404)
+
+    assert resp["result"] == "error"
+    add_failed_login_for_requester.assert_called_once()
+
+
+def test_email_not_found_for_registering_user_does_not_log_failed_login(admin_request, mocker):
+    create_user(email="foo@bar.other_email.test")
+
+    mocker.patch("app.user.rest._pending_registration", return_value=True)
+    add_failed_login_for_requester = mocker.patch("app.user.rest.add_failed_login_for_requester")
+
+    resp = admin_request.post("user.fetch_user_by_email", _data={"email": "doesnt@exist.test"}, _expected_status=404)
+
+    assert resp["result"] == "error"
+    add_failed_login_for_requester.assert_not_called()
 
 
 def test_fetch_user_by_email_without_email_returns_400(admin_request, notify_db_session):

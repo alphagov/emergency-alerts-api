@@ -487,7 +487,8 @@ def fetch_user_by_email():
     try:
         fetched_user = get_user_by_email(email["email"])
     except Exception:
-        add_failed_login_for_requester()
+        if not _pending_registration(email["email"]):
+            add_failed_login_for_requester()
         log_auth_activity(email["email"], "Attempted Login", admin_only=False)
         raise
     result = fetched_user.serialize()
@@ -605,6 +606,11 @@ def _create_2fa_url(user, secret_code, next_redirect, email_auth_link_host):
     if next_redirect:
         full_url += "?{}".format(urlencode({"next": next_redirect}))
     return full_url
+
+
+def _pending_registration(email_address):
+    user = get_invited_user_by_email(email_address)
+    return user is not None and user.status == "pending"
 
 
 def get_orgs_and_services(user):
