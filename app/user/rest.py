@@ -45,7 +45,10 @@ from app.failed_logins.rest import (
     check_throttle_for_requester,
 )
 from app.models import EMAIL_TYPE, SMS_TYPE, Permission
-from app.password_history.rest import add_password_for_user, check_password_for_user_not_already_in_table
+from app.password_history.rest import (
+    add_password_for_user,
+    check_password_for_user_not_already_in_table,
+)
 from app.schema_validation import validate
 from app.schemas import (
     create_user_schema,
@@ -565,7 +568,7 @@ def update_password(user_id):
 
     current_app.logger.info("update_password", extra={"python_module": __name__, "user_id": user_id})
     if check_password_for_user_not_already_in_table(user_id, password):
-        return jsonify({"errors": ['password used before']}), 500
+        return jsonify({"errors": ["You've used this password before. Please choose a new one."]}), 400
     add_password_for_user(user.id, password)
     update_user_password(user, password)
     return jsonify(data=user.serialize()), 200

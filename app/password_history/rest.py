@@ -1,12 +1,12 @@
-from flask import Blueprint, json, jsonify
+from flask import Blueprint, jsonify
 
 from app.dao.password_history_dao import (
     dao_create_password_for_user_id,
     dao_get_all_passwords_for_user,
-    dao_get_count_of_all_historic_passwords_for_user
+    dao_get_count_of_all_historic_passwords_for_user,
 )
-from app.errors import InvalidRequest, register_errors
-from app.hashing import check_hash, hashpw
+from app.errors import register_errors
+from app.hashing import check_hash
 
 password_history_blueprint = Blueprint(
     "password_history",
