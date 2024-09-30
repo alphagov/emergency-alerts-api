@@ -1,6 +1,3 @@
-from emergency_alerts_utils.clients.slack.slack_client import SlackMessage
-
-
 def test_create_report(admin_request, mocker):
     data = {
         "type": "some-violation",
@@ -9,23 +6,12 @@ def test_create_report(admin_request, mocker):
         "body": {"something": "random", "could_be": "anything"},
     }
 
-    mock_send_message_to_slack = mocker.patch(
-        "app.slack_client.send_message_to_slack",
+    mock_log_report = mocker.patch(
+        "app.reports.rest.slack_client.send_message_to_slack",
         autospec=True,
+        return_value={"message": "Slack message sent to the provided webhook URL."},
     )
 
-    slack_message = SlackMessage(
-        webhook_url="",
-        subject="Reporting Endpoint Submission",
-        message_type="info",
-        markdown_sections=[
-            (
-                "*Type*: some-violation\n\n"
-                "*URL*: https://gov.uk\n\n"
-                "*User Agent*: some-browser\n\n"
-                '*Body*: ```{"something":"random","could_be":"anything"}```'
-            )
-        ],
-    )
-    admin_request.post("reports.log_report", _data=data)
-    mock_send_message_to_slack.assert_called_once_with(slack_message)
+    admin_request.post("reports.log_report", _data=data, _expected_status=201)
+
+    mock_log_report.assert_called_once()

@@ -290,8 +290,6 @@ class Config(object):
 
     EAS_EMAIL_REPLY_TO_ID = "591164ac-721d-46e5-b329-fe40f5253241"
 
-    REPORTS_SLACK_WEBHOOK_URL = ""
-
     # as defined in api db migration 0331_add_broadcast_org.py
     BROADCAST_ORGANISATION_ID = "38e4bf69-93b0-445d-acee-53ea53fe02df"
 
@@ -397,6 +395,8 @@ class Test(Config):
         else ""
     )
     ADMIN_EXTERNAL_URL = f"https://{TENANT}admin.{SUBDOMAIN}emergency-alerts.service.gov.uk"
+
+    REPORTS_SLACK_WEBHOOK_URL = "https://hooks.slack.com/somewhere"
 
     CBC_PROXY_ENABLED = True
     DVLA_EMAIL_ADDRESSES = ["success@simulator.amazonses.com", "success+2@simulator.amazonses.com"]
