@@ -20,6 +20,7 @@ RUN echo "" > $DIR_API/environment.sh
 
 RUN useradd -ms /bin/bash easuser && chown -R easuser:easuser $DIR_API && chown -R easuser:easuser $DIR_UTILS
 
+COPY scripts/link-test.sh /
 COPY scripts/healthcheck.sh /
 COPY scripts/start-celery.sh /
 CMD bash /start-celery.sh

@@ -35,6 +35,7 @@ RUN useradd -ms /bin/bash easuser && \
     chown -R easuser:easuser $DIR_API && \
     chown -R easuser:easuser $DIR_UTILS
 
+COPY scripts/link-test.sh /
 COPY scripts/start-api.sh /
 CMD bash /start-api.sh
 
