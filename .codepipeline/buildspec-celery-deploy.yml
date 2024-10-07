@@ -3,8 +3,11 @@ version: 0.2
 phases:
   pre_build:
     commands:
-      - echo Checking out to celery_${ENVIRONMENT}_latest tag...
-      - git checkout tags/celery_${ENVIRONMENT}_latest
+      - |
+        if [ -n "$COMMIT_ID" ]; then
+          echo Checking out to celery_${ENVIRONMENT}_latest tag...
+          git checkout tags/celery_${ENVIRONMENT}_latest
+        fi
   build:
     commands:
       - echo Deployment started on `date`

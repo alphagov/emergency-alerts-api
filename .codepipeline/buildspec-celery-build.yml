@@ -3,19 +3,29 @@ version: 0.2
 phases:
   pre_build:
     commands:
-      - echo Checking out to celery_${ENVIRONMENT}_latest tag...
-      - git checkout tags/celery_${ENVIRONMENT}_latest
+      - |
+        if [ -n "$COMMIT_ID" ]; then
+          echo Checking out to celery_${ENVIRONMENT}_latest tag...
+          git checkout tags/celery_${ENVIRONMENT}_latest
+        fi
       - echo Logging in to Amazon ECR...
       - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS
         --password-stdin $ACCOUNT_NUMBER.dkr.ecr.$AWS_REGION.amazonaws.com
   build:
     commands:
-      - COMMIT_ID=$(echo $COMMIT_ID | cut -c 1-7)
+      - |
+        TAGS="-t $REPOSITORY_URI:latest -t $REPOSITORY_URI:pipeline_$EXECUTION_ID"
+        if [ -n "$COMMIT_ID" ]; then
+          COMMIT_ID=$(echo $COMMIT_ID | cut -c 1-7)
+          TAGS="$TAGS -t $REPOSITORY_URI:commit_$COMMIT_ID"
+        fi
       - echo Build started on `date`
       - echo Building Docker image...
       - export TENANT_PREFIX="${RESOURCE_PREFIX:-eas-app}"
-      - docker build -t $REPOSITORY_URI:latest -t $REPOSITORY_URI:pipeline_$EXECUTION_ID -t $REPOSITORY_URI:commit_$COMMIT_ID
-        -f Dockerfile.eas-celery --build-arg ECS_ACCOUNT_NUMBER=$ACCOUNT_NUMBER --build-arg RESOURCE_PREFIX=$TENANT_PREFIX --no-cache
+      - docker build $TAGS -f Dockerfile.eas-celery
+        --build-arg ECS_ACCOUNT_NUMBER=$ACCOUNT_NUMBER
+        --build-arg AWS_REGION=${AWS_REGION:-eu-west-2}
+        --build-arg RESOURCE_PREFIX=$TENANT_PREFIX --no-cache
         .
   post_build:
     commands:
