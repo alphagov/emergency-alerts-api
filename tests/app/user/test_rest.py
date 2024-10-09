@@ -813,8 +813,8 @@ def test_send_user_confirm_new_email_returns_400_when_email_missing(admin_reques
 @freeze_time("2020-02-14T12:00:00")
 def test_update_user_password_saves_correctly(admin_request, sample_service):
     sample_user = sample_service.users[0]
-    new_password = "1234567890"
-    data = {"_password": "1234567890"}
+    new_password = "A1234567890!?!"
+    data = {"_password": "A1234567890!?!"}
 
     json_resp = admin_request.post("user.update_password", user_id=str(sample_user.id), _data=data)
 
@@ -1186,3 +1186,15 @@ def test_complete_login_after_webauthn_authentication_attempt_raises_400_if_sche
         _data={"successful": "True"},
         _expected_status=400,
     )
+
+
+def test_update_user_password_low_entropy_password(admin_request, sample_service):
+    sample_user = sample_service.users[0]
+    new_password = "low entropy"
+    data = {"_password": new_password}
+
+    json_resp = admin_request.post(
+        "user.update_password", user_id=str(sample_user.id), _data=data, _expected_status=400
+    )
+
+    assert json_resp["errors"] == ["Password does not have enough entropy."]
