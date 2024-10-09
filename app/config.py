@@ -119,6 +119,7 @@ class Config(object):
     EXPIRE_CACHE_EIGHT_DAYS = 8 * 24 * 60 * 60
 
     ZENDESK_API_KEY = os.environ.get("ZENDESK_API_KEY")
+    REPORTS_SLACK_WEBHOOK_URL = os.environ.get("REPORTS_SLACK_WEBHOOK_URL")
 
     # Logging
     DEBUG = True
@@ -394,6 +395,8 @@ class Test(Config):
         else ""
     )
     ADMIN_EXTERNAL_URL = f"https://{TENANT}admin.{SUBDOMAIN}emergency-alerts.service.gov.uk"
+
+    REPORTS_SLACK_WEBHOOK_URL = "https://hooks.slack.com/somewhere"
 
     CBC_PROXY_ENABLED = True
     DVLA_EMAIL_ADDRESSES = ["success@simulator.amazonses.com", "success+2@simulator.amazonses.com"]
