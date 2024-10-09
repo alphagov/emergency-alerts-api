@@ -1,3 +1,5 @@
+# Sensible defaults, but they will be explicitly overridden in the context of a buildspec anyway.
+# The only one that needs to be passed in however is the ECS_ACCOUNT_NUMBER, as this changes per environment.
 ARG ECS_ACCOUNT_NUMBER
 ARG RESOURCE_PREFIX=eas-app
 ARG AWS_REGION=eu-west-2
