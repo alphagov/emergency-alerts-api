@@ -85,6 +85,9 @@ def handle_integrity_error(exc):
 @user_blueprint.route("", methods=["POST"])
 def create_user():
     req_json = request.get_json()
+    password = req_json.get("password")
+    if pwdpy.entropy(password) <= 70:
+        return jsonify({"errors": ["Password does not have enough entropy."]}), 400
     user_to_create = create_user_schema.load(req_json)
 
     save_model_user(user_to_create, password=req_json.get("password"), validated_email_access=True)
