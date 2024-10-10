@@ -1,41 +1,48 @@
-from datetime import datetime, timedelta
-
-import pytest
+import uuid
 
 from app.dao.password_history_dao import (
     dao_create_password_for_user_id,
     dao_get_all_passwords_for_user,
-    dao_get_count_of_all_historic_passwords_for_user
-
+    dao_get_count_of_all_historic_passwords_for_user,
 )
-from tests.app.conftest import fake_uuid
+from app.hashing import check_hash
+
+test_uuid = uuid.uuid4()
+test_password = "test"
 
 
 def test_get_password_history_returns_all_past_passwords(notify_db_session):
     """
-    Creates 3 failed login records and checks that 3 are returned in dao_get_count_of_all_failed_logins_for_ip.
+    Creates 3 password records in PasswordHistory table and checks that 3 records are
+    returned in dao_get_all_passwords_for_user.
     """
-    dao_create_password_for_user_id(fake_uuid, "test")
-    dao_create_password_for_user_id(fake_uuid, "test")
-    dao_create_password_for_user_id(fake_uuid, "test")
-    response = dao_get_all_passwords_for_user(fake_uuid)
+    dao_create_password_for_user_id(test_uuid, test_password)
+    dao_create_password_for_user_id(test_uuid, test_password)
+    dao_create_password_for_user_id(test_uuid, test_password)
+    response = dao_get_all_passwords_for_user(test_uuid)
     assert len(response) == 3
 
 
 def test_get_password_history_count_returns_count_of_past_passwords(notify_db_session):
     """
-    Creates 3 failed login records and checks that 3 are returned in dao_get_count_of_all_failed_logins_for_ip.
+    Creates 3 password records in PasswordHistory table and checks that record count of 3
+    is returned for dao_get_count_of_all_historic_passwords_for_user.
     """
-    dao_create_password_for_user_id(fake_uuid, "test")
-    dao_create_password_for_user_id(fake_uuid, "test")
-    dao_create_password_for_user_id(fake_uuid, "test")
-    response = dao_get_count_of_all_historic_passwords_for_user(fake_uuid)
+    dao_create_password_for_user_id(test_uuid, test_password)
+    dao_create_password_for_user_id(test_uuid, test_password)
+    dao_create_password_for_user_id(test_uuid, test_password)
+    response = dao_get_count_of_all_historic_passwords_for_user(test_uuid)
     assert response == 3
 
 
-def test_create_password_adds_password_to_password_history(notify_db_session):
+def test_creates_passwords_adds_passwords_to_password_history(notify_db_session):
     """
-    Creates 3 failed login records and checks that 3 are returned in dao_get_count_of_all_failed_logins_for_ip.
+    Creates 2 password records in PasswordHistory and checks that the second password
+    stored is the same as the second password added within tests.
     """
-    dao_create_password_for_user_id(fake_uuid, "test")
-    assert dao_get_all_passwords_for_user[0] == ""
+    dao_create_password_for_user_id(test_uuid, test_password)
+    dao_create_password_for_user_id(test_uuid, f"{test_password}1")
+    assert check_hash(
+        f"{test_password}1",
+        dao_get_all_passwords_for_user(test_uuid)[1]._password,
+    )
