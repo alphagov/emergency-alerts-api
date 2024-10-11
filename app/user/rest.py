@@ -86,7 +86,7 @@ def handle_integrity_error(exc):
 def create_user():
     req_json = request.get_json()
     password = req_json.get("password")
-    if pwdpy.entropy(password) <= 70:
+    if password and (pwdpy.entropy(password) <= 70):
         return jsonify({"errors": ["Password does not have enough entropy."]}), 400
     user_to_create = create_user_schema.load(req_json)
 
