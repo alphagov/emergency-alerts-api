@@ -16,6 +16,7 @@ password_history_blueprint = Blueprint(
 register_errors(password_history_blueprint)
 
 
+@password_history_blueprint.route("")
 def add_password_for_user(user_id, password):
     dao_create_password_for_user_id(user_id, password)
 
