@@ -562,13 +562,20 @@ def update_password(user_id):
     user = get_user_by_id(user_id=user_id)
     req_json = request.get_json()
     password = req_json.get("_password")
-    if pwdpy.entropy(password) > 70:
-        user_update_password_schema_load_json.load(req_json)
+    user_update_password_schema_load_json.load(req_json)
 
-        current_app.logger.info("update_password", extra={"python_module": __name__, "user_id": user_id})
+    current_app.logger.info("update_password", extra={"python_module": __name__, "user_id": user_id})
 
-        update_user_password(user, password)
-        return jsonify(data=user.serialize()), 200
+    update_user_password(user, password)
+    return jsonify(data=user.serialize()), 200
+
+
+@user_blueprint.route("/<uuid:user_id>/check-password-validity", methods=["POST"])
+def check_password_is_valid(user_id):
+    req_json = request.get_json()
+    password = req_json.get("_password")
+    if password and (pwdpy.entropy(password) > 70):
+        return jsonify({}), 200
     else:
         return jsonify({"errors": ["Password does not have enough entropy."]}), 400
 
