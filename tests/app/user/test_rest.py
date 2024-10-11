@@ -100,7 +100,7 @@ def test_post_user(admin_request, notify_db_session):
     data = {
         "name": "Test User",
         "email_address": "user@digital.cabinet-office.gov.uk",
-        "password": "password",
+        "password": "password123456",
         "mobile_number": "+447700900986",
         "logged_in_at": None,
         "state": "active",
@@ -111,7 +111,7 @@ def test_post_user(admin_request, notify_db_session):
     json_resp = admin_request.post("user.create_user", _data=data, _expected_status=201)
 
     user = User.query.filter_by(email_address="user@digital.cabinet-office.gov.uk").first()
-    assert user.check_password("password")
+    assert user.check_password("password123456")
     assert json_resp["data"]["email_address"] == user.email_address
     assert json_resp["data"]["id"] == str(user.id)
     assert user.auth_type == EMAIL_AUTH_TYPE
@@ -122,7 +122,7 @@ def test_post_user_without_auth_type(admin_request, notify_db_session):
     data = {
         "name": "Test User",
         "email_address": "user@digital.cabinet-office.gov.uk",
-        "password": "password",
+        "password": "password123456",
         "mobile_number": "+447700900986",
         "permissions": {},
     }
@@ -141,7 +141,7 @@ def test_post_user_missing_attribute_email(admin_request, notify_db_session):
     User.query.delete()
     data = {
         "name": "Test User",
-        "password": "password",
+        "password": "password123456",
         "mobile_number": "+447700900986",
         "logged_in_at": None,
         "state": "active",
@@ -177,7 +177,7 @@ def test_can_create_user_with_email_auth_and_no_mobile(admin_request, notify_db_
     data = {
         "name": "Test User",
         "email_address": "user@digital.cabinet-office.gov.uk",
-        "password": "password",
+        "password": "password123456",
         "mobile_number": None,
         "auth_type": EMAIL_AUTH_TYPE,
     }
@@ -192,7 +192,7 @@ def test_cannot_create_user_with_sms_auth_and_no_mobile(admin_request, notify_db
     data = {
         "name": "Test User",
         "email_address": "user@digital.cabinet-office.gov.uk",
-        "password": "password",
+        "password": "password123456",
         "mobile_number": None,
         "auth_type": SMS_AUTH_TYPE,
     }
@@ -203,7 +203,7 @@ def test_cannot_create_user_with_sms_auth_and_no_mobile(admin_request, notify_db
 
 
 def test_cannot_create_user_with_empty_strings(admin_request, notify_db_session):
-    data = {"name": "", "email_address": "", "password": "password", "mobile_number": "", "auth_type": EMAIL_AUTH_TYPE}
+    data = {"name": "", "email_address": "", "password": "password123456", "mobile_number": "", "auth_type": EMAIL_AUTH_TYPE}
     resp = admin_request.post("user.create_user", _data=data, _expected_status=400)
     assert resp["message"] == {
         "email_address": ["Not a valid email address"],
