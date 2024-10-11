@@ -558,6 +558,7 @@ def send_user_reset_password():
 def update_password(user_id):
     user = get_user_by_id(user_id=user_id)
     req_json = request.get_json()
+
     password = req_json.get("_password")
     user_update_password_schema_load_json.load(req_json)
 
