@@ -1,9 +1,8 @@
-from flask import Blueprint, jsonify
+from flask import Blueprint
 
 from app.dao.password_history_dao import (
     dao_create_password_for_user_id,
     dao_get_all_passwords_for_user,
-    dao_get_count_of_all_historic_passwords_for_user,
 )
 from app.errors import register_errors
 from app.hashing import check_hash
@@ -15,15 +14,6 @@ password_history_blueprint = Blueprint(
 )
 
 register_errors(password_history_blueprint)
-
-
-@password_history_blueprint.route("")
-def get_count_of_historic_passwords_for_user(user_id):
-    """
-    Fetches historic passwords for user.
-    """
-    data = dao_get_count_of_all_historic_passwords_for_user(user_id)
-    return jsonify(data.serialize() if data else {}), 200
 
 
 def add_password_for_user(user_id, password):

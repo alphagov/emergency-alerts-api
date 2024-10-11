@@ -3,7 +3,6 @@ import uuid
 from app.dao.password_history_dao import (
     dao_create_password_for_user_id,
     dao_get_all_passwords_for_user,
-    dao_get_count_of_all_historic_passwords_for_user,
 )
 from app.hashing import check_hash
 
@@ -21,18 +20,6 @@ def test_get_password_history_returns_all_past_passwords(notify_db_session):
     dao_create_password_for_user_id(test_uuid, test_password)
     response = dao_get_all_passwords_for_user(test_uuid)
     assert len(response) == 3
-
-
-def test_get_password_history_count_returns_count_of_past_passwords(notify_db_session):
-    """
-    Creates 3 password records in PasswordHistory table and checks that record count of 3
-    is returned for dao_get_count_of_all_historic_passwords_for_user.
-    """
-    dao_create_password_for_user_id(test_uuid, test_password)
-    dao_create_password_for_user_id(test_uuid, test_password)
-    dao_create_password_for_user_id(test_uuid, test_password)
-    response = dao_get_count_of_all_historic_passwords_for_user(test_uuid)
-    assert response == 3
 
 
 def test_creates_passwords_adds_passwords_to_password_history(notify_db_session):
