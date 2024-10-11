@@ -203,7 +203,13 @@ def test_cannot_create_user_with_sms_auth_and_no_mobile(admin_request, notify_db
 
 
 def test_cannot_create_user_with_empty_strings(admin_request, notify_db_session):
-    data = {"name": "", "email_address": "", "password": "password123456", "mobile_number": "", "auth_type": EMAIL_AUTH_TYPE}
+    data = {
+        "name": "",
+        "email_address": "",
+        "password": "password123456",
+        "mobile_number": "",
+        "auth_type": EMAIL_AUTH_TYPE,
+    }
     resp = admin_request.post("user.create_user", _data=data, _expected_status=400)
     assert resp["message"] == {
         "email_address": ["Not a valid email address"],
