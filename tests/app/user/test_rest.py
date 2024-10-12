@@ -1194,13 +1194,10 @@ def test_complete_login_after_webauthn_authentication_attempt_raises_400_if_sche
     )
 
 
-def test_update_user_password_low_entropy_password(admin_request, sample_service):
-    sample_user = sample_service.users[0]
+def test_update_user_password_low_entropy_password(admin_request):
     new_password = "low entropy"
     data = {"_password": new_password}
 
-    json_resp = admin_request.post(
-        "user.update_password", user_id=str(sample_user.id), _data=data, _expected_status=400
-    )
+    json_resp = admin_request.post("user.check_password_is_valid", _data=data, _expected_status=400)
 
     assert json_resp["errors"] == ["Password does not have enough entropy."]
