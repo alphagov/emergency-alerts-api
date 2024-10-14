@@ -13,6 +13,7 @@ from emergency_alerts_utils.clients.encryption.encryption_client import (
     Encryption,
 )
 from emergency_alerts_utils.clients.redis.redis_client import RedisClient
+from emergency_alerts_utils.clients.slack.slack_client import SlackClient
 from emergency_alerts_utils.clients.statsd.statsd_client import StatsdClient
 from emergency_alerts_utils.clients.zendesk.zendesk_client import ZendeskClient
 from flask import (
@@ -63,6 +64,7 @@ aws_ses_client = AwsSesClient()
 aws_ses_stub_client = AwsSesStubClient()
 encryption = Encryption()
 zendesk_client = ZendeskClient()
+slack_client = SlackClient()
 statsd_client = StatsdClient()
 redis_store = RedisClient()
 cbc_proxy_client = CBCProxyClient()
@@ -161,6 +163,7 @@ def register_blueprint(application):
     from app.organisation.invite_rest import organisation_invite_blueprint
     from app.organisation.rest import organisation_blueprint
     from app.platform_stats.rest import platform_stats_blueprint
+    from app.reports.rest import reports_blueprint
     from app.service.callback_rest import service_callback_blueprint
     from app.service.rest import service_blueprint
     from app.service_invite.rest import (
@@ -239,6 +242,9 @@ def register_blueprint(application):
 
     failed_logins_blueprint.before_request(requires_admin_auth)
     application.register_blueprint(failed_logins_blueprint)
+
+    reports_blueprint.before_request(requires_admin_auth)
+    application.register_blueprint(reports_blueprint)
 
 
 def register_v2_blueprints(application):
