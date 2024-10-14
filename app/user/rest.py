@@ -577,7 +577,7 @@ def check_password_is_valid(user_id):
     else:
         return (
             jsonify(
-                {"errors": ["Your password should consist of 3 random, unrelated words, each at least 5 letters long."]}
+                {"errors": ["Your password should consist of 3 random, unrelated words, each at least 5 letters long"]}
             ),
             400,
         )

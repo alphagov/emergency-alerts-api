@@ -1203,5 +1203,5 @@ def test_update_user_password_low_entropy_password(admin_request):
     )
 
     assert json_resp["errors"] == [
-        "Your password should consist of 3 random, unrelated words, each at least 5 letters long."
+        "Your password should consist of 3 random, unrelated words, each at least 5 letters long"
     ]
