@@ -575,7 +575,12 @@ def check_password_is_valid(user_id):
     if password and (pwdpy.entropy(password) > 70):
         return jsonify({}), 200
     else:
-        return jsonify({"errors": ["Password does not have enough entropy."]}), 400
+        return (
+            jsonify(
+                {"errors": ["Your password should consist of 3 random, unrelated words, each at least 5 letters long."]}
+            ),
+            400,
+        )
 
 
 @user_blueprint.route("/<uuid:user_id>/organisations-and-services", methods=["GET"])

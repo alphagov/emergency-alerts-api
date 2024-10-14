@@ -1202,4 +1202,6 @@ def test_update_user_password_low_entropy_password(admin_request):
         "user.check_password_is_valid", user_id=uuid.uuid4(), _data=data, _expected_status=400
     )
 
-    assert json_resp["errors"] == ["Password does not have enough entropy."]
+    assert json_resp["errors"] == [
+        "Your password should consist of 3 random, unrelated words, each at least 5 letters long."
+    ]
