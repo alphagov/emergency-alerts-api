@@ -568,8 +568,8 @@ def update_password(user_id):
     return jsonify(data=user.serialize()), 200
 
 
-@user_blueprint.route("/check-password-validity", methods=["POST"])
-def check_password_is_valid():
+@user_blueprint.route("/<uuid:user_id>/check-password-validity", methods=["POST"])
+def check_password_is_valid(user_id):
     req_json = request.get_json()
     password = req_json.get("_password")
     if password and (pwdpy.entropy(password) > 70):

@@ -1198,6 +1198,8 @@ def test_update_user_password_low_entropy_password(admin_request):
     new_password = "low entropy"
     data = {"_password": new_password}
 
-    json_resp = admin_request.post("user.check_password_is_valid", _data=data, _expected_status=400)
+    json_resp = admin_request.post(
+        "user.check_password_is_valid", user_id=uuid.uuid4(), _data=data, _expected_status=400
+    )
 
     assert json_resp["errors"] == ["Password does not have enough entropy."]
