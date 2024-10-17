@@ -1,29 +1,14 @@
 import pytest
-from freezegun import freeze_time
-from sqlalchemy.exc import IntegrityError
 
 from app.models import (
     EMAIL_TYPE,
     MOBILE_TYPE,
-    NOTIFICATION_CREATED,
-    NOTIFICATION_DELIVERED,
-    NOTIFICATION_FAILED,
-    NOTIFICATION_PENDING,
-    NOTIFICATION_SENDING,
-    NOTIFICATION_STATUS_LETTER_ACCEPTED,
-    NOTIFICATION_STATUS_LETTER_RECEIVED,
-    NOTIFICATION_STATUS_TYPES_FAILED,
-    NOTIFICATION_TECHNICAL_FAILURE,
     PRECOMPILED_TEMPLATE_NAME,
-    SMS_TYPE,
-    Notification,
     ServiceGuestList,
 )
 from tests.app.db import (
     create_letter_contact,
-    create_notification,
     create_reply_to_email,
-    create_template,
     create_template_folder,
 )
 
@@ -50,88 +35,9 @@ def test_should_not_build_service_guest_list_from_invalid_contact(recipient_type
         ServiceGuestList.from_string("service_id", recipient_type, contact)
 
 
-@pytest.mark.parametrize(
-    "initial_statuses, expected_statuses",
-    [
-        # passing in single statuses as strings
-        (NOTIFICATION_FAILED, NOTIFICATION_STATUS_TYPES_FAILED),
-        (NOTIFICATION_STATUS_LETTER_ACCEPTED, [NOTIFICATION_SENDING, NOTIFICATION_CREATED]),
-        (NOTIFICATION_CREATED, [NOTIFICATION_CREATED]),
-        (NOTIFICATION_TECHNICAL_FAILURE, [NOTIFICATION_TECHNICAL_FAILURE]),
-        # passing in lists containing single statuses
-        ([NOTIFICATION_FAILED], NOTIFICATION_STATUS_TYPES_FAILED),
-        ([NOTIFICATION_CREATED], [NOTIFICATION_CREATED]),
-        ([NOTIFICATION_TECHNICAL_FAILURE], [NOTIFICATION_TECHNICAL_FAILURE]),
-        (NOTIFICATION_STATUS_LETTER_RECEIVED, NOTIFICATION_DELIVERED),
-        # passing in lists containing multiple statuses
-        ([NOTIFICATION_FAILED, NOTIFICATION_CREATED], NOTIFICATION_STATUS_TYPES_FAILED + [NOTIFICATION_CREATED]),
-        ([NOTIFICATION_CREATED, NOTIFICATION_PENDING], [NOTIFICATION_CREATED, NOTIFICATION_PENDING]),
-        (
-            [NOTIFICATION_CREATED, NOTIFICATION_TECHNICAL_FAILURE],
-            [NOTIFICATION_CREATED, NOTIFICATION_TECHNICAL_FAILURE],
-        ),
-        (
-            [NOTIFICATION_FAILED, NOTIFICATION_STATUS_LETTER_ACCEPTED],
-            NOTIFICATION_STATUS_TYPES_FAILED + [NOTIFICATION_SENDING, NOTIFICATION_CREATED],
-        ),
-        # checking we don't end up with duplicates
-        (
-            [NOTIFICATION_FAILED, NOTIFICATION_CREATED, NOTIFICATION_TECHNICAL_FAILURE],
-            NOTIFICATION_STATUS_TYPES_FAILED + [NOTIFICATION_CREATED],
-        ),
-    ],
-)
-def test_status_conversion(initial_statuses, expected_statuses):
-    converted_statuses = Notification.substitute_status(initial_statuses)
-    assert len(converted_statuses) == len(expected_statuses)
-    assert set(converted_statuses) == set(expected_statuses)
-
-
-@freeze_time("2016-01-01 11:09:00.000000")
-@pytest.mark.parametrize(
-    "template_type, recipient",
-    [
-        ("sms", "+447700900855"),
-        ("email", "foo@bar.com"),
-    ],
-)
-def test_notification_for_csv_returns_correct_type(sample_service, template_type, recipient):
-    template = create_template(sample_service, template_type=template_type)
-    notification = create_notification(template, to_field=recipient)
-
-    serialized = notification.serialize_for_csv()
-    assert serialized["template_type"] == template_type
-
-
-@freeze_time("2016-01-01 11:09:00.000000")
-def test_notification_for_csv_returns_correct_job_row_number(sample_job):
-    notification = create_notification(sample_job.template, sample_job, job_row_number=0)
-
-    serialized = notification.serialize_for_csv()
-    assert serialized["row_number"] == 1
-
-
-def test_notification_personalisation_getter_returns_empty_dict_from_None():
-    noti = Notification()
-    noti._personalisation = None
-    assert noti.personalisation == {}
-
-
-def test_notification_subject_is_none_for_sms(sample_service):
-    template = create_template(service=sample_service, template_type=SMS_TYPE)
-    notification = create_notification(template=template)
-    assert notification.subject is None
-
-
 def test_email_notification_serializes_with_subject(client, sample_email_template):
     res = sample_email_template.serialize_for_v2()
     assert res["subject"] == "Email Subject"
-
-
-def test_notification_requires_a_valid_template_version(client, sample_template):
-    sample_template.version = 2
-    with pytest.raises(IntegrityError):
-        create_notification(sample_template)
 
 
 def test_service_get_default_reply_to_email_address(sample_service):

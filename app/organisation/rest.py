@@ -3,7 +3,6 @@ from sqlalchemy.exc import IntegrityError
 
 from app.dao.annual_billing_dao import set_default_free_allowance_for_service
 from app.dao.dao_utils import transaction
-from app.dao.fact_billing_dao import fetch_usage_for_organisation
 from app.dao.invited_org_user_dao import get_invited_org_users_for_organisation
 from app.dao.organisation_dao import (
     dao_add_service_to_organisation,
@@ -145,18 +144,6 @@ def get_organisation_services(organisation_id):
     services = dao_get_organisation_services(organisation_id)
     sorted_services = sorted(services, key=lambda s: (-s.active, s.name))
     return jsonify([s.serialize_for_org_dashboard() for s in sorted_services])
-
-
-@organisation_blueprint.route("/<uuid:organisation_id>/services-with-usage", methods=["GET"])
-def get_organisation_services_usage(organisation_id):
-    try:
-        year = int(request.args.get("year", "none"))
-    except ValueError:
-        return jsonify(result="error", message="No valid year provided"), 400
-    services = fetch_usage_for_organisation(organisation_id, year)
-    list_services = services.values()
-    sorted_services = sorted(list_services, key=lambda s: (-s["active"], s["service_name"].lower()))
-    return jsonify(services=sorted_services)
 
 
 @organisation_blueprint.route("/<uuid:organisation_id>/users/<uuid:user_id>", methods=["POST"])

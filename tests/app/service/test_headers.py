@@ -6,7 +6,7 @@ from tests import (
 )
 
 
-@pytest.mark.parametrize("endpoint", ["/", "/v2/broadcast", "/notifications"])
+@pytest.mark.parametrize("endpoint", ["/", "/v2/broadcast"])
 def test_service_request_returns_hsts_header(endpoint, client, sample_service):
     auth_header = create_service_authorization_header(service_id=sample_service.id)
     response = client.options(
@@ -18,7 +18,7 @@ def test_service_request_returns_hsts_header(endpoint, client, sample_service):
     assert response.headers["Strict-Transport-Security"] == "max-age=63072000; includeSubdomains; preload"
 
 
-@pytest.mark.parametrize("endpoint", ["/", "/v2/broadcast", "/notifications"])
+@pytest.mark.parametrize("endpoint", ["/", "/v2/broadcast"])
 def test_service_request_returns_referrer_policy(endpoint, client, sample_service):
     auth_header = create_service_authorization_header(service_id=sample_service.id)
     response = client.options(
@@ -32,7 +32,7 @@ def test_service_request_returns_referrer_policy(endpoint, client, sample_servic
 
 @pytest.mark.parametrize(
     "endpoint",
-    ["/", "/events", "/feature-toggle", "/organisations", "/platform-stats", "/service"],
+    ["/", "/events", "/feature-toggle", "/organisations", "/service"],
 )
 def test_admin_request_returns_hsts_header(endpoint, client):
     auth_header = create_admin_authorization_header()
@@ -45,9 +45,7 @@ def test_admin_request_returns_hsts_header(endpoint, client):
     assert response.headers["Strict-Transport-Security"] == "max-age=63072000; includeSubdomains; preload"
 
 
-@pytest.mark.parametrize(
-    "endpoint", ["/", "/events", "/feature-toggle", "/organisations", "/platform-stats", "/service"]
-)
+@pytest.mark.parametrize("endpoint", ["/", "/events", "/feature-toggle", "/organisations", "/service"])
 def test_admin_request_returns_referrer_policy(endpoint, client):
     auth_header = create_admin_authorization_header()
     response = client.options(
