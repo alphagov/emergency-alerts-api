@@ -2345,3 +2345,37 @@ class FailedLogin(db.Model):
             "ip": self.ip,
             "attempted_at": self.attempted_at,
         }
+
+
+class PasswordHistory(db.Model):
+    """
+    This table is used to store historic passwords.
+    """
+
+    __tablename__ = "password_history"
+
+    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = db.Column(UUID(as_uuid=True), default=uuid.uuid4)
+    _password = db.Column(db.String, index=False, unique=False, nullable=False)
+    password_changed_at = db.Column(
+        db.DateTime, index=True, unique=False, nullable=False, default=datetime.datetime.now(datetime.timezone.utc)
+    )
+
+    @property
+    def password(self):
+        raise AttributeError("Password not readable")
+
+    @password.setter
+    def password(self, password):
+        self._password = hashpw(password)
+
+    def check_password(self, password):
+        return check_hash(password, self._password)
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "_password": self._password,
+            "password_changed_at": self.password_changed_at,
+        }
