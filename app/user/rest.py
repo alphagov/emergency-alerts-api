@@ -47,7 +47,7 @@ from app.failed_logins.rest import (
 from app.models import EMAIL_TYPE, SMS_TYPE, Permission
 from app.password_history.rest import (
     add_old_password_for_user,
-    is_password_for_user_already_in_table,
+    has_user_already_used_password,
 )
 from app.schema_validation import validate
 from app.schemas import (
@@ -576,7 +576,7 @@ def check_password_is_valid(user_id):
     req_json = request.get_json()
     password = req_json.get("_password")
     user = get_user_by_id(user_id=user_id)
-    if is_password_for_user_already_in_table(user_id, password):
+    if has_user_already_used_password(user_id, password):
         return jsonify({"errors": ["You've used this password before. Please choose a new one."]}), 400
     add_old_password_for_user(user.id, password)
     return jsonify(data=user.serialize()), 200

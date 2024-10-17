@@ -21,7 +21,7 @@ def add_old_password_for_user(user_id, password):
     dao_create_password_for_user_id(user_id, password)
 
 
-def is_password_for_user_already_in_table(user_id, password):
+def has_user_already_used_password(user_id, password):
     data = dao_get_all_passwords_for_user(user_id)
     passwords = [item._password for item in data]
     return any(check_hash(password, hashed_password) for hashed_password in passwords)
