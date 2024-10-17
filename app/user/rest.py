@@ -46,7 +46,7 @@ from app.failed_logins.rest import (
 )
 from app.models import EMAIL_TYPE, SMS_TYPE, Permission
 from app.password_history.rest import (
-    add_password_for_user,
+    add_old_password_for_user,
     is_password_for_user_already_in_table,
 )
 from app.schema_validation import validate
@@ -93,7 +93,7 @@ def create_user():
     save_model_user(user_to_create, password=req_json.get("password"), validated_email_access=True)
     result = user_to_create.serialize()
     log_user(result, "User created")
-    add_password_for_user(user_to_create.id, password=req_json.get("password"))
+    add_old_password_for_user(user_to_create.id, password=req_json.get("password"))
     return jsonify(data=result), 201
 
 
@@ -564,7 +564,7 @@ def update_password(user_id):
     req_json = request.get_json()
     password = req_json.get("_password")
     user_update_password_schema_load_json.load(req_json)
-    add_password_for_user(user_id, password)
+    add_old_password_for_user(user_id, password)
 
     current_app.logger.info("update_password", extra={"python_module": __name__, "user_id": user_id})
     update_user_password(user, password)
@@ -578,7 +578,7 @@ def check_password_is_valid(user_id):
     user = get_user_by_id(user_id=user_id)
     if is_password_for_user_already_in_table(user_id, password):
         return jsonify({"errors": ["You've used this password before. Please choose a new one."]}), 400
-    add_password_for_user(user.id, password)
+    add_old_password_for_user(user.id, password)
     return jsonify(data=user.serialize()), 200
 
 
