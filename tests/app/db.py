@@ -4,11 +4,8 @@ from datetime import date, datetime, timedelta
 import pytest
 
 from app import db
-from app.dao import fact_processing_time_dao
 from app.dao.invited_org_user_dao import save_invited_org_user
 from app.dao.invited_user_dao import save_invited_user
-from app.dao.jobs_dao import dao_create_job
-from app.dao.notifications_dao import dao_create_notification
 from app.dao.organisation_dao import (
     dao_add_service_to_organisation,
     dao_create_organisation,
@@ -39,15 +36,11 @@ from app.models import (
     Domain,
     FactBilling,
     FactNotificationStatus,
-    FactProcessingTime,
     FailedLogin,
     FeatureToggle,
     InvitedOrganisationUser,
     InvitedUser,
-    Job,
     LetterRate,
-    Notification,
-    NotificationHistory,
     Organisation,
     Permission,
     Rate,
@@ -189,196 +182,6 @@ def create_template(
         dao_update_template(template)
 
     return template
-
-
-def create_notification(
-    template=None,
-    job=None,
-    job_row_number=None,
-    to_field=None,
-    status="created",
-    reference=None,
-    created_at=None,
-    sent_at=None,
-    updated_at=None,
-    billable_units=1,
-    personalisation=None,
-    api_key=None,
-    key_type=KEY_TYPE_NORMAL,
-    sent_by=None,
-    client_reference=None,
-    rate_multiplier=None,
-    international=False,
-    phone_prefix=None,
-    normalised_to=None,
-    one_off=False,
-    reply_to_text=None,
-    created_by_id=None,
-    postage=None,
-    document_download_count=None,
-):
-    assert job or template
-    if job:
-        template = job.template
-
-    if created_at is None:
-        created_at = datetime.utcnow()
-
-    if to_field is None:
-        to_field = "+447700900855" if template.template_type == SMS_TYPE else "test@example.com"
-
-    if status not in ("created", "validation-failed", "virus-scan-failed", "pending-virus-check"):
-        sent_at = sent_at or datetime.utcnow()
-        updated_at = updated_at or datetime.utcnow()
-
-    if not one_off and (job is None and api_key is None):
-        # we did not specify in test - lets create it
-        api_key = ApiKey.query.filter(ApiKey.service == template.service, ApiKey.key_type == key_type).first()
-        if not api_key:
-            api_key = create_api_key(template.service, key_type=key_type)
-
-    if template.template_type == "letter" and postage is None:
-        postage = "second"
-
-    data = {
-        "id": uuid.uuid4(),
-        "to": to_field,
-        "job_id": job and job.id,
-        "job": job,
-        "service_id": template.service.id,
-        "service": template.service,
-        "template_id": template.id,
-        "template_version": template.version,
-        "status": status,
-        "reference": reference,
-        "created_at": created_at,
-        "sent_at": sent_at,
-        "billable_units": billable_units,
-        "personalisation": personalisation,
-        "notification_type": template.template_type,
-        "api_key": api_key,
-        "api_key_id": api_key and api_key.id,
-        "key_type": api_key.key_type if api_key else key_type,
-        "sent_by": sent_by,
-        "updated_at": updated_at,
-        "client_reference": client_reference,
-        "job_row_number": job_row_number,
-        "rate_multiplier": rate_multiplier,
-        "international": international,
-        "phone_prefix": phone_prefix,
-        "normalised_to": normalised_to,
-        "reply_to_text": reply_to_text,
-        "created_by_id": created_by_id,
-        "postage": postage,
-        "document_download_count": document_download_count,
-    }
-    notification = Notification(**data)
-    dao_create_notification(notification)
-
-    return notification
-
-
-def create_notification_history(
-    template=None,
-    job=None,
-    job_row_number=None,
-    status="created",
-    reference=None,
-    created_at=None,
-    sent_at=None,
-    updated_at=None,
-    billable_units=1,
-    api_key=None,
-    key_type=KEY_TYPE_NORMAL,
-    sent_by=None,
-    client_reference=None,
-    rate_multiplier=None,
-    international=False,
-    phone_prefix=None,
-    created_by_id=None,
-    postage=None,
-    id=None,
-):
-    assert job or template
-    if job:
-        template = job.template
-
-    if created_at is None:
-        created_at = datetime.utcnow()
-
-    if status != "created":
-        sent_at = sent_at or datetime.utcnow()
-        updated_at = updated_at or datetime.utcnow()
-
-    if template.template_type == "letter" and postage is None:
-        postage = "second"
-
-    data = {
-        "id": id or uuid.uuid4(),
-        "job_id": job and job.id,
-        "job": job,
-        "service_id": template.service.id,
-        "service": template.service,
-        "template_id": template.id,
-        "template_version": template.version,
-        "status": status,
-        "reference": reference,
-        "created_at": created_at,
-        "sent_at": sent_at,
-        "billable_units": billable_units,
-        "notification_type": template.template_type,
-        "api_key": api_key,
-        "api_key_id": api_key and api_key.id,
-        "key_type": api_key.key_type if api_key else key_type,
-        "sent_by": sent_by,
-        "updated_at": updated_at,
-        "client_reference": client_reference,
-        "job_row_number": job_row_number,
-        "rate_multiplier": rate_multiplier,
-        "international": international,
-        "phone_prefix": phone_prefix,
-        "created_by_id": created_by_id,
-        "postage": postage,
-    }
-    notification_history = NotificationHistory(**data)
-    db.session.add(notification_history)
-    db.session.commit()
-
-    return notification_history
-
-
-def create_job(
-    template,
-    notification_count=1,
-    created_at=None,
-    job_status="pending",
-    scheduled_for=None,
-    processing_started=None,
-    processing_finished=None,
-    original_file_name="some.csv",
-    archived=False,
-    contact_list_id=None,
-):
-    data = {
-        "id": uuid.uuid4(),
-        "service_id": template.service_id,
-        "service": template.service,
-        "template_id": template.id,
-        "template_version": template.version,
-        "original_file_name": original_file_name,
-        "notification_count": notification_count,
-        "created_at": created_at or datetime.utcnow(),
-        "created_by": template.created_by,
-        "job_status": job_status,
-        "scheduled_for": scheduled_for,
-        "processing_started": processing_started,
-        "processing_finished": processing_finished,
-        "archived": archived,
-        "contact_list_id": contact_list_id,
-    }
-    job = Job(**data)
-    dao_create_job(job)
-    return job
 
 
 def create_service_permission(service_id, permission=EMAIL_TYPE):
@@ -622,13 +425,6 @@ def create_ft_notification_status(
     db.session.add(data)
     db.session.commit()
     return data
-
-
-def create_process_time(bst_date="2021-03-01", messages_total=35, messages_within_10_secs=34):
-    data = FactProcessingTime(
-        bst_date=bst_date, messages_total=messages_total, messages_within_10_secs=messages_within_10_secs
-    )
-    fact_processing_time_dao.insert_update_processing_time(data)
 
 
 def create_service_guest_list(service, email_address=None, mobile_number=None):
