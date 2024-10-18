@@ -28,6 +28,8 @@ from app.utils import DATETIME_FORMAT, format_sequential_number
 # ie a Cancel message would have a unique event but have the event of
 #    the preceeding Alert message in the previous_provider_messages field
 
+aws_region = os.environ.get("AWS_REGION", "eu-west-2")
+
 
 class CBCProxyRetryableException(Exception):
     pass
@@ -44,13 +46,13 @@ class CBCProxyClient:
             self._lambda_client = (
                 boto3.client(
                     "lambda",
-                    region_name="eu-west-2",
+                    region_name=aws_region,
                     aws_access_key_id=os.environ.get("AWS_ACCESS_KEY_ID"),
                     aws_secret_access_key=os.environ.get("AWS_SECRET_ACCESS_KEY"),
                     aws_session_token=os.environ.get("AWS_SESSION_TOKEN"),
                 )
                 if app.config.get("HOST") == "local"
-                else boto3.client("lambda", region_name="eu-west-2")
+                else boto3.client("lambda", region_name=aws_region)
             )
 
     def get_proxy(self, provider):

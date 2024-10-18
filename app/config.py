@@ -186,7 +186,7 @@ class Config(object):
     TASK_IMPORTS = "broadcast_message_tasks" if SERVICE == "api" else "scheduled_tasks"
 
     CELERY = {
-        "broker_url": "https://sqs.eu-west-2.amazonaws.com",
+        "broker_url": f"https://sqs.{AWS_REGION}.amazonaws.com",
         "broker_transport": "sqs",
         "broker_transport_options": {
             "region": AWS_REGION,
