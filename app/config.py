@@ -132,7 +132,7 @@ class Config(object):
     ANTIVIRUS_ENABLED = os.getenv("ANTIVIRUS_ENABLED") == "1"
 
     HOST = "local"
-    AWS_REGION = "eu-west-2"
+    AWS_REGION = os.environ.get("AWS_REGION", "eu-west-2")
     INVITATION_EXPIRATION_DAYS = 2
     NOTIFY_APP_NAME = "api"
     NOTIFY_EMAIL_DOMAIN = "notify.tools"
