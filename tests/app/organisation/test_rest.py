@@ -1,6 +1,4 @@
-import random
 import uuid
-from datetime import datetime, timedelta
 
 import pytest
 from freezegun import freeze_time
@@ -10,7 +8,6 @@ from app.dao.organisation_dao import (
     dao_add_service_to_organisation,
     dao_add_user_to_organisation,
 )
-from app.dao.services_dao import dao_archive_service
 from app.models import (
     INVITE_ACCEPTED,
     INVITE_CANCELLED,
@@ -18,15 +15,11 @@ from app.models import (
     Organisation,
 )
 from tests.app.db import (
-    create_annual_billing,
     create_domain,
-    create_ft_billing,
     create_organisation,
     create_service,
-    create_template,
     create_user,
 )
-from tests.utils import count_sqlalchemy_queries
 
 
 def test_get_all_organisations(admin_request, notify_db_session):
@@ -637,124 +630,3 @@ def test_get_organisation_users_returns_users_for_organisation(admin_request, sa
 
     assert len(response["data"]) == 2
     assert response["data"][0]["id"] == str(first.id)
-
-
-@freeze_time("2020-02-24 13:30")
-def test_get_organisation_services_usage(admin_request, notify_db_session):
-    org = create_organisation(name="Organisation without live services")
-    service = create_service()
-    template = create_template(service=service)
-    dao_add_service_to_organisation(service=service, organisation_id=org.id)
-    create_annual_billing(service_id=service.id, free_sms_fragment_limit=10, financial_year_start=2019)
-    create_ft_billing(
-        bst_date=datetime.utcnow().date(), template=template, billable_unit=19, rate=0.060, notifications_sent=19
-    )
-    response = admin_request.get(
-        "organisation.get_organisation_services_usage", organisation_id=org.id, **{"year": 2019}
-    )
-    assert len(response) == 1
-    assert len(response["services"]) == 1
-    service_usage = response["services"][0]
-    assert service_usage["service_id"] == str(service.id)
-    assert service_usage["service_name"] == service.name
-    assert service_usage["chargeable_billable_sms"] == 9.0
-    assert service_usage["emails_sent"] == 0
-    assert service_usage["free_sms_limit"] == 10
-    assert service_usage["letter_cost"] == 0
-    assert service_usage["sms_billable_units"] == 19
-    assert service_usage["sms_remainder"] == 0
-    assert service_usage["sms_cost"] == 0.54
-
-
-@pytest.mark.skip(
-    "Another test (`test_cbc_proxy_vodafone_send_link_test_invokes_function`) fails when we enable "
-    "SQLALCHEMY_RECORD_QUERIES, which is a requirement for this test. So we can't run this for now ... but "
-    "maybe the flask-sqlalchemy/psycopg2 edge case causing the exception (below) will eventually be fixed and we can "
-    "re-enable this. This exception is thrown when trying to record the query result, after sqlalchemy fetches the "
-    "next value from a sequence (sqlalchemy.engine.default.DefaultExecutionContext._execute_scalar).\n\n"
-    "Test error: *** AttributeError: 'PGExecutionContext_psycopg2' object has no attribute 'parameters'"
-)
-@pytest.mark.parametrize("num_services", [1, 5, 10])
-@freeze_time("2020-02-24 13:30")
-def test_get_organisation_services_usage_limit_queries_executed(admin_request, notify_db_session, num_services):
-    org = create_organisation(name="Organisation without live services")
-    for _ in range(num_services):
-        service = create_service(service_name=f"service {_}")
-        template = create_template(service=service)
-        dao_add_service_to_organisation(service=service, organisation_id=org.id)
-        create_annual_billing(service_id=service.id, free_sms_fragment_limit=10, financial_year_start=2019)
-        for num_billing_days in range(random.randint(10, 25)):
-            create_ft_billing(
-                bst_date=datetime.utcnow().date() - timedelta(days=num_billing_days),
-                template=template,
-                billable_unit=num_billing_days + 1,
-                rate=0.060,
-                notifications_sent=num_billing_days + 1,
-            )
-
-    with count_sqlalchemy_queries() as get_query_count:
-        admin_request.get("organisation.get_organisation_services_usage", organisation_id=org.id, **{"year": 2019})
-
-    assert get_query_count() == 9, (
-        "The number of queries executed by this view has changed. The number of queries executed "
-        "shouldn't increase as the number of org services increases. If this has increased by 1 or 2 queries, and "
-        "affects all parameterized versions of this test, you can probably accept the change. If only one of the "
-        "test runs is failing, you may want to look at the new code instead."
-    )
-
-
-@freeze_time("2020-02-24 13:30")
-def test_get_organisation_services_usage_sort_active_first(admin_request, notify_db_session):
-    org = create_organisation(name="Organisation without live services")
-    service = create_service(service_name="live service")
-    archived_service = create_service(service_name="archived_service")
-    template = create_template(service=service)
-    dao_add_service_to_organisation(service=service, organisation_id=org.id)
-    dao_add_service_to_organisation(service=archived_service, organisation_id=org.id)
-    create_annual_billing(service_id=service.id, free_sms_fragment_limit=10, financial_year_start=2019)
-    create_ft_billing(
-        bst_date=datetime.utcnow().date(), template=template, billable_unit=19, rate=0.060, notifications_sent=19
-    )
-    response = admin_request.get(
-        "organisation.get_organisation_services_usage", organisation_id=org.id, **{"year": 2019}
-    )
-    assert len(response) == 1
-    assert len(response["services"]) == 2
-    first_service = response["services"][0]
-    assert first_service["service_id"] == str(archived_service.id)
-    assert first_service["service_name"] == archived_service.name
-    assert first_service["active"] is True
-    last_service = response["services"][1]
-    assert last_service["service_id"] == str(service.id)
-    assert last_service["service_name"] == service.name
-    assert last_service["active"] is True
-
-    dao_archive_service(service_id=archived_service.id)
-    response_after_archive = admin_request.get(
-        "organisation.get_organisation_services_usage", organisation_id=org.id, **{"year": 2019}
-    )
-    first_service = response_after_archive["services"][0]
-    assert first_service["service_id"] == str(service.id)
-    assert first_service["service_name"] == service.name
-    assert first_service["active"] is True
-    last_service = response_after_archive["services"][1]
-    assert last_service["service_id"] == str(archived_service.id)
-    assert last_service["service_name"] == archived_service.name
-    assert last_service["active"] is False
-
-
-def test_get_organisation_services_usage_returns_400_if_year_is_invalid(admin_request):
-    response = admin_request.get(
-        "organisation.get_organisation_services_usage",
-        organisation_id=uuid.uuid4(),
-        **{"year": "not-a-valid-year"},
-        _expected_status=400,
-    )
-    assert response["message"] == "No valid year provided"
-
-
-def test_get_organisation_services_usage_returns_400_if_year_is_empty(admin_request):
-    response = admin_request.get(
-        "organisation.get_organisation_services_usage", organisation_id=uuid.uuid4(), _expected_status=400
-    )
-    assert response["message"] == "No valid year provided"

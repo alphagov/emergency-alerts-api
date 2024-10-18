@@ -209,10 +209,7 @@ def test_should_raise_error_if_service_does_not_exist_on_create(client, sample_u
             BROADCAST_TYPE,
             None,
             {"template_type": ["Creating broadcast message templates is not allowed"]},
-        ),  # noqa
-        ([EMAIL_TYPE], SMS_TYPE, None, {"template_type": ["Creating text message templates is not allowed"]}),
-        ([SMS_TYPE], EMAIL_TYPE, "subject", {"template_type": ["Creating email templates is not allowed"]}),
-        ([SMS_TYPE], LETTER_TYPE, "subject", {"template_type": ["Creating letter templates is not allowed"]}),
+        ),
     ],
 )
 def test_should_raise_error_on_create_if_no_permission(
@@ -246,9 +243,7 @@ def test_should_raise_error_on_create_if_no_permission(
 @pytest.mark.parametrize(
     "template_type, permissions, expected_error",
     [
-        (SMS_TYPE, [EMAIL_TYPE], {"template_type": ["Updating text message templates is not allowed"]}),
-        (EMAIL_TYPE, [LETTER_TYPE], {"template_type": ["Updating email templates is not allowed"]}),
-        (LETTER_TYPE, [SMS_TYPE], {"template_type": ["Updating letter templates is not allowed"]}),
+        (BROADCAST_TYPE, [EMAIL_TYPE], {"template_type": ["Updating broadcast message templates is not allowed"]}),
     ],
 )
 def test_should_be_error_on_update_if_no_permission(
@@ -810,56 +805,6 @@ def test_update_set_process_type_on_template(client, sample_template):
     assert template.process_type == "priority"
 
 
-def test_create_a_template_with_reply_to(admin_request, sample_user):
-    service = create_service(service_permissions=["letter"])
-    letter_contact = create_letter_contact(service, "Edinburgh, ED1 1AA")
-    data = {
-        "name": "my template",
-        "subject": "subject",
-        "template_type": "letter",
-        "content": "template <b>content</b>",
-        "service": str(service.id),
-        "created_by": str(sample_user.id),
-        "reply_to": str(letter_contact.id),
-    }
-
-    json_resp = admin_request.post("template.create_template", service_id=service.id, _data=data, _expected_status=201)
-
-    assert json_resp["data"]["template_type"] == "letter"
-    assert json_resp["data"]["reply_to"] == str(letter_contact.id)
-    assert json_resp["data"]["reply_to_text"] == letter_contact.contact_block
-
-    template = Template.query.get(json_resp["data"]["id"])
-    from app.schemas import template_schema
-
-    assert sorted(json_resp["data"]) == sorted(template_schema.dump(template))
-    th = TemplateHistory.query.filter_by(id=template.id, version=1).one()
-    assert th.service_letter_contact_id == letter_contact.id
-
-
-def test_create_a_template_with_foreign_service_reply_to(admin_request, sample_user):
-    service = create_service(service_permissions=["letter"])
-    service2 = create_service(
-        service_name="test service", email_from="test@example.com", service_permissions=["letter"]
-    )
-    letter_contact = create_letter_contact(service2, "Edinburgh, ED1 1AA")
-    data = {
-        "name": "my template",
-        "subject": "subject",
-        "template_type": "letter",
-        "content": "template <b>content</b>",
-        "service": str(service.id),
-        "created_by": str(sample_user.id),
-        "reply_to": str(letter_contact.id),
-    }
-
-    json_resp = admin_request.post("template.create_template", service_id=service.id, _data=data, _expected_status=400)
-
-    assert json_resp["message"] == "letter_contact_id {} does not exist in database for service id {}".format(
-        str(letter_contact.id), str(service.id)
-    )
-
-
 @pytest.mark.parametrize(
     "post_data, expected_errors",
     [
@@ -927,90 +872,6 @@ def test_get_template_reply_to(client, sample_service, template_default, service
     assert "service_letter_contact_id" not in json_resp["data"]
     assert json_resp["data"]["reply_to"] == reply_to_id
     assert json_resp["data"]["reply_to_text"] == template_default
-
-
-def test_update_template_reply_to(client, sample_letter_template):
-    auth_header = create_admin_authorization_header()
-    letter_contact = create_letter_contact(sample_letter_template.service, "Edinburgh, ED1 1AA")
-    data = {
-        "reply_to": str(letter_contact.id),
-    }
-
-    resp = client.post(
-        "/service/{}/template/{}".format(sample_letter_template.service_id, sample_letter_template.id),
-        data=json.dumps(data),
-        headers=[("Content-Type", "application/json"), auth_header],
-    )
-
-    assert resp.status_code == 200, resp.get_data(as_text=True)
-
-    template = dao_get_template_by_id(sample_letter_template.id)
-    assert template.service_letter_contact_id == letter_contact.id
-    th = TemplateHistory.query.filter_by(id=sample_letter_template.id, version=2).one()
-    assert th.service_letter_contact_id == letter_contact.id
-
-
-def test_update_template_reply_to_set_to_blank(client, notify_db_session):
-    auth_header = create_admin_authorization_header()
-    service = create_service(service_permissions=["letter"])
-    letter_contact = create_letter_contact(service, "Edinburgh, ED1 1AA")
-    template = create_template(service=service, template_type="letter", reply_to=letter_contact.id)
-
-    data = {
-        "reply_to": None,
-    }
-
-    resp = client.post(
-        "/service/{}/template/{}".format(template.service_id, template.id),
-        data=json.dumps(data),
-        headers=[("Content-Type", "application/json"), auth_header],
-    )
-
-    assert resp.status_code == 200, resp.get_data(as_text=True)
-
-    template = dao_get_template_by_id(template.id)
-    assert template.service_letter_contact_id is None
-    th = TemplateHistory.query.filter_by(id=template.id, version=2).one()
-    assert th.service_letter_contact_id is None
-
-
-def test_update_template_validates_postage(admin_request, sample_service_full_permissions):
-    template = create_template(service=sample_service_full_permissions, template_type="letter")
-
-    response = admin_request.post(
-        "template.update_template",
-        service_id=sample_service_full_permissions.id,
-        template_id=template.id,
-        _data={"postage": "third"},
-        _expected_status=400,
-    )
-    assert "postage invalid" in response["errors"][0]["message"]
-
-
-def test_update_template_with_foreign_service_reply_to(client, sample_letter_template):
-    auth_header = create_admin_authorization_header()
-
-    service2 = create_service(
-        service_name="test service", email_from="test@example.com", service_permissions=["letter"]
-    )
-    letter_contact = create_letter_contact(service2, "Edinburgh, ED1 1AA")
-
-    data = {
-        "reply_to": str(letter_contact.id),
-    }
-
-    resp = client.post(
-        "/service/{}/template/{}".format(sample_letter_template.service_id, sample_letter_template.id),
-        data=json.dumps(data),
-        headers=[("Content-Type", "application/json"), auth_header],
-    )
-
-    assert resp.status_code == 400, resp.get_data(as_text=True)
-    json_resp = json.loads(resp.get_data(as_text=True))
-
-    assert json_resp["message"] == "letter_contact_id {} does not exist in database for service id {}".format(
-        str(letter_contact.id), str(sample_letter_template.service_id)
-    )
 
 
 def test_update_redact_template(admin_request, sample_template):
