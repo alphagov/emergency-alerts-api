@@ -3,7 +3,7 @@
 echo "Start script executing for celery beat.."
 
 function configure_container_role(){
-  aws configure set default.region eu-west-2
+  aws configure set default.region ${AWS_REGION}
 }
 
 function run_celery(){
