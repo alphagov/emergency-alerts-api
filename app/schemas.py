@@ -223,7 +223,6 @@ class ServiceSchema(BaseSchema, UUIDsAsStringsMixin):
             "api_keys",
             "broadcast_messages",
             "contact_list",
-            "created_at",
             "crown",
             "data_retention",
             "guest_list",

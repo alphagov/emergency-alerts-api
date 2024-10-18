@@ -221,6 +221,7 @@ def test_get_service_by_id(admin_request, sample_service):
         "consent_to_research",
         "contact_link",
         "count_as_live",
+        "created_at",
         "created_by",
         "email_from",
         "go_live_at",
