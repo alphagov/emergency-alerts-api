@@ -13,10 +13,10 @@ down_revision = "0400_add_password_history_table"
 
 
 def upgrade():
+    op.execute("DROP VIEW notifications_all_time_view")
     op.drop_table("notifications")
     op.drop_table("notification_history")
     op.drop_table("notification_status_types")
-    op.execute("DROP VIEW notifications_all_time_view")
     op.drop_table("jobs")
     op.drop_table("job_status")
     op.drop_table("ft_billing")
