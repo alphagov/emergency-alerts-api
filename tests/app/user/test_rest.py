@@ -1186,3 +1186,25 @@ def test_complete_login_after_webauthn_authentication_attempt_raises_400_if_sche
         _data={"successful": "True"},
         _expected_status=400,
     )
+
+
+def test_check_password_is_valid_rejects_reused_password(admin_request, sample_service):
+    sample_user = sample_service.users[0]
+    data = {"_password": "1234567890"}
+    new_data = {"_password": "1234567890!"}
+
+    json_resp = admin_request.post(
+        "user.check_password_is_valid", user_id=str(sample_user.id), _data=data, _expected_status=200
+    )
+    assert json_resp["data"]["password_changed_at"] is not None
+
+    json_resp = admin_request.post(
+        "user.check_password_is_valid", user_id=str(sample_user.id), _data=new_data, _expected_status=200
+    )
+
+    assert json_resp["data"]["password_changed_at"] is not None
+
+    json_resp = admin_request.post(
+        "user.check_password_is_valid", user_id=str(sample_user.id), _data=data, _expected_status=400
+    )
+    assert json_resp["errors"] == ["You've used this password before. Please choose a new one."]
