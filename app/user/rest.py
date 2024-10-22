@@ -578,7 +578,7 @@ def check_password_is_valid(user_id):
     req_json = request.get_json()
     password = req_json.get("_password")
     user = get_user_by_id(user_id=user_id)
-    if password and (pwdpy.entropy(password) < 70):
+    if password and (pwdpy.entropy(password) < current_app.config["MIN_ENTROPY_THRESHOLD"]):
         return (
             jsonify({"errors": ["Your password is not strong enough, try adding more words"]}),
             400,
