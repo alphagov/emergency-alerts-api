@@ -1,7 +1,6 @@
 import json
 import uuid
 from datetime import datetime, timedelta
-from unittest.mock import ANY
 
 import pytest
 from flask import current_app, url_for
@@ -37,10 +36,8 @@ from app.models import (
 )
 from tests import create_admin_authorization_header
 from tests.app.db import (
-    create_annual_billing,
     create_api_key,
     create_domain,
-    create_ft_billing,
     create_letter_contact,
     create_organisation,
     create_reply_to_email,
@@ -141,65 +138,6 @@ def test_find_services_by_name_handles_no_service_name(notify_db_session, admin_
     mock_get_services_by_partial_name = mocker.patch("app.service.rest.get_services_by_partial_name")
     admin_request.get("service.find_services_by_name", _expected_status=400)
     mock_get_services_by_partial_name.assert_not_called()
-
-
-@freeze_time("2019-05-02")
-def test_get_live_services_data(sample_user, admin_request):
-    org = create_organisation()
-
-    service = create_service(go_live_user=sample_user, go_live_at=datetime(2018, 1, 1))
-    service_2 = create_service(service_name="second", go_live_at=datetime(2019, 1, 1), go_live_user=sample_user)
-
-    sms_template = create_template(service=service)
-    email_template = create_template(service=service, template_type="email")
-    dao_add_service_to_organisation(service=service, organisation_id=org.id)
-    create_ft_billing(bst_date="2019-04-20", template=sms_template)
-    create_ft_billing(bst_date="2019-04-20", template=email_template)
-
-    create_annual_billing(service.id, 1, 2019)
-    create_annual_billing(service_2.id, 2, 2018)
-
-    response = admin_request.get("service.get_live_services_data")["data"]
-
-    assert len(response) == 2
-    assert response == [
-        {
-            "consent_to_research": None,
-            "contact_email": "notify@digital.cabinet-office.gov.uk",
-            "contact_mobile": "+447700900986",
-            "contact_name": "Test User",
-            "email_totals": 1,
-            "email_volume_intent": None,
-            "letter_totals": 0,
-            "letter_volume_intent": None,
-            "live_date": "Mon, 01 Jan 2018 00:00:00 GMT",
-            "organisation_name": "test_org_1",
-            "service_id": ANY,
-            "service_name": "Sample service",
-            "sms_totals": 1,
-            "sms_volume_intent": None,
-            "organisation_type": None,
-            "free_sms_fragment_limit": 1,
-        },
-        {
-            "consent_to_research": None,
-            "contact_email": "notify@digital.cabinet-office.gov.uk",
-            "contact_mobile": "+447700900986",
-            "contact_name": "Test User",
-            "email_totals": 0,
-            "email_volume_intent": None,
-            "letter_totals": 0,
-            "letter_volume_intent": None,
-            "live_date": "Tue, 01 Jan 2019 00:00:00 GMT",
-            "organisation_name": None,
-            "service_id": ANY,
-            "service_name": "second",
-            "sms_totals": 0,
-            "sms_volume_intent": None,
-            "organisation_type": None,
-            "free_sms_fragment_limit": 2,
-        },
-    ]
 
 
 def test_get_service_by_id(admin_request, sample_service):

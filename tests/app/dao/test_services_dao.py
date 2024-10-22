@@ -1,9 +1,6 @@
 import uuid
-from datetime import datetime
-from unittest import mock
 
 import pytest
-from freezegun import freeze_time
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
 
@@ -23,7 +20,6 @@ from app.dao.services_dao import (
     dao_fetch_active_users_for_service,
     dao_fetch_all_services,
     dao_fetch_all_services_by_user,
-    dao_fetch_live_services_data,
     dao_fetch_service_by_id,
     dao_remove_user_from_service,
     dao_update_service,
@@ -54,8 +50,6 @@ from app.models import (
     user_folder_permissions,
 )
 from tests.app.db import (
-    create_annual_billing,
-    create_ft_billing,
     create_invited_user,
     create_organisation,
     create_service,
@@ -360,102 +354,6 @@ def test_get_all_user_services_only_returns_services_user_has_access_to(notify_d
 def test_get_all_user_services_should_return_empty_list_if_no_services_for_user(notify_db_session):
     user = create_user()
     assert len(dao_fetch_all_services_by_user(user.id)) == 0
-
-
-@freeze_time("2019-04-23T10:00:00")
-def test_dao_fetch_live_services_data(sample_user):
-    org = create_organisation(organisation_type="central")
-    service = create_service(go_live_user=sample_user, go_live_at="2014-04-20T10:00:00")
-    sms_template = create_template(service=service)
-    service_2 = create_service(service_name="second", go_live_at="2017-04-20T10:00:00", go_live_user=sample_user)
-    service_3 = create_service(service_name="third", go_live_at="2016-04-20T10:00:00")
-    # below services should be filtered out:
-    create_service(service_name="restricted", restricted=True)
-    create_service(service_name="not_active", active=False)
-    create_service(service_name="not_live", count_as_live=False)
-    email_template = create_template(service=service, template_type="email")
-    template_letter_1 = create_template(service=service, template_type="letter")
-    template_letter_2 = create_template(service=service_2, template_type="letter")
-    dao_add_service_to_organisation(service=service, organisation_id=org.id)
-    # two sms billing records for 1st service within current financial year:
-    create_ft_billing(bst_date="2019-04-20", template=sms_template)
-    create_ft_billing(bst_date="2019-04-21", template=sms_template)
-    # one sms billing record for 1st service from previous financial year, should not appear in the result:
-    create_ft_billing(bst_date="2018-04-20", template=sms_template)
-    # one email billing record for 1st service within current financial year:
-    create_ft_billing(bst_date="2019-04-20", template=email_template)
-    # one letter billing record for 1st service within current financial year:
-    create_ft_billing(bst_date="2019-04-15", template=template_letter_1)
-    # one letter billing record for 2nd service within current financial year:
-    create_ft_billing(bst_date="2019-04-16", template=template_letter_2)
-
-    # 1st service: billing from 2018 and 2019
-    create_annual_billing(service.id, 500, 2018)
-    create_annual_billing(service.id, 100, 2019)
-    # 2nd service: billing from 2018
-    create_annual_billing(service_2.id, 300, 2018)
-    # 3rd service: billing from 2019
-    create_annual_billing(service_3.id, 200, 2019)
-
-    results = dao_fetch_live_services_data()
-    assert len(results) == 3
-    # checks the results and that they are ordered by date:
-    assert results == [
-        {
-            "service_id": mock.ANY,
-            "service_name": "Sample service",
-            "organisation_name": "test_org_1",
-            "organisation_type": "central",
-            "consent_to_research": None,
-            "contact_name": "Test User",
-            "contact_email": "notify@digital.cabinet-office.gov.uk",
-            "contact_mobile": "+447700900986",
-            "live_date": datetime(2014, 4, 20, 10, 0),
-            "sms_volume_intent": None,
-            "email_volume_intent": None,
-            "letter_volume_intent": None,
-            "sms_totals": 2,
-            "email_totals": 1,
-            "letter_totals": 1,
-            "free_sms_fragment_limit": 100,
-        },
-        {
-            "service_id": mock.ANY,
-            "service_name": "third",
-            "organisation_name": None,
-            "consent_to_research": None,
-            "organisation_type": None,
-            "contact_name": None,
-            "contact_email": None,
-            "contact_mobile": None,
-            "live_date": datetime(2016, 4, 20, 10, 0),
-            "sms_volume_intent": None,
-            "email_volume_intent": None,
-            "letter_volume_intent": None,
-            "sms_totals": 0,
-            "email_totals": 0,
-            "letter_totals": 0,
-            "free_sms_fragment_limit": 200,
-        },
-        {
-            "service_id": mock.ANY,
-            "service_name": "second",
-            "organisation_name": None,
-            "consent_to_research": None,
-            "contact_name": "Test User",
-            "contact_email": "notify@digital.cabinet-office.gov.uk",
-            "contact_mobile": "+447700900986",
-            "live_date": datetime(2017, 4, 20, 10, 0),
-            "sms_volume_intent": None,
-            "organisation_type": None,
-            "email_volume_intent": None,
-            "letter_volume_intent": None,
-            "sms_totals": 0,
-            "email_totals": 0,
-            "letter_totals": 1,
-            "free_sms_fragment_limit": 300,
-        },
-    ]
 
 
 def test_get_service_by_id_returns_none_if_no_service(notify_db_session):

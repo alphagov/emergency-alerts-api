@@ -2,11 +2,10 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy.orm import joinedload
-from sqlalchemy.sql.expression import and_, asc, case, func
+from sqlalchemy.sql.expression import asc, func
 
 from app import db
 from app.dao.dao_utils import VersionOptions, autocommit, version_class
-from app.dao.date_util import get_current_financial_year
 from app.dao.organisation_dao import dao_get_organisation_by_email_address
 from app.dao.service_user_dao import dao_get_service_user
 from app.dao.template_folder_dao import dao_get_valid_template_folders_by_id
@@ -22,7 +21,6 @@ from app.models import (
     UPLOAD_LETTERS,
     AnnualBilling,
     ApiKey,
-    FactBilling,
     InvitedUser,
     Organisation,
     Permission,
@@ -72,113 +70,6 @@ def dao_count_live_services():
         restricted=False,
         count_as_live=True,
     ).count()
-
-
-def dao_fetch_live_services_data():
-    year_start_date, year_end_date = get_current_financial_year()
-
-    most_recent_annual_billing = (
-        db.session.query(AnnualBilling.service_id, func.max(AnnualBilling.financial_year_start).label("year"))
-        .group_by(AnnualBilling.service_id)
-        .subquery()
-    )
-
-    this_year_ft_billing = FactBilling.query.filter(
-        FactBilling.bst_date >= year_start_date,
-        FactBilling.bst_date <= year_end_date,
-    ).subquery()
-
-    data = (
-        db.session.query(
-            Service.id.label("service_id"),
-            Service.name.label("service_name"),
-            Organisation.name.label("organisation_name"),
-            Organisation.organisation_type.label("organisation_type"),
-            Service.consent_to_research.label("consent_to_research"),
-            User.name.label("contact_name"),
-            User.email_address.label("contact_email"),
-            User.mobile_number.label("contact_mobile"),
-            Service.go_live_at.label("live_date"),
-            Service.volume_sms.label("sms_volume_intent"),
-            Service.volume_email.label("email_volume_intent"),
-            Service.volume_letter.label("letter_volume_intent"),
-            case(
-                [
-                    (
-                        this_year_ft_billing.c.notification_type == "email",
-                        func.sum(this_year_ft_billing.c.notifications_sent),
-                    )
-                ],
-                else_=0,
-            ).label("email_totals"),
-            case(
-                [
-                    (
-                        this_year_ft_billing.c.notification_type == "sms",
-                        func.sum(this_year_ft_billing.c.notifications_sent),
-                    )
-                ],
-                else_=0,
-            ).label("sms_totals"),
-            case(
-                [
-                    (
-                        this_year_ft_billing.c.notification_type == "letter",
-                        func.sum(this_year_ft_billing.c.notifications_sent),
-                    )
-                ],
-                else_=0,
-            ).label("letter_totals"),
-            AnnualBilling.free_sms_fragment_limit,
-        )
-        .join(Service.annual_billing)
-        .join(
-            most_recent_annual_billing,
-            and_(
-                Service.id == most_recent_annual_billing.c.service_id,
-                AnnualBilling.financial_year_start == most_recent_annual_billing.c.year,
-            ),
-        )
-        .outerjoin(Service.organisation)
-        .outerjoin(this_year_ft_billing, Service.id == this_year_ft_billing.c.service_id)
-        .outerjoin(User, Service.go_live_user_id == User.id)
-        .filter(
-            Service.count_as_live.is_(True),
-            Service.active.is_(True),
-            Service.restricted.is_(False),
-        )
-        .group_by(
-            Service.id,
-            Organisation.name,
-            Organisation.organisation_type,
-            Service.name,
-            Service.consent_to_research,
-            Service.count_as_live,
-            Service.go_live_user_id,
-            User.name,
-            User.email_address,
-            User.mobile_number,
-            Service.go_live_at,
-            Service.volume_sms,
-            Service.volume_email,
-            Service.volume_letter,
-            this_year_ft_billing.c.notification_type,
-            AnnualBilling.free_sms_fragment_limit,
-        )
-        .order_by(asc(Service.go_live_at))
-        .all()
-    )
-    results = []
-    for row in data:
-        existing_service = next((x for x in results if x["service_id"] == row.service_id), None)
-
-        if existing_service is not None:
-            existing_service["email_totals"] += row.email_totals
-            existing_service["sms_totals"] += row.sms_totals
-            existing_service["letter_totals"] += row.letter_totals
-        else:
-            results.append(row._asdict())
-    return results
 
 
 def dao_fetch_service_by_id(service_id, only_active=False):

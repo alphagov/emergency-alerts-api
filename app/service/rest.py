@@ -49,7 +49,6 @@ from app.dao.services_dao import (
     dao_fetch_all_services,
     dao_fetch_all_services_by_user,
     dao_fetch_all_services_created_by_user,
-    dao_fetch_live_services_data,
     dao_fetch_service_by_id,
     dao_remove_user_from_service,
     dao_update_service,
@@ -137,12 +136,6 @@ def find_services_by_name():
     fetched_services = get_services_by_partial_name(service_name)
     data = [service.serialize_for_org_dashboard() for service in fetched_services]
     return jsonify(data=data), 200
-
-
-@service_blueprint.route("/live-services-data", methods=["GET"])
-def get_live_services_data():
-    data = dao_fetch_live_services_data()
-    return jsonify(data=data)
 
 
 @service_blueprint.route("/<uuid:service_id>", methods=["GET"])
