@@ -3,6 +3,7 @@ import uuid
 from datetime import datetime
 from urllib.parse import urlencode
 
+import pwdpy
 from flask import Blueprint, abort, current_app, jsonify, request
 from notifications_python_client.errors import HTTPError
 from sqlalchemy.exc import IntegrityError
@@ -576,7 +577,12 @@ def check_password_is_valid(user_id):
     req_json = request.get_json()
     password = req_json.get("_password")
     user = get_user_by_id(user_id=user_id)
-    if has_user_already_used_password(user_id, password):
+    if password and (pwdpy.entropy(password) < current_app.config["MIN_ENTROPY_THRESHOLD"]):
+        return (
+            jsonify({"errors": ["Your password is not strong enough, try adding more words"]}),
+            400,
+        )
+    if password and has_user_already_used_password(user_id, password):
         return jsonify({"errors": ["You've used this password before. Please choose a new one."]}), 400
     add_old_password_for_user(user.id, password)
     return jsonify(data=user.serialize()), 200
