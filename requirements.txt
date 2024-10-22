@@ -183,6 +183,8 @@ prompt-toolkit==3.0.31
     # via click-repl
 psycopg2-binary==2.9.3
     # via -r requirements.in
+pwdpy==1.0.1
+    # via -r requirements.in
 py==1.11.0
     # via
     #   pytest

@@ -159,6 +159,7 @@ def register_blueprint(application):
     from app.inbound_sms.rest import inbound_sms as inbound_sms_blueprint
     from app.organisation.invite_rest import organisation_invite_blueprint
     from app.organisation.rest import organisation_blueprint
+    from app.password_history.rest import password_history_blueprint
     from app.reports.rest import reports_blueprint
     from app.service.callback_rest import service_callback_blueprint
     from app.service.rest import service_blueprint
@@ -225,6 +226,9 @@ def register_blueprint(application):
 
     reports_blueprint.before_request(requires_admin_auth)
     application.register_blueprint(reports_blueprint)
+
+    password_history_blueprint.before_request(requires_admin_auth)
+    application.register_blueprint(password_history_blueprint)
 
 
 def register_v2_blueprints(application):
