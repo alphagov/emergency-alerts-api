@@ -16,6 +16,10 @@ from app.dao.broadcast_service_dao import set_broadcast_service_type
 from app.dao.dao_utils import dao_rollback, transaction
 from app.dao.failed_logins_dao import dao_delete_all_failed_logins_for_ip
 from app.dao.organisation_dao import dao_get_organisation_by_service_id
+from app.dao.password_history_dao import (
+    dao_delete_all_historic_passwords_for_user,
+    dao_get_all_passwords_for_user,
+)
 from app.dao.service_data_retention_dao import (
     fetch_service_data_retention,
     fetch_service_data_retention_by_id,
@@ -599,3 +603,23 @@ def purge_failed_logins_created_by_tests():
         return jsonify(result="error", message=f"Unable to purge failed logins created by functional tests: {e}"), 500
 
     return jsonify({"message": "Successfully purged failed logins"}), 200
+
+
+@service_blueprint.route("/purge-historic-passwords-created-by-tests/<uuid:user_id>", methods=["DELETE"])
+def purge_historic_passwords_created_by_tests(user_id):
+    if is_public_environment():
+        raise InvalidRequest("Endpoint not found", status_code=404)
+
+    try:
+        if len(dao_get_all_passwords_for_user(user_id)) > 0:
+            dao_delete_all_historic_passwords_for_user(user_id)
+    except Exception as e:
+        return (
+            jsonify(
+                result="error",
+                message=f"Unable to purge historic passwords created by functional tests for user {user_id}: {e}",
+            ),
+            500,
+        )
+
+    return jsonify({"message": "Successfully purged historic passwords"}), 200
