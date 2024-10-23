@@ -16,7 +16,7 @@ import uuid
 from alembic import op
 from sqlalchemy.orm.session import Session
 
-from app.models import Job, NotificationHistory, Template
+from app.models import Template
 
 
 def upgrade():

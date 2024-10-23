@@ -1,13 +1,11 @@
 import uuid
-from datetime import date, datetime, timedelta
+from datetime import datetime
 
-from sqlalchemy import Float, cast
 from sqlalchemy.orm import joinedload
-from sqlalchemy.sql.expression import and_, asc, case, func
+from sqlalchemy.sql.expression import asc, func
 
 from app import db
 from app.dao.dao_utils import VersionOptions, autocommit, version_class
-from app.dao.date_util import get_current_financial_year
 from app.dao.organisation_dao import dao_get_organisation_by_email_address
 from app.dao.service_user_dao import dao_get_service_user
 from app.dao.template_folder_dao import dao_get_valid_template_folders_by_id
@@ -17,19 +15,13 @@ from app.models import (
     EMAIL_TYPE,
     INTERNATIONAL_LETTERS,
     INTERNATIONAL_SMS_TYPE,
-    KEY_TYPE_TEST,
     LETTER_TYPE,
     NON_CROWN_ORGANISATION_TYPES,
-    NOTIFICATION_PERMANENT_FAILURE,
     SMS_TYPE,
     UPLOAD_LETTERS,
     AnnualBilling,
     ApiKey,
-    FactBilling,
     InvitedUser,
-    Job,
-    Notification,
-    NotificationHistory,
     Organisation,
     Permission,
     Service,
@@ -45,11 +37,7 @@ from app.models import (
     User,
     VerifyCode,
 )
-from app.utils import (
-    escape_special_characters,
-    get_archived_db_column_value,
-    get_london_midnight_in_utc,
-)
+from app.utils import escape_special_characters, get_archived_db_column_value
 
 DEFAULT_SERVICE_PERMISSIONS = [
     BROADCAST_TYPE,
@@ -82,113 +70,6 @@ def dao_count_live_services():
         restricted=False,
         count_as_live=True,
     ).count()
-
-
-def dao_fetch_live_services_data():
-    year_start_date, year_end_date = get_current_financial_year()
-
-    most_recent_annual_billing = (
-        db.session.query(AnnualBilling.service_id, func.max(AnnualBilling.financial_year_start).label("year"))
-        .group_by(AnnualBilling.service_id)
-        .subquery()
-    )
-
-    this_year_ft_billing = FactBilling.query.filter(
-        FactBilling.bst_date >= year_start_date,
-        FactBilling.bst_date <= year_end_date,
-    ).subquery()
-
-    data = (
-        db.session.query(
-            Service.id.label("service_id"),
-            Service.name.label("service_name"),
-            Organisation.name.label("organisation_name"),
-            Organisation.organisation_type.label("organisation_type"),
-            Service.consent_to_research.label("consent_to_research"),
-            User.name.label("contact_name"),
-            User.email_address.label("contact_email"),
-            User.mobile_number.label("contact_mobile"),
-            Service.go_live_at.label("live_date"),
-            Service.volume_sms.label("sms_volume_intent"),
-            Service.volume_email.label("email_volume_intent"),
-            Service.volume_letter.label("letter_volume_intent"),
-            case(
-                [
-                    (
-                        this_year_ft_billing.c.notification_type == "email",
-                        func.sum(this_year_ft_billing.c.notifications_sent),
-                    )
-                ],
-                else_=0,
-            ).label("email_totals"),
-            case(
-                [
-                    (
-                        this_year_ft_billing.c.notification_type == "sms",
-                        func.sum(this_year_ft_billing.c.notifications_sent),
-                    )
-                ],
-                else_=0,
-            ).label("sms_totals"),
-            case(
-                [
-                    (
-                        this_year_ft_billing.c.notification_type == "letter",
-                        func.sum(this_year_ft_billing.c.notifications_sent),
-                    )
-                ],
-                else_=0,
-            ).label("letter_totals"),
-            AnnualBilling.free_sms_fragment_limit,
-        )
-        .join(Service.annual_billing)
-        .join(
-            most_recent_annual_billing,
-            and_(
-                Service.id == most_recent_annual_billing.c.service_id,
-                AnnualBilling.financial_year_start == most_recent_annual_billing.c.year,
-            ),
-        )
-        .outerjoin(Service.organisation)
-        .outerjoin(this_year_ft_billing, Service.id == this_year_ft_billing.c.service_id)
-        .outerjoin(User, Service.go_live_user_id == User.id)
-        .filter(
-            Service.count_as_live.is_(True),
-            Service.active.is_(True),
-            Service.restricted.is_(False),
-        )
-        .group_by(
-            Service.id,
-            Organisation.name,
-            Organisation.organisation_type,
-            Service.name,
-            Service.consent_to_research,
-            Service.count_as_live,
-            Service.go_live_user_id,
-            User.name,
-            User.email_address,
-            User.mobile_number,
-            Service.go_live_at,
-            Service.volume_sms,
-            Service.volume_email,
-            Service.volume_letter,
-            this_year_ft_billing.c.notification_type,
-            AnnualBilling.free_sms_fragment_limit,
-        )
-        .order_by(asc(Service.go_live_at))
-        .all()
-    )
-    results = []
-    for row in data:
-        existing_service = next((x for x in results if x["service_id"] == row.service_id), None)
-
-        if existing_service is not None:
-            existing_service["email_totals"] += row.email_totals
-            existing_service["sms_totals"] += row.sms_totals
-            existing_service["letter_totals"] += row.letter_totals
-        else:
-            results.append(row._asdict())
-    return results
 
 
 def dao_fetch_service_by_id(service_id, only_active=False):
@@ -366,9 +247,6 @@ def delete_service_and_all_associated_db_objects(service):
     _delete(ServiceContactList.query.filter_by(service=service))
     _delete(InvitedUser.query.filter_by(service=service))
     _delete(Permission.query.filter_by(service=service))
-    _delete(NotificationHistory.query.filter_by(service=service))
-    _delete(Notification.query.filter_by(service=service))
-    _delete(Job.query.filter_by(service=service))
     _delete(Template.query.filter_by(service=service))
     _delete(TemplateHistory.query.filter_by(service_id=service.id))
     _delete(ServicePermission.query.filter_by(service_id=service.id))
@@ -407,145 +285,8 @@ def delete_service_created_for_functional_testing(service):
     db.session.delete(service)
 
 
-def dao_fetch_todays_stats_for_service(service_id):
-    today = date.today()
-    start_date = get_london_midnight_in_utc(today)
-
-    return (
-        db.session.query(
-            Notification.notification_type, Notification.status, func.count(Notification.id).label("count")
-        )
-        .filter(
-            Notification.service_id == service_id,
-            Notification.key_type != KEY_TYPE_TEST,
-            Notification.created_at >= start_date,
-        )
-        .group_by(
-            Notification.notification_type,
-            Notification.status,
-        )
-        .all()
-    )
-
-
-def dao_fetch_todays_stats_for_all_services(include_from_test_key=True, only_active=True):
-    today = date.today()
-    start_date = get_london_midnight_in_utc(today)
-    end_date = get_london_midnight_in_utc(today + timedelta(days=1))
-
-    subquery = (
-        db.session.query(
-            Notification.notification_type,
-            Notification.status,
-            Notification.service_id,
-            func.count(Notification.id).label("count"),
-        )
-        .filter(Notification.created_at >= start_date, Notification.created_at < end_date)
-        .group_by(Notification.notification_type, Notification.status, Notification.service_id)
-    )
-
-    if not include_from_test_key:
-        subquery = subquery.filter(Notification.key_type != KEY_TYPE_TEST)
-
-    subquery = subquery.subquery()
-
-    query = (
-        db.session.query(
-            Service.id.label("service_id"),
-            Service.name,
-            Service.restricted,
-            Service.research_mode,
-            Service.active,
-            Service.created_at,
-            subquery.c.notification_type,
-            subquery.c.status,
-            subquery.c.count,
-        )
-        .outerjoin(subquery, subquery.c.service_id == Service.id)
-        .order_by(Service.id)
-    )
-
-    if only_active:
-        query = query.filter(Service.active)
-
-    return query.all()
-
-
 def dao_fetch_active_users_for_service(service_id):
     query = User.query.filter(User.services.any(id=service_id), User.state == "active")
-
-    return query.all()
-
-
-def dao_find_services_sending_to_tv_numbers(start_date, end_date, threshold=500):
-    return (
-        db.session.query(
-            Notification.service_id.label("service_id"), func.count(Notification.id).label("notification_count")
-        )
-        .filter(
-            Notification.service_id == Service.id,
-            Notification.created_at >= start_date,
-            Notification.created_at <= end_date,
-            Notification.key_type != KEY_TYPE_TEST,
-            Notification.notification_type == SMS_TYPE,
-            func.substr(Notification.normalised_to, 3, 7) == "7700900",
-            Service.restricted == False,  # noqa
-            Service.research_mode == False,  # noqa
-            Service.active == True,  # noqa
-        )
-        .group_by(
-            Notification.service_id,
-        )
-        .having(func.count(Notification.id) > threshold)
-        .all()
-    )
-
-
-def dao_find_services_with_high_failure_rates(start_date, end_date, threshold=10000):
-    subquery = (
-        db.session.query(func.count(Notification.id).label("total_count"), Notification.service_id.label("service_id"))
-        .filter(
-            Notification.service_id == Service.id,
-            Notification.created_at >= start_date,
-            Notification.created_at <= end_date,
-            Notification.key_type != KEY_TYPE_TEST,
-            Notification.notification_type == SMS_TYPE,
-            Service.restricted == False,  # noqa
-            Service.research_mode == False,  # noqa
-            Service.active == True,  # noqa
-        )
-        .group_by(
-            Notification.service_id,
-        )
-        .having(func.count(Notification.id) >= threshold)
-    )
-
-    subquery = subquery.subquery()
-
-    query = (
-        db.session.query(
-            Notification.service_id.label("service_id"),
-            func.count(Notification.id).label("permanent_failure_count"),
-            subquery.c.total_count.label("total_count"),
-            (cast(func.count(Notification.id), Float) / cast(subquery.c.total_count, Float)).label(
-                "permanent_failure_rate"
-            ),
-        )
-        .join(subquery, subquery.c.service_id == Notification.service_id)
-        .filter(
-            Notification.service_id == Service.id,
-            Notification.created_at >= start_date,
-            Notification.created_at <= end_date,
-            Notification.key_type != KEY_TYPE_TEST,
-            Notification.notification_type == SMS_TYPE,
-            Notification.status == NOTIFICATION_PERMANENT_FAILURE,
-            Service.restricted == False,  # noqa
-            Service.research_mode == False,  # noqa
-            Service.active == True,  # noqa
-        )
-        .group_by(Notification.service_id, subquery.c.total_count)
-        .having(cast(func.count(Notification.id), Float) / cast(subquery.c.total_count, Float) >= 0.25)
-    )
 
     return query.all()
 

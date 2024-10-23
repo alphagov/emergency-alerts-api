@@ -1,20 +1,10 @@
-import itertools
 import os
-from datetime import datetime
 
-from emergency_alerts_utils.letter_timings import (
-    letter_can_be_cancelled,
-    too_late_to_cancel_letter,
-)
-from emergency_alerts_utils.timezones import convert_utc_to_bst
 from flask import Blueprint, current_app, jsonify, request
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
-from werkzeug.datastructures import MultiDict
 
-from app.aws import s3
 from app.clients.notify_client import notify_send
-from app.dao import fact_notification_status_dao, notifications_dao
 from app.dao.annual_billing_dao import set_default_free_allowance_for_service
 from app.dao.api_key_dao import (
     expire_api_key,
@@ -24,22 +14,8 @@ from app.dao.api_key_dao import (
 )
 from app.dao.broadcast_service_dao import set_broadcast_service_type
 from app.dao.dao_utils import dao_rollback, transaction
-from app.dao.date_util import get_financial_year
-from app.dao.fact_notification_status_dao import (
-    fetch_monthly_template_usage_for_service,
-    fetch_notification_status_for_service_by_month,
-    fetch_notification_status_for_service_for_day,
-    fetch_notification_status_for_service_for_today_and_7_previous_days,
-    fetch_stats_for_all_services_by_date_range,
-)
 from app.dao.failed_logins_dao import dao_delete_all_failed_logins_for_ip
 from app.dao.organisation_dao import dao_get_organisation_by_service_id
-from app.dao.service_contact_list_dao import (
-    dao_archive_contact_list,
-    dao_get_contact_list_by_id,
-    dao_get_contact_lists,
-    save_service_contact_list,
-)
 from app.dao.service_data_retention_dao import (
     fetch_service_data_retention,
     fetch_service_data_retention_by_id,
@@ -73,10 +49,7 @@ from app.dao.services_dao import (
     dao_fetch_all_services,
     dao_fetch_all_services_by_user,
     dao_fetch_all_services_created_by_user,
-    dao_fetch_live_services_data,
     dao_fetch_service_by_id,
-    dao_fetch_todays_stats_for_all_services,
-    dao_fetch_todays_stats_for_service,
     dao_remove_user_from_service,
     dao_update_service,
     delete_service_created_for_functional_testing,
@@ -89,31 +62,16 @@ from app.dao.users_dao import (
     get_users_by_partial_email,
 )
 from app.errors import InvalidRequest, register_errors
-from app.letters.utils import letter_print_day
-from app.models import (
-    EMAIL_TYPE,
-    LETTER_TYPE,
-    NOTIFICATION_CANCELLED,
-    Permission,
-    Service,
-    ServiceContactList,
-)
+from app.models import EMAIL_TYPE, Permission, Service
 from app.schema_validation import validate
 from app.schemas import (
     api_key_schema,
-    detailed_service_schema,
     email_data_request_schema,
-    notification_with_template_schema,
-    notifications_filter_schema,
     service_schema,
 )
-from app.service import statistics
 from app.service.sender import send_notification_to_service_users
 from app.service.service_broadcast_settings_schema import (
     service_broadcast_settings_schema,
-)
-from app.service.service_contact_list_schema import (
-    create_service_contact_list_schema,
 )
 from app.service.service_data_retention_schema import (
     add_service_data_retention_request,
@@ -125,7 +83,7 @@ from app.service.service_senders_schema import (
 )
 from app.service.utils import get_guest_list_objects
 from app.user.users_schema import post_set_permissions_schema
-from app.utils import get_prev_next_pagination_links, is_public_environment
+from app.utils import is_public_environment
 
 service_blueprint = Blueprint("service", __name__)
 
@@ -159,28 +117,10 @@ def handle_integrity_error(exc):
 @service_blueprint.route("", methods=["GET"])
 def get_services():
     only_active = request.args.get("only_active") == "True"
-    detailed = request.args.get("detailed") == "True"
     user_id = request.args.get("user_id", None)
-    include_from_test_key = request.args.get("include_from_test_key", "True") != "False"
-
-    # If start and end date are not set, we are expecting today's stats.
-    today = str(datetime.utcnow().date())
-
-    start_date = datetime.strptime(request.args.get("start_date", today), "%Y-%m-%d").date()
-    end_date = datetime.strptime(request.args.get("end_date", today), "%Y-%m-%d").date()
 
     if user_id:
         services = dao_fetch_all_services_by_user(user_id, only_active)
-    elif detailed:
-        result = jsonify(
-            data=get_detailed_services(
-                start_date=start_date,
-                end_date=end_date,
-                only_active=only_active,
-                include_from_test_key=include_from_test_key,
-            )
-        )
-        return result
     else:
         services = dao_fetch_all_services(only_active)
     data = service_schema.dump(services, many=True)
@@ -198,30 +138,12 @@ def find_services_by_name():
     return jsonify(data=data), 200
 
 
-@service_blueprint.route("/live-services-data", methods=["GET"])
-def get_live_services_data():
-    data = dao_fetch_live_services_data()
-    return jsonify(data=data)
-
-
 @service_blueprint.route("/<uuid:service_id>", methods=["GET"])
 def get_service_by_id(service_id):
-    if request.args.get("detailed") == "True":
-        data = get_detailed_service(service_id, today_only=request.args.get("today_only") == "True")
-    else:
-        fetched = dao_fetch_service_by_id(service_id)
+    fetched = dao_fetch_service_by_id(service_id)
 
-        data = service_schema.dump(fetched)
+    data = service_schema.dump(fetched)
     return jsonify(data=data)
-
-
-@service_blueprint.route("/<uuid:service_id>/statistics")
-def get_service_notification_statistics(service_id):
-    return jsonify(
-        data=get_service_statistics(
-            service_id, request.args.get("today_only") == "True", int(request.args.get("limit_days", 7))
-        )
-    )
 
 
 @service_blueprint.route("", methods=["POST"])
@@ -382,246 +304,6 @@ def get_service_history(service_id):
     return jsonify(data=data)
 
 
-@service_blueprint.route("/<uuid:service_id>/notifications", methods=["GET", "POST"])
-def get_all_notifications_for_service(service_id):
-    if request.method == "GET":
-        data = notifications_filter_schema.load(request.args)
-    elif request.method == "POST":
-        # Must transform request.get_json() to MultiDict as NotificationsFilterSchema expects a MultiDict.
-        # Unlike request.args, request.get_json() does not return a MultiDict but instead just a dict.
-        data = notifications_filter_schema.load(MultiDict(request.get_json()))
-
-    if data.get("to"):
-        notification_type = data.get("template_type")[0] if data.get("template_type") else None
-        return search_for_notification_by_to_field(
-            service_id=service_id,
-            search_term=data["to"],
-            statuses=data.get("status"),
-            notification_type=notification_type,
-        )
-    page = data["page"] if "page" in data else 1
-    page_size = data["page_size"] if "page_size" in data else current_app.config.get("PAGE_SIZE")
-    limit_days = data.get("limit_days")
-    include_jobs = data.get("include_jobs", True)
-    include_from_test_key = data.get("include_from_test_key", False)
-    include_one_off = data.get("include_one_off", True)
-
-    # count_pages is not being used for whether to count the number of pages, but instead as a flag
-    # for whether to show pagination links
-    count_pages = data.get("count_pages", True)
-
-    pagination = notifications_dao.get_notifications_for_service(
-        service_id,
-        filter_dict=data,
-        page=page,
-        page_size=page_size,
-        count_pages=False,
-        limit_days=limit_days,
-        include_jobs=include_jobs,
-        include_from_test_key=include_from_test_key,
-        include_one_off=include_one_off,
-    )
-
-    kwargs = request.args.to_dict()
-    kwargs["service_id"] = service_id
-
-    if data.get("format_for_csv"):
-        notifications = [notification.serialize_for_csv() for notification in pagination.items]
-    else:
-        notifications = notification_with_template_schema.dump(pagination.items, many=True)
-
-    # We try and get the next page of results to work out if we need provide a pagination link to the next page
-    # in our response if it exists. Note, this could be done instead by changing `count_pages` in the previous
-    # call to be True which will enable us to use Flask-Sqlalchemy to tell if there is a next page of results but
-    # this way is much more performant for services with many results (unlike Flask SqlAlchemy, this approach
-    # doesn't do an additional query to count all the results of which there could be millions but instead only
-    # asks for a single extra page of results).
-    next_page_of_pagination = notifications_dao.get_notifications_for_service(
-        service_id,
-        filter_dict=data,
-        page=page + 1,
-        page_size=page_size,
-        count_pages=False,
-        limit_days=limit_days,
-        include_jobs=include_jobs,
-        include_from_test_key=include_from_test_key,
-        include_one_off=include_one_off,
-        error_out=False,  # False so that if there are no results, it doesn't end in aborting with a 404
-    )
-
-    return (
-        jsonify(
-            notifications=notifications,
-            page_size=page_size,
-            links=get_prev_next_pagination_links(
-                page, len(next_page_of_pagination.items), ".get_all_notifications_for_service", **kwargs
-            )
-            if count_pages
-            else {},
-        ),
-        200,
-    )
-
-
-@service_blueprint.route("/<uuid:service_id>/notifications/<uuid:notification_id>", methods=["GET"])
-def get_notification_for_service(service_id, notification_id):
-    notification = notifications_dao.get_notification_with_personalisation(
-        service_id,
-        notification_id,
-        key_type=None,
-    )
-    return (
-        jsonify(
-            notification_with_template_schema.dump(notification),
-        ),
-        200,
-    )
-
-
-@service_blueprint.route("/<uuid:service_id>/notifications/<uuid:notification_id>/cancel", methods=["POST"])
-def cancel_notification_for_service(service_id, notification_id):
-    notification = notifications_dao.get_notification_by_id(notification_id, service_id)
-
-    if not notification:
-        raise InvalidRequest("Notification not found", status_code=404)
-    elif notification.notification_type != LETTER_TYPE:
-        raise InvalidRequest("Notification cannot be cancelled - only letters can be cancelled", status_code=400)
-    elif not letter_can_be_cancelled(notification.status, notification.created_at):
-        print_day = letter_print_day(notification.created_at)
-        if too_late_to_cancel_letter(notification.created_at):
-            message = "It’s too late to cancel this letter. Printing started {} at 5.30pm".format(print_day)
-        elif notification.status == "cancelled":
-            message = "This letter has already been cancelled."
-        else:
-            message = (
-                f"We could not cancel this letter. "
-                f"Letter status: {notification.status}, created_at: {notification.created_at}"
-            )
-        raise InvalidRequest(message, status_code=400)
-
-    updated_notification = notifications_dao.update_notification_status_by_id(
-        notification_id,
-        NOTIFICATION_CANCELLED,
-    )
-
-    return jsonify(notification_with_template_schema.dump(updated_notification)), 200
-
-
-def search_for_notification_by_to_field(service_id, search_term, statuses, notification_type):
-    results = notifications_dao.dao_get_notifications_by_recipient_or_reference(
-        service_id=service_id,
-        search_term=search_term,
-        statuses=statuses,
-        notification_type=notification_type,
-        page=1,
-        page_size=current_app.config["PAGE_SIZE"],
-    )
-
-    # We try and get the next page of results to work out if we need provide a pagination link to the next page
-    # in our response. Note, this was previously be done by having
-    # notifications_dao.dao_get_notifications_by_recipient_or_reference use count=False when calling
-    # Flask-Sqlalchemys `paginate'. But instead we now use this way because it is much more performant for
-    # services with many results (unlike using Flask SqlAlchemy `paginate` with `count=True`, this approach
-    # doesn't do an additional query to count all the results of which there could be millions but instead only
-    # asks for a single extra page of results).
-    next_page_of_pagination = notifications_dao.dao_get_notifications_by_recipient_or_reference(
-        service_id=service_id,
-        search_term=search_term,
-        statuses=statuses,
-        notification_type=notification_type,
-        page=2,
-        page_size=current_app.config["PAGE_SIZE"],
-        error_out=False,  # False so that if there are no results, it doesn't end in aborting with a 404
-    )
-
-    return (
-        jsonify(
-            notifications=notification_with_template_schema.dump(results.items, many=True),
-            links=get_prev_next_pagination_links(
-                1,
-                len(next_page_of_pagination.items),
-                ".get_all_notifications_for_service",
-                statuses=statuses,
-                notification_type=notification_type,
-                service_id=service_id,
-            ),
-        ),
-        200,
-    )
-
-
-@service_blueprint.route("/<uuid:service_id>/notifications/monthly", methods=["GET"])
-def get_monthly_notification_stats(service_id):
-    # check service_id validity
-    dao_fetch_service_by_id(service_id)
-
-    try:
-        year = int(request.args.get("year", "NaN"))
-    except ValueError:
-        raise InvalidRequest("Year must be a number", status_code=400)
-
-    start_date, end_date = get_financial_year(year)
-
-    data = statistics.create_empty_monthly_notification_status_stats_dict(year)
-
-    stats = fetch_notification_status_for_service_by_month(start_date, end_date, service_id)
-    statistics.add_monthly_notification_status_stats(data, stats)
-
-    now = datetime.utcnow()
-    if end_date > now:
-        todays_deltas = fetch_notification_status_for_service_for_day(convert_utc_to_bst(now), service_id=service_id)
-        statistics.add_monthly_notification_status_stats(data, todays_deltas)
-
-    return jsonify(data=data)
-
-
-def get_detailed_service(service_id, today_only=False):
-    service = dao_fetch_service_by_id(service_id)
-
-    service.statistics = get_service_statistics(service_id, today_only)
-    return detailed_service_schema.dump(service)
-
-
-def get_service_statistics(service_id, today_only, limit_days=7):
-    # today_only flag is used by the send page to work out if the service will exceed their daily usage by sending a job
-    if today_only:
-        stats = dao_fetch_todays_stats_for_service(service_id)
-    else:
-        stats = fetch_notification_status_for_service_for_today_and_7_previous_days(service_id, limit_days=limit_days)
-
-    return statistics.format_statistics(stats)
-
-
-def get_detailed_services(start_date, end_date, only_active=False, include_from_test_key=True):
-    if start_date == datetime.utcnow().date():
-        stats = dao_fetch_todays_stats_for_all_services(
-            include_from_test_key=include_from_test_key, only_active=only_active
-        )
-    else:
-        stats = fetch_stats_for_all_services_by_date_range(
-            start_date=start_date,
-            end_date=end_date,
-            include_from_test_key=include_from_test_key,
-        )
-    results = []
-    for _service_id, rows in itertools.groupby(stats, lambda x: x.service_id):
-        rows = list(rows)
-        s = statistics.format_statistics(rows)
-        results.append(
-            {
-                "id": str(rows[0].service_id),
-                "name": rows[0].name,
-                "notification_type": rows[0].notification_type,
-                "research_mode": rows[0].research_mode,
-                "restricted": rows[0].restricted,
-                "active": rows[0].active,
-                "created_at": rows[0].created_at,
-                "statistics": s,
-            }
-        )
-    return results
-
-
 @service_blueprint.route("/<uuid:service_id>/guest-list", methods=["GET"])
 def get_guest_list(service_id):
     from app.models import EMAIL_TYPE, MOBILE_TYPE
@@ -668,30 +350,6 @@ def archive_service(service_id):
         dao_archive_service(service.id)
 
     return "", 204
-
-
-@service_blueprint.route("/<uuid:service_id>/notifications/templates_usage/monthly", methods=["GET"])
-def get_monthly_template_usage(service_id):
-    try:
-        start_date, end_date = get_financial_year(int(request.args.get("year", "NaN")))
-        data = fetch_monthly_template_usage_for_service(start_date=start_date, end_date=end_date, service_id=service_id)
-        stats = list()
-        for i in data:
-            stats.append(
-                {
-                    "template_id": str(i.template_id),
-                    "name": i.name,
-                    "type": i.template_type,
-                    "month": i.month,
-                    "year": i.year,
-                    "count": i.count,
-                    "is_precompiled_letter": i.is_precompiled_letter,
-                }
-            )
-
-        return jsonify(stats=stats), 200
-    except ValueError:
-        raise InvalidRequest("Year must be a number", status_code=400)
 
 
 @service_blueprint.route("/<uuid:service_id>/email-reply-to", methods=["GET"])
@@ -864,76 +522,12 @@ def modify_service_data_retention(service_id, data_retention_id):
     return "", 204
 
 
-@service_blueprint.route("/monthly-data-by-service")
-def get_monthly_notification_data_by_service():
-    start_date = request.args.get("start_date")
-    end_date = request.args.get("end_date")
-
-    rows = fact_notification_status_dao.fetch_monthly_notification_statuses_per_service(start_date, end_date)
-
-    serialized_results = [
-        [
-            str(row.date_created),
-            str(row.service_id),
-            row.service_name,
-            row.notification_type,
-            row.count_sending,
-            row.count_delivered,
-            row.count_technical_failure,
-            row.count_temporary_failure,
-            row.count_permanent_failure,
-            row.count_sent,
-        ]
-        for row in rows
-    ]
-    return jsonify(serialized_results)
-
-
 def check_if_reply_to_address_already_in_use(service_id, email_address):
     existing_reply_to_addresses = dao_get_reply_to_by_service_id(service_id)
     if email_address in [i.email_address for i in existing_reply_to_addresses]:
         raise InvalidRequest(
             "Your service already uses ‘{}’ as an email reply-to address.".format(email_address), status_code=409
         )
-
-
-@service_blueprint.route("/<uuid:service_id>/contact-list", methods=["GET"])
-def get_contact_list(service_id):
-    contact_lists = dao_get_contact_lists(service_id)
-
-    return jsonify([x.serialize() for x in contact_lists])
-
-
-@service_blueprint.route("/<uuid:service_id>/contact-list/<uuid:contact_list_id>", methods=["GET"])
-def get_contact_list_by_id(service_id, contact_list_id):
-    contact_list = dao_get_contact_list_by_id(service_id=service_id, contact_list_id=contact_list_id)
-
-    return jsonify(contact_list.serialize())
-
-
-@service_blueprint.route("/<uuid:service_id>/contact-list/<uuid:contact_list_id>", methods=["DELETE"])
-def delete_contact_list_by_id(service_id, contact_list_id):
-    contact_list = dao_get_contact_list_by_id(
-        service_id=service_id,
-        contact_list_id=contact_list_id,
-    )
-    dao_archive_contact_list(contact_list)
-    s3.remove_contact_list_from_s3(service_id, contact_list_id)
-
-    return "", 204
-
-
-@service_blueprint.route("/<uuid:service_id>/contact-list", methods=["POST"])
-def create_contact_list(service_id):
-    service_contact_list = validate(request.get_json(), create_service_contact_list_schema)
-    service_contact_list["created_by_id"] = service_contact_list.pop("created_by")
-    service_contact_list["created_at"] = datetime.utcnow()
-    service_contact_list["service_id"] = str(service_id)
-    list_to_save = ServiceContactList(**service_contact_list)
-
-    save_service_contact_list(list_to_save)
-
-    return jsonify(list_to_save.serialize()), 201
 
 
 @service_blueprint.route("/<uuid:service_id>/set-as-broadcast-service", methods=["POST"])
