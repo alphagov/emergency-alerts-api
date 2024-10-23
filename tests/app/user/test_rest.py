@@ -100,7 +100,7 @@ def test_post_user(admin_request, notify_db_session):
     data = {
         "name": "Test User",
         "email_address": "user@digital.cabinet-office.gov.uk",
-        "password": "password",
+        "password": "password123456",
         "mobile_number": "+447700900986",
         "logged_in_at": None,
         "state": "active",
@@ -111,7 +111,7 @@ def test_post_user(admin_request, notify_db_session):
     json_resp = admin_request.post("user.create_user", _data=data, _expected_status=201)
 
     user = User.query.filter_by(email_address="user@digital.cabinet-office.gov.uk").first()
-    assert user.check_password("password")
+    assert user.check_password("password123456")
     assert json_resp["data"]["email_address"] == user.email_address
     assert json_resp["data"]["id"] == str(user.id)
     assert user.auth_type == EMAIL_AUTH_TYPE
@@ -122,7 +122,7 @@ def test_post_user_without_auth_type(admin_request, notify_db_session):
     data = {
         "name": "Test User",
         "email_address": "user@digital.cabinet-office.gov.uk",
-        "password": "password",
+        "password": "password123456",
         "mobile_number": "+447700900986",
         "permissions": {},
     }
@@ -141,7 +141,7 @@ def test_post_user_missing_attribute_email(admin_request, notify_db_session):
     User.query.delete()
     data = {
         "name": "Test User",
-        "password": "password",
+        "password": "password123456",
         "mobile_number": "+447700900986",
         "logged_in_at": None,
         "state": "active",
@@ -177,7 +177,7 @@ def test_can_create_user_with_email_auth_and_no_mobile(admin_request, notify_db_
     data = {
         "name": "Test User",
         "email_address": "user@digital.cabinet-office.gov.uk",
-        "password": "password",
+        "password": "password123456",
         "mobile_number": None,
         "auth_type": EMAIL_AUTH_TYPE,
     }
@@ -192,7 +192,7 @@ def test_cannot_create_user_with_sms_auth_and_no_mobile(admin_request, notify_db
     data = {
         "name": "Test User",
         "email_address": "user@digital.cabinet-office.gov.uk",
-        "password": "password",
+        "password": "password123456",
         "mobile_number": None,
         "auth_type": SMS_AUTH_TYPE,
     }
@@ -203,7 +203,13 @@ def test_cannot_create_user_with_sms_auth_and_no_mobile(admin_request, notify_db
 
 
 def test_cannot_create_user_with_empty_strings(admin_request, notify_db_session):
-    data = {"name": "", "email_address": "", "password": "password", "mobile_number": "", "auth_type": EMAIL_AUTH_TYPE}
+    data = {
+        "name": "",
+        "email_address": "",
+        "password": "password123456",
+        "mobile_number": "",
+        "auth_type": EMAIL_AUTH_TYPE,
+    }
     resp = admin_request.post("user.create_user", _data=data, _expected_status=400)
     assert resp["message"] == {
         "email_address": ["Not a valid email address"],
@@ -813,8 +819,8 @@ def test_send_user_confirm_new_email_returns_400_when_email_missing(admin_reques
 @freeze_time("2020-02-14T12:00:00")
 def test_update_user_password_saves_correctly(admin_request, sample_service):
     sample_user = sample_service.users[0]
-    new_password = "1234567890"
-    data = {"_password": "1234567890"}
+    new_password = "A1234567890!?!"
+    data = {"_password": "A1234567890!?!"}
 
     json_resp = admin_request.post("user.update_password", user_id=str(sample_user.id), _data=data)
 
@@ -1186,3 +1192,37 @@ def test_complete_login_after_webauthn_authentication_attempt_raises_400_if_sche
         _data={"successful": "True"},
         _expected_status=400,
     )
+
+
+def test_check_password_is_valid_rejects_reused_password(admin_request, sample_service):
+    data = {"_password": "1234567890TEST!!!"}
+    new_data = {"_password": "1234567890TEST!!!!"}
+    sample_user = sample_service.users[0]
+
+    json_resp = admin_request.post(
+        "user.check_password_is_valid", user_id=sample_user.id, _data=data, _expected_status=200
+    )
+    assert json_resp["data"]["password_changed_at"] is not None
+
+    json_resp = admin_request.post(
+        "user.check_password_is_valid", user_id=sample_user.id, _data=new_data, _expected_status=200
+    )
+
+    assert json_resp["data"]["password_changed_at"] is not None
+
+    json_resp = admin_request.post(
+        "user.check_password_is_valid", user_id=sample_user.id, _data=data, _expected_status=400
+    )
+    assert json_resp["errors"] == ["You've used this password before. Please choose a new one."]
+
+
+def test_update_user_password_low_entropy_password(admin_request, sample_service):
+    new_password = "low entropy"
+    data = {"_password": new_password}
+    sample_user = sample_service.users[0]
+
+    json_resp = admin_request.post(
+        "user.check_password_is_valid", user_id=sample_user.id, _data=data, _expected_status=400
+    )
+
+    assert json_resp["errors"] == ["Your password is not strong enough, try adding more words"]

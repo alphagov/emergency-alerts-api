@@ -3,6 +3,7 @@ import uuid
 from datetime import datetime
 from urllib.parse import urlencode
 
+import pwdpy
 from flask import Blueprint, abort, current_app, jsonify, request
 from notifications_python_client.errors import HTTPError
 from sqlalchemy.exc import IntegrityError
@@ -45,6 +46,10 @@ from app.failed_logins.rest import (
     check_throttle_for_requester,
 )
 from app.models import EMAIL_TYPE, SMS_TYPE, Permission
+from app.password_history.rest import (
+    add_old_password_for_user,
+    has_user_already_used_password,
+)
 from app.schema_validation import validate
 from app.schemas import (
     create_user_schema,
@@ -89,6 +94,7 @@ def create_user():
     save_model_user(user_to_create, password=req_json.get("password"), validated_email_access=True)
     result = user_to_create.serialize()
     log_user(result, "User created")
+    add_old_password_for_user(user_to_create.id, password=req_json.get("password"))
     return jsonify(data=result), 201
 
 
@@ -557,13 +563,29 @@ def send_user_reset_password():
 def update_password(user_id):
     user = get_user_by_id(user_id=user_id)
     req_json = request.get_json()
-    password = req_json.get("_password")
 
+    password = req_json.get("_password")
     user_update_password_schema_load_json.load(req_json)
+    add_old_password_for_user(user_id, password)
 
     current_app.logger.info("update_password", extra={"python_module": __name__, "user_id": user_id})
-
     update_user_password(user, password)
+    return jsonify(data=user.serialize()), 200
+
+
+@user_blueprint.route("/<uuid:user_id>/check-password-validity", methods=["POST"])
+def check_password_is_valid(user_id):
+    req_json = request.get_json()
+    password = req_json.get("_password")
+    user = get_user_by_id(user_id=user_id)
+    if password and (pwdpy.entropy(password) < current_app.config["MIN_ENTROPY_THRESHOLD"]):
+        return (
+            jsonify({"errors": ["Your password is not strong enough, try adding more words"]}),
+            400,
+        )
+    if password and has_user_already_used_password(user_id, password):
+        return jsonify({"errors": ["You've used this password before. Please choose a new one."]}), 400
+    add_old_password_for_user(user.id, password)
     return jsonify(data=user.serialize()), 200
 
 

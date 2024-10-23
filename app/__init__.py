@@ -148,21 +148,18 @@ def create_app(application):
 def register_blueprint(application):
     from app.authentication.auth import (
         requires_admin_auth,
-        requires_auth,
         requires_govuk_alerts_auth,
         requires_no_auth,
     )
-    from app.billing.rest import billing_blueprint
     from app.broadcast_message.rest import broadcast_message_blueprint
     from app.events.rest import events as events_blueprint
     from app.failed_logins.rest import failed_logins_blueprint
     from app.feature_toggle.rest import feature_toggle_blueprint
     from app.govuk_alerts.rest import govuk_alerts_blueprint
     from app.inbound_sms.rest import inbound_sms as inbound_sms_blueprint
-    from app.notifications.rest import notifications as notifications_blueprint
     from app.organisation.invite_rest import organisation_invite_blueprint
     from app.organisation.rest import organisation_blueprint
-    from app.platform_stats.rest import platform_stats_blueprint
+    from app.password_history.rest import password_history_blueprint
     from app.reports.rest import reports_blueprint
     from app.service.callback_rest import service_callback_blueprint
     from app.service.rest import service_blueprint
@@ -172,9 +169,6 @@ def register_blueprint(application):
     from app.status.healthcheck import status as status_blueprint
     from app.template.rest import template_blueprint
     from app.template_folder.rest import template_folder_blueprint
-    from app.template_statistics.rest import (
-        template_statistics as template_statistics_blueprint,
-    )
     from app.user.rest import user_blueprint
     from app.verify.rest import verify_code_blueprint
     from app.webauthn.rest import webauthn_blueprint
@@ -197,10 +191,6 @@ def register_blueprint(application):
     verify_code_blueprint.before_request(requires_no_auth)
     application.register_blueprint(verify_code_blueprint, url_prefix="/verify-code")
 
-    # delivery receipts
-    notifications_blueprint.before_request(requires_auth)
-    application.register_blueprint(notifications_blueprint)
-
     service_invite_blueprint.before_request(requires_admin_auth)
     application.register_blueprint(service_invite_blueprint)
 
@@ -210,23 +200,14 @@ def register_blueprint(application):
     inbound_sms_blueprint.before_request(requires_admin_auth)
     application.register_blueprint(inbound_sms_blueprint)
 
-    template_statistics_blueprint.before_request(requires_admin_auth)
-    application.register_blueprint(template_statistics_blueprint)
-
     events_blueprint.before_request(requires_admin_auth)
     application.register_blueprint(events_blueprint)
-
-    billing_blueprint.before_request(requires_admin_auth)
-    application.register_blueprint(billing_blueprint)
 
     service_callback_blueprint.before_request(requires_admin_auth)
     application.register_blueprint(service_callback_blueprint)
 
     organisation_blueprint.before_request(requires_admin_auth)
     application.register_blueprint(organisation_blueprint, url_prefix="/organisations")
-
-    platform_stats_blueprint.before_request(requires_admin_auth)
-    application.register_blueprint(platform_stats_blueprint, url_prefix="/platform-stats")
 
     template_folder_blueprint.before_request(requires_admin_auth)
     application.register_blueprint(template_folder_blueprint)
@@ -245,6 +226,9 @@ def register_blueprint(application):
 
     reports_blueprint.before_request(requires_admin_auth)
     application.register_blueprint(reports_blueprint)
+
+    password_history_blueprint.before_request(requires_admin_auth)
+    application.register_blueprint(password_history_blueprint)
 
 
 def register_v2_blueprints(application):

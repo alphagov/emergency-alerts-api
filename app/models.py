@@ -1,12 +1,6 @@
 import datetime
-import itertools
 import uuid
 
-from emergency_alerts_utils.insensitive_dict import InsensitiveDict
-from emergency_alerts_utils.letter_timings import get_letter_timings
-from emergency_alerts_utils.postal_address import (
-    address_lines_1_to_6_and_postcode_keys,
-)
 from emergency_alerts_utils.recipients import (
     InvalidEmailError,
     InvalidPhoneError,
@@ -19,16 +13,8 @@ from emergency_alerts_utils.template import (
     PlainTextEmailTemplate,
     SMSMessageTemplate,
 )
-from emergency_alerts_utils.timezones import convert_utc_to_bst
 from flask import current_app, url_for
-from sqlalchemy import (
-    CheckConstraint,
-    Index,
-    String,
-    UniqueConstraint,
-    and_,
-    func,
-)
+from sqlalchemy import CheckConstraint, Index, UniqueConstraint
 from sqlalchemy.dialects.postgresql import INET, JSON, JSONB, UUID
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.declarative import declared_attr
@@ -934,64 +920,6 @@ PROVIDERS = SMS_PROVIDERS + EMAIL_PROVIDERS
 NOTIFICATION_TYPE = [EMAIL_TYPE, SMS_TYPE, LETTER_TYPE]
 notification_types = db.Enum(*NOTIFICATION_TYPE, name="notification_type")
 
-
-JOB_STATUS_PENDING = "pending"
-JOB_STATUS_IN_PROGRESS = "in progress"
-JOB_STATUS_FINISHED = "finished"
-JOB_STATUS_SENDING_LIMITS_EXCEEDED = "sending limits exceeded"
-JOB_STATUS_SCHEDULED = "scheduled"
-JOB_STATUS_CANCELLED = "cancelled"
-JOB_STATUS_READY_TO_SEND = "ready to send"
-JOB_STATUS_SENT_TO_DVLA = "sent to dvla"
-JOB_STATUS_ERROR = "error"
-JOB_STATUS_TYPES = [
-    JOB_STATUS_PENDING,
-    JOB_STATUS_IN_PROGRESS,
-    JOB_STATUS_FINISHED,
-    JOB_STATUS_SENDING_LIMITS_EXCEEDED,
-    JOB_STATUS_SCHEDULED,
-    JOB_STATUS_CANCELLED,
-    JOB_STATUS_READY_TO_SEND,
-    JOB_STATUS_SENT_TO_DVLA,
-    JOB_STATUS_ERROR,
-]
-
-
-class JobStatus(db.Model):
-    __tablename__ = "job_status"
-
-    name = db.Column(db.String(255), primary_key=True)
-
-
-class Job(db.Model):
-    __tablename__ = "jobs"
-
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    original_file_name = db.Column(db.String, nullable=False)
-    service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"), index=True, unique=False, nullable=False)
-    service = db.relationship("Service", backref=db.backref("jobs", lazy="dynamic"))
-    template_id = db.Column(UUID(as_uuid=True), db.ForeignKey("templates.id"), index=True, unique=False)
-    template = db.relationship("Template", backref=db.backref("jobs", lazy="dynamic"))
-    template_version = db.Column(db.Integer, nullable=False)
-    created_at = db.Column(db.DateTime, index=False, unique=False, nullable=False, default=datetime.datetime.utcnow)
-    updated_at = db.Column(db.DateTime, index=False, unique=False, nullable=True, onupdate=datetime.datetime.utcnow)
-    notification_count = db.Column(db.Integer, nullable=False)
-    notifications_sent = db.Column(db.Integer, nullable=False, default=0)
-    notifications_delivered = db.Column(db.Integer, nullable=False, default=0)
-    notifications_failed = db.Column(db.Integer, nullable=False, default=0)
-
-    processing_started = db.Column(db.DateTime, index=False, unique=False, nullable=True)
-    processing_finished = db.Column(db.DateTime, index=False, unique=False, nullable=True)
-    created_by = db.relationship("User")
-    created_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), index=True, nullable=True)
-    scheduled_for = db.Column(db.DateTime, index=True, unique=False, nullable=True)
-    job_status = db.Column(
-        db.String(255), db.ForeignKey("job_status.name"), index=True, nullable=False, default="pending"
-    )
-    archived = db.Column(db.Boolean, nullable=False, default=False)
-    contact_list_id = db.Column(UUID(as_uuid=True), db.ForeignKey("service_contact_list.id"), nullable=True)
-
-
 VERIFY_CODE_TYPES = [EMAIL_TYPE, SMS_TYPE]
 
 
@@ -1125,374 +1053,6 @@ RESOLVE_POSTAGE_FOR_FILE_NAME = {
     EUROPE: "E",
     REST_OF_WORLD: "N",
 }
-
-
-class NotificationStatusTypes(db.Model):
-    __tablename__ = "notification_status_types"
-
-    name = db.Column(db.String(), primary_key=True)
-
-
-class NotificationAllTimeView(db.Model):
-    """
-    WARNING: this view is a union of rows in "notifications" and
-    "notification_history". Any query on this view will query both
-    tables and therefore rely on *both* sets of indices.
-    """
-
-    __tablename__ = "notifications_all_time_view"
-
-    id = db.Column(UUID(as_uuid=True), primary_key=True)
-    job_id = db.Column(UUID(as_uuid=True))
-    job_row_number = db.Column(db.Integer)
-    service_id = db.Column(UUID(as_uuid=True))
-    template_id = db.Column(UUID(as_uuid=True))
-    template_version = db.Column(db.Integer)
-    api_key_id = db.Column(UUID(as_uuid=True))
-    key_type = db.Column(db.String)
-    billable_units = db.Column(db.Integer)
-    notification_type = db.Column(notification_types)
-    created_at = db.Column(db.DateTime)
-    sent_at = db.Column(db.DateTime)
-    sent_by = db.Column(db.String)
-    updated_at = db.Column(db.DateTime)
-    status = db.Column("notification_status", db.Text)
-    reference = db.Column(db.String)
-    client_reference = db.Column(db.String)
-    international = db.Column(db.Boolean)
-    phone_prefix = db.Column(db.String)
-    rate_multiplier = db.Column(db.Numeric(asdecimal=False))
-    created_by_id = db.Column(UUID(as_uuid=True))
-    postage = db.Column(db.String)
-    document_download_count = db.Column(db.Integer)
-
-
-class Notification(db.Model):
-    __tablename__ = "notifications"
-
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    to = db.Column(db.String, nullable=False)
-    normalised_to = db.Column(db.String, nullable=True)
-    job_id = db.Column(UUID(as_uuid=True), db.ForeignKey("jobs.id"), index=True, unique=False)
-    job = db.relationship("Job", backref=db.backref("notifications", lazy="dynamic"))
-    job_row_number = db.Column(db.Integer, nullable=True)
-    service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"), unique=False)
-    service = db.relationship("Service")
-    template_id = db.Column(UUID(as_uuid=True), index=True, unique=False)
-    template_version = db.Column(db.Integer, nullable=False)
-    template = db.relationship("TemplateHistory")
-    api_key_id = db.Column(UUID(as_uuid=True), db.ForeignKey("api_keys.id"), unique=False)
-    api_key = db.relationship("ApiKey")
-    key_type = db.Column(db.String, db.ForeignKey("key_types.name"), unique=False, nullable=False)
-    billable_units = db.Column(db.Integer, nullable=False, default=0)
-    notification_type = db.Column(notification_types, nullable=False)
-    created_at = db.Column(db.DateTime, index=True, unique=False, nullable=False)
-    sent_at = db.Column(db.DateTime, index=False, unique=False, nullable=True)
-    sent_by = db.Column(db.String, nullable=True)
-    updated_at = db.Column(db.DateTime, index=False, unique=False, nullable=True, onupdate=datetime.datetime.utcnow)
-    status = db.Column(
-        "notification_status",
-        db.Text,
-        db.ForeignKey("notification_status_types.name"),
-        nullable=True,
-        default="created",
-        key="status",  # http://docs.sqlalchemy.org/en/latest/core/metadata.html#sqlalchemy.schema.Column
-    )
-    reference = db.Column(db.String, nullable=True, index=True)
-    client_reference = db.Column(db.String, index=True, nullable=True)
-    _personalisation = db.Column(db.String, nullable=True)
-
-    international = db.Column(db.Boolean, nullable=False, default=False)
-    phone_prefix = db.Column(db.String, nullable=True)
-    rate_multiplier = db.Column(db.Numeric(asdecimal=False), nullable=True)
-
-    created_by = db.relationship("User")
-    created_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=True)
-
-    reply_to_text = db.Column(db.String, nullable=True)
-
-    document_download_count = db.Column(db.Integer, nullable=True)
-
-    postage = db.Column(db.String, nullable=True)
-
-    __table_args__ = (
-        db.ForeignKeyConstraint(
-            ["template_id", "template_version"],
-            ["templates_history.id", "templates_history.version"],
-        ),
-        UniqueConstraint("job_id", "job_row_number", name="uq_notifications_job_row_number"),
-        Index("ix_notifications_notification_type_composite", "notification_type", "status", "created_at"),
-        Index("ix_notifications_service_created_at", "service_id", "created_at"),
-        Index("ix_notifications_service_id_composite", "service_id", "notification_type", "status", "created_at"),
-    )
-
-    @property
-    def personalisation(self):
-        if self._personalisation:
-            return encryption.decrypt(self._personalisation)
-        return {}
-
-    @personalisation.setter
-    def personalisation(self, personalisation):
-        self._personalisation = encryption.encrypt(personalisation or {})
-
-    def completed_at(self):
-        if self.status in NOTIFICATION_STATUS_TYPES_COMPLETED:
-            return self.updated_at.strftime(DATETIME_FORMAT)
-
-        return None
-
-    @staticmethod
-    def substitute_status(status_or_statuses):
-        """
-        static function that takes a status or list of statuses and substitutes our new failure types if it finds
-        the deprecated one
-
-        > IN
-        'failed'
-
-        < OUT
-        ['technical-failure', 'temporary-failure', 'permanent-failure']
-
-        -
-
-        > IN
-        ['failed', 'created', 'accepted']
-
-        < OUT
-        ['technical-failure', 'temporary-failure', 'permanent-failure', 'created', 'sending']
-
-
-        -
-
-        > IN
-        'delivered'
-
-        < OUT
-        ['received']
-
-        :param status_or_statuses: a single status or list of statuses
-        :return: a single status or list with the current failure statuses substituted for 'failure'
-        """
-
-        def _substitute_status_str(_status):
-            return (
-                NOTIFICATION_STATUS_TYPES_FAILED
-                if _status == NOTIFICATION_FAILED
-                else [NOTIFICATION_CREATED, NOTIFICATION_SENDING]
-                if _status == NOTIFICATION_STATUS_LETTER_ACCEPTED
-                else NOTIFICATION_DELIVERED
-                if _status == NOTIFICATION_STATUS_LETTER_RECEIVED
-                else [_status]
-            )
-
-        def _substitute_status_seq(_statuses):
-            return list(set(itertools.chain.from_iterable(_substitute_status_str(status) for status in _statuses)))
-
-        if isinstance(status_or_statuses, str):
-            return _substitute_status_str(status_or_statuses)
-        return _substitute_status_seq(status_or_statuses)
-
-    @property
-    def content(self):
-        return self.template._as_utils_template_with_personalisation(
-            self.personalisation
-        ).content_with_placeholders_filled_in
-
-    @property
-    def subject(self):
-        template_object = self.template._as_utils_template_with_personalisation(self.personalisation)
-        return getattr(template_object, "subject", None)
-
-    @property
-    def formatted_status(self):
-        return {
-            "email": {
-                "failed": "Failed",
-                "technical-failure": "Technical failure",
-                "temporary-failure": "Inbox not accepting messages right now",
-                "permanent-failure": "Email address doesn’t exist",
-                "delivered": "Delivered",
-                "sending": "Sending",
-                "created": "Sending",
-                "sent": "Delivered",
-            },
-            "sms": {
-                "failed": "Failed",
-                "technical-failure": "Technical failure",
-                "temporary-failure": "Phone not accepting messages right now",
-                "permanent-failure": "Phone number doesn’t exist",
-                "delivered": "Delivered",
-                "sending": "Sending",
-                "created": "Sending",
-                "sent": "Sent internationally",
-            },
-            "letter": {
-                "technical-failure": "Technical failure",
-                "permanent-failure": "Permanent failure",
-                "sending": "Accepted",
-                "created": "Accepted",
-                "delivered": "Received",
-            },
-        }[self.template.template_type].get(self.status, self.status)
-
-    def get_letter_status(self):
-        """
-        Return the notification_status, as we should present for letters. The distinction between created and sending is
-        a bit more confusing for letters, not to mention that there's no concept of temporary or permanent failure yet.
-
-
-        """
-        # this should only ever be called for letter notifications - it makes no sense otherwise and I'd rather not
-        # get the two code flows mixed up at all
-        assert self.notification_type == LETTER_TYPE
-
-        if self.status in [NOTIFICATION_CREATED, NOTIFICATION_SENDING]:
-            return NOTIFICATION_STATUS_LETTER_ACCEPTED
-        elif self.status in [NOTIFICATION_DELIVERED]:
-            return NOTIFICATION_STATUS_LETTER_RECEIVED
-        else:
-            # Currently can only be technical-failure OR pending-virus-check OR validation-failed
-            return self.status
-
-    def get_created_by_name(self):
-        if self.created_by:
-            return self.created_by.name
-        else:
-            return None
-
-    def get_created_by_email_address(self):
-        if self.created_by:
-            return self.created_by.email_address
-        else:
-            return None
-
-    def serialize_for_csv(self):
-        created_at_in_bst = convert_utc_to_bst(self.created_at)
-        serialized = {
-            "row_number": "" if self.job_row_number is None else self.job_row_number + 1,
-            "recipient": self.to,
-            "client_reference": self.client_reference or "",
-            "template_name": self.template.name,
-            "template_type": self.template.template_type,
-            "job_name": self.job.original_file_name if self.job else "",
-            "status": self.formatted_status,
-            "created_at": created_at_in_bst.strftime("%Y-%m-%d %H:%M:%S"),
-            "created_by_name": self.get_created_by_name(),
-            "created_by_email_address": self.get_created_by_email_address(),
-        }
-
-        return serialized
-
-    def serialize(self):
-        template_dict = {"version": self.template.version, "id": self.template.id, "uri": self.template.get_link()}
-
-        serialized = {
-            "id": self.id,
-            "reference": self.client_reference,
-            "email_address": self.to if self.notification_type == EMAIL_TYPE else None,
-            "phone_number": self.to if self.notification_type == SMS_TYPE else None,
-            "line_1": None,
-            "line_2": None,
-            "line_3": None,
-            "line_4": None,
-            "line_5": None,
-            "line_6": None,
-            "postcode": None,
-            "type": self.notification_type,
-            "status": self.get_letter_status() if self.notification_type == LETTER_TYPE else self.status,
-            "template": template_dict,
-            "body": self.content,
-            "subject": self.subject,
-            "created_at": self.created_at.strftime(DATETIME_FORMAT),
-            "created_by_name": self.get_created_by_name(),
-            "sent_at": get_dt_string_or_none(self.sent_at),
-            "completed_at": self.completed_at(),
-            "scheduled_for": None,
-            "postage": self.postage,
-        }
-
-        if self.notification_type == LETTER_TYPE:
-            personalisation = InsensitiveDict(self.personalisation)
-
-            (
-                serialized["line_1"],
-                serialized["line_2"],
-                serialized["line_3"],
-                serialized["line_4"],
-                serialized["line_5"],
-                serialized["line_6"],
-                serialized["postcode"],
-            ) = (personalisation.get(line) for line in address_lines_1_to_6_and_postcode_keys)
-
-            serialized["estimated_delivery"] = get_letter_timings(
-                serialized["created_at"], postage=self.postage
-            ).earliest_delivery.strftime(DATETIME_FORMAT)
-
-        return serialized
-
-
-class NotificationHistory(db.Model, HistoryModel):
-    __tablename__ = "notification_history"
-
-    id = db.Column(UUID(as_uuid=True), primary_key=True)
-    job_id = db.Column(UUID(as_uuid=True), db.ForeignKey("jobs.id"), index=True, unique=False)
-    job = db.relationship("Job")
-    job_row_number = db.Column(db.Integer, nullable=True)
-    service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"), unique=False)
-    service = db.relationship("Service")
-    template_id = db.Column(UUID(as_uuid=True), unique=False)
-    template_version = db.Column(db.Integer, nullable=False)
-    api_key_id = db.Column(UUID(as_uuid=True), db.ForeignKey("api_keys.id"), unique=False)
-    api_key = db.relationship("ApiKey")
-    key_type = db.Column(db.String, db.ForeignKey("key_types.name"), unique=False, nullable=False)
-    billable_units = db.Column(db.Integer, nullable=False, default=0)
-    notification_type = db.Column(notification_types, nullable=False)
-    created_at = db.Column(db.DateTime, unique=False, nullable=False)
-    sent_at = db.Column(db.DateTime, index=False, unique=False, nullable=True)
-    sent_by = db.Column(db.String, nullable=True)
-    updated_at = db.Column(db.DateTime, index=False, unique=False, nullable=True, onupdate=datetime.datetime.utcnow)
-    status = db.Column(
-        "notification_status",
-        db.Text,
-        db.ForeignKey("notification_status_types.name"),
-        nullable=True,
-        default="created",
-        key="status",  # http://docs.sqlalchemy.org/en/latest/core/metadata.html#sqlalchemy.schema.Column
-    )
-    reference = db.Column(db.String, nullable=True, index=True)
-    client_reference = db.Column(db.String, nullable=True)
-
-    international = db.Column(db.Boolean, nullable=True, default=False)
-    phone_prefix = db.Column(db.String, nullable=True)
-    rate_multiplier = db.Column(db.Numeric(asdecimal=False), nullable=True)
-
-    created_by_id = db.Column(UUID(as_uuid=True), nullable=True)
-
-    postage = db.Column(db.String, nullable=True)
-
-    document_download_count = db.Column(db.Integer, nullable=True)
-
-    __table_args__ = (
-        db.ForeignKeyConstraint(
-            ["template_id", "template_version"],
-            ["templates_history.id", "templates_history.version"],
-        ),
-        Index(
-            "ix_notification_history_service_id_composite", "service_id", "key_type", "notification_type", "created_at"
-        ),
-    )
-
-    @classmethod
-    def from_original(cls, notification):
-        history = super().from_original(notification)
-        history.status = notification.status
-        return history
-
-    def update_from_original(self, original):
-        super().update_from_original(original)
-        self.status = original.status
-
 
 INVITE_PENDING = "pending"
 INVITE_ACCEPTED = "accepted"
@@ -1767,54 +1327,6 @@ class DailySortedLetter(db.Model):
     __table_args__ = (UniqueConstraint("file_name", "billing_day", name="uix_file_name_billing_day"),)
 
 
-class FactBilling(db.Model):
-    __tablename__ = "ft_billing"
-
-    bst_date = db.Column(db.Date, nullable=False, primary_key=True, index=True)
-    template_id = db.Column(UUID(as_uuid=True), nullable=False, primary_key=True, index=True)
-    service_id = db.Column(UUID(as_uuid=True), nullable=False, primary_key=True, index=True)
-    notification_type = db.Column(db.Text, nullable=False, primary_key=True)
-    provider = db.Column(db.Text, nullable=False, primary_key=True)
-    rate_multiplier = db.Column(db.Integer(), nullable=False, primary_key=True)
-    international = db.Column(db.Boolean, nullable=False, primary_key=True)
-    rate = db.Column(db.Numeric(), nullable=False, primary_key=True)
-    postage = db.Column(db.String, nullable=False, primary_key=True)
-    billable_units = db.Column(db.Integer(), nullable=True)
-    notifications_sent = db.Column(db.Integer(), nullable=True)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
-    updated_at = db.Column(db.DateTime, nullable=True, onupdate=datetime.datetime.utcnow)
-
-
-class FactNotificationStatus(db.Model):
-    __tablename__ = "ft_notification_status"
-
-    bst_date = db.Column(db.Date, index=True, primary_key=True, nullable=False)
-    template_id = db.Column(UUID(as_uuid=True), primary_key=True, index=True, nullable=False)
-    service_id = db.Column(
-        UUID(as_uuid=True),
-        primary_key=True,
-        index=True,
-        nullable=False,
-    )
-    job_id = db.Column(UUID(as_uuid=True), primary_key=True, index=True, nullable=False)
-    notification_type = db.Column(db.Text, primary_key=True, nullable=False)
-    key_type = db.Column(db.Text, primary_key=True, nullable=False)
-    notification_status = db.Column(db.Text, primary_key=True, nullable=False)
-    notification_count = db.Column(db.Integer(), nullable=False)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
-    updated_at = db.Column(db.DateTime, nullable=True, onupdate=datetime.datetime.utcnow)
-
-
-class FactProcessingTime(db.Model):
-    __tablename__ = "ft_processing_time"
-
-    bst_date = db.Column(db.Date, index=True, primary_key=True, nullable=False)
-    messages_total = db.Column(db.Integer(), nullable=False)
-    messages_within_10_secs = db.Column(db.Integer(), nullable=False)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
-    updated_at = db.Column(db.DateTime, nullable=True, onupdate=datetime.datetime.utcnow)
-
-
 class ServiceDataRetention(db.Model):
     __tablename__ = "service_data_retention"
 
@@ -1856,33 +1368,6 @@ class ServiceContactList(db.Model):
     created_at = db.Column(db.DateTime, nullable=False)
     updated_at = db.Column(db.DateTime, nullable=True, onupdate=datetime.datetime.utcnow)
     archived = db.Column(db.Boolean, nullable=False, default=False)
-
-    @property
-    def job_count(self):
-        today = datetime.datetime.utcnow().date()
-        return (
-            Job.query.filter(
-                Job.contact_list_id == self.id,
-                func.coalesce(Job.processing_started, Job.created_at)
-                >= today - func.coalesce(ServiceDataRetention.days_of_retention, 7),
-            )
-            .outerjoin(
-                ServiceDataRetention,
-                and_(
-                    self.service_id == ServiceDataRetention.service_id,
-                    func.cast(self.template_type, String) == func.cast(ServiceDataRetention.notification_type, String),
-                ),
-            )
-            .count()
-        )
-
-    @property
-    def has_jobs(self):
-        return bool(
-            Job.query.filter(
-                Job.contact_list_id == self.id,
-            ).first()
-        )
 
     def serialize(self):
         contact_list = {
@@ -2344,4 +1829,38 @@ class FailedLogin(db.Model):
             "id": self.id,
             "ip": self.ip,
             "attempted_at": self.attempted_at,
+        }
+
+
+class PasswordHistory(db.Model):
+    """
+    This table is used to store historic passwords.
+    """
+
+    __tablename__ = "password_history"
+
+    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = db.Column(UUID(as_uuid=True), default=uuid.uuid4)
+    _password = db.Column(db.String, index=False, unique=False, nullable=False)
+    password_changed_at = db.Column(
+        db.DateTime, index=True, unique=False, nullable=False, default=datetime.datetime.now(datetime.timezone.utc)
+    )
+
+    @property
+    def password(self):
+        raise AttributeError("Password not readable")
+
+    @password.setter
+    def password(self, password):
+        self._password = hashpw(password)
+
+    def check_password(self, password):
+        return check_hash(password, self._password)
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "_password": self._password,
+            "password_changed_at": self.password_changed_at,
         }

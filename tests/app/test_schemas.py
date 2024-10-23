@@ -1,53 +1,6 @@
 import pytest
 from marshmallow import ValidationError
 
-from tests.app.db import create_api_key
-
-
-def test_job_schema_doesnt_return_notifications(sample_notification_with_job):
-    from app.schemas import job_schema
-
-    job = sample_notification_with_job.job
-    assert job.notifications.count() == 1
-
-    data = job_schema.dump(job)
-
-    assert "notifications" not in data
-
-
-def test_notification_schema_ignores_absent_api_key(sample_notification_with_job):
-    from app.schemas import notification_with_template_schema
-
-    data = notification_with_template_schema.dump(sample_notification_with_job)
-    assert data["key_name"] is None
-
-
-def test_notification_schema_adds_api_key_name(sample_notification):
-    from app.schemas import notification_with_template_schema
-
-    api_key = create_api_key(sample_notification.service, key_name="Test key")
-    sample_notification.api_key = api_key
-
-    data = notification_with_template_schema.dump(sample_notification)
-    assert data["key_name"] == "Test key"
-
-
-@pytest.mark.parametrize(
-    "schema_name",
-    [
-        "notification_with_template_schema",
-        "notification_schema",
-        "notification_with_template_schema",
-        "notification_with_personalisation_schema",
-    ],
-)
-def test_notification_schema_has_correct_status(sample_notification, schema_name):
-    from app import schemas
-
-    data = getattr(schemas, schema_name).dump(sample_notification)
-
-    assert data["status"] == sample_notification.status
-
 
 @pytest.mark.parametrize(
     "user_attribute, user_value",
