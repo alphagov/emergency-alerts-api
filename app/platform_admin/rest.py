@@ -8,7 +8,6 @@ from app.errors import register_errors
 from app.models import (
     ApiKey,
     InboundSms,
-    Job,
     Notification,
     Organisation,
     Service,
@@ -32,7 +31,6 @@ FIND_BY_UUID_MODELS = {
     "notification": Notification,
     "user": User,
     "reply_to_email": ServiceEmailReplyTo,
-    "job": Job,
     "service_contact_list": ServiceContactList,
     "service_data_retention": ServiceDataRetention,
     "api_key": ApiKey,
@@ -52,7 +50,6 @@ FIND_BY_UUID_EXTRA_CONTEXT = {
     "template": {"service_id"},
     "notification": {"service_id"},
     "reply_to_email": {"service_id"},
-    "job": {"service_id"},
     "service_contact_list": {"service_id"},
     "service_data_retention": {"service_id"},
     "service_sms_sender": {"service_id"},

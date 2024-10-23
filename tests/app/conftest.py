@@ -15,8 +15,6 @@ from app.dao.broadcast_service_dao import (
     insert_or_update_service_broadcast_settings,
 )
 from app.dao.invited_user_dao import save_invited_user
-from app.dao.jobs_dao import dao_create_job
-from app.dao.notifications_dao import dao_create_notification
 from app.dao.organisation_dao import (
     dao_add_service_to_organisation,
     dao_create_organisation,
@@ -36,9 +34,6 @@ from app.models import (
     SMS_TYPE,
     ApiKey,
     InvitedUser,
-    Job,
-    Notification,
-    NotificationHistory,
     Organisation,
     Permission,
     Service,
@@ -54,9 +49,7 @@ from tests import (
 from tests.app.db import (
     create_api_key,
     create_invited_org_user,
-    create_job,
     create_letter_contact,
-    create_notification,
     create_service,
     create_template,
     create_user,
@@ -346,210 +339,6 @@ def sample_team_api_key(sample_api_key):
     service = create_service(check_if_service_exists=True)
 
     return create_api_key(service, key_type=KEY_TYPE_TEAM)
-
-
-@pytest.fixture(scope="function")
-def sample_job(notify_db_session):
-    service = create_service(check_if_service_exists=True)
-    template = create_template(service=service)
-    data = {
-        "id": uuid.uuid4(),
-        "service_id": service.id,
-        "service": service,
-        "template_id": template.id,
-        "template_version": template.version,
-        "original_file_name": "some.csv",
-        "notification_count": 1,
-        "created_at": datetime.utcnow(),
-        "created_by": service.created_by,
-        "job_status": "pending",
-        "scheduled_for": None,
-        "processing_started": None,
-        "archived": False,
-    }
-    job = Job(**data)
-    dao_create_job(job)
-    return job
-
-
-@pytest.fixture(scope="function")
-def sample_job_with_placeholdered_template(
-    sample_job,
-    sample_template_with_placeholders,
-):
-    sample_job.template = sample_template_with_placeholders
-
-    return sample_job
-
-
-@pytest.fixture(scope="function")
-def sample_scheduled_job(sample_template_with_placeholders):
-    return create_job(
-        sample_template_with_placeholders,
-        job_status="scheduled",
-        scheduled_for=(datetime.utcnow() + timedelta(minutes=60)).isoformat(),
-    )
-
-
-@pytest.fixture
-def sample_letter_job(sample_letter_template):
-    service = sample_letter_template.service
-    data = {
-        "id": uuid.uuid4(),
-        "service_id": service.id,
-        "service": service,
-        "template_id": sample_letter_template.id,
-        "template_version": sample_letter_template.version,
-        "original_file_name": "some.csv",
-        "notification_count": 1,
-        "created_at": datetime.utcnow(),
-        "created_by": service.created_by,
-    }
-    job = Job(**data)
-    dao_create_job(job)
-    return job
-
-
-@pytest.fixture(scope="function")
-def sample_notification_with_job(notify_db_session):
-    service = create_service(check_if_service_exists=True)
-    template = create_template(service=service)
-    job = create_job(template=template)
-    return create_notification(
-        template=template,
-        job=job,
-        job_row_number=None,
-        to_field=None,
-        status="created",
-        reference=None,
-        created_at=None,
-        sent_at=None,
-        billable_units=1,
-        personalisation=None,
-        api_key=None,
-        key_type=KEY_TYPE_NORMAL,
-    )
-
-
-@pytest.fixture(scope="function")
-def sample_notification(notify_db_session):
-    created_at = datetime.utcnow()
-    service = create_service(check_if_service_exists=True)
-    template = create_template(service=service)
-
-    api_key = ApiKey.query.filter(ApiKey.service == template.service, ApiKey.key_type == KEY_TYPE_NORMAL).first()
-    if not api_key:
-        api_key = create_api_key(template.service, key_type=KEY_TYPE_NORMAL)
-
-    notification_id = uuid.uuid4()
-    to = "+447700900855"
-
-    data = {
-        "id": notification_id,
-        "to": to,
-        "job_id": None,
-        "job": None,
-        "service_id": service.id,
-        "service": service,
-        "template_id": template.id,
-        "template_version": template.version,
-        "status": "created",
-        "reference": None,
-        "created_at": created_at,
-        "sent_at": None,
-        "billable_units": 1,
-        "personalisation": None,
-        "notification_type": template.template_type,
-        "api_key": api_key,
-        "api_key_id": api_key and api_key.id,
-        "key_type": api_key.key_type,
-        "sent_by": None,
-        "updated_at": None,
-        "client_reference": None,
-        "rate_multiplier": 1.0,
-        "normalised_to": None,
-        "postage": None,
-    }
-
-    notification = Notification(**data)
-    dao_create_notification(notification)
-
-    return notification
-
-
-@pytest.fixture
-def sample_letter_notification(sample_letter_template):
-    address = {
-        "address_line_1": "A1",
-        "address_line_2": "A2",
-        "address_line_3": "A3",
-        "address_line_4": "A4",
-        "address_line_5": "A5",
-        "address_line_6": "A6",
-        "postcode": "A_POST",
-    }
-    return create_notification(sample_letter_template, reference="foo", personalisation=address)
-
-
-@pytest.fixture(scope="function")
-def sample_email_notification(notify_db_session):
-    created_at = datetime.utcnow()
-    service = create_service(check_if_service_exists=True)
-    template = create_template(service, template_type=EMAIL_TYPE)
-    job = create_job(template)
-
-    notification_id = uuid.uuid4()
-
-    to = "foo@bar.com"
-
-    data = {
-        "id": notification_id,
-        "to": to,
-        "job_id": job.id,
-        "job": job,
-        "service_id": service.id,
-        "service": service,
-        "template_id": template.id,
-        "template_version": template.version,
-        "status": "created",
-        "reference": None,
-        "created_at": created_at,
-        "billable_units": 0,
-        "personalisation": None,
-        "notification_type": template.template_type,
-        "api_key_id": None,
-        "key_type": KEY_TYPE_NORMAL,
-        "job_row_number": 1,
-    }
-    notification = Notification(**data)
-    dao_create_notification(notification)
-    return notification
-
-
-@pytest.fixture(scope="function")
-def sample_notification_history(notify_db_session, sample_template):
-    created_at = datetime.utcnow()
-    sent_at = datetime.utcnow()
-    notification_type = sample_template.template_type
-    api_key = create_api_key(sample_template.service, key_type=KEY_TYPE_NORMAL)
-
-    notification_history = NotificationHistory(
-        id=uuid.uuid4(),
-        service=sample_template.service,
-        template_id=sample_template.id,
-        template_version=sample_template.version,
-        status="created",
-        created_at=created_at,
-        notification_type=notification_type,
-        key_type=KEY_TYPE_NORMAL,
-        api_key=api_key,
-        api_key_id=api_key and api_key.id,
-        sent_at=sent_at,
-    )
-    notify_db_session.add(notification_history)
-    notify_db_session.commit()
-
-    return notification_history
 
 
 @pytest.fixture(scope="function")

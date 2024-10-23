@@ -13,7 +13,6 @@ from app.dao.broadcast_message_dao import (
 )
 from app.dao.dao_utils import dao_save_object
 from app.models import BROADCAST_TYPE, BroadcastMessage, BroadcastStatusType
-from app.notifications.validators import check_service_has_permission
 from app.schema_validation import validate
 from app.v2.broadcast import v2_broadcast_blueprint
 from app.v2.broadcast.broadcast_schemas import post_broadcast_schema
@@ -23,7 +22,7 @@ from app.xml_schemas import validate_xml
 
 @v2_broadcast_blueprint.route("", methods=["POST"])
 def create_broadcast():
-    check_service_has_permission(
+    _check_service_has_permission(
         BROADCAST_TYPE,
         authenticated_service.permissions,
     )
@@ -138,3 +137,8 @@ def _validate_template(broadcast_json):
             + (" (because it could not be GSM7 encoded)" if template.non_gsm_characters else ""),
             status_code=400,
         )
+
+
+def _check_service_has_permission(type, permissions):
+    if type not in permissions:
+        raise BadRequestError(message="Service is not allowed to send broadcast messages")

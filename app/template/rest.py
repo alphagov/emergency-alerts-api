@@ -22,7 +22,6 @@ from app.dao.templates_dao import (
     dao_purge_templates_for_service,
     dao_redact_template,
     dao_update_template,
-    dao_update_template_reply_to,
     get_precompiled_letter_template,
 )
 from app.errors import InvalidRequest, register_errors
@@ -33,7 +32,6 @@ from app.models import (
     SMS_TYPE,
     Template,
 )
-from app.notifications.validators import check_reply_to, service_has_permission
 from app.schema_validation import validate
 from app.schemas import (
     template_history_schema,
@@ -82,7 +80,7 @@ def create_template(service_id):
     folder = validate_parent_folder(template_json=template_json)
     new_template = Template.from_json(template_json, folder)
 
-    if not service_has_permission(new_template.template_type, permissions):
+    if new_template.template_type not in permissions:
         message = "Creating {} templates is not allowed".format(get_public_notify_type_text(new_template.template_type))
         errors = {"template_type": [message]}
         raise InvalidRequest(errors, 403)
@@ -98,8 +96,6 @@ def create_template(service_id):
         errors = {"content": [message]}
         raise InvalidRequest(errors, status_code=400)
 
-    check_reply_to(service_id, new_template.reply_to, new_template.template_type)
-
     dao_create_template(new_template)
 
     return jsonify(data=template_schema.dump(new_template)), 201
@@ -109,9 +105,8 @@ def create_template(service_id):
 def update_template(service_id, template_id):
     fetched_template = dao_get_template_by_id_and_service_id(template_id=template_id, service_id=service_id)
 
-    if not service_has_permission(
-        fetched_template.template_type, [p.permission for p in fetched_template.service.permissions]
-    ):
+    permissions = [p.permission for p in fetched_template.service.permissions]
+    if fetched_template.template_type not in permissions:
         message = "Updating {} templates is not allowed".format(
             get_public_notify_type_text(fetched_template.template_type)
         )
@@ -125,11 +120,6 @@ def update_template(service_id, template_id):
     # if redacting, don't update anything else
     if data.get("redact_personalisation") is True:
         return redact_template(fetched_template, data)
-
-    if "reply_to" in data:
-        check_reply_to(service_id, data.get("reply_to"), fetched_template.template_type)
-        updated = dao_update_template_reply_to(template_id=template_id, reply_to=data.get("reply_to"))
-        return jsonify(data=template_schema.dump(updated)), 200
 
     current_data = dict(template_schema.dump(fetched_template).items())
     updated_template = dict(template_schema.dump(fetched_template).items())

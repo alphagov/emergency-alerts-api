@@ -1,9 +1,6 @@
 import uuid
-from datetime import datetime, timedelta
-from unittest import mock
 
 import pytest
-from freezegun import freeze_time
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
 
@@ -23,12 +20,7 @@ from app.dao.services_dao import (
     dao_fetch_active_users_for_service,
     dao_fetch_all_services,
     dao_fetch_all_services_by_user,
-    dao_fetch_live_services_data,
     dao_fetch_service_by_id,
-    dao_fetch_todays_stats_for_all_services,
-    dao_fetch_todays_stats_for_service,
-    dao_find_services_sending_to_tv_numbers,
-    dao_find_services_with_high_failure_rates,
     dao_remove_user_from_service,
     dao_update_service,
     delete_service_and_all_associated_db_objects,
@@ -41,17 +33,11 @@ from app.models import (
     EMAIL_TYPE,
     INTERNATIONAL_LETTERS,
     INTERNATIONAL_SMS_TYPE,
-    KEY_TYPE_NORMAL,
-    KEY_TYPE_TEAM,
-    KEY_TYPE_TEST,
     LETTER_TYPE,
     SMS_TYPE,
     UPLOAD_LETTERS,
     ApiKey,
     InvitedUser,
-    Job,
-    Notification,
-    NotificationHistory,
     Organisation,
     Permission,
     Service,
@@ -64,12 +50,7 @@ from app.models import (
     user_folder_permissions,
 )
 from tests.app.db import (
-    create_annual_billing,
-    create_api_key,
-    create_ft_billing,
     create_invited_user,
-    create_notification,
-    create_notification_history,
     create_organisation,
     create_service,
     create_template,
@@ -375,102 +356,6 @@ def test_get_all_user_services_should_return_empty_list_if_no_services_for_user(
     assert len(dao_fetch_all_services_by_user(user.id)) == 0
 
 
-@freeze_time("2019-04-23T10:00:00")
-def test_dao_fetch_live_services_data(sample_user):
-    org = create_organisation(organisation_type="central")
-    service = create_service(go_live_user=sample_user, go_live_at="2014-04-20T10:00:00")
-    sms_template = create_template(service=service)
-    service_2 = create_service(service_name="second", go_live_at="2017-04-20T10:00:00", go_live_user=sample_user)
-    service_3 = create_service(service_name="third", go_live_at="2016-04-20T10:00:00")
-    # below services should be filtered out:
-    create_service(service_name="restricted", restricted=True)
-    create_service(service_name="not_active", active=False)
-    create_service(service_name="not_live", count_as_live=False)
-    email_template = create_template(service=service, template_type="email")
-    template_letter_1 = create_template(service=service, template_type="letter")
-    template_letter_2 = create_template(service=service_2, template_type="letter")
-    dao_add_service_to_organisation(service=service, organisation_id=org.id)
-    # two sms billing records for 1st service within current financial year:
-    create_ft_billing(bst_date="2019-04-20", template=sms_template)
-    create_ft_billing(bst_date="2019-04-21", template=sms_template)
-    # one sms billing record for 1st service from previous financial year, should not appear in the result:
-    create_ft_billing(bst_date="2018-04-20", template=sms_template)
-    # one email billing record for 1st service within current financial year:
-    create_ft_billing(bst_date="2019-04-20", template=email_template)
-    # one letter billing record for 1st service within current financial year:
-    create_ft_billing(bst_date="2019-04-15", template=template_letter_1)
-    # one letter billing record for 2nd service within current financial year:
-    create_ft_billing(bst_date="2019-04-16", template=template_letter_2)
-
-    # 1st service: billing from 2018 and 2019
-    create_annual_billing(service.id, 500, 2018)
-    create_annual_billing(service.id, 100, 2019)
-    # 2nd service: billing from 2018
-    create_annual_billing(service_2.id, 300, 2018)
-    # 3rd service: billing from 2019
-    create_annual_billing(service_3.id, 200, 2019)
-
-    results = dao_fetch_live_services_data()
-    assert len(results) == 3
-    # checks the results and that they are ordered by date:
-    assert results == [
-        {
-            "service_id": mock.ANY,
-            "service_name": "Sample service",
-            "organisation_name": "test_org_1",
-            "organisation_type": "central",
-            "consent_to_research": None,
-            "contact_name": "Test User",
-            "contact_email": "notify@digital.cabinet-office.gov.uk",
-            "contact_mobile": "+447700900986",
-            "live_date": datetime(2014, 4, 20, 10, 0),
-            "sms_volume_intent": None,
-            "email_volume_intent": None,
-            "letter_volume_intent": None,
-            "sms_totals": 2,
-            "email_totals": 1,
-            "letter_totals": 1,
-            "free_sms_fragment_limit": 100,
-        },
-        {
-            "service_id": mock.ANY,
-            "service_name": "third",
-            "organisation_name": None,
-            "consent_to_research": None,
-            "organisation_type": None,
-            "contact_name": None,
-            "contact_email": None,
-            "contact_mobile": None,
-            "live_date": datetime(2016, 4, 20, 10, 0),
-            "sms_volume_intent": None,
-            "email_volume_intent": None,
-            "letter_volume_intent": None,
-            "sms_totals": 0,
-            "email_totals": 0,
-            "letter_totals": 0,
-            "free_sms_fragment_limit": 200,
-        },
-        {
-            "service_id": mock.ANY,
-            "service_name": "second",
-            "organisation_name": None,
-            "consent_to_research": None,
-            "contact_name": "Test User",
-            "contact_email": "notify@digital.cabinet-office.gov.uk",
-            "contact_mobile": "+447700900986",
-            "live_date": datetime(2017, 4, 20, 10, 0),
-            "sms_volume_intent": None,
-            "organisation_type": None,
-            "email_volume_intent": None,
-            "letter_volume_intent": None,
-            "sms_totals": 0,
-            "email_totals": 0,
-            "letter_totals": 1,
-            "free_sms_fragment_limit": 300,
-        },
-    ]
-
-
 def test_get_service_by_id_returns_none_if_no_service(notify_db_session):
     with pytest.raises(NoResultFound) as e:
         dao_fetch_service_by_id(str(uuid.uuid4()))
@@ -696,9 +581,6 @@ def test_delete_service_and_associated_objects(notify_db_session):
     service = create_service(user=user, service_permissions=None, organisation=organisation)
     create_user_code(user=user, code="somecode", code_type="email")
     create_user_code(user=user, code="somecode", code_type="sms")
-    template = create_template(service=service)
-    api_key = create_api_key(service=service)
-    create_notification(template=template, api_key=api_key)
     create_invited_user(service=service)
     user.organisations = [organisation]
 
@@ -720,8 +602,6 @@ def test_delete_service_and_associated_objects(notify_db_session):
     assert ApiKey.get_history_model().query.count() == 0
     assert Template.query.count() == 0
     assert TemplateHistory.query.count() == 0
-    assert Job.query.count() == 0
-    assert Notification.query.count() == 0
     assert Permission.query.count() == 0
     assert User.query.count() == 1  # service creator is not deleted
     assert InvitedUser.query.count() == 0
@@ -777,310 +657,6 @@ def test_add_existing_user_to_another_service_doesnot_change_old_permissions(not
     assert len(other_user_service_two_permissions) == 8
 
 
-def test_fetch_stats_filters_on_service(notify_db_session):
-    service_one = create_service()
-    create_notification(template=create_template(service=service_one))
-
-    service_two = Service(
-        name="service_two", created_by=service_one.created_by, email_from="hello", restricted=False, message_limit=1000
-    )
-    dao_create_service(service_two, service_one.created_by)
-
-    stats = dao_fetch_todays_stats_for_service(service_two.id)
-    assert len(stats) == 0
-
-
-def test_fetch_stats_ignores_historical_notification_data(sample_template):
-    create_notification_history(template=sample_template)
-
-    assert Notification.query.count() == 0
-    assert NotificationHistory.query.count() == 1
-
-    stats = dao_fetch_todays_stats_for_service(sample_template.service_id)
-    assert len(stats) == 0
-
-
-def test_dao_fetch_todays_stats_for_service(notify_db_session):
-    service = create_service()
-    sms_template = create_template(service=service)
-    email_template = create_template(service=service, template_type="email")
-    # two created email, one failed email, and one created sms
-    create_notification(template=email_template, status="created")
-    create_notification(template=email_template, status="created")
-    create_notification(template=email_template, status="technical-failure")
-    create_notification(template=sms_template, status="created")
-
-    stats = dao_fetch_todays_stats_for_service(service.id)
-    stats = sorted(stats, key=lambda x: (x.notification_type, x.status))
-    assert len(stats) == 3
-
-    assert stats[0].notification_type == "email"
-    assert stats[0].status == "created"
-    assert stats[0].count == 2
-
-    assert stats[1].notification_type == "email"
-    assert stats[1].status == "technical-failure"
-    assert stats[1].count == 1
-
-    assert stats[2].notification_type == "sms"
-    assert stats[2].status == "created"
-    assert stats[2].count == 1
-
-
-def test_dao_fetch_todays_stats_for_service_should_ignore_test_key(notify_db_session):
-    service = create_service()
-    template = create_template(service=service)
-    live_api_key = create_api_key(service=service, key_type=KEY_TYPE_NORMAL)
-    team_api_key = create_api_key(service=service, key_type=KEY_TYPE_TEAM)
-    test_api_key = create_api_key(service=service, key_type=KEY_TYPE_TEST)
-
-    # two created email, one failed email, and one created sms
-    create_notification(template=template, api_key=live_api_key, key_type=live_api_key.key_type)
-    create_notification(template=template, api_key=test_api_key, key_type=test_api_key.key_type)
-    create_notification(template=template, api_key=team_api_key, key_type=team_api_key.key_type)
-    create_notification(template=template)
-
-    stats = dao_fetch_todays_stats_for_service(service.id)
-    assert len(stats) == 1
-    assert stats[0].notification_type == "sms"
-    assert stats[0].status == "created"
-    assert stats[0].count == 3
-
-
-def test_dao_fetch_todays_stats_for_service_only_includes_today(notify_db_session):
-    template = create_template(service=create_service())
-    # two created email, one failed email, and one created sms
-    with freeze_time("2001-01-01T23:59:00"):
-        # just_before_midnight_yesterday
-        create_notification(template=template, to_field="1", status="delivered")
-
-    with freeze_time("2001-01-02T00:01:00"):
-        # just_after_midnight_today
-        create_notification(template=template, to_field="2", status="failed")
-
-    with freeze_time("2001-01-02T12:00:00"):
-        # right_now
-        create_notification(template=template, to_field="3", status="created")
-
-        stats = dao_fetch_todays_stats_for_service(template.service_id)
-
-    stats = {row.status: row.count for row in stats}
-    assert "delivered" not in stats
-    assert stats["failed"] == 1
-    assert stats["created"] == 1
-
-
-def test_dao_fetch_todays_stats_for_service_only_includes_today_when_clocks_spring_forward(notify_db_session):
-    template = create_template(service=create_service())
-    with freeze_time("2021-03-27T23:59:59"):
-        # just before midnight yesterday in UTC -- not included
-        create_notification(template=template, to_field="1", status="permanent-failure")
-    with freeze_time("2021-03-28T00:01:00"):
-        # just after midnight yesterday in UTC -- included
-        create_notification(template=template, to_field="2", status="failed")
-    with freeze_time("2021-03-28T12:00:00"):
-        # we have entered BST at this point but had not for the previous two notifications --included
-        # collect stats for this timestamp
-        create_notification(template=template, to_field="3", status="created")
-        stats = dao_fetch_todays_stats_for_service(template.service_id)
-
-    stats = {row.status: row.count for row in stats}
-    assert "delivered" not in stats
-    assert stats["failed"] == 1
-    assert stats["created"] == 1
-    assert not stats.get("permanent-failure")
-    assert not stats.get("temporary-failure")
-
-
-def test_dao_fetch_todays_stats_for_service_only_includes_today_during_bst(notify_db_session):
-    template = create_template(service=create_service())
-    with freeze_time("2021-03-28T22:59:59"):
-        # just before midnight BST -- not included
-        create_notification(template=template, to_field="1", status="permanent-failure")
-    with freeze_time("2021-03-28T23:00:01"):
-        # just after midnight BST -- included
-        create_notification(template=template, to_field="2", status="failed")
-    with freeze_time("2021-03-29T12:00:00"):
-        # well after midnight BST -- included
-        # collect stats for this timestamp
-        create_notification(template=template, to_field="3", status="created")
-        stats = dao_fetch_todays_stats_for_service(template.service_id)
-
-    stats = {row.status: row.count for row in stats}
-    assert "delivered" not in stats
-    assert stats["failed"] == 1
-    assert stats["created"] == 1
-    assert not stats.get("permanent-failure")
-
-
-def test_dao_fetch_todays_stats_for_service_only_includes_today_when_clocks_fall_back(notify_db_session):
-    template = create_template(service=create_service())
-    with freeze_time("2021-10-30T22:59:59"):
-        # just before midnight BST -- not included
-        create_notification(template=template, to_field="1", status="permanent-failure")
-    with freeze_time("2021-10-31T23:00:01"):
-        # just after midnight BST -- included
-        create_notification(template=template, to_field="2", status="failed")
-    # clocks go back to UTC on 31 October at 2am
-    with freeze_time("2021-10-31T12:00:00"):
-        # well after midnight -- included
-        # collect stats for this timestamp
-        create_notification(template=template, to_field="3", status="created")
-        stats = dao_fetch_todays_stats_for_service(template.service_id)
-
-    stats = {row.status: row.count for row in stats}
-    assert "delivered" not in stats
-    assert stats["failed"] == 1
-    assert stats["created"] == 1
-    assert not stats.get("permanent-failure")
-
-
-def test_dao_fetch_todays_stats_for_service_only_includes_during_utc(notify_db_session):
-    template = create_template(service=create_service())
-    with freeze_time("2021-10-30T12:59:59"):
-        # just before midnight UTC -- not included
-        create_notification(template=template, to_field="1", status="permanent-failure")
-    with freeze_time("2021-10-31T00:00:01"):
-        # just after midnight UTC -- included
-        create_notification(template=template, to_field="2", status="failed")
-    # clocks go back to UTC on 31 October at 2am
-    with freeze_time("2021-10-31T12:00:00"):
-        # well after midnight -- included
-        # collect stats for this timestamp
-        create_notification(template=template, to_field="3", status="created")
-        stats = dao_fetch_todays_stats_for_service(template.service_id)
-
-    stats = {row.status: row.count for row in stats}
-    assert "delivered" not in stats
-    assert stats["failed"] == 1
-    assert stats["created"] == 1
-    assert not stats.get("permanent-failure")
-
-
-def test_dao_fetch_todays_stats_for_all_services_includes_all_services(notify_db_session):
-    # two services, each with an email and sms notification
-    service1 = create_service(service_name="service 1", email_from="service.1")
-    service2 = create_service(service_name="service 2", email_from="service.2")
-    template_email_one = create_template(service=service1, template_type="email")
-    template_sms_one = create_template(service=service1, template_type="sms")
-    template_email_two = create_template(service=service2, template_type="email")
-    template_sms_two = create_template(service=service2, template_type="sms")
-    create_notification(template=template_email_one)
-    create_notification(template=template_sms_one)
-    create_notification(template=template_email_two)
-    create_notification(template=template_sms_two)
-
-    stats = dao_fetch_todays_stats_for_all_services()
-
-    assert len(stats) == 4
-    # services are ordered by service id; not explicit on email/sms or status
-    assert stats == sorted(stats, key=lambda x: x.service_id)
-
-
-def test_dao_fetch_todays_stats_for_all_services_only_includes_today(notify_db_session):
-    template = create_template(service=create_service())
-    with freeze_time("2001-01-01T23:59:00"):
-        # just_before_midnight_yesterday
-        create_notification(template=template, to_field="1", status="delivered")
-
-    with freeze_time("2001-01-02T00:01:00"):
-        # just_after_midnight_today
-        create_notification(template=template, to_field="2", status="failed")
-
-    with freeze_time("2001-01-02T12:00:00"):
-        stats = dao_fetch_todays_stats_for_all_services()
-
-    stats = {row.status: row.count for row in stats}
-    assert "delivered" not in stats
-    assert stats["failed"] == 1
-
-
-def test_dao_fetch_todays_stats_for_all_services_groups_correctly(notify_db_session):
-    service1 = create_service(service_name="service 1", email_from="service.1")
-    service2 = create_service(service_name="service 2", email_from="service.2")
-    template_sms = create_template(service=service1)
-    template_email = create_template(service=service1, template_type="email")
-    template_two = create_template(service=service2)
-    # service1: 2 sms with status "created" and one "failed", and one email
-    create_notification(template=template_sms)
-    create_notification(template=template_sms)
-    create_notification(template=template_sms, status="failed")
-    create_notification(template=template_email)
-    # service2: 1 sms "created"
-    create_notification(template=template_two)
-
-    stats = dao_fetch_todays_stats_for_all_services()
-    assert len(stats) == 4
-    assert (
-        service1.id,
-        service1.name,
-        service1.restricted,
-        service1.research_mode,
-        service1.active,
-        service1.created_at,
-        "sms",
-        "created",
-        2,
-    ) in stats
-    assert (
-        service1.id,
-        service1.name,
-        service1.restricted,
-        service1.research_mode,
-        service1.active,
-        service1.created_at,
-        "sms",
-        "failed",
-        1,
-    ) in stats
-    assert (
-        service1.id,
-        service1.name,
-        service1.restricted,
-        service1.research_mode,
-        service1.active,
-        service1.created_at,
-        "email",
-        "created",
-        1,
-    ) in stats
-    assert (
-        service2.id,
-        service2.name,
-        service2.restricted,
-        service2.research_mode,
-        service2.active,
-        service2.created_at,
-        "sms",
-        "created",
-        1,
-    ) in stats
-
-
-def test_dao_fetch_todays_stats_for_all_services_includes_all_keys_by_default(notify_db_session):
-    template = create_template(service=create_service())
-    create_notification(template=template, key_type=KEY_TYPE_NORMAL)
-    create_notification(template=template, key_type=KEY_TYPE_TEAM)
-    create_notification(template=template, key_type=KEY_TYPE_TEST)
-
-    stats = dao_fetch_todays_stats_for_all_services()
-
-    assert len(stats) == 1
-    assert stats[0].count == 3
-
-
-def test_dao_fetch_todays_stats_for_all_services_can_exclude_from_test_key(notify_db_session):
-    template = create_template(service=create_service())
-    create_notification(template=template, key_type=KEY_TYPE_NORMAL)
-    create_notification(template=template, key_type=KEY_TYPE_TEAM)
-    create_notification(template=template, key_type=KEY_TYPE_TEST)
-
-    stats = dao_fetch_todays_stats_for_all_services(include_from_test_key=False)
-
-    assert len(stats) == 1
-    assert stats[0].count == 2
-
-
 def test_dao_fetch_active_users_for_service_returns_active_only(notify_db_session):
     active_user = create_user(email="active@foo.com", state="active")
     pending_user = create_user(email="pending@foo.com", state="pending")
@@ -1102,86 +678,6 @@ def create_email_sms_letter_template():
     template_two = create_template(service=service, template_name="2", template_type="sms")
     template_three = create_template(service=service, template_name="3", template_type="letter")
     return template_one, template_three, template_two
-
-
-@freeze_time("2019-12-02 12:00:00.000000")
-def test_dao_find_services_sending_to_tv_numbers(notify_db_session, fake_uuid):
-    service_1 = create_service(service_name="Service 1", service_id=fake_uuid)
-    service_3 = create_service(service_name="Service 3", restricted=True)  # restricted is excluded
-    service_4 = create_service(service_name="Service 4", research_mode=True)  # research mode is excluded
-    service_5 = create_service(service_name="Service 5", active=False)  # not active is excluded
-    services = [service_1, service_3, service_4, service_5]
-
-    tv_number = "447700900001"
-    normal_number = "447711900001"
-    normal_number_resembling_tv_number = "447227700900"
-
-    for service in services:
-        template = create_template(service)
-        for _ in range(0, 5):
-            create_notification(template, normalised_to=tv_number, status="permanent-failure")
-
-    service_6 = create_service(service_name="Service 6")  # notifications too old are excluded
-    with freeze_time("2019-11-30 15:00:00.000000"):
-        template_6 = create_template(service_6)
-        for _ in range(0, 5):
-            create_notification(template_6, normalised_to=tv_number, status="permanent-failure")
-
-    service_2 = create_service(service_name="Service 2")  # below threshold is excluded
-    template_2 = create_template(service_2)
-    create_notification(template_2, normalised_to=tv_number, status="permanent-failure")
-    for _ in range(0, 5):
-        # test key type is excluded
-        create_notification(template_2, normalised_to=tv_number, status="permanent-failure", key_type="test")
-    for _ in range(0, 5):
-        # normal numbers are not counted by the query
-        create_notification(template_2, normalised_to=normal_number, status="delivered")
-        create_notification(template_2, normalised_to=normal_number_resembling_tv_number, status="delivered")
-
-    start_date = datetime.utcnow() - timedelta(days=1)
-    end_date = datetime.utcnow()
-
-    result = dao_find_services_sending_to_tv_numbers(start_date, end_date, threshold=4)
-    assert len(result) == 1
-    assert str(result[0].service_id) == fake_uuid
-
-
-def test_dao_find_services_with_high_failure_rates(notify_db_session, fake_uuid):
-    service_1 = create_service(service_name="Service 1", service_id=fake_uuid)
-    service_3 = create_service(service_name="Service 3", restricted=True)  # restricted is excluded
-    service_4 = create_service(service_name="Service 4", research_mode=True)  # research mode is excluded
-    service_5 = create_service(service_name="Service 5", active=False)  # not active is excluded
-    services = [service_1, service_3, service_4, service_5]
-
-    for service in services:
-        template = create_template(service)
-        for _ in range(0, 3):
-            create_notification(template, status="permanent-failure")
-            create_notification(template, status="delivered")
-            create_notification(template, status="sending")
-            create_notification(template, status="temporary-failure")
-
-    service_6 = create_service(service_name="Service 6")
-    with freeze_time("2019-11-30 15:00:00.000000"):
-        template_6 = create_template(service_6)
-        for _ in range(0, 4):
-            create_notification(template_6, status="permanent-failure")  # notifications too old are excluded
-
-    service_2 = create_service(service_name="Service 2")
-    template_2 = create_template(service_2)
-    for _ in range(0, 4):
-        create_notification(template_2, status="permanent-failure", key_type="test")  # test key type is excluded
-    create_notification(template_2, status="permanent-failure")  # below threshold is excluded
-
-    start_date = datetime.utcnow() - timedelta(days=1)
-    end_date = datetime.utcnow()
-
-    result = dao_find_services_with_high_failure_rates(start_date, end_date, threshold=3)
-    # assert len(result) == 3
-    # assert str(result[0].service_id) == fake_uuid
-    assert len(result) == 1
-    assert str(result[0].service_id) == fake_uuid
-    assert result[0].permanent_failure_rate == 0.25
 
 
 def test_get_live_services_with_organisation(sample_organisation):
