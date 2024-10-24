@@ -2,7 +2,6 @@
 
 PLATFORM=linux/amd64
 # We can add linux/arm64 back in if we need it
-REGION='eu-west-2'
 
 while [ $# -gt 0 ]; do
   if [[ $1 == *"--"* ]]; then
@@ -22,13 +21,13 @@ function get_account_number(){
 }
 
 function ecr_login(){
-  aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin $ECS_ACCOUNT_NUMBER.dkr.ecr.$REGION.amazonaws.com
+  aws ecr get-login-password --region ${AWS_REGION:-eu-west-2} | docker login --username AWS --password-stdin $ECS_ACCOUNT_NUMBER.dkr.ecr.${AWS_REGION:-eu-west-2}.amazonaws.com
 }
 
 function docker_buildx(){
   docker buildx build \
     --platform $PLATFORM \
-    -t $ECS_ACCOUNT_NUMBER.dkr.ecr.$REGION.amazonaws.com/eas-app-$IMAGE:latest \
+    -t $ECS_ACCOUNT_NUMBER.dkr.ecr.${AWS_REGION:-eu-west-2}.amazonaws.com/eas-app-$IMAGE:latest \
     --build-arg ECS_ACCOUNT_NUMBER=$ECS_ACCOUNT_NUMBER \
     -f Dockerfile.eas-$IMAGE \
     --no-cache \
@@ -38,14 +37,14 @@ function docker_buildx(){
 
 function docker_build(){
   docker build \
-    -t $ECS_ACCOUNT_NUMBER.dkr.ecr.$REGION.amazonaws.com/eas-app-$IMAGE:latest \
+    -t $ECS_ACCOUNT_NUMBER.dkr.ecr.${AWS_REGION:-eu-west-2}.amazonaws.com/eas-app-$IMAGE:latest \
     -f Dockerfile.eas-$IMAGE \
     --no-cache \
     .
 }
 
 function docker_push(){
-  docker push $ECS_ACCOUNT_NUMBER.dkr.ecr.$REGION.amazonaws.com/eas-app-$IMAGE:latest
+  docker push $ECS_ACCOUNT_NUMBER.dkr.ecr.${AWS_REGION:-eu-west-2}.amazonaws.com/eas-app-$IMAGE:latest
 }
 
 get_account_number

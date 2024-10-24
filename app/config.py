@@ -132,7 +132,7 @@ class Config(object):
     ANTIVIRUS_ENABLED = os.getenv("ANTIVIRUS_ENABLED") == "1"
 
     HOST = "local"
-    AWS_REGION = "eu-west-2"
+    AWS_REGION = os.environ.get("AWS_REGION", "eu-west-2")
     INVITATION_EXPIRATION_DAYS = 2
     NOTIFY_APP_NAME = "api"
     NOTIFY_EMAIL_DOMAIN = "notify.tools"
@@ -187,7 +187,7 @@ class Config(object):
     TASK_IMPORTS = "broadcast_message_tasks" if SERVICE == "api" else "scheduled_tasks"
 
     CELERY = {
-        "broker_url": "https://sqs.eu-west-2.amazonaws.com",
+        "broker_url": f"https://sqs.{AWS_REGION}.amazonaws.com",
         "broker_transport": "sqs",
         "broker_transport_options": {
             "region": AWS_REGION,
