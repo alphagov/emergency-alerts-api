@@ -33,7 +33,7 @@ function put_metric_data(){
         --dimensions $dimension \
         --value 1 \
         --timestamp $(date -u +"%Y-%m-%dT%H:%M:%S.000Z") \
-        --region ${AWS_REGION}
+        --region ${AWS_REGION:-eu-west-2}
 }
 
 function run_db_migrations(){
@@ -124,7 +124,7 @@ function backup_database(){
 }
 
 function configure_container_role(){
-    aws configure set default.region ${AWS_REGION}
+    aws configure set default.region ${AWS_REGION:-eu-west-2}
 }
 
 function run_celery(){
