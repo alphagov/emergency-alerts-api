@@ -140,6 +140,10 @@ def validate_functional_test_account_emails():
         save_model_user(user3, validated_email_access=True)
         user4 = get_user_by_email("emergency-alerts-tests+user4@digital.cabinet-office.gov.uk")
         save_model_user(user4, validated_email_access=True)
+        user5 = get_user_by_email("emergency-alerts-tests+user5@digital.cabinet-office.gov.uk")
+        save_model_user(user5, validated_email_access=True)
+        user6 = get_user_by_email("emergency-alerts-tests+user6@digital.cabinet-office.gov.uk")
+        save_model_user(user6, validated_email_access=True)
         admin = get_user_by_email("emergency-alerts-tests+admin@digital.cabinet-office.gov.uk")
         save_model_user(admin, validated_email_access=True)
     except SQLAlchemyError as e:
