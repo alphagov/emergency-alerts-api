@@ -41,11 +41,9 @@ from app.models import (
     Rate,
     Service,
     ServiceCallbackApi,
-    ServiceContactList,
     ServiceEmailReplyTo,
     ServiceGuestList,
     ServiceInboundApi,
-    ServiceLetterContact,
     ServicePermission,
     Template,
     TemplateFolder,
@@ -265,21 +263,6 @@ def create_reply_to_email(service, email_address, is_default=True, archived=Fals
     return reply_to
 
 
-def create_letter_contact(service, contact_block, is_default=True, archived=False):
-    data = {
-        "service": service,
-        "contact_block": contact_block,
-        "is_default": is_default,
-        "archived": archived,
-    }
-    letter_content = ServiceLetterContact(**data)
-
-    db.session.add(letter_content)
-    db.session.commit()
-
-    return letter_content
-
-
 def create_annual_billing(service_id, free_sms_fragment_limit, financial_year_start):
     annual_billing = AnnualBilling(
         service_id=service_id,
@@ -432,31 +415,6 @@ def create_template_folder(service, name="foo", parent=None, users=None):
     db.session.add(tf)
     db.session.commit()
     return tf
-
-
-def create_service_contact_list(
-    service=None,
-    original_file_name="EmergencyContactList.xls",
-    row_count=100,
-    template_type="email",
-    created_by_id=None,
-    archived=False,
-):
-    if not service:
-        service = create_service(service_name="service for contact list", user=create_user())
-
-    contact_list = ServiceContactList(
-        service_id=service.id,
-        original_file_name=original_file_name,
-        row_count=row_count,
-        template_type=template_type,
-        created_by_id=created_by_id or service.users[0].id,
-        created_at=datetime.utcnow(),
-        archived=archived,
-    )
-    db.session.add(contact_list)
-    db.session.commit()
-    return contact_list
 
 
 def create_broadcast_message(

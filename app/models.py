@@ -420,10 +420,6 @@ class Service(db.Model, Versioned):
         default_reply_to = [x for x in self.reply_to_email_addresses if x.is_default]
         return default_reply_to[0].id if default_reply_to else None
 
-    def get_default_letter_contact(self):
-        default_letter_contact = [x for x in self.letter_contacts if x.is_default]
-        return default_letter_contact[0].contact_block if default_letter_contact else None
-
     def has_permission(self, permission):
         return permission in [p.permission for p in self.permissions]
 
@@ -758,34 +754,19 @@ class TemplateBase(db.Model):
 
     redact_personalisation = association_proxy("template_redacted", "redact_personalisation")
 
-    @declared_attr
-    def service_letter_contact_id(cls):
-        return db.Column(UUID(as_uuid=True), db.ForeignKey("service_letter_contacts.id"), nullable=True)
-
-    @declared_attr
-    def service_letter_contact(cls):
-        return db.relationship("ServiceLetterContact", viewonly=True)
-
     @property
     def reply_to(self):
-        if self.template_type == LETTER_TYPE:
-            return self.service_letter_contact_id
-        else:
-            return None
+        return None
 
     @reply_to.setter
     def reply_to(self, value):
-        if self.template_type == LETTER_TYPE:
-            self.service_letter_contact_id = value
-        elif value is None:
+        if value is None:
             pass
         else:
             raise ValueError("Unable to set sender for {} template".format(self.template_type))
 
     def get_reply_to_text(self):
-        if self.template_type == LETTER_TYPE:
-            return self.service_letter_contact.contact_block if self.service_letter_contact else None
-        elif self.template_type == EMAIL_TYPE:
+        if self.template_type == EMAIL_TYPE:
             return self.service.get_default_reply_to_email_address()
         else:
             return None
@@ -834,7 +815,6 @@ class TemplateBase(db.Model):
                 for key in self._as_utils_template().placeholders
             },
             "postage": self.postage,
-            "letter_contact_block": self.service_letter_contact.contact_block if self.service_letter_contact else None,
         }
 
         return serialized
@@ -1234,32 +1214,6 @@ class ServiceEmailReplyTo(db.Model):
         }
 
 
-class ServiceLetterContact(db.Model):
-    __tablename__ = "service_letter_contacts"
-
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-
-    service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"), unique=False, index=True, nullable=False)
-    service = db.relationship(Service, backref=db.backref("letter_contacts"))
-
-    contact_block = db.Column(db.Text, nullable=False, index=False, unique=False)
-    is_default = db.Column(db.Boolean, nullable=False, default=True)
-    archived = db.Column(db.Boolean, nullable=False, default=False)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
-    updated_at = db.Column(db.DateTime, nullable=True, onupdate=datetime.datetime.utcnow)
-
-    def serialize(self):
-        return {
-            "id": str(self.id),
-            "service_id": str(self.service_id),
-            "contact_block": self.contact_block,
-            "is_default": self.is_default,
-            "archived": self.archived,
-            "created_at": self.created_at.strftime(DATETIME_FORMAT),
-            "updated_at": get_dt_string_or_none(self.updated_at),
-        }
-
-
 class AuthType(db.Model):
     __tablename__ = "auth_type"
 
@@ -1304,36 +1258,6 @@ class ServiceDataRetention(db.Model):
             "created_at": self.created_at.strftime(DATETIME_FORMAT),
             "updated_at": get_dt_string_or_none(self.updated_at),
         }
-
-
-class ServiceContactList(db.Model):
-    __tablename__ = "service_contact_list"
-
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    original_file_name = db.Column(db.String, nullable=False)
-    row_count = db.Column(db.Integer, nullable=False)
-    template_type = db.Column(template_types, nullable=False)
-    service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"), unique=False, index=True, nullable=False)
-    service = db.relationship(Service, backref=db.backref("contact_list"))
-    created_by = db.relationship("User")
-    created_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), index=True, nullable=True)
-    created_at = db.Column(db.DateTime, nullable=False)
-    updated_at = db.Column(db.DateTime, nullable=True, onupdate=datetime.datetime.utcnow)
-    archived = db.Column(db.Boolean, nullable=False, default=False)
-
-    def serialize(self):
-        contact_list = {
-            "id": str(self.id),
-            "original_file_name": self.original_file_name,
-            "row_count": self.row_count,
-            "recent_job_count": self.job_count,
-            "has_jobs": self.has_jobs,
-            "template_type": self.template_type,
-            "service_id": str(self.service_id),
-            "created_by": self.created_by.name,
-            "created_at": self.created_at.strftime(DATETIME_FORMAT),
-        }
-        return contact_list
 
 
 class BroadcastStatusType(db.Model):

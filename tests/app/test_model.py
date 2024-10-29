@@ -6,11 +6,7 @@ from app.models import (
     PRECOMPILED_TEMPLATE_NAME,
     ServiceGuestList,
 )
-from tests.app.db import (
-    create_letter_contact,
-    create_reply_to_email,
-    create_template_folder,
-)
+from tests.app.db import create_reply_to_email, create_template_folder
 
 
 @pytest.mark.parametrize("mobile_number", ["07700 900678", "+44 7700 900678"])
@@ -44,12 +40,6 @@ def test_service_get_default_reply_to_email_address(sample_service):
     create_reply_to_email(service=sample_service, email_address="default@email.com")
 
     assert sample_service.get_default_reply_to_email_address() == "default@email.com"
-
-
-def test_service_get_default_contact_letter(sample_service):
-    create_letter_contact(service=sample_service, contact_block="London,\nNW1A 1AA")
-
-    assert sample_service.get_default_letter_contact() == "London,\nNW1A 1AA"
 
 
 def test_is_precompiled_letter_false(sample_letter_template):

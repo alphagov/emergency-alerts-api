@@ -49,7 +49,6 @@ from tests import (
 from tests.app.db import (
     create_api_key,
     create_invited_org_user,
-    create_letter_contact,
     create_service,
     create_template,
     create_user,
@@ -212,12 +211,6 @@ def _sample_service_full_permissions(notify_db_session):
         check_if_service_exists=True,
     )
     return service
-
-
-@pytest.fixture(scope="function", name="sample_service_custom_letter_contact_block")
-def _sample_service_custom_letter_contact_block(sample_service):
-    create_letter_contact(sample_service, contact_block="((contact block))")
-    return sample_service
 
 
 @pytest.fixture(scope="function")

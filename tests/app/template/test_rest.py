@@ -19,12 +19,7 @@ from app.models import (
     TemplateHistory,
 )
 from tests import create_admin_authorization_header
-from tests.app.db import (
-    create_letter_contact,
-    create_service,
-    create_template,
-    create_template_folder,
-)
+from tests.app.db import create_service, create_template, create_template_folder
 
 
 @pytest.mark.parametrize(
@@ -538,7 +533,6 @@ def test_should_get_return_all_fields_by_default(
         "reply_to",
         "reply_to_text",
         "service",
-        "service_letter_contact",
         "subject",
         "template_redacted",
         "template_type",
@@ -847,31 +841,6 @@ def test_create_template_validates_against_json_schema(
         "template.create_template", service_id=sample_service_full_permissions.id, _data=post_data, _expected_status=400
     )
     assert response["errors"] == expected_errors
-
-
-@pytest.mark.parametrize(
-    "template_default, service_default",
-    [("template address", "service address"), (None, "service address"), ("template address", None), (None, None)],
-)
-def test_get_template_reply_to(client, sample_service, template_default, service_default):
-    auth_header = create_admin_authorization_header()
-    if service_default:
-        create_letter_contact(service=sample_service, contact_block=service_default, is_default=True)
-    if template_default:
-        template_default_contact = create_letter_contact(
-            service=sample_service, contact_block=template_default, is_default=False
-        )
-    reply_to_id = str(template_default_contact.id) if template_default else None
-    template = create_template(service=sample_service, template_type="letter", reply_to=reply_to_id)
-
-    resp = client.get("/service/{}/template/{}".format(template.service_id, template.id), headers=[auth_header])
-
-    assert resp.status_code == 200, resp.get_data(as_text=True)
-    json_resp = json.loads(resp.get_data(as_text=True))
-
-    assert "service_letter_contact_id" not in json_resp["data"]
-    assert json_resp["data"]["reply_to"] == reply_to_id
-    assert json_resp["data"]["reply_to_text"] == template_default
 
 
 def test_update_redact_template(admin_request, sample_template):
