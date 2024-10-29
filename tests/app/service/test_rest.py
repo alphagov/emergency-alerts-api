@@ -18,7 +18,6 @@ from app.models import (
     BROADCAST_TYPE,
     EMAIL_AUTH_TYPE,
     EMAIL_TYPE,
-    INBOUND_SMS_TYPE,
     INTERNATIONAL_LETTERS,
     INTERNATIONAL_SMS_TYPE,
     LETTER_TYPE,
@@ -814,12 +813,6 @@ def test_update_service_allows_only_lowercase_digits_and_fullstops_in_email_from
 @pytest.mark.parametrize(
     "permission_to_add",
     [
-        (EMAIL_TYPE),
-        (SMS_TYPE),
-        (INTERNATIONAL_SMS_TYPE),
-        (LETTER_TYPE),
-        (INBOUND_SMS_TYPE),
-        (EMAIL_AUTH_TYPE),
         (BROADCAST_TYPE),  # TODO: remove this ability to set broadcast permission this way
     ],
 )

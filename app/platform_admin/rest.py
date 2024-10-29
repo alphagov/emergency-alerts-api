@@ -7,8 +7,6 @@ from app import db
 from app.errors import register_errors
 from app.models import (
     ApiKey,
-    InboundSms,
-    Notification,
     Organisation,
     Service,
     ServiceCallbackApi,
@@ -28,7 +26,6 @@ FIND_BY_UUID_MODELS = {
     "organisation": Organisation,
     "service": Service,
     "template": Template,
-    "notification": Notification,
     "user": User,
     "reply_to_email": ServiceEmailReplyTo,
     "service_contact_list": ServiceContactList,
@@ -37,7 +34,6 @@ FIND_BY_UUID_MODELS = {
     "template_folder": TemplateFolder,
     "service_inbound_api": ServiceInboundApi,
     "service_callback_api": ServiceCallbackApi,
-    "inbound_sms": InboundSms,
 }
 
 # The `context` here is actually information required by the admin app to build the redirect URL. This does mean
@@ -57,7 +53,6 @@ FIND_BY_UUID_EXTRA_CONTEXT = {
     "template_folder": {"service_id"},
     "service_inbound_api": {"service_id"},
     "service_callback_api": {"service_id"},
-    "inbound_sms": {"service_id"},
 }
 
 

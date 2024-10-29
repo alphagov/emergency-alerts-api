@@ -156,7 +156,6 @@ def register_blueprint(application):
     from app.failed_logins.rest import failed_logins_blueprint
     from app.feature_toggle.rest import feature_toggle_blueprint
     from app.govuk_alerts.rest import govuk_alerts_blueprint
-    from app.inbound_sms.rest import inbound_sms as inbound_sms_blueprint
     from app.organisation.invite_rest import organisation_invite_blueprint
     from app.organisation.rest import organisation_blueprint
     from app.password_history.rest import password_history_blueprint
@@ -197,9 +196,6 @@ def register_blueprint(application):
     organisation_invite_blueprint.before_request(requires_admin_auth)
     application.register_blueprint(organisation_invite_blueprint)
 
-    inbound_sms_blueprint.before_request(requires_admin_auth)
-    application.register_blueprint(inbound_sms_blueprint)
-
     events_blueprint.before_request(requires_admin_auth)
     application.register_blueprint(events_blueprint)
 
@@ -234,14 +230,10 @@ def register_blueprint(application):
 def register_v2_blueprints(application):
     from app.authentication.auth import requires_auth
     from app.v2.broadcast.post_broadcast import v2_broadcast_blueprint
-    from app.v2.inbound_sms.get_inbound_sms import v2_inbound_sms_blueprint
     from app.v2.templates.get_templates import v2_templates_blueprint
 
     v2_templates_blueprint.before_request(requires_auth)
     application.register_blueprint(v2_templates_blueprint)
-
-    v2_inbound_sms_blueprint.before_request(requires_auth)
-    application.register_blueprint(v2_inbound_sms_blueprint)
 
     v2_broadcast_blueprint.before_request(requires_auth)
     application.register_blueprint(v2_broadcast_blueprint)

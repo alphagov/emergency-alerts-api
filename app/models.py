@@ -212,7 +212,6 @@ BRANDING_TYPES = [BRANDING_ORG, BRANDING_BOTH, BRANDING_ORG_BANNER]
 
 
 INTERNATIONAL_SMS_TYPE = "international_sms"
-INBOUND_SMS_TYPE = "inbound_sms"
 SCHEDULE_NOTIFICATIONS = "schedule_notifications"
 EMAIL_AUTH = "email_auth"
 LETTERS_AS_PDF = "letters_as_pdf"
@@ -228,7 +227,6 @@ SERVICE_PERMISSION_TYPES = [
     LETTER_TYPE,
     BROADCAST_TYPE,
     INTERNATIONAL_SMS_TYPE,
-    INBOUND_SMS_TYPE,
     SCHEDULE_NOTIFICATIONS,
     EMAIL_AUTH,
     LETTERS_AS_PDF,
@@ -1196,52 +1194,6 @@ class Rate(db.Model):
         the_string += " {}".format(self.notification_type)
         the_string += " {}".format(self.valid_from)
         return the_string
-
-
-class InboundSms(db.Model):
-    __tablename__ = "inbound_sms"
-
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
-    service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"), index=True, nullable=False)
-    service = db.relationship("Service", backref="inbound_sms")
-
-    notify_number = db.Column(db.String, nullable=False)  # the service's number, that the msg was sent to
-    user_number = db.Column(db.String, nullable=False, index=True)  # the end user's number, that the msg was sent from
-    provider_date = db.Column(db.DateTime)
-    provider_reference = db.Column(db.String)
-    provider = db.Column(db.String, nullable=False)
-    _content = db.Column("content", db.String, nullable=False)
-
-    @property
-    def content(self):
-        return encryption.decrypt(self._content)
-
-    @content.setter
-    def content(self, content):
-        self._content = encryption.encrypt(content)
-
-    def serialize(self):
-        return {
-            "id": str(self.id),
-            "created_at": self.created_at.strftime(DATETIME_FORMAT),
-            "service_id": str(self.service_id),
-            "notify_number": self.notify_number,
-            "user_number": self.user_number,
-            "content": self.content,
-        }
-
-
-class InboundSmsHistory(db.Model, HistoryModel):
-    __tablename__ = "inbound_sms_history"
-    id = db.Column(UUID(as_uuid=True), primary_key=True)
-    created_at = db.Column(db.DateTime, index=True, unique=False, nullable=False)
-    service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"), index=True, unique=False)
-    service = db.relationship("Service")
-    notify_number = db.Column(db.String, nullable=False)
-    provider_date = db.Column(db.DateTime)
-    provider_reference = db.Column(db.String)
-    provider = db.Column(db.String, nullable=False)
 
 
 class LetterRate(db.Model):
