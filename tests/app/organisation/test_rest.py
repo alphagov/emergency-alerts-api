@@ -2,18 +2,12 @@ import uuid
 
 import pytest
 from freezegun import freeze_time
-from sqlalchemy.exc import SQLAlchemyError
 
 from app.dao.organisation_dao import (
     dao_add_service_to_organisation,
     dao_add_user_to_organisation,
 )
-from app.models import (
-    INVITE_ACCEPTED,
-    INVITE_CANCELLED,
-    AnnualBilling,
-    Organisation,
-)
+from app.models import INVITE_ACCEPTED, INVITE_CANCELLED, Organisation
 from tests.app.db import (
     create_domain,
     create_organisation,
@@ -449,38 +443,6 @@ def test_post_link_service_to_organisation(admin_request, sample_service):
 
 
 @freeze_time("2021-09-24 13:30")
-def test_post_link_service_to_organisation_inserts_annual_billing(admin_request, sample_service):
-    data = {"service_id": str(sample_service.id)}
-    organisation = create_organisation(organisation_type="central")
-    assert len(organisation.services) == 0
-    assert len(AnnualBilling.query.all()) == 0
-    admin_request.post(
-        "organisation.link_service_to_organisation", _data=data, organisation_id=organisation.id, _expected_status=204
-    )
-
-    annual_billing = AnnualBilling.query.all()
-    assert len(annual_billing) == 1
-    assert annual_billing[0].free_sms_fragment_limit == 150000
-
-
-def test_post_link_service_to_organisation_rollback_service_if_annual_billing_update_fails(
-    admin_request, sample_service, mocker
-):
-    mocker.patch("app.dao.annual_billing_dao.dao_create_or_update_annual_billing_for_year", side_effect=SQLAlchemyError)
-    data = {"service_id": str(sample_service.id)}
-    assert not sample_service.organisation_type
-
-    organisation = create_organisation(organisation_type="central")
-    assert len(organisation.services) == 0
-    assert len(AnnualBilling.query.all()) == 0
-    with pytest.raises(expected_exception=SQLAlchemyError):
-        admin_request.post("organisation.link_service_to_organisation", _data=data, organisation_id=organisation.id)
-    assert not sample_service.organisation_type
-    assert len(organisation.services) == 0
-    assert len(AnnualBilling.query.all()) == 0
-
-
-@freeze_time("2021-09-24 13:30")
 def test_post_link_service_to_another_org(admin_request, sample_service, sample_organisation):
     data = {"service_id": str(sample_service.id)}
     assert len(sample_organisation.services) == 0
@@ -502,9 +464,6 @@ def test_post_link_service_to_another_org(admin_request, sample_service, sample_
     assert not sample_organisation.services
     assert len(new_org.services) == 1
     assert sample_service.organisation_type == "central"
-    annual_billing = AnnualBilling.query.all()
-    assert len(annual_billing) == 1
-    assert annual_billing[0].free_sms_fragment_limit == 150000
 
 
 def test_post_link_service_to_organisation_nonexistent_organisation(admin_request, sample_service, fake_uuid):

@@ -16,18 +16,20 @@ environment = os.environ["HOST"]
 
 
 def upgrade():
-    index = """
-        CREATE UNIQUE INDEX CONCURRENTLY uix_service_id_financial_year_start
-        ON annual_billing (service_id, financial_year_start)
-    """
-    constraint = """
-        ALTER TABLE annual_BILLING add constraint uix_service_id_financial_year_start
-         UNIQUE USING INDEX uix_service_id_financial_year_start
-    """
-    op.execute("COMMIT")
-    op.execute(index)
-    op.execute(constraint)
+    # index = """
+    #     CREATE UNIQUE INDEX CONCURRENTLY uix_service_id_financial_year_start
+    #     ON annual_billing (service_id, financial_year_start)
+    # """
+    # constraint = """
+    #     ALTER TABLE annual_BILLING add constraint uix_service_id_financial_year_start
+    #      UNIQUE USING INDEX uix_service_id_financial_year_start
+    # """
+    # op.execute("COMMIT")
+    # op.execute(index)
+    # op.execute(constraint)
+    pass
 
 
 def downgrade():
-    op.drop_constraint("uix_service_id_financial_year_start", "annual_billing", type_="unique")
+    # op.drop_constraint("uix_service_id_financial_year_start", "annual_billing", type_="unique")
+    pass

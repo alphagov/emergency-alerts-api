@@ -19,7 +19,6 @@ from app.models import (
     KEY_TYPE_NORMAL,
     LETTER_TYPE,
     SMS_TYPE,
-    AnnualBilling,
     ApiKey,
     BroadcastEvent,
     BroadcastMessage,
@@ -215,18 +214,6 @@ def create_api_key(service, key_type=KEY_TYPE_NORMAL, key_name=None):
     db.session.add(api_key)
     db.session.commit()
     return api_key
-
-
-def create_annual_billing(service_id, free_sms_fragment_limit, financial_year_start):
-    annual_billing = AnnualBilling(
-        service_id=service_id,
-        free_sms_fragment_limit=free_sms_fragment_limit,
-        financial_year_start=financial_year_start,
-    )
-    db.session.add(annual_billing)
-    db.session.commit()
-
-    return annual_billing
 
 
 def create_domain(domain, organisation_id):

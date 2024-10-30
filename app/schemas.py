@@ -216,7 +216,6 @@ class ServiceSchema(BaseSchema, UUIDsAsStringsMixin):
         model = models.Service
         exclude = (
             "all_template_folders",
-            "annual_billing",
             "api_keys",
             "broadcast_messages",
             "crown",
@@ -271,7 +270,6 @@ class DetailedServiceSchema(BaseSchema):
         model = models.Service
         exclude = (
             "all_template_folders",
-            "annual_billing",
             "api_keys",
             "broadcast_messages",
             "created_by",

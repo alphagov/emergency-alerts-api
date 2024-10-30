@@ -19,7 +19,6 @@ from app.models import (
     NON_CROWN_ORGANISATION_TYPES,
     SMS_TYPE,
     UPLOAD_LETTERS,
-    AnnualBilling,
     ApiKey,
     InvitedUser,
     Organisation,
@@ -246,7 +245,6 @@ def delete_service_and_all_associated_db_objects(service):
     _delete(ServicePermission.query.filter_by(service_id=service.id))
     _delete(ApiKey.query.filter_by(service=service))
     _delete(ApiKey.get_history_model().query.filter_by(service_id=service.id))
-    _delete(AnnualBilling.query.filter_by(service_id=service.id))
 
     verify_codes = VerifyCode.query.join(User).filter(User.id.in_([x.id for x in service.users]))
     list(map(db.session.delete, verify_codes))
@@ -271,7 +269,6 @@ def delete_service_created_for_functional_testing(service):
     def _delete(query):
         query.delete(synchronize_session=False)
 
-    _delete(AnnualBilling.query.filter_by(service_id=service.id))
     _delete(Permission.query.filter_by(service=service))
     _delete(ServiceBroadcastSettings.query.filter_by(service_id=service.id))
     _delete(ServicePermission.query.filter_by(service_id=service.id))

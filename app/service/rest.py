@@ -4,7 +4,6 @@ from flask import Blueprint, current_app, jsonify, request
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
 
-from app.dao.annual_billing_dao import set_default_free_allowance_for_service
 from app.dao.api_key_dao import (
     expire_api_key,
     get_model_api_keys,
@@ -125,7 +124,6 @@ def create_service():
 
     with transaction():
         dao_create_service(valid_service, user)
-        set_default_free_allowance_for_service(service=valid_service, year_start=None)
 
     return jsonify(data=service_schema.dump(valid_service)), 201
 
