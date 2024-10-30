@@ -1103,50 +1103,10 @@ class Event(db.Model):
     data = db.Column(JSON, nullable=False)
 
 
-class Rate(db.Model):
-    __tablename__ = "rates"
-
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    valid_from = db.Column(db.DateTime, nullable=False)
-    rate = db.Column(db.Float(asdecimal=False), nullable=False)
-    notification_type = db.Column(notification_types, index=True, nullable=False)
-
-    def __str__(self):
-        the_string = "{}".format(self.rate)
-        the_string += " {}".format(self.notification_type)
-        the_string += " {}".format(self.valid_from)
-        return the_string
-
-
-class LetterRate(db.Model):
-    __tablename__ = "letter_rates"
-
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    start_date = db.Column(db.DateTime, nullable=False)
-    end_date = db.Column(db.DateTime, nullable=True)
-    sheet_count = db.Column(db.Integer, nullable=False)  # double sided sheet
-    rate = db.Column(db.Numeric(), nullable=False)
-    crown = db.Column(db.Boolean, nullable=False)
-    post_class = db.Column(db.String, nullable=False)
-
-
 class AuthType(db.Model):
     __tablename__ = "auth_type"
 
     name = db.Column(db.String, primary_key=True)
-
-
-class DailySortedLetter(db.Model):
-    __tablename__ = "daily_sorted_letter"
-
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    billing_day = db.Column(db.Date, nullable=False, index=True)
-    file_name = db.Column(db.String, nullable=True, index=True)
-    unsorted_count = db.Column(db.Integer, nullable=False, default=0)
-    sorted_count = db.Column(db.Integer, nullable=False, default=0)
-    updated_at = db.Column(db.DateTime, nullable=True, onupdate=datetime.datetime.utcnow)
-
-    __table_args__ = (UniqueConstraint("file_name", "billing_day", name="uix_file_name_billing_day"),)
 
 
 class BroadcastStatusType(db.Model):

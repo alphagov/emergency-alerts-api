@@ -1,5 +1,5 @@
 import uuid
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 
 import pytest
 
@@ -27,16 +27,13 @@ from app.models import (
     BroadcastProviderMessage,
     BroadcastProviderMessageNumber,
     BroadcastStatusType,
-    DailySortedLetter,
     Domain,
     FailedLogin,
     FeatureToggle,
     InvitedOrganisationUser,
     InvitedUser,
-    LetterRate,
     Organisation,
     Permission,
-    Rate,
     Service,
     ServiceCallbackApi,
     ServiceInboundApi,
@@ -207,30 +204,6 @@ def create_service_callback_api(
     return service_callback_api
 
 
-def create_rate(start_date, value, notification_type):
-    rate = Rate(id=uuid.uuid4(), valid_from=start_date, rate=value, notification_type=notification_type)
-    db.session.add(rate)
-    db.session.commit()
-    return rate
-
-
-def create_letter_rate(start_date=None, end_date=None, crown=True, sheet_count=1, rate=0.33, post_class="second"):
-    if start_date is None:
-        start_date = datetime(2016, 1, 1)
-    rate = LetterRate(
-        id=uuid.uuid4(),
-        start_date=start_date,
-        end_date=end_date,
-        crown=crown,
-        sheet_count=sheet_count,
-        rate=rate,
-        post_class=post_class,
-    )
-    db.session.add(rate)
-    db.session.commit()
-    return rate
-
-
 def create_api_key(service, key_type=KEY_TYPE_NORMAL, key_name=None):
     id_ = uuid.uuid4()
 
@@ -303,22 +276,6 @@ def create_invited_org_user(organisation, invited_by, email_address="invite@exam
     )
     save_invited_org_user(invited_org_user)
     return invited_org_user
-
-
-def create_daily_sorted_letter(
-    billing_day=None, file_name="Notify-20180118123.rs.txt", unsorted_count=0, sorted_count=0
-):
-    daily_sorted_letter = DailySortedLetter(
-        billing_day=billing_day or date(2018, 1, 18),
-        file_name=file_name,
-        unsorted_count=unsorted_count,
-        sorted_count=sorted_count,
-    )
-
-    db.session.add(daily_sorted_letter)
-    db.session.commit()
-
-    return daily_sorted_letter
 
 
 def ses_notification_callback():
