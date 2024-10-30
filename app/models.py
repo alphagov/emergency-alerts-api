@@ -405,14 +405,6 @@ class Service(db.Model, Versioned):
 
         return cls(**fields)
 
-    def get_default_reply_to_email_address(self):
-        default_reply_to = [x for x in self.reply_to_email_addresses if x.is_default]
-        return default_reply_to[0].email_address if default_reply_to else None
-
-    def get_default_reply_to_email_id(self):
-        default_reply_to = [x for x in self.reply_to_email_addresses if x.is_default]
-        return default_reply_to[0].id if default_reply_to else None
-
     def has_permission(self, permission):
         return permission in [p.permission for p in self.permissions]
 
@@ -724,12 +716,6 @@ class TemplateBase(db.Model):
         else:
             raise ValueError("Unable to set sender for {} template".format(self.template_type))
 
-    def get_reply_to_text(self):
-        if self.template_type == EMAIL_TYPE:
-            return self.service.get_default_reply_to_email_address()
-        else:
-            return None
-
     @hybrid_property
     def is_precompiled_letter(self):
         return self.hidden and self.name == PRECOMPILED_TEMPLATE_NAME and self.template_type == LETTER_TYPE
@@ -746,10 +732,7 @@ class TemplateBase(db.Model):
         if self.template_type == BROADCAST_TYPE:
             return BroadcastMessageTemplate(self.__dict__)
         if self.template_type == LETTER_TYPE:
-            return LetterPrintTemplate(
-                self.__dict__,
-                contact_block=self.get_reply_to_text(),
-            )
+            return LetterPrintTemplate(self.__dict__)
 
     def _as_utils_template_with_personalisation(self, values):
         template = self._as_utils_template()
@@ -1145,32 +1128,6 @@ class LetterRate(db.Model):
     rate = db.Column(db.Numeric(), nullable=False)
     crown = db.Column(db.Boolean, nullable=False)
     post_class = db.Column(db.String, nullable=False)
-
-
-class ServiceEmailReplyTo(db.Model):
-    __tablename__ = "service_email_reply_to"
-
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-
-    service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"), unique=False, index=True, nullable=False)
-    service = db.relationship(Service, backref=db.backref("reply_to_email_addresses"))
-
-    email_address = db.Column(db.Text, nullable=False, index=False, unique=False)
-    is_default = db.Column(db.Boolean, nullable=False, default=True)
-    archived = db.Column(db.Boolean, nullable=False, default=False)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
-    updated_at = db.Column(db.DateTime, nullable=True, onupdate=datetime.datetime.utcnow)
-
-    def serialize(self):
-        return {
-            "id": str(self.id),
-            "service_id": str(self.service_id),
-            "email_address": self.email_address,
-            "is_default": self.is_default,
-            "archived": self.archived,
-            "created_at": self.created_at.strftime(DATETIME_FORMAT),
-            "updated_at": get_dt_string_or_none(self.updated_at),
-        }
 
 
 class AuthType(db.Model):

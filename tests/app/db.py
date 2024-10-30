@@ -39,7 +39,6 @@ from app.models import (
     Rate,
     Service,
     ServiceCallbackApi,
-    ServiceEmailReplyTo,
     ServiceInboundApi,
     ServicePermission,
     Template,
@@ -243,21 +242,6 @@ def create_api_key(service, key_type=KEY_TYPE_NORMAL, key_name=None):
     db.session.add(api_key)
     db.session.commit()
     return api_key
-
-
-def create_reply_to_email(service, email_address, is_default=True, archived=False):
-    data = {
-        "service": service,
-        "email_address": email_address,
-        "is_default": is_default,
-        "archived": archived,
-    }
-    reply_to = ServiceEmailReplyTo(**data)
-
-    db.session.add(reply_to)
-    db.session.commit()
-
-    return reply_to
 
 
 def create_annual_billing(service_id, free_sms_fragment_limit, financial_year_start):

@@ -4,7 +4,6 @@ from flask import Blueprint, current_app, jsonify, request
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
 
-from app.clients.notify_client import notify_send
 from app.dao.annual_billing_dao import set_default_free_allowance_for_service
 from app.dao.api_key_dao import (
     expire_api_key,
@@ -16,13 +15,6 @@ from app.dao.broadcast_service_dao import set_broadcast_service_type
 from app.dao.dao_utils import transaction
 from app.dao.failed_logins_dao import dao_delete_all_failed_logins_for_ip
 from app.dao.organisation_dao import dao_get_organisation_by_service_id
-from app.dao.service_email_reply_to_dao import (
-    add_reply_to_email_address_for_service,
-    archive_reply_to_email_address,
-    dao_get_reply_to_by_id,
-    dao_get_reply_to_by_service_id,
-    update_reply_to_email_address,
-)
 from app.dao.services_dao import (
     dao_add_user_to_service,
     dao_archive_service,
@@ -43,19 +35,12 @@ from app.dao.users_dao import (
     get_users_by_partial_email,
 )
 from app.errors import InvalidRequest, register_errors
-from app.models import EMAIL_TYPE, Permission, Service
+from app.models import Permission, Service
 from app.schema_validation import validate
-from app.schemas import (
-    api_key_schema,
-    email_data_request_schema,
-    service_schema,
-)
+from app.schemas import api_key_schema, service_schema
 from app.service.sender import send_notification_to_service_users
 from app.service.service_broadcast_settings_schema import (
     service_broadcast_settings_schema,
-)
-from app.service.service_senders_schema import (
-    add_service_email_reply_to_request,
 )
 from app.user.users_schema import post_set_permissions_schema
 from app.utils import is_public_environment
@@ -295,82 +280,10 @@ def archive_service(service_id):
     return "", 204
 
 
-@service_blueprint.route("/<uuid:service_id>/email-reply-to", methods=["GET"])
-def get_email_reply_to_addresses(service_id):
-    result = dao_get_reply_to_by_service_id(service_id)
-    return jsonify([i.serialize() for i in result]), 200
-
-
-@service_blueprint.route("/<uuid:service_id>/email-reply-to/<uuid:reply_to_id>", methods=["GET"])
-def get_email_reply_to_address(service_id, reply_to_id):
-    result = dao_get_reply_to_by_id(service_id=service_id, reply_to_id=reply_to_id)
-    return jsonify(result.serialize()), 200
-
-
-@service_blueprint.route("/<uuid:service_id>/email-reply-to/verify", methods=["POST"])
-def verify_reply_to_email_address(service_id):
-    email_address = email_data_request_schema.load(request.get_json())
-
-    check_if_reply_to_address_already_in_use(service_id, email_address["email"])
-
-    notification = {
-        "type": EMAIL_TYPE,
-        "template_id": current_app.config["REPLY_TO_EMAIL_ADDRESS_VERIFICATION_TEMPLATE_ID"],
-        "recipient": email_address["email"],
-        "reply_to": current_app.config["EAS_EMAIL_REPLY_TO_ID"],
-        "personalisation": "",
-    }
-
-    response = notify_send(notification)
-
-    return jsonify(data={"id": response.id}), 201
-
-
-@service_blueprint.route("/<uuid:service_id>/email-reply-to", methods=["POST"])
-def add_service_reply_to_email_address(service_id):
-    # validate the service exists, throws ResultNotFound exception.
-    dao_fetch_service_by_id(service_id)
-    form = validate(request.get_json(), add_service_email_reply_to_request)
-    check_if_reply_to_address_already_in_use(service_id, form["email_address"])
-    new_reply_to = add_reply_to_email_address_for_service(
-        service_id=service_id, email_address=form["email_address"], is_default=form.get("is_default", True)
-    )
-    return jsonify(data=new_reply_to.serialize()), 201
-
-
-@service_blueprint.route("/<uuid:service_id>/email-reply-to/<uuid:reply_to_email_id>", methods=["POST"])
-def update_service_reply_to_email_address(service_id, reply_to_email_id):
-    # validate the service exists, throws ResultNotFound exception.
-    dao_fetch_service_by_id(service_id)
-    form = validate(request.get_json(), add_service_email_reply_to_request)
-    new_reply_to = update_reply_to_email_address(
-        service_id=service_id,
-        reply_to_id=reply_to_email_id,
-        email_address=form["email_address"],
-        is_default=form.get("is_default", True),
-    )
-    return jsonify(data=new_reply_to.serialize()), 200
-
-
-@service_blueprint.route("/<uuid:service_id>/email-reply-to/<uuid:reply_to_email_id>/archive", methods=["POST"])
-def delete_service_reply_to_email_address(service_id, reply_to_email_id):
-    archived_reply_to = archive_reply_to_email_address(service_id, reply_to_email_id)
-
-    return jsonify(data=archived_reply_to.serialize()), 200
-
-
 @service_blueprint.route("/<uuid:service_id>/organisation", methods=["GET"])
 def get_organisation_for_service(service_id):
     organisation = dao_get_organisation_by_service_id(service_id=service_id)
     return jsonify(organisation.serialize() if organisation else {}), 200
-
-
-def check_if_reply_to_address_already_in_use(service_id, email_address):
-    existing_reply_to_addresses = dao_get_reply_to_by_service_id(service_id)
-    if email_address in [i.email_address for i in existing_reply_to_addresses]:
-        raise InvalidRequest(
-            "Your service already uses ‘{}’ as an email reply-to address.".format(email_address), status_code=409
-        )
 
 
 @service_blueprint.route("/<uuid:service_id>/set-as-broadcast-service", methods=["POST"])

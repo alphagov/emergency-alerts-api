@@ -530,8 +530,6 @@ def test_should_get_return_all_fields_by_default(
         "postage",
         "process_type",
         "redact_personalisation",
-        "reply_to",
-        "reply_to_text",
         "service",
         "subject",
         "template_redacted",

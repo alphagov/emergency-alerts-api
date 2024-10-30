@@ -37,7 +37,6 @@ from app.models import (
     Organisation,
     Permission,
     Service,
-    ServiceEmailReplyTo,
     Template,
     TemplateHistory,
 )
@@ -588,17 +587,6 @@ def notify_service(notify_db_session, sample_user):
             prefix_sms=False,
         )
         dao_create_service(service=service, service_id=current_app.config["NOTIFY_SERVICE_ID"], user=sample_user)
-
-        data = {
-            "service": service,
-            "email_address": "notify@gov.uk",
-            "is_default": True,
-        }
-        reply_to = ServiceEmailReplyTo(**data)
-
-        notify_db_session.add(reply_to)
-        notify_db_session.commit()
-
     return service
 
 

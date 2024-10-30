@@ -1,18 +1,12 @@
 import pytest
 
 from app.models import PRECOMPILED_TEMPLATE_NAME
-from tests.app.db import create_reply_to_email, create_template_folder
+from tests.app.db import create_template_folder
 
 
 def test_email_notification_serializes_with_subject(client, sample_email_template):
     res = sample_email_template.serialize_for_v2()
     assert res["subject"] == "Email Subject"
-
-
-def test_service_get_default_reply_to_email_address(sample_service):
-    create_reply_to_email(service=sample_service, email_address="default@email.com")
-
-    assert sample_service.get_default_reply_to_email_address() == "default@email.com"
 
 
 def test_is_precompiled_letter_false(sample_letter_template):

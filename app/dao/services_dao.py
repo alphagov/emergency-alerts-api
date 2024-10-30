@@ -26,7 +26,6 @@ from app.models import (
     Permission,
     Service,
     ServiceBroadcastSettings,
-    ServiceEmailReplyTo,
     ServicePermission,
     ServiceUser,
     Template,
@@ -240,7 +239,6 @@ def delete_service_and_all_associated_db_objects(service):
     template_ids = db.session.query(Template.id).filter_by(service=service)
     _delete(TemplateRedacted.query.filter(TemplateRedacted.template_id.in_(template_ids)))
 
-    _delete(ServiceEmailReplyTo.query.filter_by(service=service))
     _delete(InvitedUser.query.filter_by(service=service))
     _delete(Permission.query.filter_by(service=service))
     _delete(Template.query.filter_by(service=service))

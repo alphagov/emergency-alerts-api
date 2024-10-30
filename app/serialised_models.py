@@ -43,7 +43,6 @@ class SerialisedTemplate(SerialisedModel):
         "id",
         "postage",
         "process_type",
-        "reply_to_text",
         "subject",
         "template_type",
         "version",

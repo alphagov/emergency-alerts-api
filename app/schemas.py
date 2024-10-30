@@ -220,7 +220,6 @@ class ServiceSchema(BaseSchema, UUIDsAsStringsMixin):
             "api_keys",
             "broadcast_messages",
             "crown",
-            "reply_to_email_addresses",
             "service_broadcast_provider_restriction",
             "service_broadcast_settings",
             "templates",
@@ -282,7 +281,6 @@ class DetailedServiceSchema(BaseSchema):
             "message_limit",
             "permissions",
             "rate_limit",
-            "reply_to_email_addresses",
             "templates",
             "users",
             "version",
@@ -290,15 +288,6 @@ class DetailedServiceSchema(BaseSchema):
 
 
 class BaseTemplateSchema(BaseSchema):
-    reply_to = fields.Method("get_reply_to", allow_none=True)
-    reply_to_text = fields.Method("get_reply_to_text", allow_none=True)
-
-    def get_reply_to(self, template):
-        return template.reply_to
-
-    def get_reply_to_text(self, template):
-        return template.get_reply_to_text()
-
     class Meta(BaseSchema.Meta):
         model = models.Template
         exclude = ("service_id",)
@@ -345,8 +334,6 @@ class TemplateSchemaNoDetail(TemplateSchema):
             "postage",
             "process_type",
             "redact_personalisation",
-            "reply_to",
-            "reply_to_text",
             "service",
             "subject",
             "template_redacted",
@@ -363,19 +350,11 @@ class TemplateSchemaNoDetail(TemplateSchema):
 
 
 class TemplateHistorySchema(BaseSchema):
-    reply_to = fields.Method("get_reply_to", allow_none=True)
-    reply_to_text = fields.Method("get_reply_to_text", allow_none=True)
     process_type = field_for(models.Template, "process_type")
 
     created_by = fields.Nested(UserSchema, only=["id", "name", "email_address"], dump_only=True)
     created_at = field_for(models.Template, "created_at", format=DATETIME_FORMAT_NO_TIMEZONE)
     updated_at = FlexibleDateTime()
-
-    def get_reply_to(self, template):
-        return template.reply_to
-
-    def get_reply_to_text(self, template):
-        return template.get_reply_to_text()
 
     class Meta(BaseSchema.Meta):
         model = models.TemplateHistory
