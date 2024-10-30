@@ -38,7 +38,6 @@ from app.models import (
     Permission,
     Service,
     ServiceEmailReplyTo,
-    ServiceGuestList,
     Template,
     TemplateHistory,
 )
@@ -601,16 +600,6 @@ def notify_service(notify_db_session, sample_user):
         notify_db_session.commit()
 
     return service
-
-
-@pytest.fixture(scope="function")
-def sample_service_guest_list(notify_db_session):
-    service = create_service(check_if_service_exists=True)
-    guest_list_user = ServiceGuestList.from_string(service.id, EMAIL_TYPE, "guest_list_user@digital.gov.uk")
-
-    notify_db_session.add(guest_list_user)
-    notify_db_session.commit()
-    return guest_list_user
 
 
 @pytest.fixture

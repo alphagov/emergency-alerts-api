@@ -13,7 +13,7 @@ from app.dao.api_key_dao import (
     save_model_api_key,
 )
 from app.dao.broadcast_service_dao import set_broadcast_service_type
-from app.dao.dao_utils import dao_rollback, transaction
+from app.dao.dao_utils import transaction
 from app.dao.failed_logins_dao import dao_delete_all_failed_logins_for_ip
 from app.dao.organisation_dao import dao_get_organisation_by_service_id
 from app.dao.service_data_retention_dao import (
@@ -29,11 +29,6 @@ from app.dao.service_email_reply_to_dao import (
     dao_get_reply_to_by_id,
     dao_get_reply_to_by_service_id,
     update_reply_to_email_address,
-)
-from app.dao.service_guest_list_dao import (
-    dao_add_and_commit_guest_list_contacts,
-    dao_fetch_service_guest_list,
-    dao_remove_service_guest_list,
 )
 from app.dao.services_dao import (
     dao_add_user_to_service,
@@ -73,7 +68,6 @@ from app.service.service_data_retention_schema import (
 from app.service.service_senders_schema import (
     add_service_email_reply_to_request,
 )
-from app.service.utils import get_guest_list_objects
 from app.user.users_schema import post_set_permissions_schema
 from app.utils import is_public_environment
 
@@ -294,38 +288,6 @@ def get_service_history(service_id):
     }
 
     return jsonify(data=data)
-
-
-@service_blueprint.route("/<uuid:service_id>/guest-list", methods=["GET"])
-def get_guest_list(service_id):
-    from app.models import EMAIL_TYPE, MOBILE_TYPE
-
-    service = dao_fetch_service_by_id(service_id)
-
-    if not service:
-        raise InvalidRequest("Service does not exist", status_code=404)
-
-    guest_list = dao_fetch_service_guest_list(service.id)
-    return jsonify(
-        email_addresses=[item.recipient for item in guest_list if item.recipient_type == EMAIL_TYPE],
-        phone_numbers=[item.recipient for item in guest_list if item.recipient_type == MOBILE_TYPE],
-    )
-
-
-@service_blueprint.route("/<uuid:service_id>/guest-list", methods=["PUT"])
-def update_guest_list(service_id):
-    # doesn't commit so if there are any errors, we preserve old values in db
-    dao_remove_service_guest_list(service_id)
-    try:
-        guest_list_objects = get_guest_list_objects(service_id, request.get_json())
-    except ValueError as e:
-        current_app.logger.exception(e)
-        dao_rollback()
-        msg = "{} is not a valid email address or phone number".format(str(e))
-        raise InvalidRequest(msg, 400)
-    else:
-        dao_add_and_commit_guest_list_contacts(guest_list_objects)
-        return "", 204
 
 
 @service_blueprint.route("/<uuid:service_id>/archive", methods=["POST"])

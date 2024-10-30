@@ -19,7 +19,6 @@ from app.models import (
     EMAIL_TYPE,
     KEY_TYPE_NORMAL,
     LETTER_TYPE,
-    MOBILE_TYPE,
     SMS_TYPE,
     AnnualBilling,
     ApiKey,
@@ -42,7 +41,6 @@ from app.models import (
     Service,
     ServiceCallbackApi,
     ServiceEmailReplyTo,
-    ServiceGuestList,
     ServiceInboundApi,
     ServicePermission,
     Template,
@@ -338,19 +336,6 @@ def create_daily_sorted_letter(
     db.session.commit()
 
     return daily_sorted_letter
-
-
-def create_service_guest_list(service, email_address=None, mobile_number=None):
-    if email_address:
-        guest_list_user = ServiceGuestList.from_string(service.id, EMAIL_TYPE, email_address)
-    elif mobile_number:
-        guest_list_user = ServiceGuestList.from_string(service.id, MOBILE_TYPE, mobile_number)
-    else:
-        guest_list_user = ServiceGuestList.from_string(service.id, EMAIL_TYPE, "guest_list_user@digital.gov.uk")
-
-    db.session.add(guest_list_user)
-    db.session.commit()
-    return guest_list_user
 
 
 def ses_notification_callback():

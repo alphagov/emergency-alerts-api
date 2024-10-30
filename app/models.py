@@ -1,12 +1,6 @@
 import datetime
 import uuid
 
-from emergency_alerts_utils.recipients import (
-    InvalidEmailError,
-    InvalidPhoneError,
-    validate_email_address,
-    validate_phone_number,
-)
 from emergency_alerts_utils.template import (
     BroadcastMessageTemplate,
     LetterPrintTemplate,
@@ -498,40 +492,6 @@ EMAIL_TYPE = "email"
 
 GUEST_LIST_RECIPIENT_TYPE = [MOBILE_TYPE, EMAIL_TYPE]
 guest_list_recipient_types = db.Enum(*GUEST_LIST_RECIPIENT_TYPE, name="recipient_type")
-
-
-class ServiceGuestList(db.Model):
-    __tablename__ = "service_whitelist"
-
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"), index=True, nullable=False)
-    service = db.relationship("Service", backref="guest_list")
-    recipient_type = db.Column(guest_list_recipient_types, nullable=False)
-    recipient = db.Column(db.String(255), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
-
-    @classmethod
-    def from_string(cls, service_id, recipient_type, recipient):
-        instance = cls(service_id=service_id, recipient_type=recipient_type)
-
-        try:
-            if recipient_type == MOBILE_TYPE:
-                validate_phone_number(recipient, international=True)
-                instance.recipient = recipient
-            elif recipient_type == EMAIL_TYPE:
-                validate_email_address(recipient)
-                instance.recipient = recipient
-            else:
-                raise ValueError("Invalid recipient type")
-        except InvalidPhoneError:
-            raise ValueError('Invalid guest list: "{}"'.format(recipient))
-        except InvalidEmailError:
-            raise ValueError('Invalid guest list: "{}"'.format(recipient))
-        else:
-            return instance
-
-    def __repr__(self):
-        return "Recipient {} of type: {}".format(self.recipient, self.recipient_type)
 
 
 class ServiceInboundApi(db.Model, Versioned):
