@@ -13,7 +13,6 @@ from sqlalchemy.dialects.postgresql import INET, JSON, JSONB, UUID
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.orm.collections import attribute_mapped_collection
 from sqlalchemy.schema import Sequence
 
 from app import db, encryption
@@ -1191,33 +1190,6 @@ class DailySortedLetter(db.Model):
     updated_at = db.Column(db.DateTime, nullable=True, onupdate=datetime.datetime.utcnow)
 
     __table_args__ = (UniqueConstraint("file_name", "billing_day", name="uix_file_name_billing_day"),)
-
-
-class ServiceDataRetention(db.Model):
-    __tablename__ = "service_data_retention"
-
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"), unique=False, index=True, nullable=False)
-    service = db.relationship(
-        Service, backref=db.backref("data_retention", collection_class=attribute_mapped_collection("notification_type"))
-    )
-    notification_type = db.Column(notification_types, nullable=False)
-    days_of_retention = db.Column(db.Integer, nullable=False)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
-    updated_at = db.Column(db.DateTime, nullable=True, onupdate=datetime.datetime.utcnow)
-
-    __table_args__ = (UniqueConstraint("service_id", "notification_type", name="uix_service_data_retention"),)
-
-    def serialize(self):
-        return {
-            "id": str(self.id),
-            "service_id": str(self.service_id),
-            "service_name": self.service.name,
-            "notification_type": self.notification_type,
-            "days_of_retention": self.days_of_retention,
-            "created_at": self.created_at.strftime(DATETIME_FORMAT),
-            "updated_at": get_dt_string_or_none(self.updated_at),
-        }
 
 
 class BroadcastStatusType(db.Model):

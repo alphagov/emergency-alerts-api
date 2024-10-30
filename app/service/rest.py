@@ -16,13 +16,6 @@ from app.dao.broadcast_service_dao import set_broadcast_service_type
 from app.dao.dao_utils import transaction
 from app.dao.failed_logins_dao import dao_delete_all_failed_logins_for_ip
 from app.dao.organisation_dao import dao_get_organisation_by_service_id
-from app.dao.service_data_retention_dao import (
-    fetch_service_data_retention,
-    fetch_service_data_retention_by_id,
-    fetch_service_data_retention_by_notification_type,
-    insert_service_data_retention,
-    update_service_data_retention,
-)
 from app.dao.service_email_reply_to_dao import (
     add_reply_to_email_address_for_service,
     archive_reply_to_email_address,
@@ -60,10 +53,6 @@ from app.schemas import (
 from app.service.sender import send_notification_to_service_users
 from app.service.service_broadcast_settings_schema import (
     service_broadcast_settings_schema,
-)
-from app.service.service_data_retention_schema import (
-    add_service_data_retention_request,
-    update_service_data_retention_request,
 )
 from app.service.service_senders_schema import (
     add_service_email_reply_to_request,
@@ -374,62 +363,6 @@ def delete_service_reply_to_email_address(service_id, reply_to_email_id):
 def get_organisation_for_service(service_id):
     organisation = dao_get_organisation_by_service_id(service_id=service_id)
     return jsonify(organisation.serialize() if organisation else {}), 200
-
-
-@service_blueprint.route("/<uuid:service_id>/data-retention", methods=["GET"])
-def get_data_retention_for_service(service_id):
-    data_retention_list = fetch_service_data_retention(service_id)
-    return jsonify([data_retention.serialize() for data_retention in data_retention_list]), 200
-
-
-@service_blueprint.route("/<uuid:service_id>/data-retention/notification-type/<notification_type>", methods=["GET"])
-def get_data_retention_for_service_notification_type(service_id, notification_type):
-    data_retention = fetch_service_data_retention_by_notification_type(service_id, notification_type)
-    return jsonify(data_retention.serialize() if data_retention else {}), 200
-
-
-@service_blueprint.route("/<uuid:service_id>/data-retention/<uuid:data_retention_id>", methods=["GET"])
-def get_data_retention_for_service_by_id(service_id, data_retention_id):
-    data_retention = fetch_service_data_retention_by_id(service_id, data_retention_id)
-    return jsonify(data_retention.serialize() if data_retention else {}), 200
-
-
-@service_blueprint.route("/<uuid:service_id>/data-retention", methods=["POST"])
-def create_service_data_retention(service_id):
-    form = validate(request.get_json(), add_service_data_retention_request)
-    try:
-        new_data_retention = insert_service_data_retention(
-            service_id=service_id,
-            notification_type=form.get("notification_type"),
-            days_of_retention=form.get("days_of_retention"),
-        )
-    except IntegrityError:
-        raise InvalidRequest(
-            message="Service already has data retention for {} notification type".format(form.get("notification_type")),
-            status_code=400,
-        )
-
-    return jsonify(result=new_data_retention.serialize()), 201
-
-
-@service_blueprint.route("/<uuid:service_id>/data-retention/<uuid:data_retention_id>", methods=["POST"])
-def modify_service_data_retention(service_id, data_retention_id):
-    form = validate(request.get_json(), update_service_data_retention_request)
-
-    update_count = update_service_data_retention(
-        service_data_retention_id=data_retention_id,
-        service_id=service_id,
-        days_of_retention=form.get("days_of_retention"),
-    )
-    if update_count == 0:
-        raise InvalidRequest(
-            message="The service data retention for id: {} was not found for service: {}".format(
-                data_retention_id, service_id
-            ),
-            status_code=404,
-        )
-
-    return "", 204
 
 
 def check_if_reply_to_address_already_in_use(service_id, email_address):

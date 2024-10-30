@@ -220,7 +220,6 @@ class ServiceSchema(BaseSchema, UUIDsAsStringsMixin):
             "api_keys",
             "broadcast_messages",
             "crown",
-            "data_retention",
             "reply_to_email_addresses",
             "service_broadcast_provider_restriction",
             "service_broadcast_settings",

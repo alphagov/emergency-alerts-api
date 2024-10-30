@@ -9,7 +9,6 @@ from app.dao.invited_user_dao import save_invited_user
 from app.dao.organisation_dao import dao_create_organisation
 from app.dao.permissions_dao import permission_dao
 from app.dao.service_callback_api_dao import save_service_callback_api
-from app.dao.service_data_retention_dao import insert_service_data_retention
 from app.dao.service_inbound_api_dao import save_service_inbound_api
 from app.dao.service_permissions_dao import dao_add_service_permission
 from app.dao.services_dao import dao_add_user_to_service, dao_create_service
@@ -364,13 +363,6 @@ def ses_notification_callback():
         '\n  "UnsubscribeURL" : "https://sns.eu-west-2.amazonaws.com/?Action=Unsubscribe&S'
         'subscriptionArn=arn:aws:sns:eu-west-2:302763885840:preview-emails:d6aad3ef-83d6-4cf3-a470-54e2e75916da"\n}'
     )
-
-
-def create_service_data_retention(service, notification_type="sms", days_of_retention=3):
-    data_retention = insert_service_data_retention(
-        service_id=service.id, notification_type=notification_type, days_of_retention=days_of_retention
-    )
-    return data_retention
 
 
 def create_invited_user(service=None, to_email_address=None):
