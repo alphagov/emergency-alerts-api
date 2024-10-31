@@ -23,10 +23,10 @@ def upgrade():
     )
 
     op.create_index(
-        op.f("ix_password"),
+        op.f("ix_common_password"),
         "common_passwords",
         ["password"],
-        unique=False,
+        unique=True,
     )
 
 
