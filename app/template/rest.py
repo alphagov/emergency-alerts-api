@@ -14,13 +14,12 @@ from app.dao.template_folder_dao import (
     dao_get_template_folder_by_id_and_service_id,
     dao_purge_template_folders_for_service,
 )
-from app.dao.templates_dao import (
+from app.dao.templates_dao import (  # dao_redact_template,
     dao_create_template,
     dao_get_all_templates_for_service,
     dao_get_template_by_id_and_service_id,
     dao_get_template_versions,
     dao_purge_templates_for_service,
-    dao_redact_template,
     dao_update_template,
     get_precompiled_letter_template,
 )
@@ -118,8 +117,8 @@ def update_template(service_id, template_id):
     validate(data, post_update_template_schema)
 
     # if redacting, don't update anything else
-    if data.get("redact_personalisation") is True:
-        return redact_template(fetched_template, data)
+    # if data.get("redact_personalisation") is True:
+    #     return redact_template(fetched_template, data)
 
     current_data = dict(template_schema.dump(fetched_template).items())
     updated_template = dict(template_schema.dump(fetched_template).items())
@@ -222,17 +221,17 @@ def _template_has_not_changed(current_data, updated_template):
     )
 
 
-def redact_template(template, data):
-    # we also don't need to check what was passed in redact_personalisation - its presence in the dict is enough.
-    if "created_by" not in data:
-        message = "Field is required"
-        errors = {"created_by": [message]}
-        raise InvalidRequest(errors, status_code=400)
+# def redact_template(template, data):
+#     # we also don't need to check what was passed in redact_personalisation - its presence in the dict is enough.
+#     if "created_by" not in data:
+#         message = "Field is required"
+#         errors = {"created_by": [message]}
+#         raise InvalidRequest(errors, status_code=400)
 
-    # if it's already redacted, then just return 200 straight away.
-    if not template.redact_personalisation:
-        dao_redact_template(template, data["created_by"])
-    return "null", 200
+#     # if it's already redacted, then just return 200 straight away.
+#     if not template.redact_personalisation:
+#         dao_redact_template(template, data["created_by"])
+#     return "null", 200
 
 
 def _get_png_preview_or_overlaid_pdf(url, data, notification_id, json=True):

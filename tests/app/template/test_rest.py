@@ -2,14 +2,14 @@ import json
 import random
 import string
 import uuid
-from datetime import datetime, timedelta
 
 import pytest
 import requests_mock
 from emergency_alerts_utils import SMS_CHAR_COUNT_LIMIT
-from freezegun import freeze_time
 
-from app.dao.templates_dao import dao_get_template_by_id, dao_redact_template
+from app.dao.templates_dao import (
+    dao_get_template_by_id,  # , dao_redact_template
+)
 from app.models import (
     BROADCAST_TYPE,
     EMAIL_TYPE,
@@ -20,6 +20,10 @@ from app.models import (
 )
 from tests import create_admin_authorization_header
 from tests.app.db import create_service, create_template, create_template_folder
+
+# from datetime import datetime, timedelta
+
+# from freezegun import freeze_time
 
 
 @pytest.mark.parametrize(
@@ -529,10 +533,10 @@ def test_should_get_return_all_fields_by_default(
         "name",
         "postage",
         "process_type",
-        "redact_personalisation",
+        # "redact_personalisation",
         "service",
         "subject",
-        "template_redacted",
+        # "template_redacted",
         "template_type",
         "updated_at",
         "version",
@@ -601,7 +605,7 @@ def test_should_get_a_single_template(client, sample_user, sample_service, subje
     assert data["content"] == content
     assert data["subject"] == subject
     assert data["process_type"] == "normal"
-    assert not data["redact_personalisation"]
+    # assert not data["redact_personalisation"]
 
 
 @pytest.mark.parametrize(
@@ -841,77 +845,77 @@ def test_create_template_validates_against_json_schema(
     assert response["errors"] == expected_errors
 
 
-def test_update_redact_template(admin_request, sample_template):
-    assert sample_template.redact_personalisation is False
+# def test_update_redact_template(admin_request, sample_template):
+#     assert sample_template.redact_personalisation is False
 
-    data = {"redact_personalisation": True, "created_by": str(sample_template.created_by_id)}
+#     data = {"redact_personalisation": True, "created_by": str(sample_template.created_by_id)}
 
-    dt = datetime.now()
+#     dt = datetime.now()
 
-    with freeze_time(dt):
-        resp = admin_request.post(
-            "template.update_template",
-            service_id=sample_template.service_id,
-            template_id=sample_template.id,
-            _data=data,
-        )
+#     with freeze_time(dt):
+#         resp = admin_request.post(
+#             "template.update_template",
+#             service_id=sample_template.service_id,
+#             template_id=sample_template.id,
+#             _data=data,
+#         )
 
-    assert resp is None
+#     assert resp is None
 
-    assert sample_template.redact_personalisation is True
-    assert sample_template.template_redacted.updated_by_id == sample_template.created_by_id
-    assert sample_template.template_redacted.updated_at == dt
+#     assert sample_template.redact_personalisation is True
+#     assert sample_template.template_redacted.updated_by_id == sample_template.created_by_id
+#     assert sample_template.template_redacted.updated_at == dt
 
-    assert sample_template.version == 1
-
-
-def test_update_redact_template_ignores_other_properties(admin_request, sample_template):
-    data = {"name": "Foo", "redact_personalisation": True, "created_by": str(sample_template.created_by_id)}
-
-    admin_request.post(
-        "template.update_template", service_id=sample_template.service_id, template_id=sample_template.id, _data=data
-    )
-
-    assert sample_template.redact_personalisation is True
-    assert sample_template.name != "Foo"
+#     assert sample_template.version == 1
 
 
-def test_update_redact_template_does_nothing_if_already_redacted(admin_request, sample_template):
-    dt = datetime.now()
-    with freeze_time(dt):
-        dao_redact_template(sample_template, sample_template.created_by_id)
+# def test_update_redact_template_ignores_other_properties(admin_request, sample_template):
+#     data = {"name": "Foo", "redact_personalisation": True, "created_by": str(sample_template.created_by_id)}
 
-    data = {"redact_personalisation": True, "created_by": str(sample_template.created_by_id)}
+#     admin_request.post(
+#         "template.update_template", service_id=sample_template.service_id, template_id=sample_template.id, _data=data
+#     )
 
-    with freeze_time(dt + timedelta(days=1)):
-        resp = admin_request.post(
-            "template.update_template",
-            service_id=sample_template.service_id,
-            template_id=sample_template.id,
-            _data=data,
-        )
-
-    assert resp is None
-
-    assert sample_template.redact_personalisation is True
-    # make sure that it hasn't been updated
-    assert sample_template.template_redacted.updated_at == dt
+#     assert sample_template.redact_personalisation is True
+#     assert sample_template.name != "Foo"
 
 
-def test_update_redact_template_400s_if_no_created_by(admin_request, sample_template):
-    original_updated_time = sample_template.template_redacted.updated_at
-    resp = admin_request.post(
-        "template.update_template",
-        service_id=sample_template.service_id,
-        template_id=sample_template.id,
-        _data={"redact_personalisation": True},
-        _expected_status=400,
-    )
+# def test_update_redact_template_does_nothing_if_already_redacted(admin_request, sample_template):
+#     dt = datetime.now()
+#     with freeze_time(dt):
+#         dao_redact_template(sample_template, sample_template.created_by_id)
 
-    assert resp == {"result": "error", "message": {"created_by": ["Field is required"]}}
+#     data = {"redact_personalisation": True, "created_by": str(sample_template.created_by_id)}
 
-    assert sample_template.redact_personalisation is False
-    assert sample_template.template_redacted.updated_at == original_updated_time
+#     with freeze_time(dt + timedelta(days=1)):
+#         resp = admin_request.post(
+#             "template.update_template",
+#             service_id=sample_template.service_id,
+#             template_id=sample_template.id,
+#             _data=data,
+#         )
+
+#     assert resp is None
+
+#     assert sample_template.redact_personalisation is True
+#     # make sure that it hasn't been updated
+#     assert sample_template.template_redacted.updated_at == dt
+
+
+# def test_update_redact_template_400s_if_no_created_by(admin_request, sample_template):
+#     original_updated_time = sample_template.template_redacted.updated_at
+#     resp = admin_request.post(
+#         "template.update_template",
+#         service_id=sample_template.service_id,
+#         template_id=sample_template.id,
+#         _data={"redact_personalisation": True},
+#         _expected_status=400,
+#     )
+
+#     assert resp == {"result": "error", "message": {"created_by": ["Field is required"]}}
+
+#     assert sample_template.redact_personalisation is False
+#     assert sample_template.template_redacted.updated_at == original_updated_time
 
 
 def test_purge_templates_and_folders_for_service_removes_db_objects(mocker, sample_service, admin_request):

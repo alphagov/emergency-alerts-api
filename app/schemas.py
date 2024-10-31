@@ -294,12 +294,12 @@ class BaseTemplateSchema(BaseSchema):
 class TemplateSchema(BaseTemplateSchema, UUIDsAsStringsMixin):
     created_by = field_for(models.Template, "created_by", required=True)
     process_type = field_for(models.Template, "process_type")
-    redact_personalisation = fields.Method("redact")
+    # redact_personalisation = fields.Method("redact")
     created_at = FlexibleDateTime()
     updated_at = FlexibleDateTime()
 
-    def redact(self, template):
-        return template.redact_personalisation
+    # def redact(self, template):
+    #     return template.redact_personalisation
 
     @validates_schema
     def validate_type(self, data, **kwargs):
@@ -331,10 +331,10 @@ class TemplateSchemaNoDetail(TemplateSchema):
             "hidden",
             "postage",
             "process_type",
-            "redact_personalisation",
+            # "redact_personalisation",
             "service",
             "subject",
-            "template_redacted",
+            # "template_redacted",
             "updated_at",
             "version",
         )

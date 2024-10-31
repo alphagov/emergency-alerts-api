@@ -2,14 +2,14 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy.orm import joinedload
-from sqlalchemy.sql.expression import asc, func
+from sqlalchemy.sql.expression import asc
 
 from app import db
 from app.dao.dao_utils import VersionOptions, autocommit, version_class
 from app.dao.organisation_dao import dao_get_organisation_by_email_address
 from app.dao.service_user_dao import dao_get_service_user
 from app.dao.template_folder_dao import dao_get_valid_template_folders_by_id
-from app.models import (
+from app.models import (  # TemplateRedacted,
     BROADCAST_TYPE,
     CROWN_ORGANISATION_TYPES,
     EMAIL_TYPE,
@@ -29,7 +29,6 @@ from app.models import (
     ServiceUser,
     Template,
     TemplateHistory,
-    TemplateRedacted,
     User,
     VerifyCode,
 )
@@ -117,7 +116,7 @@ def dao_archive_service(service_id):
     service = (
         Service.query.options(
             joinedload("templates"),
-            joinedload("templates.template_redacted"),
+            # joinedload("templates.template_redacted"),
             joinedload("api_keys"),
         )
         .filter(Service.id == service_id)
@@ -235,8 +234,8 @@ def delete_service_and_all_associated_db_objects(service):
     def _delete(query):
         query.delete(synchronize_session=False)
 
-    template_ids = db.session.query(Template.id).filter_by(service=service)
-    _delete(TemplateRedacted.query.filter(TemplateRedacted.template_id.in_(template_ids)))
+    # template_ids = db.session.query(Template.id).filter_by(service=service)
+    # _delete(TemplateRedacted.query.filter(TemplateRedacted.template_id.in_(template_ids)))
 
     _delete(InvitedUser.query.filter_by(service=service))
     _delete(Permission.query.filter_by(service=service))
@@ -296,23 +295,3 @@ def get_live_services_with_organisation():
     )
 
     return query.all()
-
-
-def fetch_billing_details_for_all_services():
-    return (
-        db.session.query(
-            Service.id.label("service_id"),
-            func.coalesce(Service.purchase_order_number, Organisation.purchase_order_number).label(
-                "purchase_order_number"
-            ),
-            func.coalesce(Service.billing_contact_names, Organisation.billing_contact_names).label(
-                "billing_contact_names"
-            ),
-            func.coalesce(Service.billing_contact_email_addresses, Organisation.billing_contact_email_addresses).label(
-                "billing_contact_email_addresses"
-            ),
-            func.coalesce(Service.billing_reference, Organisation.billing_reference).label("billing_reference"),
-        )
-        .outerjoin(Service.organisation)
-        .all()
-    )

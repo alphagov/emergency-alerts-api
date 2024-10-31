@@ -667,7 +667,7 @@ class TemplateBase(db.Model):
             db.String(255), db.ForeignKey("template_process_type.name"), index=True, nullable=False, default=NORMAL
         )
 
-    redact_personalisation = association_proxy("template_redacted", "redact_personalisation")
+    # redact_personalisation = association_proxy("template_redacted", "redact_personalisation")
 
     @property
     def reply_to(self):
@@ -764,17 +764,17 @@ class Template(TemplateBase):
         return cls(**fields)
 
 
-class TemplateRedacted(db.Model):
-    __tablename__ = "template_redacted"
+# class TemplateRedacted(db.Model):
+#     __tablename__ = "template_redacted"
 
-    template_id = db.Column(UUID(as_uuid=True), db.ForeignKey("templates.id"), primary_key=True, nullable=False)
-    redact_personalisation = db.Column(db.Boolean, nullable=False, default=False)
-    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
-    updated_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=False, index=True)
-    updated_by = db.relationship("User")
+#     template_id = db.Column(UUID(as_uuid=True), db.ForeignKey("templates.id"), primary_key=True, nullable=False)
+#     redact_personalisation = db.Column(db.Boolean, nullable=False, default=False)
+#     updated_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
+#     updated_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=False, index=True)
+#     updated_by = db.relationship("User")
 
-    # uselist=False as this is a one-to-one relationship
-    template = db.relationship("Template", uselist=False, backref=db.backref("template_redacted", uselist=False))
+#     # uselist=False as this is a one-to-one relationship
+#     template = db.relationship("Template", uselist=False, backref=db.backref("template_redacted", uselist=False))
 
 
 class TemplateHistory(TemplateBase):
@@ -783,11 +783,13 @@ class TemplateHistory(TemplateBase):
     service = db.relationship("Service")
     version = db.Column(db.Integer, primary_key=True, nullable=False)
 
-    @declared_attr
-    def template_redacted(cls):
-        return db.relationship(
-            "TemplateRedacted", foreign_keys=[cls.id], primaryjoin="TemplateRedacted.template_id == TemplateHistory.id"
-        )
+    # @declared_attr
+    # def template_redacted(cls):
+    #     return db.relationship(
+    #         "TemplateRedacted",
+    #         foreign_keys=[cls.id],
+    #         primaryjoin="TemplateRedacted.template_id == TemplateHistory.id"
+    #     )
 
     def get_link(self):
         return url_for("v2_template.get_template_by_id", template_id=self.id, version=self.version, _external=True)
