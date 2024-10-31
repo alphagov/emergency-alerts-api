@@ -9,7 +9,7 @@ from app.dao.dao_utils import VersionOptions, autocommit, version_class
 from app.dao.organisation_dao import dao_get_organisation_by_email_address
 from app.dao.service_user_dao import dao_get_service_user
 from app.dao.template_folder_dao import dao_get_valid_template_folders_by_id
-from app.models import (  # TemplateRedacted,
+from app.models import (
     BROADCAST_TYPE,
     CROWN_ORGANISATION_TYPES,
     EMAIL_TYPE,
@@ -116,7 +116,6 @@ def dao_archive_service(service_id):
     service = (
         Service.query.options(
             joinedload("templates"),
-            # joinedload("templates.template_redacted"),
             joinedload("api_keys"),
         )
         .filter(Service.id == service_id)
@@ -233,9 +232,6 @@ def dao_remove_user_from_service(service, user):
 def delete_service_and_all_associated_db_objects(service):
     def _delete(query):
         query.delete(synchronize_session=False)
-
-    # template_ids = db.session.query(Template.id).filter_by(service=service)
-    # _delete(TemplateRedacted.query.filter(TemplateRedacted.template_id.in_(template_ids)))
 
     _delete(InvitedUser.query.filter_by(service=service))
     _delete(Permission.query.filter_by(service=service))

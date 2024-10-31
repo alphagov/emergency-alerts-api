@@ -23,7 +23,6 @@ def upgrade():
     op.drop_table("service_data_retention")
     op.drop_table("service_email_reply_to")
 
-    # remove templates_service_letter_contact_id_fkey on templates and templates_history
     op.drop_column("templates", "service_letter_contact_id")
     op.drop_column("templates_history", "service_letter_contact_id")
     op.drop_table("service_letter_contacts")

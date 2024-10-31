@@ -1,18 +1,11 @@
 import uuid
 from datetime import datetime
 
-from flask import current_app
 from sqlalchemy import asc, desc
 
 from app import db
 from app.dao.dao_utils import VersionOptions, autocommit, version_class
-from app.dao.users_dao import get_user_by_id
-from app.models import (  # TemplateRedacted,
-    LETTER_TYPE,
-    SECOND_CLASS,
-    Template,
-    TemplateHistory,
-)
+from app.models import Template, TemplateHistory
 
 
 @autocommit
@@ -20,18 +13,6 @@ from app.models import (  # TemplateRedacted,
 def dao_create_template(template):
     template.id = uuid.uuid4()  # must be set now so version history model can use same id
     template.archived = False
-
-    # redacted_dict = {
-    #     "template": template,
-    #     "redact_personalisation": False,
-    # }
-    # if template.created_by:
-    #     redacted_dict.update({"updated_by": template.created_by})
-    # else:
-    #     redacted_dict.update({"updated_by_id": template.created_by_id})
-
-    # template.template_redacted = TemplateRedacted(**redacted_dict)
-
     db.session.add(template)
 
 
@@ -73,14 +54,6 @@ def dao_update_template_reply_to(template_id, reply_to):
     )
     db.session.add(history)
     return template
-
-
-# @autocommit
-# def dao_redact_template(template, user_id):
-#     template.template_redacted.redact_personalisation = True
-#     template.template_redacted.updated_at = datetime.utcnow()
-#     template.template_redacted.updated_by_id = user_id
-#     db.session.add(template.template_redacted)
 
 
 def dao_get_template_by_id_and_service_id(template_id, service_id, version=None):
@@ -130,36 +103,9 @@ def dao_get_template_versions(service_id, template_id):
     )
 
 
-def get_precompiled_letter_template(service_id):
-    template = Template.query.filter_by(service_id=service_id, template_type=LETTER_TYPE, hidden=True).first()
-    if template is not None:
-        return template
-
-    template = Template(
-        name="Pre-compiled PDF",
-        created_by=get_user_by_id(current_app.config["NOTIFY_USER_ID"]),
-        service_id=service_id,
-        template_type=LETTER_TYPE,
-        hidden=True,
-        subject="Pre-compiled PDF",
-        content="",
-        postage=SECOND_CLASS,
-    )
-
-    dao_create_template(template)
-
-    return template
-
-
 @autocommit
 def dao_purge_templates_for_service(service_id):
     templates = Template.query.filter_by(service_id=service_id).all()
-
-    # redacted_templates = TemplateRedacted.query.filter(
-    #     TemplateRedacted.template_id.in_([x.id for x in templates])
-    # ).all()
-    # for redacted_template in redacted_templates:
-    #     db.session.delete(redacted_template)
 
     for template in templates:
         db.session.delete(template)
