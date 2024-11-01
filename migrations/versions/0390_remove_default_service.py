@@ -102,21 +102,21 @@ def upgrade():
         {"id": service_id},
     )
 
-    # conn.execute(
-    #     text(
-    #         """
-    #         DELETE FROM
-    #             template_redacted
-    #         WHERE
-    #             template_id IN (
-    #                 SELECT template_id
-    #                 FROM templates
-    #                 WHERE service_id = :id
-    #             )
-    #     """
-    #     ),
-    #     {"id": service_id},
-    # )
+    conn.execute(
+        text(
+            """
+            DELETE FROM
+                template_redacted
+            WHERE
+                template_id IN (
+                    SELECT template_id
+                    FROM templates
+                    WHERE service_id = :id
+                )
+        """
+        ),
+        {"id": service_id},
+    )
 
     conn.execute(
         text(
