@@ -1,6 +1,6 @@
 from flask import Blueprint
 
-from app.dao.common_passwords_dao import get_common_password_by_password
+from app.dao.common_passwords_dao import dao_get_common_password_by_password
 from app.errors import register_errors
 
 common_passwords_blueprint = Blueprint(
@@ -14,6 +14,6 @@ register_errors(common_passwords_blueprint)
 
 @common_passwords_blueprint.route("")
 def is_password_common(password):
-    data = get_common_password_by_password(password)
+    data = dao_get_common_password_by_password(password)
     return bool(data)
     # returns whether or not password is common
