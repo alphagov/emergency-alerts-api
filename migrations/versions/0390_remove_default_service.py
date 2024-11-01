@@ -18,17 +18,17 @@ service_id = "d6aa2c68-a2d9-4437-ab19-3ae8eb202553"
 def upgrade():
     conn = op.get_bind()
 
-    # conn.execute(
-    #     text(
-    #         """
-    #         DELETE FROM
-    #             annual_billing
-    #         WHERE
-    #             service_id = :id
-    #     """
-    #     ),
-    #     {"id": service_id},
-    # )
+    conn.execute(
+        text(
+            """
+            DELETE FROM
+                annual_billing
+            WHERE
+                service_id = :id
+        """
+        ),
+        {"id": service_id},
+    )
 
     conn.execute(
         text(

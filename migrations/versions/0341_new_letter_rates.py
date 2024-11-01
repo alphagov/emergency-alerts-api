@@ -34,8 +34,8 @@ def get_new_rate(sheet_count, post_class):
 
 
 def upgrade():
-    # conn = op.get_bind()
-    # conn.execute(text("UPDATE letter_rates SET end_date = :start WHERE end_date IS NULL"), start=CHANGEOVER_DATE)
+    conn = op.get_bind()
+    conn.execute(text("UPDATE letter_rates SET end_date = :start WHERE end_date IS NULL"), start=CHANGEOVER_DATE)
 
     # op.bulk_insert(
     #     LetterRate.__table__,
@@ -54,12 +54,10 @@ def upgrade():
     #         )
     #     ],
     # )
-    pass
 
 
 def downgrade():
     # Make sure you've thought about billing implications etc before downgrading!
-    # conn = op.get_bind()
-    # conn.execute(text("DELETE FROM letter_rates WHERE start_date = :start"), start=CHANGEOVER_DATE)
-    # conn.execute(text("UPDATE letter_rates SET end_date = NULL WHERE end_date = :start"), start=CHANGEOVER_DATE)
-    pass
+    conn = op.get_bind()
+    conn.execute(text("DELETE FROM letter_rates WHERE start_date = :start"), start=CHANGEOVER_DATE)
+    conn.execute(text("UPDATE letter_rates SET end_date = NULL WHERE end_date = :start"), start=CHANGEOVER_DATE)

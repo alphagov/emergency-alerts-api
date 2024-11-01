@@ -29,7 +29,6 @@ def upgrade():
 
     op.drop_table("service_letter_contacts")
     op.drop_table("service_whitelist")
-    pass
 
 
 def downgrade():

@@ -22,14 +22,14 @@ start_date = datetime(2020, 7, 1, 0, 0)
 
 
 def upgrade():
-    # """
-    # Insert these letter rates for a post_class of both `europe` and `rest-of-world`:
-    # 1 sheet - £0.84
-    # 2 sheets - £0.92
-    # 3 sheets - £1.00
-    # 4 sheets - £1.08
-    # 5 sheets - £1.16
-    # """
+    """
+    Insert these letter rates for a post_class of both `europe` and `rest-of-world`:
+    1 sheet - £0.84
+    2 sheets - £0.92
+    3 sheets - £1.00
+    4 sheets - £1.08
+    5 sheets - £1.16
+    """
     # op.bulk_insert(
     #     LetterRate.__table__,
     #     [
@@ -51,6 +51,6 @@ def upgrade():
 
 
 def downgrade():
-    # conn = op.get_bind()
-    # conn.execute(text("DELETE FROM letter_rates WHERE start_date = :start"), start=start_date)
+    conn = op.get_bind()
+    conn.execute(text("DELETE FROM letter_rates WHERE start_date = :start"), start=start_date)
     pass
