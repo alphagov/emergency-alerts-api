@@ -23,12 +23,12 @@ def upgrade():
     op.drop_table("service_data_retention")
     op.drop_table("service_email_reply_to")
 
+    op.drop_table("template_redacted")
     op.drop_column("templates", "service_letter_contact_id")
     op.drop_column("templates_history", "service_letter_contact_id")
-    op.drop_table("service_letter_contacts")
 
-    op.drop_table("service_whitelist")
-    op.drop_table("template_redacted")
+    op.drop_table("service_letter_contacts")
+    op.drop_table("service_whitelist")    
     pass
 
 
