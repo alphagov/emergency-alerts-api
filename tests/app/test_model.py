@@ -1,55 +1,12 @@
 import pytest
 
-from app.models import (
-    EMAIL_TYPE,
-    MOBILE_TYPE,
-    PRECOMPILED_TEMPLATE_NAME,
-    ServiceGuestList,
-)
-from tests.app.db import (
-    create_letter_contact,
-    create_reply_to_email,
-    create_template_folder,
-)
-
-
-@pytest.mark.parametrize("mobile_number", ["07700 900678", "+44 7700 900678"])
-def test_should_build_service_guest_list_from_mobile_number(mobile_number):
-    service_guest_list = ServiceGuestList.from_string("service_id", MOBILE_TYPE, mobile_number)
-
-    assert service_guest_list.recipient == mobile_number
-
-
-@pytest.mark.parametrize("email_address", ["test@example.com"])
-def test_should_build_service_guest_list_from_email_address(email_address):
-    service_guest_list = ServiceGuestList.from_string("service_id", EMAIL_TYPE, email_address)
-
-    assert service_guest_list.recipient == email_address
-
-
-@pytest.mark.parametrize(
-    "contact, recipient_type", [("", None), ("07700dsadsad", MOBILE_TYPE), ("gmail.com", EMAIL_TYPE)]
-)
-def test_should_not_build_service_guest_list_from_invalid_contact(recipient_type, contact):
-    with pytest.raises(ValueError):
-        ServiceGuestList.from_string("service_id", recipient_type, contact)
+from app.models import PRECOMPILED_TEMPLATE_NAME
+from tests.app.db import create_template_folder
 
 
 def test_email_notification_serializes_with_subject(client, sample_email_template):
     res = sample_email_template.serialize_for_v2()
     assert res["subject"] == "Email Subject"
-
-
-def test_service_get_default_reply_to_email_address(sample_service):
-    create_reply_to_email(service=sample_service, email_address="default@email.com")
-
-    assert sample_service.get_default_reply_to_email_address() == "default@email.com"
-
-
-def test_service_get_default_contact_letter(sample_service):
-    create_letter_contact(service=sample_service, contact_block="London,\nNW1A 1AA")
-
-    assert sample_service.get_default_letter_contact() == "London,\nNW1A 1AA"
 
 
 def test_is_precompiled_letter_false(sample_letter_template):

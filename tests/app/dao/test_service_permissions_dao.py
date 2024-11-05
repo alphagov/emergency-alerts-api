@@ -4,13 +4,7 @@ from app.dao.service_permissions_dao import (
     dao_fetch_service_permissions,
     dao_remove_service_permission,
 )
-from app.models import (
-    EMAIL_TYPE,
-    INBOUND_SMS_TYPE,
-    INTERNATIONAL_SMS_TYPE,
-    LETTER_TYPE,
-    SMS_TYPE,
-)
+from app.models import EMAIL_TYPE, INTERNATIONAL_SMS_TYPE, LETTER_TYPE, SMS_TYPE
 from tests.app.db import create_service, create_service_permission
 
 
@@ -41,11 +35,11 @@ def test_fetch_service_permissions_gets_service_permissions(service_without_perm
 
 def test_remove_service_permission(service_without_permissions):
     create_service_permission(service_id=service_without_permissions.id, permission=EMAIL_TYPE)
-    create_service_permission(service_id=service_without_permissions.id, permission=INBOUND_SMS_TYPE)
+    create_service_permission(service_id=service_without_permissions.id, permission=SMS_TYPE)
 
     dao_remove_service_permission(service_without_permissions.id, EMAIL_TYPE)
 
     permissions = dao_fetch_service_permissions(service_without_permissions.id)
     assert len(permissions) == 1
-    assert permissions[0].permission == INBOUND_SMS_TYPE
+    assert permissions[0].permission == SMS_TYPE
     assert permissions[0].service_id == service_without_permissions.id

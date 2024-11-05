@@ -12,7 +12,7 @@ from datetime import datetime
 from alembic import op
 from sqlalchemy.sql import text
 
-from app.models import LetterRate
+# from app.models import LetterRate
 
 revision = "0367_add_reach"
 down_revision = "0366_letter_rates_2022"

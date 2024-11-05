@@ -1,7 +1,6 @@
 from flask import Blueprint, abort, current_app, jsonify, request
 from sqlalchemy.exc import IntegrityError
 
-from app.dao.annual_billing_dao import set_default_free_allowance_for_service
 from app.dao.dao_utils import transaction
 from app.dao.invited_org_user_dao import get_invited_org_users_for_organisation
 from app.dao.organisation_dao import (
@@ -134,7 +133,6 @@ def link_service_to_organisation(organisation_id):
 
     with transaction():
         dao_add_service_to_organisation(service, organisation_id)
-        set_default_free_allowance_for_service(service, year_start=None)
 
     return "", 204
 

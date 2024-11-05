@@ -1,7 +1,4 @@
-from datetime import datetime
-
 import pytest
-from freezegun import freeze_time
 from sqlalchemy.orm.exc import NoResultFound
 
 from app import db
@@ -12,21 +9,10 @@ from app.dao.templates_dao import (
     dao_get_template_by_id_and_service_id,
     dao_get_template_versions,
     dao_purge_templates_for_service,
-    dao_redact_template,
     dao_update_template,
-    dao_update_template_reply_to,
 )
-from app.models import (
-    Template,
-    TemplateHistory,
-    TemplateRedacted,
-    template_folder_map,
-)
-from tests.app.db import (
-    create_letter_contact,
-    create_template,
-    create_template_folder,
-)
+from app.models import Template, TemplateHistory, template_folder_map
+from tests.app.db import create_template, create_template_folder
 
 
 @pytest.mark.parametrize(
@@ -58,35 +44,6 @@ def test_create_template(sample_service, sample_user, template_type, subject):
     assert dao_get_all_templates_for_service(sample_service.id)[0].process_type == "normal"
 
 
-def test_create_template_creates_redact_entry(sample_service):
-    assert TemplateRedacted.query.count() == 0
-
-    template = create_template(sample_service)
-
-    redacted = TemplateRedacted.query.one()
-    assert redacted.template_id == template.id
-    assert redacted.redact_personalisation is False
-    assert redacted.updated_by_id == sample_service.created_by_id
-
-
-def test_create_template_with_reply_to(sample_service, sample_user):
-    letter_contact = create_letter_contact(sample_service, "Edinburgh, ED1 1AA")
-
-    data = {
-        "name": "Sample Template",
-        "template_type": "letter",
-        "content": "Template content",
-        "service": sample_service,
-        "created_by": sample_user,
-        "reply_to": letter_contact.id,
-        "postage": "second",
-    }
-    template = Template(**data)
-    dao_create_template(template)
-
-    assert dao_get_all_templates_for_service(sample_service.id)[0].reply_to == letter_contact.id
-
-
 def test_update_template(sample_service, sample_user):
     data = {
         "name": "Sample Template",
@@ -103,101 +60,6 @@ def test_update_template(sample_service, sample_user):
     created.name = "new name"
     dao_update_template(created)
     assert dao_get_all_templates_for_service(sample_service.id)[0].name == "new name"
-
-
-def test_dao_update_template_reply_to_none_to_some(sample_service, sample_user):
-    letter_contact = create_letter_contact(sample_service, "Edinburgh, ED1 1AA")
-
-    data = {
-        "name": "Sample Template",
-        "template_type": "letter",
-        "content": "Template content",
-        "service": sample_service,
-        "created_by": sample_user,
-        "postage": "second",
-    }
-    template = Template(**data)
-    dao_create_template(template)
-    created = Template.query.get(template.id)
-    assert created.reply_to is None
-    assert created.service_letter_contact_id is None
-
-    dao_update_template_reply_to(template_id=template.id, reply_to=letter_contact.id)
-
-    updated = Template.query.get(template.id)
-    assert updated.reply_to == letter_contact.id
-    assert updated.version == 2
-    assert updated.updated_at
-
-    template_history = TemplateHistory.query.filter_by(id=created.id, version=2).one()
-    assert template_history.service_letter_contact_id == letter_contact.id
-    assert template_history.updated_at == updated.updated_at
-
-
-def test_dao_update_template_reply_to_some_to_some(sample_service, sample_user):
-    letter_contact = create_letter_contact(sample_service, "Edinburgh, ED1 1AA")
-    letter_contact_2 = create_letter_contact(sample_service, "London, N1 1DE")
-
-    data = {
-        "name": "Sample Template",
-        "template_type": "letter",
-        "content": "Template content",
-        "service": sample_service,
-        "created_by": sample_user,
-        "service_letter_contact_id": letter_contact.id,
-        "postage": "second",
-    }
-    template = Template(**data)
-    dao_create_template(template)
-    created = Template.query.get(template.id)
-    dao_update_template_reply_to(template_id=created.id, reply_to=letter_contact_2.id)
-    updated = Template.query.get(template.id)
-    assert updated.reply_to == letter_contact_2.id
-    assert updated.version == 2
-    assert updated.updated_at
-
-    updated_history = TemplateHistory.query.filter_by(id=created.id, version=2).one()
-    assert updated_history.service_letter_contact_id == letter_contact_2.id
-    assert updated_history.updated_at == updated_history.updated_at
-
-
-def test_dao_update_template_reply_to_some_to_none(sample_service, sample_user):
-    letter_contact = create_letter_contact(sample_service, "Edinburgh, ED1 1AA")
-    data = {
-        "name": "Sample Template",
-        "template_type": "letter",
-        "content": "Template content",
-        "service": sample_service,
-        "created_by": sample_user,
-        "service_letter_contact_id": letter_contact.id,
-        "postage": "second",
-    }
-    template = Template(**data)
-    dao_create_template(template)
-    created = Template.query.get(template.id)
-    dao_update_template_reply_to(template_id=created.id, reply_to=None)
-    updated = Template.query.get(template.id)
-    assert updated.reply_to is None
-    assert updated.version == 2
-    assert updated.updated_at
-
-    history = TemplateHistory.query.filter_by(id=created.id, version=2).one()
-    assert history.service_letter_contact_id is None
-    assert history.updated_at == updated.updated_at
-
-
-def test_redact_template(sample_template):
-    redacted = TemplateRedacted.query.one()
-    assert redacted.template_id == sample_template.id
-    assert redacted.redact_personalisation is False
-
-    time = datetime.now()
-    with freeze_time(time):
-        dao_redact_template(sample_template, sample_template.created_by_id)
-
-    assert redacted.redact_personalisation is True
-    assert redacted.updated_at == time
-    assert redacted.updated_by_id == sample_template.created_by_id
 
 
 def test_get_all_templates_for_service(service_factory):
@@ -289,7 +151,6 @@ def test_get_template_by_id_and_service(sample_service):
     assert template.id == sample_template.id
     assert template.name == "Test Template"
     assert template.version == sample_template.version
-    assert not template.redact_personalisation
 
 
 def test_get_template_by_id_and_service_returns_none_for_hidden_templates(sample_service):
@@ -381,15 +242,6 @@ def test_get_template_history_version(sample_user, sample_service, sample_templa
     assert old_template.content == old_content
 
 
-def test_can_get_template_then_redacted_returns_right_values(sample_template):
-    template = dao_get_template_by_id_and_service_id(
-        template_id=sample_template.id, service_id=sample_template.service_id
-    )
-    assert not template.redact_personalisation
-    dao_redact_template(template=template, user_id=sample_template.created_by_id)
-    assert template.redact_personalisation
-
-
 def test_get_template_versions(sample_template):
     original_content = sample_template.content
     sample_template.content = "new version"
@@ -449,7 +301,6 @@ def test_purge_templates_for_service(sample_user, sample_service):
     folder_1 = create_template_folder(sample_service, name="folder_1", users=[service_user])
 
     assert Template.query.count() == 2
-    assert TemplateRedacted.query.count() == 2
     assert db.session.query(template_folder_map).count() == 1
     assert TemplateHistory.query.count() == 2
     assert len(dao_get_all_templates_for_service(sample_service.id)) == 2
@@ -457,7 +308,6 @@ def test_purge_templates_for_service(sample_user, sample_service):
     dao_purge_templates_for_service(sample_service.id)
 
     assert Template.query.count() == 0
-    assert TemplateRedacted.query.count() == 0
     assert db.session.query(template_folder_map).count() == 0
     assert TemplateHistory.query.count() == 0
     assert len(dao_get_all_templates_for_service(sample_service.id)) == 0

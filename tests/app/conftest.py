@@ -9,7 +9,6 @@ import requests_mock
 from flask import current_app, url_for
 
 from app import db
-from app.clients.sms.firetext import FiretextClient
 from app.dao.api_key_dao import save_model_api_key
 from app.dao.broadcast_service_dao import (
     insert_or_update_service_broadcast_settings,
@@ -37,8 +36,6 @@ from app.models import (
     Organisation,
     Permission,
     Service,
-    ServiceEmailReplyTo,
-    ServiceGuestList,
     Template,
     TemplateHistory,
 )
@@ -49,7 +46,6 @@ from tests import (
 from tests.app.db import (
     create_api_key,
     create_invited_org_user,
-    create_letter_contact,
     create_service,
     create_template,
     create_user,
@@ -212,12 +208,6 @@ def _sample_service_full_permissions(notify_db_session):
         check_if_service_exists=True,
     )
     return service
-
-
-@pytest.fixture(scope="function", name="sample_service_custom_letter_contact_block")
-def _sample_service_custom_letter_contact_block(sample_service):
-    create_letter_contact(sample_service, contact_block="((contact block))")
-    return sample_service
 
 
 @pytest.fixture(scope="function")
@@ -385,22 +375,6 @@ def fake_uuid():
 
 
 @pytest.fixture(scope="function")
-def mock_firetext_client(mocker):
-    client = FiretextClient()
-    statsd_client = mocker.Mock()
-    current_app = mocker.Mock(
-        config={
-            "FIRETEXT_URL": "https://example.com/firetext",
-            "FIRETEXT_API_KEY": "foo",
-            "FIRETEXT_INTERNATIONAL_API_KEY": "international",
-            "FROM_NUMBER": "bar",
-        }
-    )
-    client.init_app(current_app, statsd_client)
-    return client
-
-
-@pytest.fixture(scope="function")
 def sms_code_template(notify_service):
     return create_custom_template(
         service=notify_service,
@@ -485,18 +459,6 @@ def password_reset_email_template(notify_service):
 
 
 @pytest.fixture(scope="function")
-def verify_reply_to_address_email_template(notify_service):
-    return create_custom_template(
-        service=notify_service,
-        user=notify_service.users[0],
-        template_config_name="REPLY_TO_EMAIL_ADDRESS_VERIFICATION_TEMPLATE_ID",
-        content="Hi,This address has been provided as the reply-to email address so we are verifying if it's working",
-        subject="Your GOV.UK Notify reply-to email address",
-        template_type="email",
-    )
-
-
-@pytest.fixture(scope="function")
 def team_member_email_edit_template(notify_service):
     return create_custom_template(
         service=notify_service,
@@ -556,33 +518,6 @@ def create_custom_template(service, user, template_config_name, template_type, c
     return template
 
 
-@pytest.fixture(scope="function")
-def letter_volumes_email_template(notify_service):
-    email_template_content = "\n".join(
-        [
-            "((total_volume)) letters (((total_sheets)) sheets) sent via Notify are coming in today''s batch. These include: ",  # noqa
-            "",
-            "((first_class_volume)) first class letters (((first_class_sheets)) sheets).",
-            "((second_class_volume)) second class letters (((second_class_sheets)) sheets).",
-            "((international_volume)) international letters (((international_sheets)) sheets).",
-            "",
-            "Thanks",
-            "",
-            "GOV.​UK Notify team",
-            "https://www.gov.uk/notify",
-        ]
-    )
-
-    return create_custom_template(
-        service=notify_service,
-        user=notify_service.users[0],
-        template_config_name="LETTERS_VOLUME_EMAIL_TEMPLATE_ID",
-        content=email_template_content,
-        subject="Notify letter volume for ((date)): ((total_volume)) letters, ((total_sheets)) sheets",
-        template_type="email",
-    )
-
-
 @pytest.fixture
 def notify_service(notify_db_session, sample_user):
     service = Service.query.get(current_app.config["NOTIFY_SERVICE_ID"])
@@ -596,28 +531,7 @@ def notify_service(notify_db_session, sample_user):
             prefix_sms=False,
         )
         dao_create_service(service=service, service_id=current_app.config["NOTIFY_SERVICE_ID"], user=sample_user)
-
-        data = {
-            "service": service,
-            "email_address": "notify@gov.uk",
-            "is_default": True,
-        }
-        reply_to = ServiceEmailReplyTo(**data)
-
-        notify_db_session.add(reply_to)
-        notify_db_session.commit()
-
     return service
-
-
-@pytest.fixture(scope="function")
-def sample_service_guest_list(notify_db_session):
-    service = create_service(check_if_service_exists=True)
-    guest_list_user = ServiceGuestList.from_string(service.id, EMAIL_TYPE, "guest_list_user@digital.gov.uk")
-
-    notify_db_session.add(guest_list_user)
-    notify_db_session.commit()
-    return guest_list_user
 
 
 @pytest.fixture

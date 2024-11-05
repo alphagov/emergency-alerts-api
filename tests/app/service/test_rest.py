@@ -5,7 +5,6 @@ from datetime import datetime, timedelta
 import pytest
 from flask import current_app, url_for
 from freezegun import freeze_time
-from sqlalchemy.exc import SQLAlchemyError
 
 from app.dao.organisation_dao import dao_add_service_to_organisation
 from app.dao.service_user_dao import dao_get_service_user
@@ -18,19 +17,15 @@ from app.models import (
     BROADCAST_TYPE,
     EMAIL_AUTH_TYPE,
     EMAIL_TYPE,
-    INBOUND_SMS_TYPE,
     INTERNATIONAL_LETTERS,
     INTERNATIONAL_SMS_TYPE,
     LETTER_TYPE,
     SERVICE_PERMISSION_TYPES,
     SMS_TYPE,
     UPLOAD_LETTERS,
-    AnnualBilling,
     Permission,
     Service,
     ServiceBroadcastSettings,
-    ServiceEmailReplyTo,
-    ServiceLetterContact,
     ServicePermission,
     User,
 )
@@ -38,11 +33,8 @@ from tests import create_admin_authorization_header
 from tests.app.db import (
     create_api_key,
     create_domain,
-    create_letter_contact,
     create_organisation,
-    create_reply_to_email,
     create_service,
-    create_template,
     create_template_folder,
     create_user,
 )
@@ -261,7 +253,6 @@ def test_get_service_by_id_should_404_if_no_service(admin_request, notify_db_ses
 
 def test_get_service_by_id_and_user(client, sample_service, sample_user):
     sample_service.reply_to_email = "something@service.com"
-    create_reply_to_email(service=sample_service, email_address="new@service.com")
     auth_header = create_admin_authorization_header()
     resp = client.get("/service/{}?user_id={}".format(sample_service.id, sample_user.id), headers=[auth_header])
     assert resp.status_code == 200
@@ -382,45 +373,6 @@ def test_create_service_with_domain_sets_organisation(
         assert json_resp["data"]["organisation"] == str(org.id)
     else:
         assert json_resp["data"]["organisation"] is None
-
-
-def test_create_service_should_create_annual_billing_for_service(admin_request, sample_user):
-    data = {
-        "name": "created service",
-        "user_id": str(sample_user.id),
-        "message_limit": 1000,
-        "restricted": False,
-        "active": False,
-        "email_from": "created.service",
-        "created_by": str(sample_user.id),
-    }
-    assert len(AnnualBilling.query.all()) == 0
-    admin_request.post("service.create_service", _data=data, _expected_status=201)
-
-    annual_billing = AnnualBilling.query.all()
-    assert len(annual_billing) == 1
-
-
-def test_create_service_should_raise_exception_and_not_create_service_if_annual_billing_query_fails(
-    admin_request, sample_user, mocker
-):
-    mocker.patch("app.service.rest.set_default_free_allowance_for_service", side_effect=SQLAlchemyError)
-    data = {
-        "name": "created service",
-        "user_id": str(sample_user.id),
-        "message_limit": 1000,
-        "restricted": False,
-        "active": False,
-        "email_from": "created.service",
-        "created_by": str(sample_user.id),
-    }
-    assert len(AnnualBilling.query.all()) == 0
-    with pytest.raises(expected_exception=SQLAlchemyError):
-        admin_request.post("service.create_service", _data=data)
-
-    annual_billing = AnnualBilling.query.all()
-    assert len(annual_billing) == 0
-    assert len(Service.query.filter(Service.name == "created service").all()) == 0
 
 
 def test_should_not_create_service_with_missing_user_id_field(notify_api, fake_uuid):
@@ -814,12 +766,6 @@ def test_update_service_allows_only_lowercase_digits_and_fullstops_in_email_from
 @pytest.mark.parametrize(
     "permission_to_add",
     [
-        (EMAIL_TYPE),
-        (SMS_TYPE),
-        (INTERNATIONAL_SMS_TYPE),
-        (LETTER_TYPE),
-        (INBOUND_SMS_TYPE),
-        (EMAIL_AUTH_TYPE),
         (BROADCAST_TYPE),  # TODO: remove this ability to set broadcast permission this way
     ],
 )
@@ -1555,410 +1501,6 @@ def test_update_service_does_not_call_send_notification_when_restricted_not_chan
 
     assert resp.status_code == 200
     assert not send_notification_mock.called
-
-
-def test_get_email_reply_to_addresses_when_there_are_no_reply_to_email_addresses(client, sample_service):
-    response = client.get(
-        "/service/{}/email-reply-to".format(sample_service.id), headers=[create_admin_authorization_header()]
-    )
-
-    assert json.loads(response.get_data(as_text=True)) == []
-    assert response.status_code == 200
-
-
-def test_get_email_reply_to_addresses_with_one_email_address(client, notify_db_session):
-    service = create_service()
-    create_reply_to_email(service, "test@mail.com")
-
-    response = client.get(
-        "/service/{}/email-reply-to".format(service.id), headers=[create_admin_authorization_header()]
-    )
-    json_response = json.loads(response.get_data(as_text=True))
-
-    assert len(json_response) == 1
-    assert json_response[0]["email_address"] == "test@mail.com"
-    assert json_response[0]["is_default"]
-    assert json_response[0]["created_at"]
-    assert not json_response[0]["updated_at"]
-    assert response.status_code == 200
-
-
-def test_get_email_reply_to_addresses_with_multiple_email_addresses(client, notify_db_session):
-    service = create_service()
-    reply_to_a = create_reply_to_email(service, "test_a@mail.com")
-    reply_to_b = create_reply_to_email(service, "test_b@mail.com", False)
-
-    response = client.get(
-        "/service/{}/email-reply-to".format(service.id), headers=[create_admin_authorization_header()]
-    )
-    json_response = json.loads(response.get_data(as_text=True))
-
-    assert len(json_response) == 2
-    assert response.status_code == 200
-
-    assert json_response[0]["id"] == str(reply_to_a.id)
-    assert json_response[0]["service_id"] == str(reply_to_a.service_id)
-    assert json_response[0]["email_address"] == "test_a@mail.com"
-    assert json_response[0]["is_default"]
-    assert json_response[0]["created_at"]
-    assert not json_response[0]["updated_at"]
-
-    assert json_response[1]["id"] == str(reply_to_b.id)
-    assert json_response[1]["service_id"] == str(reply_to_b.service_id)
-    assert json_response[1]["email_address"] == "test_b@mail.com"
-    assert not json_response[1]["is_default"]
-    assert json_response[1]["created_at"]
-    assert not json_response[1]["updated_at"]
-
-
-def test_add_service_reply_to_email_address(admin_request, sample_service):
-    data = {"email_address": "new@reply.com", "is_default": True}
-    response = admin_request.post(
-        "service.add_service_reply_to_email_address", service_id=sample_service.id, _data=data, _expected_status=201
-    )
-
-    results = ServiceEmailReplyTo.query.all()
-    assert len(results) == 1
-    assert response["data"] == results[0].serialize()
-
-
-def test_add_service_reply_to_email_address_doesnt_allow_duplicates(admin_request, notify_db_session, mocker):
-    data = {"email_address": "reply-here@example.gov.uk", "is_default": True}
-    service = create_service()
-    create_reply_to_email(service, "reply-here@example.gov.uk")
-    response = admin_request.post(
-        "service.add_service_reply_to_email_address", service_id=service.id, _data=data, _expected_status=409
-    )
-    assert response["message"] == "Your service already uses ‘reply-here@example.gov.uk’ as an email reply-to address."
-
-
-def test_add_service_reply_to_email_address_can_add_multiple_addresses(admin_request, sample_service):
-    data = {"email_address": "first@reply.com", "is_default": True}
-    admin_request.post(
-        "service.add_service_reply_to_email_address", service_id=sample_service.id, _data=data, _expected_status=201
-    )
-    second = {"email_address": "second@reply.com", "is_default": True}
-    response = admin_request.post(
-        "service.add_service_reply_to_email_address", service_id=sample_service.id, _data=second, _expected_status=201
-    )
-    results = ServiceEmailReplyTo.query.all()
-    assert len(results) == 2
-    default = [x for x in results if x.is_default]
-    assert response["data"] == default[0].serialize()
-    first_reply_to_not_default = [x for x in results if not x.is_default]
-    assert first_reply_to_not_default[0].email_address == "first@reply.com"
-
-
-def test_add_service_reply_to_email_address_raise_exception_if_no_default(admin_request, sample_service):
-    data = {"email_address": "first@reply.com", "is_default": False}
-    response = admin_request.post(
-        "service.add_service_reply_to_email_address", service_id=sample_service.id, _data=data, _expected_status=400
-    )
-    assert response["message"] == "You must have at least one reply to email address as the default."
-
-
-def test_add_service_reply_to_email_address_404s_when_invalid_service_id(admin_request, notify_db_session):
-    response = admin_request.post(
-        "service.add_service_reply_to_email_address", service_id=uuid.uuid4(), _data={}, _expected_status=404
-    )
-
-    assert response["result"] == "error"
-    assert response["message"] == "No result found"
-
-
-def test_update_service_reply_to_email_address(admin_request, sample_service):
-    original_reply_to = create_reply_to_email(service=sample_service, email_address="some@email.com")
-    data = {"email_address": "changed@reply.com", "is_default": True}
-    response = admin_request.post(
-        "service.update_service_reply_to_email_address",
-        service_id=sample_service.id,
-        reply_to_email_id=original_reply_to.id,
-        _data=data,
-        _expected_status=200,
-    )
-
-    results = ServiceEmailReplyTo.query.all()
-    assert len(results) == 1
-    assert response["data"] == results[0].serialize()
-
-
-def test_update_service_reply_to_email_address_returns_400_when_no_default(admin_request, sample_service):
-    original_reply_to = create_reply_to_email(service=sample_service, email_address="some@email.com")
-    data = {"email_address": "changed@reply.com", "is_default": False}
-    response = admin_request.post(
-        "service.update_service_reply_to_email_address",
-        service_id=sample_service.id,
-        reply_to_email_id=original_reply_to.id,
-        _data=data,
-        _expected_status=400,
-    )
-
-    assert response["message"] == "You must have at least one reply to email address as the default."
-
-
-def test_update_service_reply_to_email_address_404s_when_invalid_service_id(admin_request, notify_db_session):
-    response = admin_request.post(
-        "service.update_service_reply_to_email_address",
-        service_id=uuid.uuid4(),
-        reply_to_email_id=uuid.uuid4(),
-        _data={},
-        _expected_status=404,
-    )
-
-    assert response["result"] == "error"
-    assert response["message"] == "No result found"
-
-
-def test_delete_service_reply_to_email_address_archives_an_email_reply_to(
-    sample_service, admin_request, notify_db_session
-):
-    create_reply_to_email(service=sample_service, email_address="some@email.com")
-    reply_to = create_reply_to_email(service=sample_service, email_address="some@email.com", is_default=False)
-
-    admin_request.post(
-        "service.delete_service_reply_to_email_address",
-        service_id=sample_service.id,
-        reply_to_email_id=reply_to.id,
-    )
-    assert reply_to.archived is True
-
-
-def test_delete_service_reply_to_email_address_returns_400_if_archiving_default_reply_to(
-    admin_request, notify_db_session, sample_service
-):
-    reply_to = create_reply_to_email(service=sample_service, email_address="some@email.com")
-
-    response = admin_request.post(
-        "service.delete_service_reply_to_email_address",
-        service_id=sample_service.id,
-        reply_to_email_id=reply_to.id,
-        _expected_status=400,
-    )
-
-    assert response == {"message": "You cannot delete a default email reply to address", "result": "error"}
-    assert reply_to.archived is False
-
-
-def test_get_email_reply_to_address(client, notify_db_session):
-    service = create_service()
-    reply_to = create_reply_to_email(service, "test_a@mail.com")
-
-    response = client.get(
-        "/service/{}/email-reply-to/{}".format(service.id, reply_to.id),
-        headers=[("Content-Type", "application/json"), create_admin_authorization_header()],
-    )
-
-    assert response.status_code == 200
-    assert json.loads(response.get_data(as_text=True)) == reply_to.serialize()
-
-
-def test_get_letter_contacts_when_there_are_no_letter_contacts(client, sample_service):
-    response = client.get(
-        "/service/{}/letter-contact".format(sample_service.id), headers=[create_admin_authorization_header()]
-    )
-
-    assert json.loads(response.get_data(as_text=True)) == []
-    assert response.status_code == 200
-
-
-def test_get_letter_contacts_with_one_letter_contact(client, notify_db_session):
-    service = create_service()
-    create_letter_contact(service, "Aberdeen, AB23 1XH")
-
-    response = client.get(
-        "/service/{}/letter-contact".format(service.id), headers=[create_admin_authorization_header()]
-    )
-    json_response = json.loads(response.get_data(as_text=True))
-
-    assert len(json_response) == 1
-    assert json_response[0]["contact_block"] == "Aberdeen, AB23 1XH"
-    assert json_response[0]["is_default"]
-    assert json_response[0]["created_at"]
-    assert not json_response[0]["updated_at"]
-    assert response.status_code == 200
-
-
-def test_get_letter_contacts_with_multiple_letter_contacts(client, notify_db_session):
-    service = create_service()
-    letter_contact_a = create_letter_contact(service, "Aberdeen, AB23 1XH")
-    letter_contact_b = create_letter_contact(service, "London, E1 8QS", False)
-
-    response = client.get(
-        "/service/{}/letter-contact".format(service.id), headers=[create_admin_authorization_header()]
-    )
-    json_response = json.loads(response.get_data(as_text=True))
-
-    assert len(json_response) == 2
-    assert response.status_code == 200
-
-    assert json_response[0]["id"] == str(letter_contact_a.id)
-    assert json_response[0]["service_id"] == str(letter_contact_a.service_id)
-    assert json_response[0]["contact_block"] == "Aberdeen, AB23 1XH"
-    assert json_response[0]["is_default"]
-    assert json_response[0]["created_at"]
-    assert not json_response[0]["updated_at"]
-
-    assert json_response[1]["id"] == str(letter_contact_b.id)
-    assert json_response[1]["service_id"] == str(letter_contact_b.service_id)
-    assert json_response[1]["contact_block"] == "London, E1 8QS"
-    assert not json_response[1]["is_default"]
-    assert json_response[1]["created_at"]
-    assert not json_response[1]["updated_at"]
-
-
-def test_get_letter_contact_by_id(client, notify_db_session):
-    service = create_service()
-    letter_contact = create_letter_contact(service, "London, E1 8QS")
-
-    response = client.get(
-        "/service/{}/letter-contact/{}".format(service.id, letter_contact.id),
-        headers=[("Content-Type", "application/json"), create_admin_authorization_header()],
-    )
-
-    assert response.status_code == 200
-    assert json.loads(response.get_data(as_text=True)) == letter_contact.serialize()
-
-
-def test_get_letter_contact_return_404_when_invalid_contact_id(client, notify_db_session):
-    service = create_service()
-
-    response = client.get(
-        "/service/{}/letter-contact/{}".format(service.id, "93d59f88-4aa1-453c-9900-f61e2fc8a2de"),
-        headers=[("Content-Type", "application/json"), create_admin_authorization_header()],
-    )
-
-    assert response.status_code == 404
-
-
-def test_add_service_contact_block(client, sample_service):
-    data = json.dumps({"contact_block": "London, E1 8QS", "is_default": True})
-    response = client.post(
-        "/service/{}/letter-contact".format(sample_service.id),
-        data=data,
-        headers=[("Content-Type", "application/json"), create_admin_authorization_header()],
-    )
-
-    assert response.status_code == 201
-    json_resp = json.loads(response.get_data(as_text=True))
-    results = ServiceLetterContact.query.all()
-    assert len(results) == 1
-    assert json_resp["data"] == results[0].serialize()
-
-
-def test_add_service_letter_contact_can_add_multiple_addresses(client, sample_service):
-    first = json.dumps({"contact_block": "London, E1 8QS", "is_default": True})
-    client.post(
-        "/service/{}/letter-contact".format(sample_service.id),
-        data=first,
-        headers=[("Content-Type", "application/json"), create_admin_authorization_header()],
-    )
-
-    second = json.dumps({"contact_block": "Aberdeen, AB23 1XH", "is_default": True})
-    response = client.post(
-        "/service/{}/letter-contact".format(sample_service.id),
-        data=second,
-        headers=[("Content-Type", "application/json"), create_admin_authorization_header()],
-    )
-    assert response.status_code == 201
-    json_resp = json.loads(response.get_data(as_text=True))
-    results = ServiceLetterContact.query.all()
-    assert len(results) == 2
-    default = [x for x in results if x.is_default]
-    assert json_resp["data"] == default[0].serialize()
-    first_letter_contact_not_default = [x for x in results if not x.is_default]
-    assert first_letter_contact_not_default[0].contact_block == "London, E1 8QS"
-
-
-def test_add_service_letter_contact_block_fine_if_no_default(client, sample_service):
-    data = json.dumps({"contact_block": "London, E1 8QS", "is_default": False})
-    response = client.post(
-        "/service/{}/letter-contact".format(sample_service.id),
-        data=data,
-        headers=[("Content-Type", "application/json"), create_admin_authorization_header()],
-    )
-    assert response.status_code == 201
-
-
-def test_add_service_letter_contact_block_404s_when_invalid_service_id(client, notify_db_session):
-    response = client.post(
-        "/service/{}/letter-contact".format(uuid.uuid4()),
-        data={},
-        headers=[("Content-Type", "application/json"), create_admin_authorization_header()],
-    )
-
-    assert response.status_code == 404
-    result = json.loads(response.get_data(as_text=True))
-    assert result["result"] == "error"
-    assert result["message"] == "No result found"
-
-
-def test_update_service_letter_contact(client, sample_service):
-    original_letter_contact = create_letter_contact(service=sample_service, contact_block="Aberdeen, AB23 1XH")
-    data = json.dumps({"contact_block": "London, E1 8QS", "is_default": True})
-    response = client.post(
-        "/service/{}/letter-contact/{}".format(sample_service.id, original_letter_contact.id),
-        data=data,
-        headers=[("Content-Type", "application/json"), create_admin_authorization_header()],
-    )
-
-    assert response.status_code == 200
-    json_resp = json.loads(response.get_data(as_text=True))
-    results = ServiceLetterContact.query.all()
-    assert len(results) == 1
-    assert json_resp["data"] == results[0].serialize()
-
-
-def test_update_service_letter_contact_returns_200_when_no_default(client, sample_service):
-    original_reply_to = create_letter_contact(service=sample_service, contact_block="Aberdeen, AB23 1XH")
-    data = json.dumps({"contact_block": "London, E1 8QS", "is_default": False})
-    response = client.post(
-        "/service/{}/letter-contact/{}".format(sample_service.id, original_reply_to.id),
-        data=data,
-        headers=[("Content-Type", "application/json"), create_admin_authorization_header()],
-    )
-    assert response.status_code == 200
-
-
-def test_update_service_letter_contact_returns_404_when_invalid_service_id(client, notify_db_session):
-    response = client.post(
-        "/service/{}/letter-contact/{}".format(uuid.uuid4(), uuid.uuid4()),
-        data={},
-        headers=[("Content-Type", "application/json"), create_admin_authorization_header()],
-    )
-
-    assert response.status_code == 404
-    result = json.loads(response.get_data(as_text=True))
-    assert result["result"] == "error"
-    assert result["message"] == "No result found"
-
-
-def test_delete_service_letter_contact_can_archive_letter_contact(admin_request, notify_db_session):
-    service = create_service()
-    create_letter_contact(service=service, contact_block="Edinburgh, ED1 1AA")
-    letter_contact = create_letter_contact(service=service, contact_block="Swansea, SN1 3CC", is_default=False)
-
-    admin_request.post(
-        "service.delete_service_letter_contact",
-        service_id=service.id,
-        letter_contact_id=letter_contact.id,
-    )
-
-    assert letter_contact.archived is True
-
-
-def test_delete_service_letter_contact_returns_200_if_archiving_template_default(admin_request, notify_db_session):
-    service = create_service()
-    create_letter_contact(service=service, contact_block="Edinburgh, ED1 1AA")
-    letter_contact = create_letter_contact(service=service, contact_block="Swansea, SN1 3CC", is_default=False)
-    create_template(service=service, template_type="letter", reply_to=letter_contact.id)
-
-    response = admin_request.post(
-        "service.delete_service_letter_contact",
-        service_id=service.id,
-        letter_contact_id=letter_contact.id,
-        _expected_status=200,
-    )
-    assert response["data"]["archived"] is True
 
 
 def test_get_organisation_for_service_id(admin_request, sample_service, sample_organisation):

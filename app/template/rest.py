@@ -1,12 +1,9 @@
-import base64
-
 from emergency_alerts_utils import SMS_CHAR_COUNT_LIMIT
 from emergency_alerts_utils.template import (
     BroadcastMessageTemplate,
     SMSMessageTemplate,
 )
-from flask import Blueprint, current_app, jsonify, request
-from requests import post as requests_post
+from flask import Blueprint, jsonify, request
 from sqlalchemy.orm.exc import NoResultFound
 
 from app.dao.services_dao import dao_fetch_service_by_id
@@ -20,9 +17,7 @@ from app.dao.templates_dao import (
     dao_get_template_by_id_and_service_id,
     dao_get_template_versions,
     dao_purge_templates_for_service,
-    dao_redact_template,
     dao_update_template,
-    get_precompiled_letter_template,
 )
 from app.errors import InvalidRequest, register_errors
 from app.models import (
@@ -117,10 +112,6 @@ def update_template(service_id, template_id):
     data = request.get_json()
     validate(data, post_update_template_schema)
 
-    # if redacting, don't update anything else
-    if data.get("redact_personalisation") is True:
-        return redact_template(fetched_template, data)
-
     current_data = dict(template_schema.dump(fetched_template).items())
     updated_template = dict(template_schema.dump(fetched_template).items())
     updated_template.update(data)
@@ -140,14 +131,6 @@ def update_template(service_id, template_id):
         update_dict.folder = None
     dao_update_template(update_dict)
     return jsonify(data=template_schema.dump(update_dict)), 200
-
-
-@template_blueprint.route("/precompiled", methods=["GET"])
-def get_precompiled_template_for_service(service_id):
-    template = get_precompiled_letter_template(service_id)
-    template_dict = template_schema.dump(template)
-
-    return jsonify(template_dict), 200
 
 
 @template_blueprint.route("", methods=["GET"])
@@ -220,37 +203,3 @@ def _template_has_not_changed(current_data, updated_template):
         current_data[key] == updated_template[key]
         for key in ("name", "content", "subject", "archived", "process_type", "postage")
     )
-
-
-def redact_template(template, data):
-    # we also don't need to check what was passed in redact_personalisation - its presence in the dict is enough.
-    if "created_by" not in data:
-        message = "Field is required"
-        errors = {"created_by": [message]}
-        raise InvalidRequest(errors, status_code=400)
-
-    # if it's already redacted, then just return 200 straight away.
-    if not template.redact_personalisation:
-        dao_redact_template(template, data["created_by"])
-    return "null", 200
-
-
-def _get_png_preview_or_overlaid_pdf(url, data, notification_id, json=True):
-    if json:
-        resp = requests_post(
-            url, json=data, headers={"Authorization": "Token {}".format(current_app.config["TEMPLATE_PREVIEW_API_KEY"])}
-        )
-    else:
-        resp = requests_post(
-            url, data=data, headers={"Authorization": "Token {}".format(current_app.config["TEMPLATE_PREVIEW_API_KEY"])}
-        )
-
-    if resp.status_code != 200:
-        raise InvalidRequest(
-            "Error generating preview letter for {} Status code: {} {}".format(
-                notification_id, resp.status_code, resp.content
-            ),
-            status_code=500,
-        )
-
-    return base64.b64encode(resp.content).decode("utf-8")

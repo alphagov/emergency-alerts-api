@@ -35,11 +35,6 @@ from werkzeug.local import LocalProxy
 
 from app.clients import NotificationProviderClients
 from app.clients.cbc_proxy import CBCProxyClient
-from app.clients.document_download import DocumentDownloadClient
-from app.clients.email.aws_ses import AwsSesClient
-from app.clients.email.aws_ses_stub import AwsSesStubClient
-from app.clients.sms.firetext import FiretextClient
-from app.clients.sms.mmg import MMGClient
 
 
 class SQLAlchemy(_SQLAlchemy):
@@ -58,17 +53,12 @@ db = SQLAlchemy()
 migrate = Migrate()
 ma = Marshmallow()
 notify_celery = NotifyCelery()
-firetext_client = FiretextClient()
-mmg_client = MMGClient()
-aws_ses_client = AwsSesClient()
-aws_ses_stub_client = AwsSesStubClient()
 encryption = Encryption()
 zendesk_client = ZendeskClient()
 slack_client = SlackClient()
 statsd_client = StatsdClient()
 redis_store = RedisClient()
 cbc_proxy_client = CBCProxyClient()
-document_download_client = DocumentDownloadClient()
 metrics = GDSMetrics()
 
 notification_provider_clients = NotificationProviderClients()
@@ -113,21 +103,10 @@ def create_app(application):
     zendesk_client.init_app(application)
     statsd_client.init_app(application)
     logging.init_app(application, statsd_client)
-    firetext_client.init_app(application, statsd_client=statsd_client)
-    mmg_client.init_app(application, statsd_client=statsd_client)
-
-    aws_ses_client.init_app(application.config["AWS_REGION"], statsd_client=statsd_client)
-    aws_ses_stub_client.init_app(
-        application.config["AWS_REGION"], statsd_client=statsd_client, stub_url=application.config["SES_STUB_URL"]
-    )
-    # If a stub url is provided for SES, then use the stub client rather than the real SES boto client
-    email_clients = [aws_ses_stub_client] if application.config["SES_STUB_URL"] else [aws_ses_client]
-    notification_provider_clients.init_app(sms_clients=[firetext_client, mmg_client], email_clients=email_clients)
 
     notify_celery.init_app(application)
     encryption.init_app(application)
     redis_store.init_app(application)
-    document_download_client.init_app(application)
 
     cbc_proxy_client.init_app(application)
 
@@ -156,7 +135,6 @@ def register_blueprint(application):
     from app.failed_logins.rest import failed_logins_blueprint
     from app.feature_toggle.rest import feature_toggle_blueprint
     from app.govuk_alerts.rest import govuk_alerts_blueprint
-    from app.inbound_sms.rest import inbound_sms as inbound_sms_blueprint
     from app.organisation.invite_rest import organisation_invite_blueprint
     from app.organisation.rest import organisation_blueprint
     from app.password_history.rest import password_history_blueprint
@@ -197,9 +175,6 @@ def register_blueprint(application):
     organisation_invite_blueprint.before_request(requires_admin_auth)
     application.register_blueprint(organisation_invite_blueprint)
 
-    inbound_sms_blueprint.before_request(requires_admin_auth)
-    application.register_blueprint(inbound_sms_blueprint)
-
     events_blueprint.before_request(requires_admin_auth)
     application.register_blueprint(events_blueprint)
 
@@ -234,14 +209,10 @@ def register_blueprint(application):
 def register_v2_blueprints(application):
     from app.authentication.auth import requires_auth
     from app.v2.broadcast.post_broadcast import v2_broadcast_blueprint
-    from app.v2.inbound_sms.get_inbound_sms import v2_inbound_sms_blueprint
     from app.v2.templates.get_templates import v2_templates_blueprint
 
     v2_templates_blueprint.before_request(requires_auth)
     application.register_blueprint(v2_templates_blueprint)
-
-    v2_inbound_sms_blueprint.before_request(requires_auth)
-    application.register_blueprint(v2_inbound_sms_blueprint)
 
     v2_broadcast_blueprint.before_request(requires_auth)
     application.register_blueprint(v2_broadcast_blueprint)
