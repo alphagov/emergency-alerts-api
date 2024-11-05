@@ -40,6 +40,7 @@ def upgrade():
         ["password"],
         unique=True,
     )
+    list_files()
     if is_local_host():
         with open(passwords_file, "r") as file:
             passwords = file.readlines()
@@ -65,3 +66,8 @@ def downgrade():
 
 def download_file_from_s3():
     s3.download_file(current_app.config["COMMON_PASSWORDS_BUCKET_NAME"], passwords_file, target_filepath)
+
+
+def list_files():
+    response = s3.list_objects_v2(Bucket=current_app.config["COMMON_PASSWORDS_BUCKET_NAME"])
+    print(response)
