@@ -40,20 +40,18 @@ def upgrade():
         ["password"],
         unique=True,
     )
-    list_files()
     if is_local_host():
         with open(passwords_file, "r") as file:
             passwords = file.readlines()
-        data = [(str(uuid.uuid4()), password.strip()) for password in passwords if password != ""]
-        op.bulk_insert(common_passwords_table, [{"id": row[0], "password": row[1]} for row in data])
+        if passwords:
+            bulk_insert_passwords(passwords, common_passwords_table)
     elif file_exists(current_app.config["COMMON_PASSWORDS_BUCKET_NAME"], passwords_file):
         print("File exists")
         download_file_from_s3()
         with open(target_filepath, "r") as file:
             passwords = file.readlines()
         if passwords:
-            data = [(str(uuid.uuid4()), password.strip()) for password in passwords if password != ""]
-            op.bulk_insert(common_passwords_table, [{"id": row[0], "password": row[1]} for row in data])
+            bulk_insert_passwords(passwords, common_passwords_table)
         else:
             print("Passwords file was empty")
     else:
@@ -68,6 +66,6 @@ def download_file_from_s3():
     s3.download_file(current_app.config["COMMON_PASSWORDS_BUCKET_NAME"], passwords_file, target_filepath)
 
 
-def list_files():
-    response = s3.list_objects_v2(Bucket=current_app.config["COMMON_PASSWORDS_BUCKET_NAME"])
-    print(response)
+def bulk_insert_passwords(passwords, table):
+    data = [(str(uuid.uuid4()), password.strip()) for password in passwords if password != ""]
+    op.bulk_insert(table, [{"id": row[0], "password": row[1]} for row in data])
