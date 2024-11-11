@@ -1,7 +1,7 @@
 """
 
-Revision ID: 0402_add_common_passwords_table
-Revises: 0401_drop_job_tables
+Revision ID: 0403_add_common_passwords_table
+Revises: 0402_drop_deprecated_tables
 Create Date: 2024-10-31 11:33:35
 
 """
@@ -15,11 +15,10 @@ from alembic import op
 from flask import current_app
 from sqlalchemy.dialects import postgresql
 
-from app.aws.s3 import file_exists
 from app.utils import is_local_host
 
-revision = "0402_add_common_passwords_table"
-down_revision = "0401_drop_job_tables"
+revision = "0403_add_common_passwords_table"
+down_revision = "0402_drop_deprecated_tables"
 
 
 s3 = boto3.client("s3")
@@ -41,7 +40,7 @@ def upgrade():
         ["password"],
         unique=True,
     )
-    if is_local_host():
+    if current_app.config["HOST"] in ["local", "test"]:
         with open(passwords_file, "r") as file:
             passwords = file.readlines()
         if passwords:
@@ -74,7 +73,7 @@ def bulk_insert_passwords(passwords, table):
 
 def check_file_exists(bucket, file):
     try:
-        return file_exists(bucket, file)
+        s3.Object(bucket, file).metadata
     except botocore.exceptions.ClientError as err:
         print(f"Error Message: {err.response['Error']['Message']}")
         return False
