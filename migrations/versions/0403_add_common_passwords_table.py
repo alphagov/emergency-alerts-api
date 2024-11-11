@@ -40,12 +40,12 @@ def upgrade():
         ["password"],
         unique=True,
     )
-    if is_local_host():
+    if current_app.config["HOST"] in ["local", "test"]:
         with open(passwords_file, "r") as file:
             passwords = file.readlines()
         if passwords:
             bulk_insert_passwords(passwords, common_passwords_table)
-    elif check_file_exists(current_app.config["COMMON_PASSWORDS_BUCKET_NAME"], passwords_file):
+    elif current_app.config["HOST"] == "hosted" & check_file_exists(current_app.config["COMMON_PASSWORDS_BUCKET_NAME"], passwords_file):
         print("File exists")
         download_file_from_s3(current_app.config["COMMON_PASSWORDS_BUCKET_NAME"], passwords_file, target_filepath)
         with open(target_filepath, "r") as file:
