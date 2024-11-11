@@ -40,7 +40,7 @@ def upgrade():
         ["password"],
         unique=True,
     )
-    if current_app.config["HOST"] in ["local", "test"]:
+    if is_local_host():
         with open(passwords_file, "r") as file:
             passwords = file.readlines()
         if passwords:
