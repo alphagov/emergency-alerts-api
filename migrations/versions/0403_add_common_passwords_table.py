@@ -45,7 +45,7 @@ def upgrade():
             passwords = file.readlines()
         if passwords:
             bulk_insert_passwords(passwords, common_passwords_table)
-    elif current_app.config["HOST"] == "hosted" & check_file_exists(
+    elif current_app.config["HOST"] == "hosted" and check_file_exists(
         current_app.config["COMMON_PASSWORDS_BUCKET_NAME"], passwords_file
     ):
         print("File exists")
