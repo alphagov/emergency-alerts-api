@@ -1,5 +1,5 @@
 import uuid
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 
 import pytest
 
@@ -9,7 +9,6 @@ from app.dao.invited_user_dao import save_invited_user
 from app.dao.organisation_dao import dao_create_organisation
 from app.dao.permissions_dao import permission_dao
 from app.dao.service_callback_api_dao import save_service_callback_api
-from app.dao.service_data_retention_dao import insert_service_data_retention
 from app.dao.service_inbound_api_dao import save_service_inbound_api
 from app.dao.service_permissions_dao import dao_add_service_permission
 from app.dao.services_dao import dao_add_user_to_service, dao_create_service
@@ -19,9 +18,7 @@ from app.models import (
     EMAIL_TYPE,
     KEY_TYPE_NORMAL,
     LETTER_TYPE,
-    MOBILE_TYPE,
     SMS_TYPE,
-    AnnualBilling,
     ApiKey,
     BroadcastEvent,
     BroadcastMessage,
@@ -29,23 +26,16 @@ from app.models import (
     BroadcastProviderMessage,
     BroadcastProviderMessageNumber,
     BroadcastStatusType,
-    DailySortedLetter,
     Domain,
     FailedLogin,
     FeatureToggle,
     InvitedOrganisationUser,
     InvitedUser,
-    LetterRate,
     Organisation,
     Permission,
-    Rate,
     Service,
     ServiceCallbackApi,
-    ServiceContactList,
-    ServiceEmailReplyTo,
-    ServiceGuestList,
     ServiceInboundApi,
-    ServiceLetterContact,
     ServicePermission,
     Template,
     TemplateFolder,
@@ -213,30 +203,6 @@ def create_service_callback_api(
     return service_callback_api
 
 
-def create_rate(start_date, value, notification_type):
-    rate = Rate(id=uuid.uuid4(), valid_from=start_date, rate=value, notification_type=notification_type)
-    db.session.add(rate)
-    db.session.commit()
-    return rate
-
-
-def create_letter_rate(start_date=None, end_date=None, crown=True, sheet_count=1, rate=0.33, post_class="second"):
-    if start_date is None:
-        start_date = datetime(2016, 1, 1)
-    rate = LetterRate(
-        id=uuid.uuid4(),
-        start_date=start_date,
-        end_date=end_date,
-        crown=crown,
-        sheet_count=sheet_count,
-        rate=rate,
-        post_class=post_class,
-    )
-    db.session.add(rate)
-    db.session.commit()
-    return rate
-
-
 def create_api_key(service, key_type=KEY_TYPE_NORMAL, key_name=None):
     id_ = uuid.uuid4()
 
@@ -248,48 +214,6 @@ def create_api_key(service, key_type=KEY_TYPE_NORMAL, key_name=None):
     db.session.add(api_key)
     db.session.commit()
     return api_key
-
-
-def create_reply_to_email(service, email_address, is_default=True, archived=False):
-    data = {
-        "service": service,
-        "email_address": email_address,
-        "is_default": is_default,
-        "archived": archived,
-    }
-    reply_to = ServiceEmailReplyTo(**data)
-
-    db.session.add(reply_to)
-    db.session.commit()
-
-    return reply_to
-
-
-def create_letter_contact(service, contact_block, is_default=True, archived=False):
-    data = {
-        "service": service,
-        "contact_block": contact_block,
-        "is_default": is_default,
-        "archived": archived,
-    }
-    letter_content = ServiceLetterContact(**data)
-
-    db.session.add(letter_content)
-    db.session.commit()
-
-    return letter_content
-
-
-def create_annual_billing(service_id, free_sms_fragment_limit, financial_year_start):
-    annual_billing = AnnualBilling(
-        service_id=service_id,
-        free_sms_fragment_limit=free_sms_fragment_limit,
-        financial_year_start=financial_year_start,
-    )
-    db.session.add(annual_billing)
-    db.session.commit()
-
-    return annual_billing
 
 
 def create_domain(domain, organisation_id):
@@ -341,35 +265,6 @@ def create_invited_org_user(organisation, invited_by, email_address="invite@exam
     return invited_org_user
 
 
-def create_daily_sorted_letter(
-    billing_day=None, file_name="Notify-20180118123.rs.txt", unsorted_count=0, sorted_count=0
-):
-    daily_sorted_letter = DailySortedLetter(
-        billing_day=billing_day or date(2018, 1, 18),
-        file_name=file_name,
-        unsorted_count=unsorted_count,
-        sorted_count=sorted_count,
-    )
-
-    db.session.add(daily_sorted_letter)
-    db.session.commit()
-
-    return daily_sorted_letter
-
-
-def create_service_guest_list(service, email_address=None, mobile_number=None):
-    if email_address:
-        guest_list_user = ServiceGuestList.from_string(service.id, EMAIL_TYPE, email_address)
-    elif mobile_number:
-        guest_list_user = ServiceGuestList.from_string(service.id, MOBILE_TYPE, mobile_number)
-    else:
-        guest_list_user = ServiceGuestList.from_string(service.id, EMAIL_TYPE, "guest_list_user@digital.gov.uk")
-
-    db.session.add(guest_list_user)
-    db.session.commit()
-    return guest_list_user
-
-
 def ses_notification_callback():
     return (
         '{\n  "Type" : "Notification",\n  "MessageId" : "ref1",'
@@ -396,13 +291,6 @@ def ses_notification_callback():
         '\n  "UnsubscribeURL" : "https://sns.eu-west-2.amazonaws.com/?Action=Unsubscribe&S'
         'subscriptionArn=arn:aws:sns:eu-west-2:302763885840:preview-emails:d6aad3ef-83d6-4cf3-a470-54e2e75916da"\n}'
     )
-
-
-def create_service_data_retention(service, notification_type="sms", days_of_retention=3):
-    data_retention = insert_service_data_retention(
-        service_id=service.id, notification_type=notification_type, days_of_retention=days_of_retention
-    )
-    return data_retention
 
 
 def create_invited_user(service=None, to_email_address=None):
@@ -432,31 +320,6 @@ def create_template_folder(service, name="foo", parent=None, users=None):
     db.session.add(tf)
     db.session.commit()
     return tf
-
-
-def create_service_contact_list(
-    service=None,
-    original_file_name="EmergencyContactList.xls",
-    row_count=100,
-    template_type="email",
-    created_by_id=None,
-    archived=False,
-):
-    if not service:
-        service = create_service(service_name="service for contact list", user=create_user())
-
-    contact_list = ServiceContactList(
-        service_id=service.id,
-        original_file_name=original_file_name,
-        row_count=row_count,
-        template_type=template_type,
-        created_by_id=created_by_id or service.users[0].id,
-        created_at=datetime.utcnow(),
-        archived=archived,
-    )
-    db.session.add(contact_list)
-    db.session.commit()
-    return contact_list
 
 
 def create_broadcast_message(

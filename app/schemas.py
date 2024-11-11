@@ -212,23 +212,13 @@ class ServiceSchema(BaseSchema, UUIDsAsStringsMixin):
 
         return in_data
 
-    def get_letter_contact(self, service):
-        return service.get_default_letter_contact()
-
     class Meta(BaseSchema.Meta):
         model = models.Service
         exclude = (
             "all_template_folders",
-            "annual_billing",
             "api_keys",
             "broadcast_messages",
-            "contact_list",
             "crown",
-            "data_retention",
-            "guest_list",
-            "inbound_sms",
-            "letter_contacts",
-            "reply_to_email_addresses",
             "service_broadcast_provider_restriction",
             "service_broadcast_settings",
             "templates",
@@ -280,20 +270,15 @@ class DetailedServiceSchema(BaseSchema):
         model = models.Service
         exclude = (
             "all_template_folders",
-            "annual_billing",
             "api_keys",
             "broadcast_messages",
-            "contact_list",
             "created_by",
             "crown",
             "email_from",
-            "guest_list",
             "inbound_api",
-            "inbound_sms",
             "message_limit",
             "permissions",
             "rate_limit",
-            "reply_to_email_addresses",
             "templates",
             "users",
             "version",
@@ -301,29 +286,16 @@ class DetailedServiceSchema(BaseSchema):
 
 
 class BaseTemplateSchema(BaseSchema):
-    reply_to = fields.Method("get_reply_to", allow_none=True)
-    reply_to_text = fields.Method("get_reply_to_text", allow_none=True)
-
-    def get_reply_to(self, template):
-        return template.reply_to
-
-    def get_reply_to_text(self, template):
-        return template.get_reply_to_text()
-
     class Meta(BaseSchema.Meta):
         model = models.Template
-        exclude = ("service_id", "service_letter_contact_id")
+        exclude = ("service_id",)
 
 
 class TemplateSchema(BaseTemplateSchema, UUIDsAsStringsMixin):
     created_by = field_for(models.Template, "created_by", required=True)
     process_type = field_for(models.Template, "process_type")
-    redact_personalisation = fields.Method("redact")
     created_at = FlexibleDateTime()
     updated_at = FlexibleDateTime()
-
-    def redact(self, template):
-        return template.redact_personalisation
 
     @validates_schema
     def validate_type(self, data, **kwargs):
@@ -355,13 +327,8 @@ class TemplateSchemaNoDetail(TemplateSchema):
             "hidden",
             "postage",
             "process_type",
-            "redact_personalisation",
-            "reply_to",
-            "reply_to_text",
             "service",
-            "service_letter_contact",
             "subject",
-            "template_redacted",
             "updated_at",
             "version",
         )
@@ -375,19 +342,11 @@ class TemplateSchemaNoDetail(TemplateSchema):
 
 
 class TemplateHistorySchema(BaseSchema):
-    reply_to = fields.Method("get_reply_to", allow_none=True)
-    reply_to_text = fields.Method("get_reply_to_text", allow_none=True)
     process_type = field_for(models.Template, "process_type")
 
     created_by = fields.Nested(UserSchema, only=["id", "name", "email_address"], dump_only=True)
     created_at = field_for(models.Template, "created_at", format=DATETIME_FORMAT_NO_TIMEZONE)
     updated_at = FlexibleDateTime()
-
-    def get_reply_to(self, template):
-        return template.reply_to
-
-    def get_reply_to_text(self, template):
-        return template.get_reply_to_text()
 
     class Meta(BaseSchema.Meta):
         model = models.TemplateHistory

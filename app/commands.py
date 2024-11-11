@@ -1,17 +1,12 @@
-import csv
 import functools
 import itertools
 import os
 import uuid
-from datetime import datetime, timedelta
 
 import click
 import flask
-from click_datetime import Datetime as click_dt
-from emergency_alerts_utils.statsd_decorators import statsd
 from flask import current_app, json
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm.exc import NoResultFound
 
 from app import db
 from app.dao.broadcast_message_dao import dao_purge_old_broadcast_messages
@@ -19,23 +14,17 @@ from app.dao.invited_user_dao import delete_invitations_sent_by_user
 from app.dao.organisation_dao import (
     dao_add_service_to_organisation,
     dao_get_organisation_by_email_address,
-    dao_get_organisation_by_id,
 )
 from app.dao.permissions_dao import permission_dao
 from app.dao.services_dao import (
     dao_fetch_all_services_by_user,
     dao_fetch_all_services_created_by_user,
     dao_fetch_service_by_id,
-    dao_update_service,
     delete_service_and_all_associated_db_objects,
 )
 from app.dao.template_folder_dao import dao_purge_template_folders_for_service
 from app.dao.templates_dao import dao_purge_templates_for_service
-from app.dao.users_dao import (
-    delete_model_user,
-    delete_user_verify_codes,
-    get_user_by_email,
-)
+from app.dao.users_dao import delete_model_user, delete_user_verify_codes
 from app.models import Domain, Organisation, Permission, Service, User
 from app.utils import is_public_environment
 
@@ -116,88 +105,6 @@ def purge_functional_test_data(user_email_prefix):
                 delete_model_user(usr)
 
 
-@notify_command()
-def backfill_notification_statuses():
-    """
-    DEPRECATED. Populates notification_status.
-
-    This will be used to populate the new `Notification._status_fkey` with the old
-    `Notification._status_enum`
-    """
-    LIMIT = 250000
-    subq = "SELECT id FROM notification_history WHERE notification_status is NULL LIMIT {}".format(LIMIT)
-    update = "UPDATE notification_history SET notification_status = status WHERE id in ({})".format(subq)
-    result = db.session.execute(subq).fetchall()
-
-    while len(result) > 0:
-        db.session.execute(update)
-        print("commit {} updates at {}".format(LIMIT, datetime.utcnow()))
-        db.session.commit()
-        result = db.session.execute(subq).fetchall()
-
-
-@notify_command()
-def update_notification_international_flag():
-    """
-    DEPRECATED. Set notifications.international=false.
-    """
-    # 250,000 rows takes 30 seconds to update.
-    subq = "select id from notifications where international is null limit 250000"
-    update = "update notifications set international = False where id in ({})".format(subq)
-    result = db.session.execute(subq).fetchall()
-
-    while len(result) > 0:
-        db.session.execute(update)
-        print("commit 250000 updates at {}".format(datetime.utcnow()))
-        db.session.commit()
-        result = db.session.execute(subq).fetchall()
-
-    # Now update notification_history
-    subq_history = "select id from notification_history where international is null limit 250000"
-    update_history = "update notification_history set international = False where id in ({})".format(subq_history)
-    result_history = db.session.execute(subq_history).fetchall()
-    while len(result_history) > 0:
-        db.session.execute(update_history)
-        print("commit 250000 updates at {}".format(datetime.utcnow()))
-        db.session.commit()
-        result_history = db.session.execute(subq_history).fetchall()
-
-
-@notify_command()
-def fix_notification_statuses_not_in_sync():
-    """
-    DEPRECATED.
-    This will be used to correct an issue where Notification._status_enum and NotificationHistory._status_fkey
-    became out of sync. See 979e90a.
-
-    Notification._status_enum is the source of truth so NotificationHistory._status_fkey will be updated with
-    these values.
-    """
-    MAX = 10000
-
-    subq = "SELECT id FROM notifications WHERE cast (status as text) != notification_status LIMIT {}".format(MAX)
-    update = "UPDATE notifications SET notification_status = status WHERE id in ({})".format(subq)
-    result = db.session.execute(subq).fetchall()
-
-    while len(result) > 0:
-        db.session.execute(update)
-        print("Committed {} updates at {}".format(len(result), datetime.utcnow()))
-        db.session.commit()
-        result = db.session.execute(subq).fetchall()
-
-    subq_hist = (
-        "SELECT id FROM notification_history WHERE cast (status as text) != notification_status LIMIT {}".format(MAX)
-    )
-    update = "UPDATE notification_history SET notification_status = status WHERE id in ({})".format(subq_hist)
-    result = db.session.execute(subq_hist).fetchall()
-
-    while len(result) > 0:
-        db.session.execute(update)
-        print("Committed {} updates at {}".format(len(result), datetime.utcnow()))
-        db.session.commit()
-        result = db.session.execute(subq_hist).fetchall()
-
-
 def setup_commands(application):
     application.cli.add_command(command_group)
 
@@ -256,77 +163,6 @@ def bulk_invite_user_to_service(file_name, service_id, user_id, auth_type, permi
     file.close()
 
 
-@notify_command(name="populate-notification-postage")
-@click.option(
-    "-s", "--start_date", default=datetime(2017, 2, 1), help="start date inclusive", type=click_dt(format="%Y-%m-%d")
-)
-@statsd(namespace="tasks")
-def populate_notification_postage(start_date):
-    current_app.logger.info("populating historical notification postage")
-
-    total_updated = 0
-
-    while start_date < datetime.utcnow():
-        # process in ten day chunks
-        end_date = start_date + timedelta(days=10)
-
-        sql = """
-            UPDATE {}
-            SET postage = 'second'
-            WHERE notification_type = 'letter' AND
-            postage IS NULL AND
-            created_at BETWEEN :start AND :end
-            """
-
-        execution_start = datetime.utcnow()
-
-        if end_date > datetime.utcnow() - timedelta(days=8):
-            print("Updating notifications table as well")
-            db.session.execute(sql.format("notifications"), {"start": start_date, "end": end_date})
-
-        result = db.session.execute(sql.format("notification_history"), {"start": start_date, "end": end_date})
-        db.session.commit()
-
-        current_app.logger.info(
-            "notification postage took {}ms. Migrated {} rows for {} to {}".format(
-                datetime.utcnow() - execution_start, result.rowcount, start_date, end_date
-            )
-        )
-
-        start_date += timedelta(days=10)
-
-        total_updated += result.rowcount
-
-    current_app.logger.info("Total inserted/updated records = {}".format(total_updated))
-
-
-@notify_command(name="update-emails-to-remove-gsi")
-@click.option("-s", "--service_id", required=True, help="service id. Update all user.email_address to remove .gsi")
-@statsd(namespace="tasks")
-def update_emails_to_remove_gsi(service_id):
-    users_to_update = """SELECT u.id user_id, u.name, email_address, s.id, s.name
-                           FROM users u
-                           JOIN user_to_service us on (u.id = us.user_id)
-                           JOIN services s on (s.id = us.service_id)
-                          WHERE s.id = :service_id
-                            AND u.email_address ilike ('%.gsi.gov.uk%')
-    """
-    results = db.session.execute(users_to_update, {"service_id": service_id})
-    print("Updating {} users.".format(results.rowcount))
-
-    for user in results:
-        print("User with id {} updated".format(user.user_id))
-
-        update_stmt = """
-        UPDATE users
-           SET email_address = replace(replace(email_address, '.gsi.gov.uk', '.gov.uk'), '.GSI.GOV.UK', '.GOV.UK'),
-               updated_at = now()
-         WHERE id = :user_id
-        """
-        db.session.execute(update_stmt, {"user_id": str(user.user_id)})
-        db.session.commit()
-
-
 @notify_command(name="populate-organisations-from-file")
 @click.option(
     "-f",
@@ -383,42 +219,6 @@ def populate_organisations_from_file(file_name):
                         db.session.rollback()
 
 
-@notify_command(name="populate-organisation-agreement-details-from-file")
-@click.option(
-    "-f",
-    "--file_name",
-    required=True,
-    help="CSV file containing id, agreement_signed_version, " "agreement_signed_on_behalf_of_name, agreement_signed_at",
-)
-def populate_organisation_agreement_details_from_file(file_name):
-    """
-    The input file should be a comma separated CSV file with a header row and 4 columns
-    id: the organisation ID
-    agreement_signed_version
-    agreement_signed_on_behalf_of_name
-    agreement_signed_at: The date the agreement was signed in the format of 'dd/mm/yyyy'
-    """
-    with open(file_name) as f:
-        csv_reader = csv.reader(f)
-
-        # ignore the header row
-        next(csv_reader)
-
-        for row in csv_reader:
-            org = dao_get_organisation_by_id(row[0])
-
-            current_app.logger.info(f"Updating {org.name}")
-
-            assert org.agreement_signed
-
-            org.agreement_signed_version = float(row[1])
-            org.agreement_signed_on_behalf_of_name = row[2].strip()
-            org.agreement_signed_at = datetime.strptime(row[3], "%d/%m/%Y")
-
-            db.session.add(org)
-            db.session.commit()
-
-
 @notify_command(name="associate-services-to-organisations")
 def associate_services_to_organisations():
     services = Service.get_history_model().query.filter_by(version=1).all()
@@ -431,65 +231,6 @@ def associate_services_to_organisations():
             dao_add_service_to_organisation(service=service, organisation_id=organisation.id)
 
     print("finished associating services to organisations")
-
-
-@notify_command(name="populate-service-volume-intentions")
-@click.option("-f", "--file_name", required=True, help="Pipe delimited file containing service_id, SMS, email, letters")
-def populate_service_volume_intentions(file_name):
-    # [0] service_id
-    # [1] SMS:: volume intentions for service
-    # [2] Email:: volume intentions for service
-    # [3] Letters:: volume intentions for service
-
-    with open(file_name, "r") as f:
-        for line in itertools.islice(f, 1, None):
-            columns = line.split(",")
-            print(columns)
-            service = dao_fetch_service_by_id(columns[0])
-            service.volume_sms = columns[1]
-            service.volume_email = columns[2]
-            service.volume_letter = columns[3]
-            dao_update_service(service)
-    print("populate-service-volume-intentions complete")
-
-
-@notify_command(name="populate-go-live")
-@click.option("-f", "--file_name", required=True, help="CSV file containing live service data")
-def populate_go_live(file_name):
-    # 0 - count, 1- Link, 2- Service ID, 3- DEPT, 4- Service Name, 5- Main contact,
-    # 6- Contact detail, 7-MOU, 8- LIVE date, 9- SMS, 10 - Email, 11 - Letters, 12 -CRM, 13 - Blue badge
-    import csv
-
-    print("Populate go live user and date")
-    with open(file_name, "r") as f:
-        rows = csv.reader(
-            f,
-            quoting=csv.QUOTE_MINIMAL,
-            skipinitialspace=True,
-        )
-        print(next(rows))  # ignore header row
-        for index, row in enumerate(rows):
-            print(index, row)
-            service_id = row[2]
-            go_live_email = row[6]
-            go_live_date = datetime.strptime(row[8], "%d/%m/%Y") + timedelta(hours=12)
-            print(service_id, go_live_email, go_live_date)
-            try:
-                if go_live_email:
-                    go_live_user = get_user_by_email(go_live_email)
-                else:
-                    go_live_user = None
-            except NoResultFound:
-                print("No user found for email address: ", go_live_email)
-                continue
-            try:
-                service = dao_fetch_service_by_id(service_id)
-            except NoResultFound:
-                print("No service found for: ", service_id)
-                continue
-            service.go_live_user = go_live_user
-            service.go_live_at = go_live_date
-            dao_update_service(service)
 
 
 @click.option("-u", "--user-id", required=True)
