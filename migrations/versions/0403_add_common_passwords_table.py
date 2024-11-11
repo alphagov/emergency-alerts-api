@@ -80,5 +80,5 @@ def check_file_exists(bucket, file):
         if err.response["Error"]["Code"] == "404":
             print("File not found")
         else:
-            print("Another error occured", err["Error"]["Message"])
+            print("Another error occured", err)
         return False
