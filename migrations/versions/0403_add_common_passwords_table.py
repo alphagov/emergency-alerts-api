@@ -75,7 +75,7 @@ def bulk_insert_passwords(passwords, table):
 
 def check_file_exists(bucket, file):
     try:
-        s3.head_object(Bucket=bucket, Key=file).metadata
+        s3.head_object(Bucket=bucket, Key=file)
     except botocore.exceptions.ClientError as err:
         if err.response["Error"]["Code"] == "404":
             print("File not found")
