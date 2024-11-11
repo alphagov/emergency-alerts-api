@@ -9,6 +9,7 @@ Create Date: 2024-10-31 11:33:35
 import uuid
 
 import boto3
+import botocore
 import sqlalchemy as sa
 from alembic import op
 from flask import current_app
@@ -45,9 +46,9 @@ def upgrade():
             passwords = file.readlines()
         if passwords:
             bulk_insert_passwords(passwords, common_passwords_table)
-    elif file_exists(current_app.config["COMMON_PASSWORDS_BUCKET_NAME"], passwords_file):
+    elif check_file_exists(current_app.config["COMMON_PASSWORDS_BUCKET_NAME"], passwords_file):
         print("File exists")
-        download_file_from_s3()
+        download_file_from_s3(current_app.config["COMMON_PASSWORDS_BUCKET_NAME"], passwords_file, target_filepath)
         with open(target_filepath, "r") as file:
             passwords = file.readlines()
         if passwords:
@@ -62,10 +63,18 @@ def downgrade():
     op.drop_table("common_passwords")
 
 
-def download_file_from_s3():
-    s3.download_file(current_app.config["COMMON_PASSWORDS_BUCKET_NAME"], passwords_file, target_filepath)
+def download_file_from_s3(bucket, file, destination):
+    s3.download_file(bucket, file, destination)
 
 
 def bulk_insert_passwords(passwords, table):
     data = [(str(uuid.uuid4()), password.strip()) for password in passwords if password != ""]
     op.bulk_insert(table, [{"id": row[0], "password": row[1]} for row in data])
+
+
+def check_file_exists(bucket, file):
+    try:
+        return file_exists(bucket, file)
+    except botocore.exceptions.ClientError as err:
+        print(f"Error Message: {err.response['Error']['Message']}")
+        return False
