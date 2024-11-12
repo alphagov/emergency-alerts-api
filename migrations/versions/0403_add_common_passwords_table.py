@@ -48,9 +48,7 @@ def upgrade():
     elif current_app.config["HOST"] == "hosted" and check_file_exists(
         current_app.config["COMMON_PASSWORDS_BUCKET_NAME"], passwords_file
     ):
-        print("File exists")
         download_file_from_s3(current_app.config["COMMON_PASSWORDS_BUCKET_NAME"], passwords_file, target_filepath)
-        print("File downloaded")
         with open(target_filepath, "r") as file:
             passwords = file.readlines()
         print("Passwords", passwords)
@@ -80,7 +78,7 @@ def check_file_exists(bucket, file):
         s3.head_object(Bucket=bucket, Key=file)
         return True
     except botocore.exceptions.ClientError as err:
-        if err.response["Error"]["Code"] == "404":
+        if err.response["Error"]["Code"] == "403":
             print("File not found")
         else:
             print("Another error occured", err)
