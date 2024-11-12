@@ -349,7 +349,7 @@ def send_user_confirm_new_email(user_id):
     notification = {
         "type": EMAIL_TYPE,
         "template_id": current_app.config["CHANGE_EMAIL_CONFIRMATION_TEMPLATE_ID"],
-        "recipient": email,
+        "recipient": email["email"],
         "reply_to": current_app.config["EAS_EMAIL_REPLY_TO_ID"],
         "personalisation": {
             "name": user_to_send_to.name,
