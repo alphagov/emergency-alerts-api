@@ -8,7 +8,7 @@ def test_is_password_common(notify_db_session, admin_request, mocker):
     """
     assert is_password_common("TEST") is False
 
-    common_password = CommonPasswords(passwordattempted_at="TEST")
+    common_password = CommonPasswords(password="TEST")
     notify_db_session.add(common_password)
     notify_db_session.commit()
 
