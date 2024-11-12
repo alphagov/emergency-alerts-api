@@ -50,10 +50,10 @@ def upgrade():
     ):
         print("File exists")
         download_file_from_s3(current_app.config["COMMON_PASSWORDS_BUCKET_NAME"], passwords_file, target_filepath)
-        print('File downloaded')
+        print("File downloaded")
         with open(target_filepath, "r") as file:
             passwords = file.readlines()
-        print('Passwords', passwords)
+        print("Passwords", passwords)
         if passwords:
             bulk_insert_passwords(passwords, common_passwords_table)
         else:
