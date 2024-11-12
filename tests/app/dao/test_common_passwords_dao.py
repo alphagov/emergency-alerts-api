@@ -11,5 +11,6 @@ def test_get_common_password_by_password(notify_db_session):
     notify_db_session.add(common_password)
     notify_db_session.commit()
 
-    assert dao_get_common_password_by_password("TEST") == "TEST"
+    assert dao_get_common_password_by_password("TEST")
+    assert dao_get_common_password_by_password("TEST").password == "TEST"
     assert dao_get_common_password_by_password("TEST2") is None
