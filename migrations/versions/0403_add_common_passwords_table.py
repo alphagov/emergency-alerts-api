@@ -47,9 +47,9 @@ def upgrade():
     elif current_app.config["HOST"] == "hosted" and check_file_exists(
         current_app.config["COMMON_PASSWORDS_BUCKET_NAME"], passwords_file
     ):
-        passwords = get_file_contents_from_s3(current_app.config["COMMON_PASSWORDS_BUCKET_NAME"], passwords_file)
-        print(passwords)
-        if passwords:
+        if passwords := get_file_contents_from_s3(
+            current_app.config["COMMON_PASSWORDS_BUCKET_NAME"], passwords_file
+        ):
             bulk_insert_passwords(passwords, common_passwords_table)
         else:
             print("Passwords file was empty")
