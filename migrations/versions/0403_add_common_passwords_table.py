@@ -6,6 +6,7 @@ Create Date: 2024-10-31 11:33:35
 
 """
 
+import os
 import uuid
 
 import boto3
@@ -39,7 +40,7 @@ def upgrade():
         ["password"],
         unique=True,
     )
-    if is_local_host():
+    if is_local_host() and os.path.exists(passwords_file):
         with open(passwords_file, "r") as file:
             passwords = file.readlines()
         if passwords:
