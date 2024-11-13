@@ -63,7 +63,7 @@ def downgrade():
 
 def get_file_contents_from_s3(bucket, file):
     response = s3.get_object(Bucket=bucket, Key=file)
-    return response["Body"].read().decode("utf-8")
+    return response["Body"].read().decode("utf-8").splitlines()
 
 
 def bulk_insert_passwords(passwords, table):
