@@ -23,7 +23,6 @@ down_revision = "0402_drop_deprecated_tables"
 
 s3 = boto3.client("s3")
 passwords_file = current_app.config["COMMON_PASSWORDS_FILEPATH"]
-target_filepath = "/tmp/passwords.txt"
 
 
 def upgrade():
