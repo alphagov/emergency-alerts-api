@@ -6,6 +6,7 @@ Create Date: 2024-10-31 11:33:35
 
 """
 
+import os
 import uuid
 
 import boto3
@@ -23,7 +24,6 @@ down_revision = "0402_drop_deprecated_tables"
 
 s3 = boto3.client("s3")
 passwords_file = current_app.config["COMMON_PASSWORDS_FILEPATH"]
-target_filepath = "/tmp/passwords.txt"
 
 
 def upgrade():
@@ -40,7 +40,7 @@ def upgrade():
         ["password"],
         unique=True,
     )
-    if is_local_host():
+    if is_local_host() and os.path.exists(passwords_file):
         with open(passwords_file, "r") as file:
             passwords = file.readlines()
         if passwords:
@@ -48,10 +48,7 @@ def upgrade():
     elif current_app.config["HOST"] == "hosted" and check_file_exists(
         current_app.config["COMMON_PASSWORDS_BUCKET_NAME"], passwords_file
     ):
-        download_file_from_s3(current_app.config["COMMON_PASSWORDS_BUCKET_NAME"], passwords_file, target_filepath)
-        with open(target_filepath, "r") as file:
-            passwords = file.readlines()
-        if passwords:
+        if passwords := get_file_contents_from_s3(current_app.config["COMMON_PASSWORDS_BUCKET_NAME"], passwords_file):
             bulk_insert_passwords(passwords, common_passwords_table)
         else:
             print("Passwords file was empty")
@@ -63,8 +60,9 @@ def downgrade():
     op.drop_table("common_passwords")
 
 
-def download_file_from_s3(bucket, file, destination):
-    s3.download_file(bucket, file, destination)
+def get_file_contents_from_s3(bucket, file):
+    response = s3.get_object(Bucket=bucket, Key=file)
+    return response["Body"].read().decode("utf-8").splitlines()
 
 
 def bulk_insert_passwords(passwords, table):
