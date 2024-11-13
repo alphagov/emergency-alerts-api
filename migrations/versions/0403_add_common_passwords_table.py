@@ -48,9 +48,8 @@ def upgrade():
     elif current_app.config["HOST"] == "hosted" and check_file_exists(
         current_app.config["COMMON_PASSWORDS_BUCKET_NAME"], passwords_file
     ):
-        download_file_from_s3(current_app.config["COMMON_PASSWORDS_BUCKET_NAME"], passwords_file, target_filepath)
-        with open(target_filepath, "r") as file:
-            passwords = file.readlines()
+        passwords = get_file_contents_from_s3(current_app.config["COMMON_PASSWORDS_BUCKET_NAME"], passwords_file)
+        print(passwords)
         if passwords:
             bulk_insert_passwords(passwords, common_passwords_table)
         else:
@@ -63,8 +62,9 @@ def downgrade():
     op.drop_table("common_passwords")
 
 
-def download_file_from_s3(bucket, file, destination):
-    s3.download_file(bucket, file, destination)
+def get_file_contents_from_s3(bucket, file):
+    response = s3.get_object(Bucket=bucket, Key=file)
+    return response["Body"].read().decode("utf-8")
 
 
 def bulk_insert_passwords(passwords, table):
