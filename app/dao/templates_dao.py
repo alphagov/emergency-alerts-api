@@ -42,13 +42,9 @@ def dao_update_template_reply_to(template_id, reply_to):
             "updated_at": template.updated_at,
             "content": template.content,
             "service_id": template.service_id,
-            "subject": template.subject,
-            "postage": template.postage,
             "created_by_id": template.created_by_id,
             "version": template.version,
             "archived": template.archived,
-            "process_type": template.process_type,
-            "service_letter_contact_id": template.service_letter_contact_id,
             "broadcast_data": template.broadcast_data,
         }
     )

@@ -20,13 +20,7 @@ from app.dao.templates_dao import (
     dao_update_template,
 )
 from app.errors import InvalidRequest, register_errors
-from app.models import (
-    BROADCAST_TYPE,
-    LETTER_TYPE,
-    SECOND_CLASS,
-    SMS_TYPE,
-    Template,
-)
+from app.models import BROADCAST_TYPE, SMS_TYPE, Template
 from app.schema_validation import validate
 from app.schemas import (
     template_history_schema,
@@ -79,9 +73,6 @@ def create_template(service_id):
         message = "Creating {} templates is not allowed".format(get_public_notify_type_text(new_template.template_type))
         errors = {"template_type": [message]}
         raise InvalidRequest(errors, 403)
-
-    if not new_template.postage and new_template.template_type == LETTER_TYPE:
-        new_template.postage = SECOND_CLASS
 
     new_template.service = fetched_service
 
@@ -150,22 +141,22 @@ def get_template_by_id_and_service_id(service_id, template_id):
     return jsonify(data=data)
 
 
-@template_blueprint.route("/<uuid:template_id>/preview", methods=["GET"])
-def preview_template_by_id_and_service_id(service_id, template_id):
-    fetched_template = dao_get_template_by_id_and_service_id(template_id=template_id, service_id=service_id)
-    data = template_schema.dump(fetched_template)
-    template_object = fetched_template._as_utils_template_with_personalisation(request.args.to_dict())
+# @template_blueprint.route("/<uuid:template_id>/preview", methods=["GET"])
+# def preview_template_by_id_and_service_id(service_id, template_id):
+#     fetched_template = dao_get_template_by_id_and_service_id(template_id=template_id, service_id=service_id)
+#     data = template_schema.dump(fetched_template)
+#     template_object = fetched_template._as_utils_template_with_personalisation(request.args.to_dict())
 
-    if template_object.missing_data:
-        raise InvalidRequest(
-            {"template": ["Missing personalisation: {}".format(", ".join(template_object.missing_data))]},
-            status_code=400,
-        )
+#     if template_object.missing_data:
+#         raise InvalidRequest(
+#             {"template": ["Missing personalisation: {}".format(", ".join(template_object.missing_data))]},
+#             status_code=400,
+#         )
 
-    data["subject"] = template_object.subject
-    data["content"] = template_object.content_with_placeholders_filled_in
+#     data["subject"] = template_object.subject
+#     data["content"] = template_object.content_with_placeholders_filled_in
 
-    return jsonify(data)
+#     return jsonify(data)
 
 
 @template_blueprint.route("/<uuid:template_id>/version/<int:version>")
@@ -199,7 +190,4 @@ def purge_templates_and_folders_for_service(service_id):
 
 
 def _template_has_not_changed(current_data, updated_template):
-    return all(
-        current_data[key] == updated_template[key]
-        for key in ("name", "content", "subject", "archived", "process_type", "postage")
-    )
+    return all(current_data[key] == updated_template[key] for key in ("name", "content", "archived"))

@@ -58,17 +58,7 @@ def test_should_create_a_new_template_for_a_service(client, sample_user, templat
     assert json_resp["data"]["service"] == str(service.id)
     assert json_resp["data"]["id"]
     assert json_resp["data"]["version"] == 1
-    assert json_resp["data"]["process_type"] == "normal"
     assert json_resp["data"]["created_by"] == str(sample_user.id)
-    if subject:
-        assert json_resp["data"]["subject"] == "subject"
-    else:
-        assert not json_resp["data"]["subject"]
-
-    if template_type == LETTER_TYPE:
-        assert json_resp["data"]["postage"] == "first"
-    else:
-        assert not json_resp["data"]["postage"]
 
     template = Template.query.get(json_resp["data"]["id"])
     from app.schemas import template_schema
@@ -81,7 +71,7 @@ def test_create_a_new_template_for_a_service_adds_folder_relationship(client, sa
 
     data = {
         "name": "my template",
-        "template_type": "sms",
+        "template_type": "broadcast",
         "content": "template <b>content</b>",
         "service": str(sample_service.id),
         "created_by": str(sample_service.users[0].id),
@@ -135,7 +125,7 @@ def test_create_template_should_return_400_if_folder_is_for_a_different_service(
 
     data = {
         "name": "my template",
-        "template_type": "sms",
+        "template_type": "broadcast",
         "content": "template <b>content</b>",
         "service": str(sample_service.id),
         "created_by": str(sample_service.users[0].id),
@@ -480,13 +470,9 @@ def test_should_get_return_all_fields_by_default(
         "created_at",
         "created_by",
         "folder",
-        "hidden",
         "id",
         "name",
-        "postage",
-        "process_type",
         "service",
-        "subject",
         "template_type",
         "updated_at",
         "version",
@@ -534,16 +520,8 @@ def test_should_not_return_content_and_subject_if_requested(
     assert json_response["data"][0]["content"] == expected_content
 
 
-@pytest.mark.parametrize(
-    "subject, content, template_type",
-    [
-        ("about your ((thing))", "hello ((name)) we’ve received your ((thing))", EMAIL_TYPE),
-        (None, "hello ((name)) we’ve received your ((thing))", SMS_TYPE),
-        ("about your ((thing))", "hello ((name)) we’ve received your ((thing))", LETTER_TYPE),
-    ],
-)
-def test_should_get_a_single_template(client, sample_user, sample_service, subject, content, template_type):
-    template = create_template(sample_service, template_type=template_type, subject=subject, content=content)
+def test_should_get_a_single_template(client, sample_user, sample_service):
+    template = create_template(sample_service, template_type=BROADCAST_TYPE, content="Here is some sample content")
 
     response = client.get(
         "/service/{}/template/{}".format(sample_service.id, template.id), headers=[create_admin_authorization_header()]
@@ -552,9 +530,7 @@ def test_should_get_a_single_template(client, sample_user, sample_service, subje
     data = json.loads(response.get_data(as_text=True))["data"]
 
     assert response.status_code == 200
-    assert data["content"] == content
-    assert data["subject"] == subject
-    assert data["process_type"] == "normal"
+    assert data["content"] == "Here is some sample content"
 
 
 @pytest.mark.parametrize(
@@ -736,27 +712,12 @@ def test_update_does_not_create_new_version_when_there_is_no_change(client, samp
     assert template.version == 1
 
 
-def test_update_set_process_type_on_template(client, sample_template):
-    auth_header = create_admin_authorization_header()
-    data = {"process_type": "priority"}
-    resp = client.post(
-        "/service/{}/template/{}".format(sample_template.service_id, sample_template.id),
-        data=json.dumps(data),
-        headers=[("Content-Type", "application/json"), auth_header],
-    )
-    assert resp.status_code == 200
-
-    template = dao_get_template_by_id(sample_template.id)
-    assert template.process_type == "priority"
-
-
 @pytest.mark.parametrize(
     "post_data, expected_errors",
     [
         (
             {},
             [
-                {"error": "ValidationError", "message": "subject is a required property"},
                 {"error": "ValidationError", "message": "name is a required property"},
                 {"error": "ValidationError", "message": "template_type is a required property"},
                 {"error": "ValidationError", "message": "content is a required property"},
@@ -766,17 +727,15 @@ def test_update_set_process_type_on_template(client, sample_template):
         ),
         (
             {
-                "name": "my template",
-                "template_type": "sms",
+                "template_type": "broadcast",
                 "content": "hi",
-                "postage": "third",
                 "service": "1af43c02-b5a8-4923-ad7f-5279b75ff2d0",
                 "created_by": "30587644-9083-44d8-a114-98887f07f1e3",
             },
             [
                 {
                     "error": "ValidationError",
-                    "message": "postage invalid. It must be first, second, europe or rest-of-world.",
+                    "message": "name is a required property",
                 },
             ],
         ),

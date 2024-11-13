@@ -12,13 +12,7 @@ from app.dao.template_folder_dao import dao_get_valid_template_folders_by_id
 from app.models import (
     BROADCAST_TYPE,
     CROWN_ORGANISATION_TYPES,
-    EMAIL_TYPE,
-    INTERNATIONAL_LETTERS,
-    INTERNATIONAL_SMS_TYPE,
-    LETTER_TYPE,
     NON_CROWN_ORGANISATION_TYPES,
-    SMS_TYPE,
-    UPLOAD_LETTERS,
     ApiKey,
     InvitedUser,
     Organisation,
@@ -34,15 +28,7 @@ from app.models import (
 )
 from app.utils import escape_special_characters, get_archived_db_column_value
 
-DEFAULT_SERVICE_PERMISSIONS = [
-    BROADCAST_TYPE,
-    SMS_TYPE,
-    EMAIL_TYPE,
-    LETTER_TYPE,
-    INTERNATIONAL_SMS_TYPE,
-    UPLOAD_LETTERS,
-    INTERNATIONAL_LETTERS,
-]
+DEFAULT_SERVICE_PERMISSIONS = [BROADCAST_TYPE]
 
 
 def dao_fetch_all_services(only_active=False):
@@ -124,7 +110,6 @@ def dao_archive_service(service_id):
 
     service.active = False
     service.name = get_archived_db_column_value(service.name)
-    service.email_from = get_archived_db_column_value(service.email_from)
 
     for template in service.templates:
         if not template.archived:

@@ -58,13 +58,13 @@ post_template_preview_response = {
 }
 
 
-def create_post_template_preview_response(template, template_object):
-    return {
-        "id": template.id,
-        "type": template.template_type,
-        "version": template.version,
-        "body": template_object.content_with_placeholders_filled_in,
-        "html": getattr(template_object, "html_body", None),
-        "subject": getattr(template_object, "subject", None),
-        "postage": template.postage,
-    }
+# def create_post_template_preview_response(template, template_object):
+#     return {
+#         "id": template.id,
+#         "type": template.template_type,
+#         "version": template.version,
+#         "body": template_object.content_with_placeholders_filled_in,
+#         "html": getattr(template_object, "html_body", None),
+#         "subject": getattr(template_object, "subject", None),
+#         "postage": template.postage,
+#     }

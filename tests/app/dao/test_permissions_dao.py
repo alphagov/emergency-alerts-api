@@ -10,9 +10,6 @@ def test_get_permissions_by_user_id_returns_all_permissions(sample_service):
             "manage_users",
             "manage_templates",
             "manage_settings",
-            "send_texts",
-            "send_emails",
-            "send_letters",
             "manage_api_keys",
             "view_activity",
         ]

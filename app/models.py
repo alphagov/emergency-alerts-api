@@ -1,18 +1,12 @@
 import datetime
 import uuid
 
-from emergency_alerts_utils.template import (
-    BroadcastMessageTemplate,
-    LetterPrintTemplate,
-    PlainTextEmailTemplate,
-    SMSMessageTemplate,
-)
+from emergency_alerts_utils.template import BroadcastMessageTemplate
 from flask import current_app, url_for
 from sqlalchemy import CheckConstraint, Index, UniqueConstraint
 from sqlalchemy.dialects.postgresql import INET, JSON, JSONB, UUID
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.declarative import declared_attr
-from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.schema import Sequence
 
 from app import db, encryption
@@ -26,20 +20,12 @@ from app.utils import (
     get_uuid_string_or_none,
 )
 
-SMS_TYPE = "sms"
-EMAIL_TYPE = "email"
-LETTER_TYPE = "letter"
 BROADCAST_TYPE = "broadcast"
+PLACEHOLDER_TYPE = "placeholder"  # dummy "permission" for testing
 
-TEMPLATE_TYPES = [SMS_TYPE, EMAIL_TYPE, LETTER_TYPE, BROADCAST_TYPE]
-NOTIFICATION_TYPES = [SMS_TYPE, EMAIL_TYPE, LETTER_TYPE]  # not broadcast
+TEMPLATE_TYPES = [BROADCAST_TYPE]
 
 template_types = db.Enum(*TEMPLATE_TYPES, name="template_type")
-
-NORMAL = "normal"
-PRIORITY = "priority"
-TEMPLATE_PROCESS_TYPE = [NORMAL, PRIORITY]
-
 
 SMS_AUTH_TYPE = "sms_auth"
 EMAIL_AUTH_TYPE = "email_auth"
@@ -47,8 +33,7 @@ WEBAUTHN_AUTH_TYPE = "webauthn_auth"
 USER_AUTH_TYPES = [SMS_AUTH_TYPE, EMAIL_AUTH_TYPE, WEBAUTHN_AUTH_TYPE]
 
 DELIVERY_STATUS_CALLBACK_TYPE = "delivery_status"
-COMPLAINT_CALLBACK_TYPE = "complaint"
-SERVICE_CALLBACK_TYPES = [DELIVERY_STATUS_CALLBACK_TYPE, COMPLAINT_CALLBACK_TYPE]
+SERVICE_CALLBACK_TYPES = [DELIVERY_STATUS_CALLBACK_TYPE]
 
 
 def filter_null_value_fields(obj):
@@ -197,36 +182,13 @@ user_folder_permissions = db.Table(
 )
 
 
-BRANDING_GOVUK = "govuk"  # Deprecated outside migrations
-BRANDING_ORG = "org"
-BRANDING_BOTH = "both"
-BRANDING_ORG_BANNER = "org_banner"
-BRANDING_TYPES = [BRANDING_ORG, BRANDING_BOTH, BRANDING_ORG_BANNER]
-
-
-INTERNATIONAL_SMS_TYPE = "international_sms"
-SCHEDULE_NOTIFICATIONS = "schedule_notifications"
 EMAIL_AUTH = "email_auth"
-LETTERS_AS_PDF = "letters_as_pdf"
-PRECOMPILED_LETTER = "precompiled_letter"
-UPLOAD_DOCUMENT = "upload_document"
 EDIT_FOLDER_PERMISSIONS = "edit_folder_permissions"
-UPLOAD_LETTERS = "upload_letters"
-INTERNATIONAL_LETTERS = "international_letters"
 
 SERVICE_PERMISSION_TYPES = [
-    EMAIL_TYPE,
-    SMS_TYPE,
-    LETTER_TYPE,
     BROADCAST_TYPE,
-    INTERNATIONAL_SMS_TYPE,
-    SCHEDULE_NOTIFICATIONS,
     EMAIL_AUTH,
-    LETTERS_AS_PDF,
-    UPLOAD_DOCUMENT,
     EDIT_FOLDER_PERMISSIONS,
-    UPLOAD_LETTERS,
-    INTERNATIONAL_LETTERS,
 ]
 
 
@@ -298,10 +260,6 @@ class Organisation(db.Model):
     )
 
     notes = db.Column(db.Text, nullable=True)
-    purchase_order_number = db.Column(db.String(255), nullable=True)
-    billing_contact_names = db.Column(db.Text, nullable=True)
-    billing_contact_email_addresses = db.Column(db.Text, nullable=True)
-    billing_reference = db.Column(db.String(255), nullable=True)
 
     @property
     def live_services(self):
@@ -328,10 +286,6 @@ class Organisation(db.Model):
             "request_to_go_live_notes": self.request_to_go_live_notes,
             "count_of_live_services": len(self.live_services),
             "notes": self.notes,
-            "purchase_order_number": self.purchase_order_number,
-            "billing_contact_names": self.billing_contact_names,
-            "billing_contact_email_addresses": self.billing_contact_email_addresses,
-            "billing_reference": self.billing_reference,
         }
 
     def serialize_for_list(self):
@@ -353,13 +307,9 @@ class Service(db.Model, Versioned):
     created_at = db.Column(db.DateTime, index=False, unique=False, nullable=False, default=datetime.datetime.utcnow)
     updated_at = db.Column(db.DateTime, index=False, unique=False, nullable=True, onupdate=datetime.datetime.utcnow)
     active = db.Column(db.Boolean, index=False, unique=False, nullable=False, default=True)
-    message_limit = db.Column(db.BigInteger, index=False, unique=False, nullable=False)
     restricted = db.Column(db.Boolean, index=False, unique=False, nullable=False)
-    research_mode = db.Column(db.Boolean, index=False, unique=False, nullable=False, default=False)
-    email_from = db.Column(db.Text, index=False, unique=True, nullable=False)
     created_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), index=True, nullable=False)
     created_by = db.relationship("User", foreign_keys=[created_by_id])
-    prefix_sms = db.Column(db.Boolean, nullable=False, default=True)
     organisation_type = db.Column(
         db.String(255),
         db.ForeignKey("organisation_types.name"),
@@ -367,13 +317,6 @@ class Service(db.Model, Versioned):
         nullable=True,
     )
     crown = db.Column(db.Boolean, index=False, nullable=True)
-    rate_limit = db.Column(db.Integer, index=False, nullable=False, default=3000)
-    contact_link = db.Column(db.String(255), nullable=True, unique=False)
-    volume_sms = db.Column(db.Integer(), nullable=True, unique=False)
-    volume_email = db.Column(db.Integer(), nullable=True, unique=False)
-    volume_letter = db.Column(db.Integer(), nullable=True, unique=False)
-    consent_to_research = db.Column(db.Boolean, nullable=True)
-    count_as_live = db.Column(db.Boolean, nullable=False, default=True)
     go_live_user_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=True)
     go_live_user = db.relationship("User", foreign_keys=[go_live_user_id])
     go_live_at = db.Column(db.DateTime, nullable=True)
@@ -382,10 +325,6 @@ class Service(db.Model, Versioned):
     organisation = db.relationship("Organisation", backref="services")
 
     notes = db.Column(db.Text, nullable=True)
-    purchase_order_number = db.Column(db.String(255), nullable=True)
-    billing_contact_names = db.Column(db.Text, nullable=True)
-    billing_contact_email_addresses = db.Column(db.Text, nullable=True)
-    billing_reference = db.Column(db.String(255), nullable=True)
 
     allowed_broadcast_provider = association_proxy("service_broadcast_settings", "provider")
     broadcast_channel = association_proxy("service_broadcast_settings", "channel")
@@ -414,7 +353,6 @@ class Service(db.Model, Versioned):
             "name": self.name,
             "active": self.active,
             "restricted": self.restricted,
-            "research_mode": self.research_mode,
         }
 
     def get_available_broadcast_providers(self):
@@ -444,9 +382,7 @@ class ServicePermission(db.Model):
 
 MOBILE_TYPE = "mobile"
 EMAIL_TYPE = "email"
-
-GUEST_LIST_RECIPIENT_TYPE = [MOBILE_TYPE, EMAIL_TYPE]
-guest_list_recipient_types = db.Enum(*GUEST_LIST_RECIPIENT_TYPE, name="recipient_type")
+SMS_TYPE = "sms"
 
 
 class ServiceInboundApi(db.Model, Versioned):
@@ -568,11 +504,6 @@ class KeyTypes(db.Model):
     name = db.Column(db.String(255), primary_key=True)
 
 
-class TemplateProcessTypes(db.Model):
-    __tablename__ = "template_process_type"
-    name = db.Column(db.String(255), primary_key=True)
-
-
 class TemplateFolder(db.Model):
     __tablename__ = "template_folder"
 
@@ -661,45 +592,9 @@ class TemplateBase(db.Model):
     def created_by(cls):
         return db.relationship("User")
 
-    @declared_attr
-    def process_type(cls):
-        return db.Column(
-            db.String(255), db.ForeignKey("template_process_type.name"), index=True, nullable=False, default=NORMAL
-        )
-
-    @property
-    def reply_to(self):
-        return None
-
-    @reply_to.setter
-    def reply_to(self, value):
-        if value is None:
-            pass
-        else:
-            raise ValueError("Unable to set sender for {} template".format(self.template_type))
-
-    @hybrid_property
-    def is_precompiled_letter(self):
-        return self.hidden and self.name == PRECOMPILED_TEMPLATE_NAME and self.template_type == LETTER_TYPE
-
-    @is_precompiled_letter.setter
-    def is_precompiled_letter(self, value):
-        pass
-
     def _as_utils_template(self):
-        if self.template_type == EMAIL_TYPE:
-            return PlainTextEmailTemplate(self.__dict__)
-        if self.template_type == SMS_TYPE:
-            return SMSMessageTemplate(self.__dict__)
         if self.template_type == BROADCAST_TYPE:
             return BroadcastMessageTemplate(self.__dict__)
-        if self.template_type == LETTER_TYPE:
-            return LetterPrintTemplate(self.__dict__)
-
-    def _as_utils_template_with_personalisation(self, values):
-        template = self._as_utils_template()
-        template.values = values
-        return template
 
     def serialize_for_v2(self):
         serialized = {
@@ -710,15 +605,7 @@ class TemplateBase(db.Model):
             "created_by": self.created_by.email_address,
             "version": self.version,
             "body": self.content,
-            "subject": self.subject if self.template_type in {EMAIL_TYPE, LETTER_TYPE} else None,
             "name": self.name,
-            "personalisation": {
-                key: {
-                    "required": True,
-                }
-                for key in self._as_utils_template().placeholders
-            },
-            "postage": self.postage,
         }
 
         return serialized
@@ -772,17 +659,6 @@ class TemplateHistory(TemplateBase):
         return url_for("v2_template.get_template_by_id", template_id=self.id, version=self.version, _external=True)
 
 
-MMG_PROVIDER = "mmg"
-FIRETEXT_PROVIDER = "firetext"
-SES_PROVIDER = "ses"
-
-SMS_PROVIDERS = [MMG_PROVIDER, FIRETEXT_PROVIDER]
-EMAIL_PROVIDERS = [SES_PROVIDER]
-PROVIDERS = SMS_PROVIDERS + EMAIL_PROVIDERS
-
-NOTIFICATION_TYPE = [EMAIL_TYPE, SMS_TYPE, LETTER_TYPE]
-notification_types = db.Enum(*NOTIFICATION_TYPE, name="notification_type")
-
 VERIFY_CODE_TYPES = [EMAIL_TYPE, SMS_TYPE]
 
 
@@ -811,111 +687,6 @@ class VerifyCode(db.Model):
     def check_code(self, cde):
         return cde == self._code
 
-
-NOTIFICATION_CANCELLED = "cancelled"
-NOTIFICATION_CREATED = "created"
-NOTIFICATION_SENDING = "sending"
-NOTIFICATION_SENT = "sent"
-NOTIFICATION_DELIVERED = "delivered"
-NOTIFICATION_PENDING = "pending"
-NOTIFICATION_FAILED = "failed"
-NOTIFICATION_TECHNICAL_FAILURE = "technical-failure"
-NOTIFICATION_TEMPORARY_FAILURE = "temporary-failure"
-NOTIFICATION_PERMANENT_FAILURE = "permanent-failure"
-NOTIFICATION_PENDING_VIRUS_CHECK = "pending-virus-check"
-NOTIFICATION_VALIDATION_FAILED = "validation-failed"
-NOTIFICATION_VIRUS_SCAN_FAILED = "virus-scan-failed"
-
-NOTIFICATION_STATUS_TYPES_FAILED = [
-    NOTIFICATION_TECHNICAL_FAILURE,
-    NOTIFICATION_TEMPORARY_FAILURE,
-    NOTIFICATION_PERMANENT_FAILURE,
-    NOTIFICATION_VALIDATION_FAILED,
-    NOTIFICATION_VIRUS_SCAN_FAILED,
-]
-
-NOTIFICATION_STATUS_TYPES_COMPLETED = [
-    NOTIFICATION_SENT,
-    NOTIFICATION_DELIVERED,
-    NOTIFICATION_FAILED,
-    NOTIFICATION_TECHNICAL_FAILURE,
-    NOTIFICATION_TEMPORARY_FAILURE,
-    NOTIFICATION_PERMANENT_FAILURE,
-    NOTIFICATION_CANCELLED,
-]
-
-NOTIFICATION_STATUS_SUCCESS = [NOTIFICATION_SENT, NOTIFICATION_DELIVERED]
-
-NOTIFICATION_STATUS_TYPES_BILLABLE = [
-    NOTIFICATION_SENDING,
-    NOTIFICATION_SENT,
-    NOTIFICATION_DELIVERED,
-    NOTIFICATION_PENDING,
-    NOTIFICATION_FAILED,
-    NOTIFICATION_TEMPORARY_FAILURE,
-    NOTIFICATION_PERMANENT_FAILURE,
-]
-
-NOTIFICATION_STATUS_TYPES_BILLABLE_SMS = [
-    NOTIFICATION_SENDING,
-    NOTIFICATION_SENT,  # internationally
-    NOTIFICATION_DELIVERED,
-    NOTIFICATION_PENDING,
-    NOTIFICATION_TEMPORARY_FAILURE,
-    NOTIFICATION_PERMANENT_FAILURE,
-]
-
-NOTIFICATION_STATUS_TYPES_BILLABLE_FOR_LETTERS = [
-    NOTIFICATION_SENDING,
-    NOTIFICATION_DELIVERED,
-]
-# we don't really have a concept of billable emails - however the ft billing table only includes emails that we have
-# actually sent.
-NOTIFICATION_STATUS_TYPES_SENT_EMAILS = [
-    NOTIFICATION_SENDING,
-    NOTIFICATION_DELIVERED,
-    NOTIFICATION_TEMPORARY_FAILURE,
-    NOTIFICATION_PERMANENT_FAILURE,
-]
-
-NOTIFICATION_STATUS_TYPES = [
-    NOTIFICATION_CANCELLED,
-    NOTIFICATION_CREATED,
-    NOTIFICATION_SENDING,
-    NOTIFICATION_SENT,
-    NOTIFICATION_DELIVERED,
-    NOTIFICATION_PENDING,
-    NOTIFICATION_FAILED,
-    NOTIFICATION_TECHNICAL_FAILURE,
-    NOTIFICATION_TEMPORARY_FAILURE,
-    NOTIFICATION_PERMANENT_FAILURE,
-    NOTIFICATION_PENDING_VIRUS_CHECK,
-    NOTIFICATION_VALIDATION_FAILED,
-    NOTIFICATION_VIRUS_SCAN_FAILED,
-]
-
-NOTIFICATION_STATUS_TYPES_NON_BILLABLE = list(set(NOTIFICATION_STATUS_TYPES) - set(NOTIFICATION_STATUS_TYPES_BILLABLE))
-
-NOTIFICATION_STATUS_TYPES_ENUM = db.Enum(*NOTIFICATION_STATUS_TYPES, name="notify_status_type")
-
-NOTIFICATION_STATUS_LETTER_ACCEPTED = "accepted"
-NOTIFICATION_STATUS_LETTER_RECEIVED = "received"
-
-DVLA_RESPONSE_STATUS_SENT = "Sent"
-
-FIRST_CLASS = "first"
-SECOND_CLASS = "second"
-EUROPE = "europe"
-REST_OF_WORLD = "rest-of-world"
-POSTAGE_TYPES = [FIRST_CLASS, SECOND_CLASS, EUROPE, REST_OF_WORLD]
-UK_POSTAGE_TYPES = [FIRST_CLASS, SECOND_CLASS]
-INTERNATIONAL_POSTAGE_TYPES = [EUROPE, REST_OF_WORLD]
-RESOLVE_POSTAGE_FOR_FILE_NAME = {
-    FIRST_CLASS: 1,
-    SECOND_CLASS: 2,
-    EUROPE: "E",
-    REST_OF_WORLD: "N",
-}
 
 INVITE_PENDING = "pending"
 INVITE_ACCEPTED = "accepted"
@@ -991,9 +762,6 @@ class InvitedOrganisationUser(db.Model):
 MANAGE_USERS = "manage_users"
 MANAGE_TEMPLATES = "manage_templates"
 MANAGE_SETTINGS = "manage_settings"
-SEND_TEXTS = "send_texts"
-SEND_EMAILS = "send_emails"
-SEND_LETTERS = "send_letters"
 MANAGE_API_KEYS = "manage_api_keys"
 PLATFORM_ADMIN = "platform_admin"
 VIEW_ACTIVITY = "view_activity"
@@ -1007,9 +775,6 @@ PERMISSION_LIST = [
     MANAGE_USERS,
     MANAGE_TEMPLATES,
     MANAGE_SETTINGS,
-    SEND_TEXTS,
-    SEND_EMAILS,
-    SEND_LETTERS,
     MANAGE_API_KEYS,
     PLATFORM_ADMIN,
     VIEW_ACTIVITY,

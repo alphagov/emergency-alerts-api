@@ -56,16 +56,12 @@ def handle_integrity_error(exc):
     """
     if any(
         'duplicate key value violates unique constraint "{}"'.format(constraint) in str(exc)
-        for constraint in {"services_name_key", "services_email_from_key"}
+        for constraint in {"services_name_key"}
     ):
         return (
             jsonify(
                 result="error",
-                message={
-                    "name": [
-                        "Duplicate service name '{}'".format(exc.params.get("name", exc.params.get("email_from", "")))
-                    ]
-                },
+                message={"name": ["Duplicate service name '{}'".format(exc.params.get("name"))]},
             ),
             400,
         )
@@ -147,7 +143,6 @@ def update_service(service_id):
             template_id=current_app.config["SERVICE_NOW_LIVE_TEMPLATE_ID"],
             personalisation={
                 "service_name": current_data["name"],
-                "message_limit": "{:,}".format(current_data["message_limit"]),
             },
             include_user_fields=["name"],
         )

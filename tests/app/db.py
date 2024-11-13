@@ -17,7 +17,6 @@ from app.dao.users_dao import save_model_user
 from app.models import (
     EMAIL_TYPE,
     KEY_TYPE_NORMAL,
-    LETTER_TYPE,
     SMS_TYPE,
     ApiKey,
     BroadcastEvent,
@@ -71,45 +70,23 @@ def create_service(
     service_name="Sample service",
     service_id=None,
     restricted=False,
-    count_as_live=True,
     service_permissions=None,
-    research_mode=False,
     active=True,
-    email_from=None,
-    prefix_sms=True,
-    message_limit=1000,
     organisation_type="central",
     check_if_service_exists=False,
-    go_live_user=None,
-    go_live_at=None,
     crown=True,
     organisation=None,
-    purchase_order_number=None,
-    billing_contact_names=None,
-    billing_contact_email_addresses=None,
-    billing_reference=None,
-    contact_link=None,
 ):
     if check_if_service_exists:
         service = Service.query.filter_by(name=service_name).first()
     if (not check_if_service_exists) or (check_if_service_exists and not service):
         service = Service(
             name=service_name,
-            message_limit=message_limit,
             restricted=restricted,
-            email_from=email_from if email_from else service_name.lower().replace(" ", "."),
             created_by=user if user else create_user(email="{}@digital.cabinet-office.gov.uk".format(uuid.uuid4())),
-            prefix_sms=prefix_sms,
             organisation_type=organisation_type,
             organisation=organisation,
-            go_live_user=go_live_user,
-            go_live_at=go_live_at,
             crown=crown,
-            purchase_order_number=purchase_order_number,
-            billing_contact_names=billing_contact_names,
-            billing_contact_email_addresses=billing_contact_email_addresses,
-            billing_reference=billing_reference,
-            contact_link=contact_link,
         )
         dao_create_service(
             service,
@@ -117,10 +94,7 @@ def create_service(
             service_id,
             service_permissions=service_permissions,
         )
-
         service.active = active
-        service.research_mode = research_mode
-        service.count_as_live = count_as_live
     else:
         if user and user not in service.users:
             dao_add_user_to_service(service, user)
@@ -132,15 +106,9 @@ def create_template(
     service,
     template_type=SMS_TYPE,
     template_name=None,
-    subject="Template subject",
     content="Dear Sir/Madam, Hello. Yours Truly, The Government.",
-    reply_to=None,
-    hidden=False,
     archived=False,
     folder=None,
-    postage=None,
-    process_type="normal",
-    contact_block_id=None,
 ):
     data = {
         "name": template_name or "{} Template Name".format(template_type),
@@ -148,17 +116,8 @@ def create_template(
         "content": content,
         "service": service,
         "created_by": service.created_by,
-        "reply_to": reply_to,
-        "hidden": hidden,
         "folder": folder,
-        "process_type": process_type,
     }
-    if template_type == LETTER_TYPE:
-        data["postage"] = postage or "second"
-        if contact_block_id:
-            data["service_letter_contact_id"] = contact_block_id
-    if template_type != SMS_TYPE:
-        data["subject"] = subject
     template = Template(**data)
     dao_create_template(template)
 
@@ -231,20 +190,12 @@ def create_organisation(
     organisation_type=None,
     domains=None,
     organisation_id=None,
-    purchase_order_number=None,
-    billing_contact_names=None,
-    billing_contact_email_addresses=None,
-    billing_reference=None,
 ):
     data = {
         "id": organisation_id,
         "name": name,
         "active": active,
         "organisation_type": organisation_type,
-        "purchase_order_number": purchase_order_number,
-        "billing_contact_names": billing_contact_names,
-        "billing_contact_email_addresses": billing_contact_email_addresses,
-        "billing_reference": billing_reference,
     }
     organisation = Organisation(**data)
     dao_create_organisation(organisation)
@@ -305,7 +256,7 @@ def create_invited_user(service=None, to_email_address=None):
         "service": service,
         "email_address": to_email_address,
         "from_user": from_user,
-        "permissions": "send_messages,manage_service,manage_api_keys",
+        "permissions": "create_broadcasts,manage_service,manage_api_keys",
         "folder_permissions": [str(uuid.uuid4()), str(uuid.uuid4())],
     }
     invited_user = InvitedUser(**data)
@@ -341,12 +292,9 @@ def create_broadcast_message(
         service = template.service
         template_id = template.id
         template_version = template.version
-        personalisation = personalisation or {}
-        content = template._as_utils_template_with_personalisation(personalisation).content_with_placeholders_filled_in
     elif content:
         template_id = None
         template_version = None
-        personalisation = None
         content = content
     else:
         pytest.fail("Provide template or content")

@@ -12,7 +12,6 @@ from emergency_alerts_utils.celery import NotifyCelery
 from emergency_alerts_utils.clients.encryption.encryption_client import (
     Encryption,
 )
-from emergency_alerts_utils.clients.redis.redis_client import RedisClient
 from emergency_alerts_utils.clients.slack.slack_client import SlackClient
 from emergency_alerts_utils.clients.statsd.statsd_client import StatsdClient
 from emergency_alerts_utils.clients.zendesk.zendesk_client import ZendeskClient
@@ -57,7 +56,6 @@ encryption = Encryption()
 zendesk_client = ZendeskClient()
 slack_client = SlackClient()
 statsd_client = StatsdClient()
-redis_store = RedisClient()
 cbc_proxy_client = CBCProxyClient()
 metrics = GDSMetrics()
 
@@ -106,7 +104,6 @@ def create_app(application):
 
     notify_celery.init_app(application)
     encryption.init_app(application)
-    redis_store.init_app(application)
 
     cbc_proxy_client.init_app(application)
 
