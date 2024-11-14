@@ -78,5 +78,5 @@ def check_file_exists(bucket, file):
         if err.response["Error"]["Code"] == "403":
             print("File not found")
         else:
-            print("Another error occured", err)
+            print("Error:", err)
         return False
