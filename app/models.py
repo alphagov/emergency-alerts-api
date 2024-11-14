@@ -1541,11 +1541,9 @@ class CommonPasswords(db.Model):
 
     __tablename__ = "common_passwords"
 
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    password = db.Column(db.String, index=True, unique=True, nullable=False)
+    password = db.Column(db.String, primary_key=True, index=True, unique=True, nullable=False)
 
     def serialize(self):
         return {
-            "id": self.id,
             "password": self.password,
         }
