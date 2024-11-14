@@ -788,7 +788,7 @@ def test_send_user_confirm_new_email_returns_204(
     notification = {
         "type": "email",
         "template_id": current_app.config["CHANGE_EMAIL_CONFIRMATION_TEMPLATE_ID"],
-        "recipient": data,
+        "recipient": new_email,
         "reply_to": current_app.config["EAS_EMAIL_REPLY_TO_ID"],
         "personalisation": {
             "name": "Test User",
