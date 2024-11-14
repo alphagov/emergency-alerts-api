@@ -45,8 +45,10 @@ def upgrade():
             passwords = file.readlines()
         if passwords:
             bulk_insert_passwords(passwords, common_passwords_table)
-    elif os.getenv("HOST") == "hosted" and check_file_exists(os.getenv("COMMON_PASSWORDS_BUCKET_NAME"), passwords_file):
-        if passwords := get_file_contents_from_s3(os.getenv("COMMON_PASSWORDS_BUCKET_NAME"), passwords_file):
+    elif os.getenv("HOST") == "hosted" and check_file_exists(
+        os.getenv("COMMON_PASSWORDS_BUCKET_NAME"), "passwords.txt"
+    ):
+        if passwords := get_file_contents_from_s3(os.getenv("COMMON_PASSWORDS_BUCKET_NAME"), "passwords.txt"):
             bulk_insert_passwords(passwords, common_passwords_table)
         else:
             print("Passwords file was empty")
