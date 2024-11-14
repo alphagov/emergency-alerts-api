@@ -13,7 +13,6 @@ import boto3
 import botocore
 import sqlalchemy as sa
 from alembic import op
-from flask import current_app
 from sqlalchemy.dialects import postgresql
 
 from app.utils import is_local_host
@@ -23,15 +22,14 @@ down_revision = "0402_drop_deprecated_tables"
 
 
 s3 = boto3.client("s3")
-passwords_file = current_app.config["COMMON_PASSWORDS_FILEPATH"]
+passwords_file = os.getenv("COMMON_PASSWORDS_FILEPATH")
 
 
 def upgrade():
     common_passwords_table = op.create_table(
         "common_passwords",
-        sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("password", sa.String(), nullable=False),
-        sa.PrimaryKeyConstraint("id"),
+        sa.PrimaryKeyConstraint("password"),
     )
 
     op.create_index(
@@ -45,10 +43,10 @@ def upgrade():
             passwords = file.readlines()
         if passwords:
             bulk_insert_passwords(passwords, common_passwords_table)
-    elif current_app.config["HOST"] == "hosted" and check_file_exists(
-        current_app.config["COMMON_PASSWORDS_BUCKET_NAME"], passwords_file
+    elif os.getenv("HOST") == "hosted" and check_file_exists(
+        os.getenv("COMMON_PASSWORDS_BUCKET_NAME"), "passwords.txt"
     ):
-        if passwords := get_file_contents_from_s3(current_app.config["COMMON_PASSWORDS_BUCKET_NAME"], passwords_file):
+        if passwords := get_file_contents_from_s3(os.getenv("COMMON_PASSWORDS_BUCKET_NAME"), "passwords.txt"):
             bulk_insert_passwords(passwords, common_passwords_table)
         else:
             print("Passwords file was empty")
@@ -66,8 +64,8 @@ def get_file_contents_from_s3(bucket, file):
 
 
 def bulk_insert_passwords(passwords, table):
-    data = [(str(uuid.uuid4()), password.strip()) for password in passwords if password != ""]
-    op.bulk_insert(table, [{"id": row[0], "password": row[1]} for row in data])
+    data = [password.strip() for password in passwords if password != ""]
+    op.bulk_insert(table, [{"password": row} for row in data])
 
 
 def check_file_exists(bucket, file):
