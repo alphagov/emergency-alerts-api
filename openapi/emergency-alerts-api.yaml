@@ -227,15 +227,11 @@ components:
           $ref: '#/components/schemas/ResponseAreas'
         cancelled_at:
           type: string
-        cancelled_by_id:
-          type: string
         cap_event:
           type: string
         content:
           type: string
         created_at:
-          type: string
-        created_by_id:
           type: string
         duration:
           type: string
@@ -328,11 +324,9 @@ components:
                     ]
                   },
                   "cancelled_at": null,
-                  "cancelled_by_id": null,
                   "cap_event": "Flood Warning 3a039397-3cf6-4568-83c0-a6df761489a1",
                   "content": "There is high risk of flooding.",
                   "created_at": "2024-11-18T15:55:35.150241Z",
-                  "created_by_id": null,
                   "duration": null,
                   "finishes_at": null,
                   "id": "a655a52b-157a-49b3-93a0-040ef533b8b3",
@@ -373,11 +367,9 @@ components:
                     ]
                   },
                   "cancelled_at": null,
-                  "cancelled_by_id": null,
                   "cap_event": "Flood Warning 3a039397-3cf6-4568-83c0-a6df761489a1",
                   "content": "There is high risk of flooding.",
                   "created_at": "2024-11-18T15:55:35.150241Z",
-                  "created_by_id": null,
                   "duration": null,
                   "finishes_at": null,
                   "id": "a655a52b-157a-49b3-93a0-040ef533b8b3",
@@ -418,11 +410,9 @@ components:
                     ]
                   },
                   "cancelled_at": "2024-11-18T16:30:45.787601Z",
-                  "cancelled_by_id": null,
                   "cap_event": "Flood Warning 86da511b-2fe9-479b-abc5-788cf956be74",
                   "content": "There is high risk of flooding.",
                   "created_at": "2024-11-18T16:28:38.709741Z",
-                  "created_by_id": null,
                   "duration": null,
                   "finishes_at": "2024-11-19T15:00:16.459327Z",
                   "id": "dc268352-29db-4814-aa20-0c21c890b3d1",
