@@ -1,0 +1,474 @@
+openapi: 3.0.3
+
+info:
+  title: Emergency Alerts Service
+  description: Broadcast alerts using the Emergency Alerts Service API
+  contact:
+    name: Emergency Alerts Support
+    url: https://admin.emergency-alerts.service.gov.uk/support/ask-question-give-feedback
+    email: emergency-alerts-support@digital.cabinet-office.gov.uk
+  license:
+    name: OpenGovLicense
+    url: https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/
+  version: 1.0.0
+
+servers:
+  - url: https://api.emergency-alerts.service.gov.uk/v2
+    description: Production environment
+  - url: https://api.staging.emergency-alerts.service.gov.uk/v2
+    description: Staging environment
+
+paths:
+  /broadcast:
+    post:
+      security:
+        - bearerAuth: []
+      operationId: BroadcastAlert
+      summary: Broadcast emergency alerts
+      requestBody:
+        content:
+          application/cap+xml:
+            schema:
+              $ref: "#/components/schemas/Alert"
+            examples:
+              Create Alert:
+                value:
+                  identifier: 'd0cb0757-db2d-4a6e-a477-1cc0aff18519'
+                  sender: 'www.gov.uk/environment-agency'
+                  sent: '2024-11-18T15:22:13-01:00'
+                  status: 'Actual'
+                  msgType: 'Alert'
+                  scope: 'Public'
+                  info:
+                    language: 'en-GB'
+                    category: 'Met'
+                    event: 'Flood Warning 1cc0aff18519'
+                    urgency: 'Immediate'
+                    severity: 'Severe'
+                    certainty: 'Likely'
+                    expires: '2024-11-19T15:22:13-01:00'
+                    senderName: 'Environment Agency'
+                    description: 'Alert warning message goes here'
+                    instruction: 'Check the latest information for your area'
+                    area:
+                      areaDesc: 'River Stepping'
+                      polygon: '53.10569,0.24453 53.10593,0.24430 53.10601,0.24375 53.10615,0.24349 53.10629,0.24356 53.10656,0.24336 53.10697,0.24354 53.10684,0.24298 53.10694,0.24264 53.10721,0.24302 53.10752,0.24310 53.10777,0.24308 53.10805,0.24320 53.10803,0.24187 53.10776,0.24085 53.10774,0.24062 53.10702,0.24056 53.10679,0.24088 53.10658,0.24071 53.10651,0.24049 53.10656,0.24022 53.10642,0.24022 53.10632,0.24052 53.10629,0.24082 53.10612,0.24093 53.10583,0.24133 53.10564,0.24178 53.10541,0.24282 53.10569,0.24453'
+                      geocode:
+                        valueName: 'TargetAreaCode'
+                        value: '053FWFSTEEP4'
+              Cancel Alert:
+                value:
+                  identifier: 'd0cb0757-db2d-4a6e-a477-1cc0aff18519'
+                  sender: 'www.gov.uk/environment-agency'
+                  sent: '2024-11-18T20:01:53-01:00'
+                  status: 'Actual'
+                  msgType: 'Cancel'
+                  scope: 'Public'
+                  references: 'www.gov.uk/environment-agency,d0cb0757-db2d-4a6e-a477-1cc0aff18519,2024-11-18T15:22:13-01:00'
+                  info:
+                    language: 'en-GB'
+                    category: 'Met'
+                    event: 'Flood Warning 1cc0aff18519'
+                    urgency: 'Immediate'
+                    severity: 'Severe'
+                    certainty: 'Likely'
+                    expires: '2024-11-19T15:22:13-01:00'
+                    senderName: 'Environment Agency'
+                    description: ''
+                    instruction: 'Check the latest information for your area'
+                    area:
+                      areaDesc: 'River Stepping'
+                      polygon: '53.10569,0.24453 53.10593,0.24430 53.10601,0.24375 53.10615,0.24349 53.10629,0.24356 53.10656,0.24336 53.10697,0.24354 53.10684,0.24298 53.10694,0.24264 53.10721,0.24302 53.10752,0.24310 53.10777,0.24308 53.10805,0.24320 53.10803,0.24187 53.10776,0.24085 53.10774,0.24062 53.10702,0.24056 53.10679,0.24088 53.10658,0.24071 53.10651,0.24049 53.10656,0.24022 53.10642,0.24022 53.10632,0.24052 53.10629,0.24082 53.10612,0.24093 53.10583,0.24133 53.10564,0.24178 53.10541,0.24282 53.10569,0.24453'
+                      geocode:
+                        valueName: 'TargetAreaCode'
+                        value: '053FWFSTEEP4'
+
+      responses:
+        "201":
+          $ref: '#/components/responses/Broadcast'
+        "403":
+          $ref: "#/components/responses/AuthError"
+
+    options:
+      summary: Check for service availability
+      security:
+        - bearerAuth: []
+      operationId: ServiceStatus
+      responses:
+        "200":
+          description: OK
+          headers:
+            Allow:
+              schema:
+                type: string
+              description: Allow header - OPTIONS, POST
+            Content-Type:
+              schema:
+                type: string
+              description: application/json
+            Content-Length:
+              schema:
+                type: string
+              description: '0'
+        "403":
+          $ref: "#/components/responses/AuthError"
+
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: jwt
+      description: Create a JWT token for GOV.UK Emergency Alerts
+
+  schemas:
+    Alert:
+      type: object
+      xml:
+        name: alert
+        namespace: urn:oasis:names:tc:emergency:cap:1.2
+      properties:
+        identifier:
+          type: string
+        sender:
+          type: string
+        sent:
+          type: string
+          format: '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d[-,+]\d\d:\d\d'
+          example: '2024-11-15T15:32:43-01:00'
+        status:
+          type: string
+          enum: [Actual, Exercise, System, Test, Draft]
+        msgType:
+          type: string
+          enum: [Alert, Update, Cancel, Ack, Error]
+        scope:
+          type: string
+          enum: [Public, Restricted, Private]
+        references:
+          type: string
+        info:
+          $ref: "#/components/schemas/Info"
+      required:
+        - identifier
+        - sender
+        - sent
+        - status
+        - msgType
+        - scope
+    Info:
+      type: object
+      properties:
+        language:
+          type: string
+        category:
+          type: string
+          enum: [Geo, Met, Safety, Security, Rescue, Fire, Health, Env, Transport, Infra, CBRNE, Other]
+        event:
+          type: string
+          description: The text denoting the type of the subject event of the alert message
+        urgency:
+          type: string
+          enum: [Immediate, Expected, Future, Past, Unknown]
+        severity:
+          type: string
+          enum: [Extreme, Severe, Moderate, Minor, Unknown]
+        certainty:
+          type: string
+          enum: [Observed, Likely, Possible, Unlikely, Unknown]
+        expires:
+          type: string
+          format: '\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d[-,+]\d\d:\d\d'
+        senderName:
+          type: string
+        description:
+          type: string
+          description: Alert message content
+        instruction:
+          type: string
+        area:
+          $ref: '#/components/schemas/Area'
+      required:
+        - category
+        - event
+        - urgency
+        - severity
+        - certainty
+    Area:
+      type: object
+      properties:
+        areaDesc:
+          type: string
+        polygon:
+          type: string
+          description: A string of Latitude-Longitude pairs
+          example: 53.10569,0.24453 53.10593,0.24430 53.10601,0.24375 53.10615,0.24349
+        geocode:
+          $ref: '#/components/schemas/GeoCode'
+      required:
+        - areaDesc
+    GeoCode:
+      type: object
+      properties:
+        valueName:
+          type: string
+        value:
+          type: string
+
+    BroadcastResponse:
+      type: object
+      properties:
+        approved_at:
+          type: string
+        approved_by_id:
+          type: string
+        areas:
+          $ref: '#/components/schemas/ResponseAreas'
+        cancelled_at:
+          type: string
+        cancelled_by_id:
+          type: string
+        cap_event:
+          type: string
+        content:
+          type: string
+        created_at:
+          type: string
+        created_by_id:
+          type: string
+        duration:
+          type: string
+        finishes_at:
+          type: string
+        id:
+          type: string
+        reference:
+          type: string
+        service_id:
+          type: string
+        starts_at:
+          type: string
+        status:
+          type: string
+        updated_at:
+          type: string
+
+    ResponseAreas:
+      type: object
+      properties:
+        names:
+          type: array
+          items:
+            type: string
+        simple_polygons:
+          type: array
+          items:
+            type: array
+            items:
+              type: array
+              minItems: 2
+              maxItems: 2
+              items:
+                type: number
+
+    ErrorResponse:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/Error"
+        status_code:
+          type: integer
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+
+  responses:
+    Broadcast:
+      description: 'CREATED'
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/BroadcastResponse"
+          examples:
+            Alert created pending approval:
+              value:
+                {
+                  "approved_at": null,
+                  "approved_by_id": null,
+                  "areas": {
+                    "names": [
+                      "River Steeping"
+                    ],
+                    "simple_polygons": [
+                      [
+                        [
+                          53.10569,
+                          0.24453
+                        ],
+                        [
+                          53.10694,
+                          0.24264
+                        ],
+                        [
+                          53.10774,
+                          0.24062
+                        ],
+                        [
+                          53.10569,
+                          0.24453
+                        ]
+                      ]
+                    ]
+                  },
+                  "cancelled_at": null,
+                  "cancelled_by_id": null,
+                  "cap_event": "Flood Warning 3a039397-3cf6-4568-83c0-a6df761489a1",
+                  "content": "There is high risk of flooding.",
+                  "created_at": "2024-11-18T15:55:35.150241Z",
+                  "created_by_id": null,
+                  "duration": null,
+                  "finishes_at": null,
+                  "id": "a655a52b-157a-49b3-93a0-040ef533b8b3",
+                  "reference": "3a039397-3cf6-4568-83c0-a6df761489a1",
+                  "service_id": "de53ec2b-4324-4a63-a8a2-ef582fd538d8",
+                  "starts_at": null,
+                  "status": "pending-approval",
+                  "updated_at": null
+                }
+            Alert rejected before broadcast:
+              value:
+                {
+                  "approved_at": null,
+                  "approved_by_id": null,
+                  "areas": {
+                    "names": [
+                      "River Steeping"
+                    ],
+                    "simple_polygons": [
+                      [
+                        [
+                          53.10569,
+                          0.24453
+                        ],
+                        [
+                          53.10694,
+                          0.24264
+                        ],
+                        [
+                          53.10774,
+                          0.24062
+                        ],
+                        [
+                          53.10569,
+                          0.24453
+                        ]
+                      ]
+                    ]
+                  },
+                  "cancelled_at": null,
+                  "cancelled_by_id": null,
+                  "cap_event": "Flood Warning 3a039397-3cf6-4568-83c0-a6df761489a1",
+                  "content": "There is high risk of flooding.",
+                  "created_at": "2024-11-18T15:55:35.150241Z",
+                  "created_by_id": null,
+                  "duration": null,
+                  "finishes_at": null,
+                  "id": "a655a52b-157a-49b3-93a0-040ef533b8b3",
+                  "reference": "3a039397-3cf6-4568-83c0-a6df761489a1",
+                  "service_id": "de53ec2b-4324-4a63-a8a2-ef582fd538d8",
+                  "starts_at": null,
+                  "status": "rejected",
+                  "updated_at": "2024-11-18T15:56:44.724549Z"
+                }
+            Alert cancelled during broadcast:
+              value:
+                {
+                  "approved_at": "2024-11-18T16:30:16.515611Z",
+                  "approved_by_id": "ecfc6390-b548-405c-f4a7-1a1353909252",
+                  "areas": {
+                    "names": [
+                      "River Steeping"
+                    ],
+                    "simple_polygons": [
+                      [
+                        [
+                          53.10569,
+                          0.24453
+                        ],
+                        [
+                          53.10694,
+                          0.24264
+                        ],
+                        [
+                          53.10774,
+                          0.24062
+                        ],
+                        [
+                          53.10569,
+                          0.24453
+                        ]
+                      ]
+                    ]
+                  },
+                  "cancelled_at": "2024-11-18T16:30:45.787601Z",
+                  "cancelled_by_id": null,
+                  "cap_event": "Flood Warning 86da511b-2fe9-479b-abc5-788cf956be74",
+                  "content": "There is high risk of flooding.",
+                  "created_at": "2024-11-18T16:28:38.709741Z",
+                  "created_by_id": null,
+                  "duration": null,
+                  "finishes_at": "2024-11-19T15:00:16.459327Z",
+                  "id": "dc268352-29db-4814-aa20-0c21c890b3d1",
+                  "reference": "86da511b-2fe9-479b-abc5-788cf956be74",
+                  "service_id": "de53ec2b-4324-4a63-a8a2-ef582fd538d8",
+                  "starts_at": "2024-11-18T16:30:16.459316Z",
+                  "status": "cancelled",
+                  "updated_at": "2024-11-18T16:30:45.788766Z"
+                }
+    AuthError:
+      description: 'FORBIDDEN'
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            Invalid api key:
+              value:
+                {
+                  "errors": [
+                    {
+                      "error": "AuthError",
+                      "message": "Invalid token: API key not found"
+                    }
+                  ],
+                  "status_code": 403
+                }
+            Service not found:
+              value:
+                {
+                  "errors": [
+                    {
+                      "error": "AuthError",
+                      "message": "Invalid token: service not found"
+                    }
+                  ],
+                  "status_code": 403
+                }
+            Token expired:
+              value:
+                {
+                  "errors": [
+                    {
+                      "error": "AuthError",
+                      "message": "Error: Your system clock must be accurate to within 30 seconds"
+                    }
+                  ],
+                  "status_code": 403
+                }
