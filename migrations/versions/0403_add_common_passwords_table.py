@@ -7,13 +7,11 @@ Create Date: 2024-10-31 11:33:35
 """
 
 import os
-import uuid
 
 import boto3
 import botocore
 import sqlalchemy as sa
 from alembic import op
-from sqlalchemy.dialects import postgresql
 
 from app.utils import is_local_host
 
@@ -22,7 +20,8 @@ down_revision = "0402_drop_deprecated_tables"
 
 
 s3 = boto3.client("s3")
-passwords_file = os.getenv("COMMON_PASSWORDS_FILEPATH")
+passwords_file = os.getenv("COMMON_PASSWORDS_FILEPATH", "")
+common_passwords_bucket_name = os.getenv("COMMON_PASSWORDS_BUCKET_NAME", "")
 
 
 def upgrade():
@@ -43,10 +42,10 @@ def upgrade():
             passwords = file.readlines()
         if passwords:
             bulk_insert_passwords(passwords, common_passwords_table)
-    elif os.getenv("HOST") == "hosted" and check_file_exists(
-        os.getenv("COMMON_PASSWORDS_BUCKET_NAME"), "passwords.txt"
+    elif (common_passwords_bucket_name != "") and (
+        check_file_exists(common_passwords_bucket_name, "passwords.txt")
     ):
-        if passwords := get_file_contents_from_s3(os.getenv("COMMON_PASSWORDS_BUCKET_NAME"), "passwords.txt"):
+        if passwords := get_file_contents_from_s3(common_passwords_bucket_name, "passwords.txt"):
             bulk_insert_passwords(passwords, common_passwords_table)
         else:
             print("Passwords file was empty")
