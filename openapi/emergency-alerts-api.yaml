@@ -32,7 +32,7 @@ info:
     ```
     jwt.encode(payload=claims, key=api_key, headers=headers)
     ```
-    The full code snippet would look something like this:
+    The full code snippet (in Python) would look something like this:
     ```
     import calendar
     import time
