@@ -47,6 +47,8 @@ read-source-file: write-source-file
 	echo '. "$$NVM_DIR/nvm.sh"' >> ~/.nvm-source;
 
 	@if [[ "$(NVM_DIR)" == "" || ! -f "$(NVM_DIR)/nvm.sh" ]]; then \
+		mkdir -p $(HOME)/.nvm; \
+		export NVM_DIR=$(HOME)/.nvm; \
 		curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v$(NVM_VERSION)/install.sh | bash; \
 		echo ""; \
 		$(MAKE) write-source-file; \
