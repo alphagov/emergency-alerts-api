@@ -47,13 +47,10 @@ info:
 
     ---
 
-  contact:
-    name: Emergency Alerts Support
-    url: https://admin.emergency-alerts.service.gov.uk/support/ask-question-give-feedback
-    email: emergency-alerts-support@digital.cabinet-office.gov.uk
   license:
     name: OpenGovLicense
     url: https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/
+
   version: 1.0.0
 
 servers:
