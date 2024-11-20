@@ -1224,3 +1224,15 @@ def test_update_user_password_low_entropy_password(admin_request, sample_service
     )
 
     assert json_resp["errors"] == ["Your password is not strong enough, try adding more words"]
+
+
+@pytest.mark.parametrize(
+    "email, to_be_created, return_value",
+    [("test@digital.cabinet-office.gov.uk", False, False), ("findel.mestro@foo.com", True, True)],
+)
+def test_check_email_already_in_use(admin_request, email, to_be_created, return_value):
+    if to_be_created:
+        create_user(email=email)
+    data = {"email": email}
+    json_resp = admin_request.post("user.check_email_already_in_use", _data=data, _expected_status=200)
+    assert json_resp is return_value
