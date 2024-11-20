@@ -1532,3 +1532,18 @@ class PasswordHistory(db.Model):
             "_password": self._password,
             "password_changed_at": self.password_changed_at,
         }
+
+
+class CommonPasswords(db.Model):
+    """
+    This table is used to store common passwords.
+    """
+
+    __tablename__ = "common_passwords"
+
+    password = db.Column(db.String, primary_key=True, index=True, unique=True, nullable=False)
+
+    def serialize(self):
+        return {
+            "password": self.password,
+        }

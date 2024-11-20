@@ -17,6 +17,7 @@ from app.models import (
     MANAGE_SETTINGS,
     MANAGE_TEMPLATES,
     SMS_AUTH_TYPE,
+    CommonPasswords,
     Permission,
     User,
 )
@@ -1224,6 +1225,22 @@ def test_update_user_password_low_entropy_password(admin_request, sample_service
     )
 
     assert json_resp["errors"] == ["Your password is not strong enough, try adding more words"]
+
+
+def test_update_user_password_rejects_common_password(admin_request, sample_service, notify_db_session):
+    new_password = "common password 123"
+    data = {"_password": new_password}
+    sample_user = sample_service.users[0]
+
+    common_password = CommonPasswords(password=new_password)
+    notify_db_session.add(common_password)
+    notify_db_session.commit()
+
+    json_resp = admin_request.post(
+        "user.check_password_is_valid", user_id=sample_user.id, _data=data, _expected_status=400
+    )
+
+    assert json_resp["errors"] == ["Your password is too common. Please choose a new one."]
 
 
 @pytest.mark.parametrize(
