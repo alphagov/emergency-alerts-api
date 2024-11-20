@@ -42,9 +42,7 @@ def upgrade():
             passwords = file.readlines()
         if passwords:
             bulk_insert_passwords(passwords, common_passwords_table)
-    elif (common_passwords_bucket_name != "") and (
-        check_file_exists(common_passwords_bucket_name, "passwords.txt")
-    ):
+    elif (common_passwords_bucket_name != "") and (check_file_exists(common_passwords_bucket_name, "passwords.txt")):
         if passwords := get_file_contents_from_s3(common_passwords_bucket_name, "passwords.txt"):
             bulk_insert_passwords(passwords, common_passwords_table)
         else:
