@@ -148,7 +148,6 @@ def dao_create_service(
     permission_dao.add_default_service_permissions_for_user(user, service)
     service.id = service_id or uuid.uuid4()  # must be set now so version history model can use same id
     service.active = True
-    service.research_mode = False
 
     for permission in service_permissions:
         service_permission = ServicePermission(service_id=service.id, permission=permission)
@@ -164,7 +163,6 @@ def dao_create_service(
         service.crown = True
     elif service.organisation_type in NON_CROWN_ORGANISATION_TYPES:
         service.crown = False
-    service.count_as_live = not user.platform_admin
 
     db.session.add(service)
 

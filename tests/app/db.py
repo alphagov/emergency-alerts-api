@@ -278,7 +278,7 @@ def create_broadcast_message(
     *,
     service=None,  # only used if template is not provided
     created_by=None,
-    personalisation=None,
+    # personalisation=None,
     content=None,
     status=BroadcastStatusType.DRAFT,
     starts_at=None,
@@ -292,6 +292,7 @@ def create_broadcast_message(
         service = template.service
         template_id = template.id
         template_version = template.version
+        content = template.content
     elif content:
         template_id = None
         template_version = None
@@ -303,7 +304,7 @@ def create_broadcast_message(
         service_id=service.id,
         template_id=template_id,
         template_version=template_version,
-        personalisation=personalisation,
+        # personalisation=personalisation,
         status=status,
         starts_at=starts_at,
         finishes_at=finishes_at,
