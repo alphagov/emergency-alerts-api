@@ -249,12 +249,6 @@ def test_get_template_versions(sample_template):
     assert {template_history["version"] for template_history in v} == {1, 2}
 
 
-def test_get_template_versions_is_empty_for_hidden_templates(sample_service):
-    sample_template = create_template(template_name="Test Template", hidden=True, service=sample_service)
-    versions = dao_get_template_versions(service_id=sample_template.service_id, template_id=sample_template.id)
-    assert len(versions) == 0
-
-
 def test_purge_templates_for_service(sample_user, sample_service):
     service_user = dao_get_service_user(sample_user.id, sample_service.id)
     folder_1 = create_template_folder(sample_service, name="folder_1", users=[service_user])

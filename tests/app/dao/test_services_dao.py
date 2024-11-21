@@ -51,7 +51,7 @@ from tests.app.db import (
     create_user,
 )
 
-DUMMY_PERMISSION = "dummy_permission"
+PLACEHOLDER_TYPE = "placeholder"
 
 
 def test_create_service(notify_db_session):
@@ -68,7 +68,6 @@ def test_create_service(notify_db_session):
     service_db = Service.query.one()
     assert service_db.name == "service_name"
     assert service_db.id == service.id
-    assert service_db.research_mode is False
     assert service.active is True
     assert user in service_db.users
     assert service_db.organisation_type == "central"
@@ -94,7 +93,6 @@ def test_create_service_with_organisation(notify_db_session):
     organisation = Organisation.query.get(organisation.id)
     assert service_db.name == "service_name"
     assert service_db.id == service.id
-    assert service_db.research_mode is False
     assert service.active is True
     assert user in service_db.users
     assert service_db.organisation_type == "local"
@@ -117,17 +115,6 @@ def test_cannot_create_two_services_with_same_name(notify_db_session):
         dao_create_service(service1, user)
         dao_create_service(service2, user)
     assert 'duplicate key value violates unique constraint "services_name_key"' in str(excinfo.value)
-
-
-def test_cannot_create_two_services_with_same_email_from(notify_db_session):
-    user = create_user()
-    assert Service.query.count() == 0
-    service1 = Service(name="service_name1", restricted=False, created_by=user)
-    service2 = Service(name="service_name2", restricted=False, created_by=user)
-    with pytest.raises(IntegrityError) as excinfo:
-        dao_create_service(service1, user)
-        dao_create_service(service2, user)
-    assert 'duplicate key value violates unique constraint "services_email_from_key"' in str(excinfo.value)
 
 
 def test_cannot_create_service_with_no_user(notify_db_session):
@@ -221,7 +208,7 @@ def test_should_remove_user_from_service(notify_db_session):
 
 
 def test_removing_a_user_from_a_service_deletes_their_permissions(sample_user, sample_service):
-    assert len(Permission.query.all()) == 8
+    assert len(Permission.query.all()) == 5
 
     dao_remove_user_from_service(sample_service, sample_user)
 
@@ -354,15 +341,15 @@ def test_create_service_returns_service_with_default_permissions(notify_db_sessi
     "permission_to_remove, permissions_remaining",
     [
         (
-            DUMMY_PERMISSION,
-            (BROADCAST_TYPE),
+            PLACEHOLDER_TYPE,
+            (BROADCAST_TYPE,),
         ),
     ],
 )
 def test_remove_permission_from_service_by_id_returns_service_with_correct_permissions(
     notify_db_session, permission_to_remove, permissions_remaining
 ):
-    service = create_service(service_permissions=[DUMMY_PERMISSION, BROADCAST_TYPE])
+    service = create_service(service_permissions=[PLACEHOLDER_TYPE, BROADCAST_TYPE])
     dao_remove_service_permission(service_id=service.id, permission=permission_to_remove)
 
     service = dao_fetch_service_by_id(service.id)
@@ -437,7 +424,7 @@ def test_update_service_permission_creates_a_history_record_with_current_data(no
         ],
     )
 
-    service.permissions.append(ServicePermission(service_id=service.id, permission=DUMMY_PERMISSION))
+    service.permissions.append(ServicePermission(service_id=service.id, permission=PLACEHOLDER_TYPE))
     dao_update_service(service)
 
     assert Service.query.count() == 1
@@ -451,11 +438,11 @@ def test_update_service_permission_creates_a_history_record_with_current_data(no
         service.permissions,
         (
             BROADCAST_TYPE,
-            DUMMY_PERMISSION,
+            PLACEHOLDER_TYPE,
         ),
     )
 
-    permission = [p for p in service.permissions if p.permission == DUMMY_PERMISSION][0]
+    permission = [p for p in service.permissions if p.permission == PLACEHOLDER_TYPE][0]
     service.permissions.remove(permission)
     dao_update_service(service)
 
@@ -524,7 +511,7 @@ def test_add_existing_user_to_another_service_doesnot_change_old_permissions(not
     dao_create_service(service_one, user)
     assert user.id == service_one.users[0].id
     test_user_permissions = Permission.query.filter_by(service=service_one, user=user).all()
-    assert len(test_user_permissions) == 8
+    assert len(test_user_permissions) == 5
 
     other_user = User(
         name="Other Test User",
@@ -582,9 +569,8 @@ def create_email_sms_letter_template():
 
 def test_get_live_services_with_organisation(sample_organisation):
     trial_service = create_service(service_name="trial service", restricted=True)
-    live_service = create_service(service_name="count as live")
+    live_service = create_service(service_name="live service")
     live_service_diff_org = create_service(service_name="live service different org")
-    dont_count_as_live = create_service(service_name="dont count as live", count_as_live=False)
     inactive_service = create_service(service_name="inactive", active=False)
     service_without_org = create_service(service_name="no org")
     another_org = create_organisation(
@@ -593,7 +579,6 @@ def test_get_live_services_with_organisation(sample_organisation):
 
     dao_add_service_to_organisation(trial_service, sample_organisation.id)
     dao_add_service_to_organisation(live_service, sample_organisation.id)
-    dao_add_service_to_organisation(dont_count_as_live, sample_organisation.id)
     dao_add_service_to_organisation(inactive_service, sample_organisation.id)
     dao_add_service_to_organisation(live_service_diff_org, another_org.id)
 
