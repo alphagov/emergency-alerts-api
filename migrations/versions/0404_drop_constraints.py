@@ -1,15 +1,15 @@
 """
 
-Revision ID: 0403_drop_constraints
-Revises: 0402_drop_deprecated_tables
+Revision ID: 0404_drop_constraints
+Revises: 0403_add_common_passwords_table
 Create Date: 2024-10-30 16:56:00
 
 """
 
 from alembic import op
 
-revision = "0403_drop_constraints"
-down_revision = "0402_drop_deprecated_tables"
+revision = "0404_drop_constraints"
+down_revision = "0403_add_common_passwords_table"
 
 
 def upgrade():

@@ -154,9 +154,9 @@ def test_get_broadcast_messages_for_service(admin_request, sample_broadcast_serv
     t = create_template(sample_broadcast_service, BROADCAST_TYPE)
 
     with freeze_time("2020-01-01 12:00"):
-        bm1 = create_broadcast_message(t, personalisation={"foo": "bar"})
+        bm1 = create_broadcast_message(t)
     with freeze_time("2020-01-01 13:00"):
-        bm2 = create_broadcast_message(t, personalisation={"foo": "baz"})
+        bm2 = create_broadcast_message(t)
 
     response = admin_request.get(
         "broadcast_message.get_broadcast_messages_for_service", service_id=t.service_id, _expected_status=200
