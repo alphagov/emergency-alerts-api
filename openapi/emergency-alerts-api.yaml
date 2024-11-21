@@ -189,6 +189,7 @@ components:
           enum: [Public, Restricted, Private]
         references:
           type: string
+          description: Required when cancelling an alert - provide extra comma-separated data points, such as \'sender\', \'sent\' timestamp or alert content (\'description\'), to ensure that the alert to be cancelled is uniquely identified (see \'Cancel Alert\' example)
         info:
           $ref: "#/components/schemas/Info"
       required:
@@ -502,4 +503,37 @@ components:
                     }
                   ],
                   "status_code": 403
+                }
+            Invalid CAP-XML:
+              value:
+                {
+                  "errors": [
+                    {
+                      "error": "BadRequestError",
+                      "message": "Request data is not valid CAP XML"
+                    }
+                  ],
+                  "status_code": 400
+                }
+            Unsupported content type:
+              value:
+                {
+                  "errors": [
+                    {
+                      "error": "BadRequestError",
+                      "message": "Content type ... not supported"
+                    }
+                  ],
+                  "status_code": 415
+                }
+            Missing references (only when Cancelling):
+              value:
+                {
+                  "errors": [
+                    {
+                      "error": "BadRequestError",
+                      "message": "Missing <references>"
+                    }
+                  ],
+                  "status_code": 400
                 }
