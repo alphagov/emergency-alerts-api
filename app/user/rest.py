@@ -9,6 +9,7 @@ from notifications_python_client.errors import HTTPError
 from sqlalchemy.exc import IntegrityError
 
 from app.clients.notify_client import notify_send
+from app.common_passwords.rest import is_password_common
 from app.dao.invited_user_dao import get_invited_user_by_email
 from app.dao.permissions_dao import permission_dao
 from app.dao.service_user_dao import (
@@ -577,6 +578,11 @@ def update_password(user_id):
 def check_password_is_valid(user_id):
     req_json = request.get_json()
     password = req_json.get("_password")
+    if is_password_common(password):
+        return (
+            jsonify({"errors": ["Your password is too common. Please choose a new one."]}),
+            400,
+        )
     user = get_user_by_id(user_id=user_id)
     if password and (pwdpy.entropy(password) < current_app.config["MIN_ENTROPY_THRESHOLD"]):
         return (
