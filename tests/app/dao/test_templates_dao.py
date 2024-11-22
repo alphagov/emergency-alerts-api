@@ -121,37 +121,12 @@ def test_get_all_templates_ignores_archived_templates(sample_service):
     assert templates[0] == normal_template
 
 
-def test_get_all_templates_ignores_hidden_templates(sample_service):
-    normal_template = create_template(template_name="Normal Template", service=sample_service, archived=False)
-
-    create_template(template_name="Hidden Template", hidden=True, service=sample_service)
-
-    templates = dao_get_all_templates_for_service(sample_service.id)
-
-    assert len(templates) == 1
-    assert templates[0] == normal_template
-
-
 def test_get_template_by_id_and_service(sample_service):
     sample_template = create_template(template_name="Test Template", service=sample_service)
     template = dao_get_template_by_id_and_service_id(template_id=sample_template.id, service_id=sample_service.id)
     assert template.id == sample_template.id
     assert template.name == "Test Template"
     assert template.version == sample_template.version
-
-
-def test_get_template_by_id_and_service_returns_none_for_hidden_templates(sample_service):
-    sample_template = create_template(template_name="Test Template", hidden=True, service=sample_service)
-
-    with pytest.raises(NoResultFound):
-        dao_get_template_by_id_and_service_id(template_id=sample_template.id, service_id=sample_service.id)
-
-
-def test_get_template_version_returns_none_for_hidden_templates(sample_service):
-    sample_template = create_template(template_name="Test Template", hidden=True, service=sample_service)
-
-    with pytest.raises(NoResultFound):
-        dao_get_template_by_id_and_service_id(sample_template.id, sample_service.id, "1")
 
 
 def test_get_template_by_id_and_service_returns_none_if_no_template(sample_service, fake_uuid):

@@ -133,7 +133,6 @@ def test_get_service_by_id(admin_request, sample_service):
     json_resp = admin_request.get("service.get_service_by_id", service_id=sample_service.id)
     assert json_resp["data"]["name"] == sample_service.name
     assert json_resp["data"]["id"] == str(sample_service.id)
-    assert not json_resp["data"]["research_mode"]
     assert json_resp["data"]["allowed_broadcast_provider"] is None
     assert json_resp["data"]["broadcast_channel"] is None
 

@@ -28,6 +28,7 @@ from app.dao.users_dao import create_user_code, save_model_user
 from app.models import (
     BROADCAST_TYPE,
     EMAIL_TYPE,
+    PLACEHOLDER_TYPE,
     SMS_TYPE,
     ApiKey,
     InvitedUser,
@@ -50,8 +51,6 @@ from tests.app.db import (
     create_template_folder,
     create_user,
 )
-
-PLACEHOLDER_TYPE = "placeholder"
 
 
 def test_create_service(notify_db_session):
@@ -525,7 +524,7 @@ def test_add_existing_user_to_another_service_doesnot_change_old_permissions(not
 
     assert other_user.id == service_two.users[0].id
     other_user_permissions = Permission.query.filter_by(service=service_two, user=other_user).all()
-    assert len(other_user_permissions) == 8
+    assert len(other_user_permissions) == 5
 
     other_user_service_one_permissions = Permission.query.filter_by(service=service_one, user=other_user).all()
     assert len(other_user_service_one_permissions) == 0

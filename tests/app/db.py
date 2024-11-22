@@ -15,9 +15,9 @@ from app.dao.services_dao import dao_add_user_to_service, dao_create_service
 from app.dao.templates_dao import dao_create_template, dao_update_template
 from app.dao.users_dao import save_model_user
 from app.models import (
+    BROADCAST_TYPE,
     EMAIL_TYPE,
     KEY_TYPE_NORMAL,
-    SMS_TYPE,
     ApiKey,
     BroadcastEvent,
     BroadcastMessage,
@@ -104,7 +104,7 @@ def create_service(
 
 def create_template(
     service,
-    template_type=SMS_TYPE,
+    template_type=BROADCAST_TYPE,
     template_name=None,
     content="Dear Sir/Madam, Hello. Yours Truly, The Government.",
     archived=False,
