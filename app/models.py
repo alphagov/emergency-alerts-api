@@ -1108,6 +1108,7 @@ class BroadcastMessage(db.Model):
 
     _personalisation = db.Column(db.String, nullable=True)
     content = db.Column(db.String, nullable=False)
+    rejection_reason = db.Column(db.String, nullable=True)
     # defaults to empty list
     areas = db.Column(JSONB(none_as_null=True), nullable=False, default=list)
 
@@ -1130,6 +1131,7 @@ class BroadcastMessage(db.Model):
     created_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=True)
     approved_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=True)
     cancelled_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=True)
+    rejected_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=True)
 
     created_by = db.relationship("User", foreign_keys=[created_by_id])
     approved_by = db.relationship("User", foreign_keys=[approved_by_id])
@@ -1180,6 +1182,8 @@ class BroadcastMessage(db.Model):
             "created_by_id": get_uuid_string_or_none(self.created_by_id),
             "approved_by_id": get_uuid_string_or_none(self.approved_by_id),
             "cancelled_by_id": get_uuid_string_or_none(self.cancelled_by_id),
+            "rejected_by_id": get_uuid_string_or_none(self.rejected_by_id),
+            "rejection_reason": self.rejection_reason if self.rejection_reason else None,
         }
 
 
