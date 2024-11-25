@@ -575,9 +575,6 @@ class TemplateBase(db.Model):
     updated_at = db.Column(db.DateTime, onupdate=datetime.datetime.utcnow)
     content = db.Column(db.Text, nullable=False)
     archived = db.Column(db.Boolean, nullable=False, default=False)
-    hidden = db.Column(db.Boolean, nullable=False, default=False)
-    subject = db.Column(db.Text)
-    postage = db.Column(db.String, nullable=True)
     broadcast_data = db.Column(JSONB(none_as_null=True), nullable=True)
 
     @declared_attr

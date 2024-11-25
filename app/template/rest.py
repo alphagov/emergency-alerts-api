@@ -1,8 +1,4 @@
-from emergency_alerts_utils import SMS_CHAR_COUNT_LIMIT
-from emergency_alerts_utils.template import (
-    BroadcastMessageTemplate,
-    SMSMessageTemplate,
-)
+from emergency_alerts_utils.template import BroadcastMessageTemplate
 from flask import Blueprint, jsonify, request
 from sqlalchemy.orm.exc import NoResultFound
 
@@ -20,7 +16,7 @@ from app.dao.templates_dao import (
     dao_update_template,
 )
 from app.errors import InvalidRequest, register_errors
-from app.models import BROADCAST_TYPE, SMS_TYPE, Template
+from app.models import BROADCAST_TYPE, Template
 from app.schema_validation import validate
 from app.schemas import (
     template_history_schema,
@@ -33,15 +29,14 @@ from app.template.template_schemas import (
 )
 from app.utils import get_public_notify_type_text, is_public_environment
 
+MAX_BROADCAST_CHAR_COUNT = 1395
+
 template_blueprint = Blueprint("template", __name__, url_prefix="/service/<uuid:service_id>/template")
 
 register_errors(template_blueprint)
 
 
 def _content_count_greater_than_limit(content, template_type):
-    if template_type == SMS_TYPE:
-        template = SMSMessageTemplate({"content": content, "template_type": template_type})
-        return template.is_message_too_long()
     if template_type == BROADCAST_TYPE:
         template = BroadcastMessageTemplate({"content": content, "template_type": template_type})
         return template.is_message_too_long()
@@ -78,7 +73,7 @@ def create_template(service_id):
 
     over_limit = _content_count_greater_than_limit(new_template.content, new_template.template_type)
     if over_limit:
-        message = "Content has a character count greater than the limit of {}".format(SMS_CHAR_COUNT_LIMIT)
+        message = "Content has a character count greater than the limit of {}".format(MAX_BROADCAST_CHAR_COUNT)
         errors = {"content": [message]}
         raise InvalidRequest(errors, status_code=400)
 
@@ -113,7 +108,7 @@ def update_template(service_id, template_id):
 
     over_limit = _content_count_greater_than_limit(updated_template["content"], fetched_template.template_type)
     if over_limit:
-        message = "Content has a character count greater than the limit of {}".format(SMS_CHAR_COUNT_LIMIT)
+        message = "Content has a character count greater than the limit of {}".format(MAX_BROADCAST_CHAR_COUNT)
         errors = {"content": [message]}
         raise InvalidRequest(errors, status_code=400)
 

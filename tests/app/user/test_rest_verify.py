@@ -8,7 +8,6 @@ from flask import current_app, url_for
 from freezegun import freeze_time
 
 from app import db
-from app.dao.services_dao import dao_fetch_service_by_id, dao_update_service
 from app.dao.users_dao import create_user_code
 from app.models import EMAIL_TYPE, SMS_TYPE, USER_AUTH_TYPES, User, VerifyCode
 from tests import create_admin_authorization_header
@@ -184,17 +183,8 @@ def test_user_verify_password_missing_password(client, sample_user):
     assert "Required field missing data" in json_resp["message"]["password"]
 
 
-@pytest.mark.parametrize("research_mode", [True, False])
 @freeze_time("2016-01-01 11:09:00.061258")
-def test_send_user_sms_code(client, sample_user, sms_code_template, mocker, research_mode):
-    """
-    Tests POST endpoint /user/<user_id>/sms-code
-    """
-    notify_service = dao_fetch_service_by_id(current_app.config["NOTIFY_SERVICE_ID"])
-    if research_mode:
-        notify_service.research_mode = True
-        dao_update_service(notify_service)
-
+def test_send_user_sms_code(client, sample_user, mocker):
     auth_header = create_admin_authorization_header()
     mock_create_secret_code = mocker.patch("app.user.rest.create_secret_code", return_value="11111")
     mock_notify_send = mocker.patch("app.user.rest.notify_send")
@@ -221,7 +211,7 @@ def test_send_user_sms_code(client, sample_user, sms_code_template, mocker, rese
 
 
 @freeze_time("2016-01-01 11:09:00.061258")
-def test_send_user_code_for_sms_with_optional_to_field(client, sample_user, sms_code_template, mocker):
+def test_send_user_code_for_sms_with_optional_to_field(client, sample_user, mocker):
     """
     Tests POST endpoint /user/<user_id>/sms-code with optional to field
     """
@@ -452,9 +442,7 @@ def test_reset_failed_login_count_returns_404_when_user_does_not_exist(client):
         ),
     ),
 )
-def test_send_user_email_code(
-    admin_request, mocker, sample_user, email_2fa_code_template, data, expected_auth_url, auth_type
-):
+def test_send_user_email_code(admin_request, mocker, sample_user, data, expected_auth_url, auth_type):
     mock_notify_send = mocker.patch("app.user.rest.notify_send")
     fake_token = "0123456789"
     mocker.patch("app.utils.generate_token", return_value=fake_token)
@@ -478,7 +466,7 @@ def test_send_user_email_code(
     mock_notify_send.assert_called_once_with(notification)
 
 
-def test_send_user_email_code_with_urlencoded_next_param(admin_request, mocker, sample_user, email_2fa_code_template):
+def test_send_user_email_code_with_urlencoded_next_param(admin_request, mocker, sample_user):
     mock_notify_send = mocker.patch("app.user.rest.notify_send")
     fake_token = "0123456789"
     mocker.patch("app.utils.generate_token", return_value=fake_token)
@@ -547,7 +535,7 @@ def test_user_verify_email_code_fails_if_code_already_used(admin_request, sample
     assert sample_user.current_session_id is None
 
 
-def test_send_user_2fa_code_sends_from_number_for_international_numbers(client, sample_user, mocker, sms_code_template):
+def test_send_user_2fa_code_sends_from_number_for_international_numbers(client, sample_user, mocker):
     sample_user.mobile_number = "601117224412"
     auth_header = create_admin_authorization_header()
     mocker.patch("app.user.rest.create_secret_code", return_value="11111")

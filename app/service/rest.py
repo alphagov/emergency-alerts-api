@@ -285,7 +285,6 @@ def set_as_broadcast_service(service_id):
     This route does the following
     - adds a service broadcast settings to define which channel broadcasts should go out on
     - removes all current service permissions and adds the broadcast service permission
-    - sets the services `count_as_live` to false
     - adds the service to the broadcast organisation
     - puts the service into training mode or live mode
     - removes all permissions from current users and invited users

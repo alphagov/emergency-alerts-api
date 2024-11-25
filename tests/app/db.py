@@ -74,6 +74,8 @@ def create_service(
     active=True,
     organisation_type="central",
     check_if_service_exists=False,
+    go_live_user=None,
+    go_live_at=None,
     crown=True,
     organisation=None,
 ):
@@ -86,6 +88,8 @@ def create_service(
             created_by=user if user else create_user(email="{}@digital.cabinet-office.gov.uk".format(uuid.uuid4())),
             organisation_type=organisation_type,
             organisation=organisation,
+            go_live_user=go_live_user,
+            go_live_at=go_live_at,
             crown=crown,
         )
         dao_create_service(

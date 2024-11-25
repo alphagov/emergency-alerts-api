@@ -49,7 +49,6 @@ def dao_count_live_services():
     return Service.query.filter_by(
         active=True,
         restricted=False,
-        count_as_live=True,
     ).count()
 
 

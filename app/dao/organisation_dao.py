@@ -17,7 +17,6 @@ def dao_count_organisations_with_live_services():
         .filter(
             Service.active.is_(True),
             Service.restricted.is_(False),
-            Service.count_as_live.is_(True),
         )
         .distinct()
         .count()

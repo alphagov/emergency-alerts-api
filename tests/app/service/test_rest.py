@@ -137,13 +137,7 @@ def test_get_service_by_id(admin_request, sample_service):
     assert set(json_resp["data"].keys()) == {
         "active",
         "allowed_broadcast_provider",
-        "billing_contact_email_addresses",
-        "billing_contact_names",
-        "billing_reference",
         "broadcast_channel",
-        "consent_to_research",
-        "contact_link",
-        "count_as_live",
         "created_at",
         "created_by",
         "go_live_at",
@@ -155,13 +149,8 @@ def test_get_service_by_id(admin_request, sample_service):
         "organisation",
         "organisation_type",
         "permissions",
-        "rate_limit",
-        "research_mode",
         "restricted",
         "service_callback_api",
-        "volume_email",
-        "volume_letter",
-        "volume_sms",
     }
 
 
@@ -544,7 +533,7 @@ def test_update_permissions_will_override_permission_flags(client, service_with_
 def test_update_service_permissions_will_add_service_permissions(client, sample_service):
     auth_header = create_admin_authorization_header()
 
-    data = {"permissions": [BROADCAST_TYPE, PLACEHOLDER_TYPE]}
+    data = {"permissions": [BROADCAST_TYPE]}
 
     resp = client.post(
         "/service/{}".format(sample_service.id),
@@ -554,7 +543,7 @@ def test_update_service_permissions_will_add_service_permissions(client, sample_
     result = resp.json
 
     assert resp.status_code == 200
-    assert set(result["data"]["permissions"]) == set([BROADCAST_TYPE, PLACEHOLDER_TYPE])
+    assert set(result["data"]["permissions"]) == set([BROADCAST_TYPE])
 
 
 @pytest.mark.parametrize(
@@ -601,7 +590,7 @@ def test_update_permissions_with_an_invalid_permission_will_raise_error(client, 
 def test_update_permissions_with_duplicate_permissions_will_raise_error(client, sample_service):
     auth_header = create_admin_authorization_header()
 
-    data = {"permissions": [BROADCAST_TYPE, PLACEHOLDER_TYPE]}
+    data = {"permissions": [BROADCAST_TYPE, BROADCAST_TYPE]}
 
     resp = client.post(
         "/service/{}".format(sample_service.id),
@@ -1358,25 +1347,6 @@ def test_set_as_broadcast_service_maintains_broadcast_permission_for_existing_br
     assert set([p.permission for p in permissions]) == set(ending_permissions)
 
 
-def test_set_as_broadcast_service_sets_count_as_live_to_false(admin_request, sample_service, broadcast_organisation):
-    assert sample_service.count_as_live is True
-
-    data = {
-        "broadcast_channel": "severe",
-        "service_mode": "live",
-        "provider_restriction": "all",
-    }
-    result = admin_request.post(
-        "service.set_as_broadcast_service",
-        service_id=sample_service.id,
-        _data=data,
-    )
-    assert result["data"]["count_as_live"] is False
-
-    service_from_db = Service.query.filter_by(id=sample_service.id).all()[0]
-    assert service_from_db.count_as_live is False
-
-
 def test_set_as_broadcast_service_sets_service_org_to_broadcast_org(
     admin_request, sample_service, broadcast_organisation
 ):
@@ -1636,7 +1606,7 @@ def test_set_as_broadcast_service_removes_user_permissions(
             )
         ],
     )
-    assert len(service_user.get_permissions(service_id=sample_service.id)) == 8
+    assert len(service_user.get_permissions(service_id=sample_service.id)) == 5
     assert len(sample_invited_user.get_permissions()) == 3
 
     admin_request.post(

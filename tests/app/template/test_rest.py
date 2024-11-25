@@ -103,8 +103,8 @@ def test_create_template_should_return_400_if_folder_is_for_a_different_service(
 def test_create_template_should_return_400_if_folder_does_not_exist(client, sample_service):
     data = {
         "name": "my template",
-        "template_type": "sms",
-        "content": "template <b>content</b>",
+        "template_type": "broadcast",
+        "content": "template content",
         "service": str(sample_service.id),
         "created_by": str(sample_service.users[0].id),
         "parent_folder_id": str(uuid.uuid4()),
@@ -142,19 +142,16 @@ def test_should_raise_error_if_service_does_not_exist_on_create(client, sample_u
 
 
 @pytest.mark.parametrize(
-    "permissions, template_type, subject, expected_error",
+    "permissions, template_type, expected_error",
     [
         (
             [PLACEHOLDER_TYPE],
             BROADCAST_TYPE,
-            None,
             {"template_type": ["Creating broadcast message templates is not allowed"]},
         ),
     ],
 )
-def test_should_raise_error_on_create_if_no_permission(
-    client, sample_user, permissions, template_type, subject, expected_error
-):
+def test_should_raise_error_on_create_if_no_permission(client, sample_user, permissions, template_type, expected_error):
     service = create_service(service_permissions=permissions)
     data = {
         "name": "my template",
@@ -163,9 +160,6 @@ def test_should_raise_error_on_create_if_no_permission(
         "service": str(service.id),
         "created_by": str(sample_user.id),
     }
-    if subject:
-        data.update({"subject": subject})
-
     data = json.dumps(data)
     auth_header = create_admin_authorization_header()
 
@@ -333,7 +327,7 @@ def test_should_be_able_to_get_all_templates_for_a_service(client, sample_user, 
     data = {
         "name": "my template 1",
         "template_type": BROADCAST_TYPE,
-        "subject": "subject 1",
+        # "subject": "subject 1",
         "content": "template content",
         "service": str(sample_service.id),
         "created_by": str(sample_user.id),
@@ -342,7 +336,7 @@ def test_should_be_able_to_get_all_templates_for_a_service(client, sample_user, 
     data = {
         "name": "my template 2",
         "template_type": BROADCAST_TYPE,
-        "subject": "subject 2",
+        # "subject": "subject 2",
         "content": "template content",
         "service": str(sample_service.id),
         "created_by": str(sample_user.id),
@@ -400,11 +394,16 @@ def test_should_get_only_templates_for_that_service(admin_request, notify_db_ses
 )
 def test_should_get_return_all_fields_by_default(
     admin_request,
-    sample_email_template,
+    sample_service,
     extra_args,
 ):
+    create_template(
+        sample_service,
+        template_type="broadcast",
+        content="This is a test",
+    )
     json_response = admin_request.get(
-        "template.get_all_templates_for_service", service_id=sample_email_template.service.id, **extra_args
+        "template.get_all_templates_for_service", service_id=sample_service.id, **extra_args
     )
     assert json_response["data"][0].keys() == {
         "archived",
@@ -420,42 +419,6 @@ def test_should_get_return_all_fields_by_default(
         "updated_at",
         "version",
     }
-
-
-@pytest.mark.parametrize(
-    "extra_args",
-    (
-        {"detailed": False},
-        {"detailed": "False"},
-    ),
-)
-@pytest.mark.parametrize(
-    "template_type, expected_content",
-    ((BROADCAST_TYPE, "This is a test"),),
-)
-def test_should_not_return_content_and_subject_if_requested(
-    admin_request,
-    sample_service,
-    extra_args,
-    template_type,
-    expected_content,
-):
-    create_template(
-        sample_service,
-        template_type=template_type,
-        content="This is a test",
-    )
-    json_response = admin_request.get(
-        "template.get_all_templates_for_service", service_id=sample_service.id, **extra_args
-    )
-    assert json_response["data"][0].keys() == {
-        "content",
-        "folder",
-        "id",
-        "name",
-        "template_type",
-    }
-    assert json_response["data"][0]["content"] == expected_content
 
 
 def test_should_get_a_single_template(client, sample_user, sample_service):

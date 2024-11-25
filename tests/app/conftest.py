@@ -1,10 +1,8 @@
 import json
 import os
 import uuid
-from datetime import datetime, timedelta
 
 import pytest
-import pytz
 import requests_mock
 from flask import current_app, url_for
 
@@ -88,11 +86,11 @@ def sample_user(notify_db_session):
     return create_user(email="notify@digital.cabinet-office.gov.uk")
 
 
-@pytest.fixture(scope="function")
-def notify_user(notify_db_session):
-    return create_user(
-        email="notify-service-user@digital.cabinet-office.gov.uk", id_=current_app.config["NOTIFY_USER_ID"]
-    )
+# @pytest.fixture(scope="function")
+# def notify_user(notify_db_session):
+#     return create_user(
+#         email="notify-service-user@digital.cabinet-office.gov.uk", id_=current_app.config["NOTIFY_USER_ID"]
+#     )
 
 
 def create_code(notify_db_session, code_type):
@@ -175,8 +173,8 @@ def sample_broadcast_service_2(broadcast_organisation, sample_user):
     return service
 
 
-@pytest.fixture(scope="function", name="sample_service_full_permissions")
-def _sample_service_full_permissions(notify_db_session):
+@pytest.fixture(scope="function")
+def sample_service_full_permissions(notify_db_session):
     service = create_service(
         service_name="sample service full permissions",
         service_permissions=set(SERVICE_PERMISSION_TYPES),
@@ -211,10 +209,10 @@ def sample_template(sample_user):
 #     return create_template(service, template_type=SMS_TYPE)
 
 
-@pytest.fixture(scope="function")
-def sample_template_with_placeholders(sample_service):
-    # deliberate space and title case in placeholder
-    return create_template(sample_service, content="Hello (( Name))\nYour thing is due soon")
+# @pytest.fixture(scope="function")
+# def sample_template_with_placeholders(sample_service):
+#     # deliberate space and title case in placeholder
+#     return create_template(sample_service, content="Hello (( Name))\nYour thing is due soon")
 
 
 # @pytest.fixture(scope="function")
@@ -289,128 +287,128 @@ def fake_uuid():
     return "6ce466d0-fd6a-11e5-82f5-e0accb9d11a6"
 
 
-@pytest.fixture(scope="function")
-def sms_code_template(notify_service):
-    return create_custom_template(
-        service=notify_service,
-        user=notify_service.users[0],
-        template_config_name="SMS_CODE_TEMPLATE_ID",
-        content="((verify_code))",
-        template_type="sms",
-    )
+# @pytest.fixture(scope="function")
+# def sms_code_template(notify_service):
+#     return create_custom_template(
+#         service=notify_service,
+#         user=notify_service.users[0],
+#         template_config_name="SMS_CODE_TEMPLATE_ID",
+#         content="((verify_code))",
+#         template_type="sms",
+#     )
 
 
-@pytest.fixture(scope="function")
-def email_2fa_code_template(notify_service):
-    return create_custom_template(
-        service=notify_service,
-        user=notify_service.users[0],
-        template_config_name="EMAIL_2FA_TEMPLATE_ID",
-        content=("Hi ((name))," "" "To sign in to GOV.​UK Notify please open this link:" "((url))"),
-        subject="Sign in to GOV.UK Notify",
-        template_type="email",
-    )
+# @pytest.fixture(scope="function")
+# def email_2fa_code_template(notify_service):
+#     return create_custom_template(
+#         service=notify_service,
+#         user=notify_service.users[0],
+#         template_config_name="EMAIL_2FA_TEMPLATE_ID",
+#         content=("Hi ((name))," "" "To sign in to GOV.​UK Notify please open this link:" "((url))"),
+#         subject="Sign in to GOV.UK Notify",
+#         template_type="email",
+#     )
 
 
-@pytest.fixture(scope="function")
-def email_verification_template(notify_service):
-    return create_custom_template(
-        service=notify_service,
-        user=notify_service.users[0],
-        template_config_name="NEW_USER_EMAIL_VERIFICATION_TEMPLATE_ID",
-        content="((user_name)) use ((url)) to complete registration",
-        template_type="email",
-    )
+# @pytest.fixture(scope="function")
+# def email_verification_template(notify_service):
+#     return create_custom_template(
+#         service=notify_service,
+#         user=notify_service.users[0],
+#         template_config_name="NEW_USER_EMAIL_VERIFICATION_TEMPLATE_ID",
+#         content="((user_name)) use ((url)) to complete registration",
+#         template_type="email",
+#     )
 
 
-@pytest.fixture(scope="function")
-def invitation_email_template(notify_service):
-    content = ("((user_name)) is invited to Notify by ((service_name)) ((url)) to complete registration",)
-    return create_custom_template(
-        service=notify_service,
-        user=notify_service.users[0],
-        template_config_name="INVITATION_EMAIL_TEMPLATE_ID",
-        content=content,
-        subject="Invitation to ((service_name))",
-        template_type="email",
-    )
+# @pytest.fixture(scope="function")
+# def invitation_email_template(notify_service):
+#     content = ("((user_name)) is invited to Notify by ((service_name)) ((url)) to complete registration",)
+#     return create_custom_template(
+#         service=notify_service,
+#         user=notify_service.users[0],
+#         template_config_name="INVITATION_EMAIL_TEMPLATE_ID",
+#         content=content,
+#         subject="Invitation to ((service_name))",
+#         template_type="email",
+#     )
 
 
-@pytest.fixture(scope="function")
-def broadcast_invitation_email_template(notify_service):
-    content = ("((user_name)) is invited to broadcast Notify by ((service_name)) ((url)) to complete registration",)
-    return create_custom_template(
-        service=notify_service,
-        user=notify_service.users[0],
-        template_config_name="BROADCAST_INVITATION_EMAIL_TEMPLATE_ID",
-        content=content,
-        subject="Invitation to ((service_name))",
-        template_type="email",
-    )
+# @pytest.fixture(scope="function")
+# def broadcast_invitation_email_template(notify_service):
+#     content = ("((user_name)) is invited to broadcast Notify by ((service_name)) ((url)) to complete registration",)
+#     return create_custom_template(
+#         service=notify_service,
+#         user=notify_service.users[0],
+#         template_config_name="BROADCAST_INVITATION_EMAIL_TEMPLATE_ID",
+#         content=content,
+#         subject="Invitation to ((service_name))",
+#         template_type="email",
+#     )
 
 
-@pytest.fixture(scope="function")
-def org_invite_email_template(notify_service):
-    return create_custom_template(
-        service=notify_service,
-        user=notify_service.users[0],
-        template_config_name="ORGANISATION_INVITATION_EMAIL_TEMPLATE_ID",
-        content="((user_name)) ((organisation_name)) ((url))",
-        subject="Invitation to ((organisation_name))",
-        template_type="email",
-    )
+# @pytest.fixture(scope="function")
+# def org_invite_email_template(notify_service):
+#     return create_custom_template(
+#         service=notify_service,
+#         user=notify_service.users[0],
+#         template_config_name="ORGANISATION_INVITATION_EMAIL_TEMPLATE_ID",
+#         content="((user_name)) ((organisation_name)) ((url))",
+#         subject="Invitation to ((organisation_name))",
+#         template_type="email",
+#     )
 
 
-@pytest.fixture(scope="function")
-def password_reset_email_template(notify_service):
-    return create_custom_template(
-        service=notify_service,
-        user=notify_service.users[0],
-        template_config_name="PASSWORD_RESET_TEMPLATE_ID",
-        content="((user_name)) you can reset password by clicking ((url))",
-        subject="Reset your password",
-        template_type="email",
-    )
+# @pytest.fixture(scope="function")
+# def password_reset_email_template(notify_service):
+#     return create_custom_template(
+#         service=notify_service,
+#         user=notify_service.users[0],
+#         template_config_name="PASSWORD_RESET_TEMPLATE_ID",
+#         content="((user_name)) you can reset password by clicking ((url))",
+#         subject="Reset your password",
+#         template_type="email",
+#     )
 
 
-@pytest.fixture(scope="function")
-def team_member_email_edit_template(notify_service):
-    return create_custom_template(
-        service=notify_service,
-        user=notify_service.users[0],
-        template_config_name="TEAM_MEMBER_EDIT_EMAIL_TEMPLATE_ID",
-        content="Hi ((name)) ((servicemanagername)) changed your email to ((email address))",
-        subject="Your GOV.UK Notify email address has changed",
-        template_type="email",
-    )
+# @pytest.fixture(scope="function")
+# def team_member_email_edit_template(notify_service):
+#     return create_custom_template(
+#         service=notify_service,
+#         user=notify_service.users[0],
+#         template_config_name="TEAM_MEMBER_EDIT_EMAIL_TEMPLATE_ID",
+#         content="Hi ((name)) ((servicemanagername)) changed your email to ((email address))",
+#         subject="Your GOV.UK Notify email address has changed",
+#         template_type="email",
+#     )
 
 
-@pytest.fixture(scope="function")
-def team_member_mobile_edit_template(notify_service):
-    return create_custom_template(
-        service=notify_service,
-        user=notify_service.users[0],
-        template_config_name="TEAM_MEMBER_EDIT_MOBILE_TEMPLATE_ID",
-        content="Your mobile number was changed by ((servicemanagername)).",
-        template_type="sms",
-    )
+# @pytest.fixture(scope="function")
+# def team_member_mobile_edit_template(notify_service):
+#     return create_custom_template(
+#         service=notify_service,
+#         user=notify_service.users[0],
+#         template_config_name="TEAM_MEMBER_EDIT_MOBILE_TEMPLATE_ID",
+#         content="Your mobile number was changed by ((servicemanagername)).",
+#         template_type="sms",
+#     )
 
 
-@pytest.fixture(scope="function")
-def change_email_confirmation_template(notify_service):
-    content = """Hi ((name)),
-              Click this link to confirm your new email address:
-              ((url))
-              If you didn’t try to change the email address for your GOV.UK Notify account, let us know here:
-              ((feedback_url))"""
-    template = create_custom_template(
-        service=notify_service,
-        user=notify_service.users[0],
-        template_config_name="CHANGE_EMAIL_CONFIRMATION_TEMPLATE_ID",
-        content=content,
-        template_type="email",
-    )
-    return template
+# @pytest.fixture(scope="function")
+# def change_email_confirmation_template(notify_service):
+#     content = """Hi ((name)),
+#               Click this link to confirm your new email address:
+#               ((url))
+#               If you didn’t try to change the email address for your GOV.UK Notify account, let us know here:
+#               ((feedback_url))"""
+#     template = create_custom_template(
+#         service=notify_service,
+#         user=notify_service.users[0],
+#         template_config_name="CHANGE_EMAIL_CONFIRMATION_TEMPLATE_ID",
+#         content=content,
+#         template_type="email",
+#     )
+#     return template
 
 
 def create_custom_template(service, user, template_config_name, template_type, content="", subject=None):
@@ -507,7 +505,7 @@ def admin_request(client):
 
 
 @pytest.fixture
-def api_client_request(client, notify_user):
+def api_client_request(client):
     """
     For v2 endpoints. Same as admin_request, except all functions take a required service_id and an optional
     _api_key_type field.
@@ -555,5 +553,5 @@ def api_client_request(client, notify_user):
     return ApiClientRequest
 
 
-def datetime_in_past(days=0, seconds=0):
-    return datetime.now(tz=pytz.utc) - timedelta(days=days, seconds=seconds)
+# def datetime_in_past(days=0, seconds=0):
+#     return datetime.now(tz=pytz.utc) - timedelta(days=days, seconds=seconds)

@@ -126,7 +126,7 @@ def test_invited_user_for_broadcast_service_receives_broadcast_invite_email(
     mocked.assert_called_once_with(notification)
 
 
-def test_create_invited_user_without_auth_type(admin_request, sample_service, mocker, invitation_email_template):
+def test_create_invited_user_without_auth_type(admin_request, sample_service, mocker):
     mocker.patch("app.service_invite.rest.notify_send")
     email_address = "invited_user@service.gov.uk"
     invite_from = sample_service.users[0]

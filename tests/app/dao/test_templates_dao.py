@@ -231,7 +231,7 @@ def test_purge_templates_for_service(sample_user, sample_service):
     data = {
         "name": "Sample Template 1",
         "template_type": "broadcast",
-        "subject": "Alert subject 1",
+        # "subject": "Alert subject 1",
         "content": "Alert template content",
         "service": sample_service,
         "created_by": sample_user,
@@ -243,7 +243,7 @@ def test_purge_templates_for_service(sample_user, sample_service):
     data = {
         "name": "Sample Template 2",
         "template_type": "broadcast",
-        "subject": "Alert subject 2",
+        # "subject": "Alert subject 2",
         "content": "Alert template content",
         "service": sample_service,
         "created_by": sample_user,
