@@ -40,7 +40,7 @@ def upgrade():
     op.execute("DELETE FROM service_permission_types WHERE name = 'sms'")
     op.execute("DELETE FROM service_permission_types WHERE name = 'upload_document'")
     op.execute("DELETE FROM service_permission_types WHERE name = 'upload_letters'")
-    
+
 
 def downgrade():
     pass

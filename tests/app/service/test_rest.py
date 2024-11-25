@@ -16,10 +16,8 @@ from app.dao.users_dao import save_model_user
 from app.models import (
     BROADCAST_TYPE,
     EMAIL_AUTH_TYPE,
-    EMAIL_TYPE,
     PLACEHOLDER_TYPE,
     SERVICE_PERMISSION_TYPES,
-    SMS_TYPE,
     Permission,
     Service,
     ServiceBroadcastSettings,
@@ -206,25 +204,13 @@ def test_get_service_list_has_default_permissions(admin_request, service_factory
 
     json_resp = admin_request.get("service.get_services")
     assert len(json_resp["data"]) == 3
-    assert all(
-        set(json["permissions"])
-        == {
-            BROADCAST_TYPE,
-            EMAIL_TYPE,
-            SMS_TYPE,
-        }
-        for json in json_resp["data"]
-    )
+    assert all(set(json["permissions"]) == {BROADCAST_TYPE} for json in json_resp["data"])
 
 
 def test_get_service_by_id_has_default_service_permissions(admin_request, sample_service):
     json_resp = admin_request.get("service.get_service_by_id", service_id=sample_service.id)
 
-    assert set(json_resp["data"]["permissions"]) == {
-        BROADCAST_TYPE,
-        EMAIL_TYPE,
-        SMS_TYPE,
-    }
+    assert set(json_resp["data"]["permissions"]) == {BROADCAST_TYPE}
 
 
 def test_get_service_by_id_should_404_if_no_service(admin_request, notify_db_session):
@@ -542,7 +528,7 @@ def test_update_service_flags_will_remove_service_permissions(client, notify_db_
 def test_update_permissions_will_override_permission_flags(client, service_with_no_permissions):
     auth_header = create_admin_authorization_header()
 
-    data = {"permissions": [BROADCAST_TYPE, PLACEHOLDER_TYPE]}
+    data = {"permissions": [BROADCAST_TYPE, EMAIL_AUTH_TYPE]}
 
     resp = client.post(
         "/service/{}".format(service_with_no_permissions.id),
@@ -552,7 +538,7 @@ def test_update_permissions_will_override_permission_flags(client, service_with_
     result = resp.json
 
     assert resp.status_code == 200
-    assert set(result["data"]["permissions"]) == set([BROADCAST_TYPE, PLACEHOLDER_TYPE])
+    assert set(result["data"]["permissions"]) == set([BROADCAST_TYPE, EMAIL_AUTH_TYPE])
 
 
 def test_update_service_permissions_will_add_service_permissions(client, sample_service):
@@ -627,30 +613,6 @@ def test_update_permissions_with_duplicate_permissions_will_raise_error(client, 
     assert resp.status_code == 400
     assert result["result"] == "error"
     assert "Duplicate Service Permission: ['{}']".format(BROADCAST_TYPE) in result["message"]["permissions"]
-
-
-def test_update_service_research_mode_throws_validation_error(notify_api, sample_service):
-    with notify_api.test_request_context():
-        with notify_api.test_client() as client:
-            auth_header = create_admin_authorization_header()
-            resp = client.get("/service/{}".format(sample_service.id), headers=[auth_header])
-            json_resp = resp.json
-            assert resp.status_code == 200
-            assert json_resp["data"]["name"] == sample_service.name
-            assert not json_resp["data"]["research_mode"]
-
-            data = {"research_mode": "dedede"}
-
-            auth_header = create_admin_authorization_header()
-
-            resp = client.post(
-                "/service/{}".format(sample_service.id),
-                data=json.dumps(data),
-                headers=[("Content-Type", "application/json"), auth_header],
-            )
-            result = resp.json
-            assert result["message"]["research_mode"][0] == "Not a valid boolean."
-            assert resp.status_code == 400
 
 
 def test_should_not_update_service_with_duplicate_name(notify_api, notify_db_session, sample_user, sample_service):

@@ -531,7 +531,7 @@ def test_add_existing_user_to_another_service_doesnot_change_old_permissions(not
 
     # adding the other_user to service_one should leave all other_user permissions on service_two intact
     permissions = []
-    for p in ["some_permission_1", "some_permission_2", "some_permission_3"]:
+    for p in ["manage_users", "manage_settings", "manage_api_keys"]:
         permissions.append(Permission(permission=p))
 
     dao_add_user_to_service(service_one, other_user, permissions=permissions)
@@ -540,7 +540,7 @@ def test_add_existing_user_to_another_service_doesnot_change_old_permissions(not
     assert len(other_user_service_one_permissions) == 3
 
     other_user_service_two_permissions = Permission.query.filter_by(service=service_two, user=other_user).all()
-    assert len(other_user_service_two_permissions) == 8
+    assert len(other_user_service_two_permissions) == 5
 
 
 def test_dao_fetch_active_users_for_service_returns_active_only(notify_db_session):
