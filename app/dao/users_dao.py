@@ -112,6 +112,10 @@ def get_user_by_email(email):
     return User.query.filter(func.lower(User.email_address) == func.lower(email)).one()
 
 
+def is_email_in_db(email):
+    return User.query.filter(func.lower(User.email_address) == func.lower(email)).first() is not None
+
+
 def get_users_by_partial_email(email):
     email = escape_special_characters(email)
     return User.query.filter(User.email_address.ilike("%{}%".format(email))).all()

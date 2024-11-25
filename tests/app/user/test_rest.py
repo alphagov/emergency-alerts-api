@@ -789,7 +789,7 @@ def test_send_user_confirm_new_email_returns_204(
     notification = {
         "type": "email",
         "template_id": current_app.config["CHANGE_EMAIL_CONFIRMATION_TEMPLATE_ID"],
-        "recipient": data,
+        "recipient": new_email,
         "reply_to": current_app.config["EAS_EMAIL_REPLY_TO_ID"],
         "personalisation": {
             "name": "Test User",
@@ -1241,3 +1241,15 @@ def test_update_user_password_rejects_common_password(admin_request, sample_serv
     )
 
     assert json_resp["errors"] == ["Your password is too common. Please choose a new one."]
+
+
+@pytest.mark.parametrize(
+    "email, to_be_created, return_value",
+    [("test@digital.cabinet-office.gov.uk", False, False), ("findel.mestro@foo.com", True, True)],
+)
+def test_check_email_already_in_use(admin_request, email, to_be_created, return_value):
+    if to_be_created:
+        create_user(email=email)
+    data = {"email": email}
+    json_resp = admin_request.post("user.check_email_already_in_use", _data=data, _expected_status=200)
+    assert json_resp is return_value
