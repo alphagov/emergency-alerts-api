@@ -127,8 +127,13 @@ class Config(object):
 
     CHECK_PROXY_HEADER = False
 
+    # The following two variables, NOTIFY_*, should be removed
+    # when the new baseline EAS db snapshot is taken
+    # i.e. when we no longer run the entire set of Notify
+    # migration files
     NOTIFY_SERVICE_ID = "d6aa2c68-a2d9-4437-ab19-3ae8eb202553"
     NOTIFY_USER_ID = "6af522d0-2915-4e52-83a3-3690455a5fe6"
+
     INVITATION_EMAIL_TEMPLATE_ID = "ad68eafb-0926-4cd4-9dc4-be4aa3393b1b"
     BROADCAST_INVITATION_EMAIL_TEMPLATE_ID = "825c5863-0875-416c-8c55-6238e37808e7"
     SMS_CODE_TEMPLATE_ID = "a5b3439f-6dc5-46b0-8ea6-769eb9d16289"

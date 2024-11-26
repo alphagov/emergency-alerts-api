@@ -86,13 +86,6 @@ def sample_user(notify_db_session):
     return create_user(email="notify@digital.cabinet-office.gov.uk")
 
 
-# @pytest.fixture(scope="function")
-# def notify_user(notify_db_session):
-#     return create_user(
-#         email="notify-service-user@digital.cabinet-office.gov.uk", id_=current_app.config["NOTIFY_USER_ID"]
-#     )
-
-
 def create_code(notify_db_session, code_type):
     code = create_secret_code()
     usr = create_user()
@@ -431,17 +424,17 @@ def create_custom_template(service, user, template_config_name, template_type, c
     return template
 
 
-@pytest.fixture
-def notify_service(notify_db_session, sample_user):
-    service = Service.query.get(current_app.config["NOTIFY_SERVICE_ID"])
-    if not service:
-        service = Service(
-            name="Notify Service",
-            restricted=False,
-            created_by=sample_user,
-        )
-        dao_create_service(service=service, service_id=current_app.config["NOTIFY_SERVICE_ID"], user=sample_user)
-    return service
+# @pytest.fixture
+# def notify_service(notify_db_session, sample_user):
+#     service = Service.query.get(current_app.config["NOTIFY_SERVICE_ID"])
+#     if not service:
+#         service = Service(
+#             name="Notify Service",
+#             restricted=False,
+#             created_by=sample_user,
+#         )
+#         dao_create_service(service=service, service_id=current_app.config["NOTIFY_SERVICE_ID"], user=sample_user)
+#     return service
 
 
 @pytest.fixture
