@@ -176,6 +176,7 @@ def update_broadcast_message_status(service_id, broadcast_message_id):
 
     new_status = data["status"]
     updating_user = get_user_by_id(data["created_by"])
+    rejection_reason = data.get("rejection_reason", "")
 
     if updating_user not in broadcast_message.service.users:
         #  we allow platform admins to cancel broadcasts, and we don't check user if request was done via API
@@ -185,7 +186,9 @@ def update_broadcast_message_status(service_id, broadcast_message_id):
                 status_code=400,
             )
 
-    broadcast_utils.update_broadcast_message_status(broadcast_message, new_status, updating_user)
+    broadcast_utils.update_broadcast_message_status(
+        broadcast_message, new_status, updating_user, rejection_reason=rejection_reason or None
+    )
 
     return jsonify(broadcast_message.serialize()), 200
 
