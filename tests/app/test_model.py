@@ -35,5 +35,5 @@ def test_user_can_use_webauthn_if_in_broadcast_org(sample_broadcast_service):
     assert sample_broadcast_service.users[0].can_use_webauthn
 
 
-# def test_user_can_use_webauthn_if_in_notify_team(notify_service):
-#     assert notify_service.users[0].can_use_webauthn
+def test_user_can_use_webauthn_if_in_notify_team(notify_service):
+    assert notify_service.users[0].can_use_webauthn
