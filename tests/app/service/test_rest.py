@@ -16,7 +16,6 @@ from app.dao.users_dao import save_model_user
 from app.models import (
     BROADCAST_TYPE,
     EMAIL_AUTH_TYPE,
-    PLACEHOLDER_TYPE,
     SERVICE_PERMISSION_TYPES,
     Permission,
     Service,
@@ -494,9 +493,9 @@ def test_update_service_flags_with_service_without_default_service_permissions(c
 def test_update_service_flags_will_remove_service_permissions(client, notify_db_session):
     auth_header = create_admin_authorization_header()
 
-    service = create_service(service_permissions=[BROADCAST_TYPE, PLACEHOLDER_TYPE])
+    service = create_service(service_permissions=[BROADCAST_TYPE, EMAIL_AUTH_TYPE])
 
-    assert PLACEHOLDER_TYPE in [p.permission for p in service.permissions]
+    assert EMAIL_AUTH_TYPE in [p.permission for p in service.permissions]
 
     data = {"permissions": [BROADCAST_TYPE]}
 
@@ -508,7 +507,7 @@ def test_update_service_flags_will_remove_service_permissions(client, notify_db_
     result = resp.json
 
     assert resp.status_code == 200
-    assert PLACEHOLDER_TYPE not in result["data"]["permissions"]
+    assert EMAIL_AUTH_TYPE not in result["data"]["permissions"]
 
     permissions = ServicePermission.query.filter_by(service_id=service.id).all()
     assert set([p.permission for p in permissions]) == set([BROADCAST_TYPE])

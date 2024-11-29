@@ -31,7 +31,6 @@ def upgrade():
     op.alter_column("templates_history", "process_type", nullable=True)
     op.alter_column("templates_history", "hidden", nullable=True)
 
-    op.execute("INSERT INTO service_permission_types VALUES ('placeholder')")
     op.execute("DELETE FROM service_permission_types WHERE name = 'email'")
     op.execute("DELETE FROM service_permission_types WHERE name = 'inbound_sms'")
     op.execute("DELETE FROM service_permission_types WHERE name = 'international_letters'")

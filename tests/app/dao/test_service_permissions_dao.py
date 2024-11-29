@@ -4,7 +4,7 @@ from app.dao.service_permissions_dao import (
     dao_fetch_service_permissions,
     dao_remove_service_permission,
 )
-from app.models import BROADCAST_TYPE, PLACEHOLDER_TYPE
+from app.models import BROADCAST_TYPE, EMAIL_AUTH_TYPE
 from tests.app.db import create_service, create_service_permission
 
 
@@ -25,20 +25,20 @@ def test_create_service_permission(service_without_permissions):
 
 def test_fetch_service_permissions_gets_service_permissions(service_without_permissions):
     create_service_permission(service_id=service_without_permissions.id, permission=BROADCAST_TYPE)
-    create_service_permission(service_id=service_without_permissions.id, permission=PLACEHOLDER_TYPE)
+    create_service_permission(service_id=service_without_permissions.id, permission=EMAIL_AUTH_TYPE)
 
     service_permissions = dao_fetch_service_permissions(service_without_permissions.id)
 
     assert len(service_permissions) == 2
     assert all(sp.service_id == service_without_permissions.id for sp in service_permissions)
-    assert all(sp.permission in [BROADCAST_TYPE, PLACEHOLDER_TYPE] for sp in service_permissions)
+    assert all(sp.permission in [BROADCAST_TYPE, EMAIL_AUTH_TYPE] for sp in service_permissions)
 
 
 def test_remove_service_permission(service_without_permissions):
     create_service_permission(service_id=service_without_permissions.id, permission=BROADCAST_TYPE)
-    create_service_permission(service_id=service_without_permissions.id, permission=PLACEHOLDER_TYPE)
+    create_service_permission(service_id=service_without_permissions.id, permission=EMAIL_AUTH_TYPE)
 
-    dao_remove_service_permission(service_without_permissions.id, PLACEHOLDER_TYPE)
+    dao_remove_service_permission(service_without_permissions.id, EMAIL_AUTH_TYPE)
 
     permissions = dao_fetch_service_permissions(service_without_permissions.id)
     assert len(permissions) == 1

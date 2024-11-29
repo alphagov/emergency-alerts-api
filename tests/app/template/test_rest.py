@@ -9,7 +9,7 @@ import requests_mock
 from app.dao.templates_dao import dao_get_template_by_id
 from app.models import (
     BROADCAST_TYPE,
-    PLACEHOLDER_TYPE,
+    EMAIL_AUTH_TYPE,
     Template,
     TemplateHistory,
 )
@@ -145,7 +145,7 @@ def test_should_raise_error_if_service_does_not_exist_on_create(client, sample_u
     "permissions, template_type, expected_error",
     [
         (
-            [PLACEHOLDER_TYPE],
+            [EMAIL_AUTH_TYPE],
             BROADCAST_TYPE,
             {"template_type": ["Creating broadcast message templates is not allowed"]},
         ),
@@ -179,7 +179,7 @@ def test_should_raise_error_on_create_if_no_permission(client, sample_user, perm
     [
         (
             BROADCAST_TYPE,
-            [PLACEHOLDER_TYPE],
+            [EMAIL_AUTH_TYPE],
             {"template_type": ["Updating broadcast message templates is not allowed"]},
         ),
     ],

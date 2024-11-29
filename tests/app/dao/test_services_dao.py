@@ -27,9 +27,7 @@ from app.dao.services_dao import (
 from app.dao.users_dao import create_user_code, save_model_user
 from app.models import (
     BROADCAST_TYPE,
-    EMAIL_TYPE,
-    PLACEHOLDER_TYPE,
-    SMS_TYPE,
+    EMAIL_AUTH_TYPE,
     ApiKey,
     InvitedUser,
     Organisation,
@@ -340,7 +338,7 @@ def test_create_service_returns_service_with_default_permissions(notify_db_sessi
     "permission_to_remove, permissions_remaining",
     [
         (
-            PLACEHOLDER_TYPE,
+            EMAIL_AUTH_TYPE,
             (BROADCAST_TYPE,),
         ),
     ],
@@ -348,7 +346,7 @@ def test_create_service_returns_service_with_default_permissions(notify_db_sessi
 def test_remove_permission_from_service_by_id_returns_service_with_correct_permissions(
     notify_db_session, permission_to_remove, permissions_remaining
 ):
-    service = create_service(service_permissions=[PLACEHOLDER_TYPE, BROADCAST_TYPE])
+    service = create_service(service_permissions=[EMAIL_AUTH_TYPE, BROADCAST_TYPE])
     dao_remove_service_permission(service_id=service.id, permission=permission_to_remove)
 
     service = dao_fetch_service_by_id(service.id)
@@ -358,8 +356,8 @@ def test_remove_permission_from_service_by_id_returns_service_with_correct_permi
 def test_removing_all_permission_returns_service_with_no_permissions(notify_db_session):
     service = create_service()
     dao_remove_service_permission(service_id=service.id, permission=BROADCAST_TYPE)
-    dao_remove_service_permission(service_id=service.id, permission=SMS_TYPE)
-    dao_remove_service_permission(service_id=service.id, permission=EMAIL_TYPE)
+    # dao_remove_service_permission(service_id=service.id, permission=SMS_TYPE)
+    # dao_remove_service_permission(service_id=service.id, permission=EMAIL_TYPE)
 
     service = dao_fetch_service_by_id(service.id)
     assert len(service.permissions) == 0
@@ -423,7 +421,7 @@ def test_update_service_permission_creates_a_history_record_with_current_data(no
         ],
     )
 
-    service.permissions.append(ServicePermission(service_id=service.id, permission=PLACEHOLDER_TYPE))
+    service.permissions.append(ServicePermission(service_id=service.id, permission=EMAIL_AUTH_TYPE))
     dao_update_service(service)
 
     assert Service.query.count() == 1
@@ -437,11 +435,11 @@ def test_update_service_permission_creates_a_history_record_with_current_data(no
         service.permissions,
         (
             BROADCAST_TYPE,
-            PLACEHOLDER_TYPE,
+            EMAIL_AUTH_TYPE,
         ),
     )
 
-    permission = [p for p in service.permissions if p.permission == PLACEHOLDER_TYPE][0]
+    permission = [p for p in service.permissions if p.permission == EMAIL_AUTH_TYPE][0]
     service.permissions.remove(permission)
     dao_update_service(service)
 
