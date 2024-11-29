@@ -21,8 +21,6 @@ from app.utils import (
 )
 
 BROADCAST_TYPE = "broadcast"
-PLACEHOLDER_TYPE = "placeholder"  # dummy "permission" for testing
-
 TEMPLATE_TYPES = [BROADCAST_TYPE]
 
 template_types = db.Enum(*TEMPLATE_TYPES, name="template_type")
