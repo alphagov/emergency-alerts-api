@@ -58,14 +58,7 @@ def test_get_organisation_by_id(admin_request, notify_db_session):
         "active",
         "crown",
         "organisation_type",
-        "agreement_signed",
-        "agreement_signed_at",
-        "agreement_signed_by_id",
-        "agreement_signed_version",
-        "agreement_signed_on_behalf_of_name",
-        "agreement_signed_on_behalf_of_email_address",
         "domains",
-        "request_to_go_live_notes",
         "count_of_live_services",
         "notes",
     }
@@ -74,14 +67,8 @@ def test_get_organisation_by_id(admin_request, notify_db_session):
     assert response["active"] is True
     assert response["crown"] is None
     assert response["organisation_type"] is None
-    assert response["agreement_signed"] is None
-    assert response["agreement_signed_by_id"] is None
-    assert response["agreement_signed_version"] is None
     assert response["domains"] == []
-    assert response["request_to_go_live_notes"] is None
     assert response["count_of_live_services"] == 0
-    assert response["agreement_signed_on_behalf_of_name"] is None
-    assert response["agreement_signed_on_behalf_of_email_address"] is None
     assert response["notes"] is None
 
 
