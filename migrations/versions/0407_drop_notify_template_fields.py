@@ -23,5 +23,6 @@ def upgrade():
 
     op.drop_table("template_process_type")
 
+
 def downgrade():
     pass
