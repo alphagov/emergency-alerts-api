@@ -623,28 +623,6 @@ def test_should_not_update_service_with_duplicate_name(notify_api, notify_db_ses
             assert "Duplicate service name '{}'".format(service_name) in json_resp["message"]["name"]
 
 
-def test_should_not_update_service_with_duplicate_email_from(
-    notify_api, notify_db_session, sample_user, sample_service
-):
-    with notify_api.test_request_context():
-        with notify_api.test_client() as client:
-            service_name = "duplicate name"
-            service = create_service(service_name=service_name, user=sample_user)
-            data = {"name": service_name, "created_by": str(service.created_by.id)}
-
-            auth_header = create_admin_authorization_header()
-
-            resp = client.post(
-                "/service/{}".format(sample_service.id),
-                data=json.dumps(data),
-                headers=[("Content-Type", "application/json"), auth_header],
-            )
-            assert resp.status_code == 400
-            json_resp = resp.json
-            assert json_resp["result"] == "error"
-            assert "Duplicate service name '{}'".format(service_name) in json_resp["message"]["name"]
-
-
 def test_update_service_should_404_if_id_is_invalid(notify_api):
     with notify_api.test_request_context():
         with notify_api.test_client() as client:
