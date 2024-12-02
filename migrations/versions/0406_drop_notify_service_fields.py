@@ -1,7 +1,7 @@
 """
 
 Revision ID: 0406_drop_notify_service_fields
-Revises: 0405_drop_notify_organisation_fields
+Revises: 0405_drop_notify_org_fields
 Create Date: 2024-10-30 16:56:00
 
 """
@@ -9,7 +9,7 @@ Create Date: 2024-10-30 16:56:00
 from alembic import op
 
 revision = "0406_drop_notify_service_fields"
-down_revision = "0405_drop_notify_organisation_fields"
+down_revision = "0405_drop_notify_org_fields"
 
 
 def upgrade():
@@ -44,6 +44,7 @@ def upgrade():
     op.drop_column("services_history", "billing_contact_names")
     op.drop_column("services_history", "billing_reference")
     op.drop_column("services_history", "purchase_order_number")
+
 
 def downgrade():
     pass
