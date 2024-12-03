@@ -45,6 +45,28 @@ def upgrade():
     op.drop_column("services_history", "billing_reference")
     op.drop_column("services_history", "purchase_order_number")
 
+    op.execute("DELETE FROM service_permissions WHERE permission = 'email'")
+    op.execute("DELETE FROM service_permissions WHERE permission = 'inbound_sms'")
+    op.execute("DELETE FROM service_permissions WHERE permission = 'international_letters'")
+    op.execute("DELETE FROM service_permissions WHERE permission = 'international_sms'")
+    op.execute("DELETE FROM service_permissions WHERE permission = 'letter'")
+    op.execute("DELETE FROM service_permissions WHERE permission = 'letters_as_pdf'")
+    op.execute("DELETE FROM service_permissions WHERE permission = 'schedule_notifications'")
+    op.execute("DELETE FROM service_permissions WHERE permission = 'sms'")
+    op.execute("DELETE FROM service_permissions WHERE permission = 'upload_document'")
+    op.execute("DELETE FROM service_permissions WHERE permission = 'upload_letters'")
+
+    op.execute("DELETE FROM service_permission_types WHERE name = 'email'")
+    op.execute("DELETE FROM service_permission_types WHERE name = 'inbound_sms'")
+    op.execute("DELETE FROM service_permission_types WHERE name = 'international_letters'")
+    op.execute("DELETE FROM service_permission_types WHERE name = 'international_sms'")
+    op.execute("DELETE FROM service_permission_types WHERE name = 'letter'")
+    op.execute("DELETE FROM service_permission_types WHERE name = 'letters_as_pdf'")
+    op.execute("DELETE FROM service_permission_types WHERE name = 'schedule_notifications'")
+    op.execute("DELETE FROM service_permission_types WHERE name = 'sms'")
+    op.execute("DELETE FROM service_permission_types WHERE name = 'upload_document'")
+    op.execute("DELETE FROM service_permission_types WHERE name = 'upload_letters'")
+
 
 def downgrade():
     pass
