@@ -24,6 +24,7 @@ function put_metric_data(){
 
     # For future we should add a version e.g. Version=1112_test
     dimension="PipelineRunId=$PIPELINE_RUN_ID,StartTime=$START_TIME,Status=$2"
+    simple_dimension="Status=$2" # Just the status dimension; for CloudWatch alarming purposes
 
 
     echo "Putting metric $1[$SERVICE_ACTION] with dimension: $dimension"
@@ -31,6 +32,14 @@ function put_metric_data(){
         --namespace $1 \
         --metric-name $SERVICE_ACTION \
         --dimensions $dimension \
+        --value 1 \
+        --timestamp $(date -u +"%Y-%m-%dT%H:%M:%S.000Z") \
+        --region ${AWS_REGION:-eu-west-2}
+
+    aws cloudwatch put-metric-data \
+        --namespace $1 \
+        --metric-name $SERVICE_ACTION \
+        --dimensions $simple_dimension \
         --value 1 \
         --timestamp $(date -u +"%Y-%m-%dT%H:%M:%S.000Z") \
         --region ${AWS_REGION:-eu-west-2}
