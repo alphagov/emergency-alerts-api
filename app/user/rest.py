@@ -31,6 +31,7 @@ from app.dao.users_dao import (
     get_user_code,
     get_users_by_partial_email,
     increment_failed_login_count,
+    is_email_in_db,
     reset_failed_login_count,
     save_model_user,
     save_user_attribute,
@@ -350,7 +351,7 @@ def send_user_confirm_new_email(user_id):
     notification = {
         "type": EMAIL_TYPE,
         "template_id": current_app.config["CHANGE_EMAIL_CONFIRMATION_TEMPLATE_ID"],
-        "recipient": email,
+        "recipient": email["email"],
         "reply_to": current_app.config["EAS_EMAIL_REPLY_TO_ID"],
         "personalisation": {
             "name": user_to_send_to.name,
@@ -498,6 +499,12 @@ def fetch_user_by_email():
         raise
     result = fetched_user.serialize()
     return jsonify(data=result)
+
+
+@user_blueprint.route("/email-in-db", methods=["POST"])
+def check_email_already_in_use():
+    email = email_data_request_schema.load(request.get_json())
+    return jsonify(is_email_in_db(email["email"]))
 
 
 @user_blueprint.route("/invited", methods=["POST"])
