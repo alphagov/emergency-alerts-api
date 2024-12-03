@@ -36,7 +36,7 @@ def test_create_invited_user(
         service=str(sample_service.id),
         email_address=email_address,
         from_user=str(invite_from.id),
-        permissions="send_messages,manage_service,manage_api_keys",
+        permissions="create_broadcasts,manage_service,manage_api_keys",
         auth_type=EMAIL_AUTH_TYPE,
         folder_permissions=["folder_1", "folder_2", "folder_3"],
         **extra_args,
@@ -49,7 +49,7 @@ def test_create_invited_user(
     assert json_resp["data"]["service"] == str(sample_service.id)
     assert json_resp["data"]["email_address"] == email_address
     assert json_resp["data"]["from_user"] == str(invite_from.id)
-    assert json_resp["data"]["permissions"] == "send_messages,manage_service,manage_api_keys"
+    assert json_resp["data"]["permissions"] == "create_broadcasts,manage_service,manage_api_keys"
     assert json_resp["data"]["auth_type"] == EMAIL_AUTH_TYPE
     assert json_resp["data"]["id"]
     assert json_resp["data"]["folder_permissions"] == ["folder_1", "folder_2", "folder_3"]
@@ -93,7 +93,7 @@ def test_invited_user_for_broadcast_service_receives_broadcast_invite_email(
         service=str(sample_broadcast_service.id),
         email_address=email_address,
         from_user=str(invite_from.id),
-        permissions="send_messages,manage_service,manage_api_keys",
+        permissions="create_broadcasts,manage_service,manage_api_keys",
         auth_type=EMAIL_AUTH_TYPE,
         folder_permissions=["folder_1", "folder_2", "folder_3"],
         **extra_args,
@@ -106,7 +106,7 @@ def test_invited_user_for_broadcast_service_receives_broadcast_invite_email(
     assert json_resp["data"]["service"] == str(sample_broadcast_service.id)
     assert json_resp["data"]["email_address"] == email_address
     assert json_resp["data"]["from_user"] == str(invite_from.id)
-    assert json_resp["data"]["permissions"] == "send_messages,manage_service,manage_api_keys"
+    assert json_resp["data"]["permissions"] == "create_broadcasts,manage_service,manage_api_keys"
     assert json_resp["data"]["auth_type"] == EMAIL_AUTH_TYPE
     assert json_resp["data"]["id"]
     assert json_resp["data"]["folder_permissions"] == ["folder_1", "folder_2", "folder_3"]
@@ -126,7 +126,7 @@ def test_invited_user_for_broadcast_service_receives_broadcast_invite_email(
     mocked.assert_called_once_with(notification)
 
 
-def test_create_invited_user_without_auth_type(admin_request, sample_service, mocker, invitation_email_template):
+def test_create_invited_user_without_auth_type(admin_request, sample_service, mocker):
     mocker.patch("app.service_invite.rest.notify_send")
     email_address = "invited_user@service.gov.uk"
     invite_from = sample_service.users[0]
@@ -135,7 +135,7 @@ def test_create_invited_user_without_auth_type(admin_request, sample_service, mo
         "service": str(sample_service.id),
         "email_address": email_address,
         "from_user": str(invite_from.id),
-        "permissions": "send_messages,manage_service,manage_api_keys",
+        "permissions": "create_broadcasts,manage_service,manage_api_keys",
         "folder_permissions": [],
     }
 
@@ -155,7 +155,7 @@ def test_create_invited_user_invalid_email(client, sample_service, mocker, fake_
         "service": str(sample_service.id),
         "email_address": email_address,
         "from_user": str(invite_from.id),
-        "permissions": "send_messages,manage_service,manage_api_keys",
+        "permissions": "create_broadcasts,manage_service,manage_api_keys",
         "folder_permissions": [fake_uuid, fake_uuid],
     }
 

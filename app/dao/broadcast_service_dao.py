@@ -44,9 +44,6 @@ def set_broadcast_service_type(service, service_mode, broadcast_channel, provide
     # want to commit the permission changes incase all of this needs to rollback
     db.session.refresh(service)
 
-    # Set service count as live false always
-    service.count_as_live = False
-
     # Set service into training mode or live mode
     if service_mode == "live":
         if service.restricted:

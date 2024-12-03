@@ -5,7 +5,7 @@ Create Date: 2018-08-24 13:36:49.346156
  """
 from alembic import op
 
-from app.models import BRANDING_GOVUK, BRANDING_ORG
+# from app.models import BRANDING_GOVUK, BRANDING_ORG
 
 revision = "0221_nullable_service_branding"
 down_revision = "0220_email_brand_type_non_null"
@@ -20,29 +20,29 @@ def upgrade():
     op.alter_column("services_history", "branding", nullable=True)
     op.alter_column("services", "branding", nullable=True)
 
-    op.execute(
-        """
-        update
-            email_branding
-        set
-            brand_type = '{}'
-        where
-            brand_type = '{}'
-    """.format(
-            BRANDING_ORG, BRANDING_GOVUK
-        )
-    )
+    # op.execute(
+    #     """
+    #     update
+    #         email_branding
+    #     set
+    #         brand_type = '{}'
+    #     where
+    #         brand_type = '{}'
+    # """.format(
+    #         BRANDING_ORG, BRANDING_GOVUK
+    #     )
+    # )
 
-    op.execute(
-        """
-        delete from
-            branding_type
-        where
-            name = '{}'
-    """.format(
-            BRANDING_GOVUK
-        )
-    )
+    # op.execute(
+    #     """
+    #     delete from
+    #         branding_type
+    #     where
+    #         name = '{}'
+    # """.format(
+    #         BRANDING_GOVUK
+    #     )
+    # )
 
 
 def downgrade():
@@ -54,14 +54,14 @@ def downgrade():
     op.alter_column("services", "branding", nullable=False)
     op.alter_column("services_history", "branding", nullable=False)
 
-    op.execute(
-        """
-        insert into
-            branding_type
-                (name)
-            values
-                ('{}')
-    """.format(
-            BRANDING_GOVUK
-        )
-    )
+    # op.execute(
+    #     """
+    #     insert into
+    #         branding_type
+    #             (name)
+    #         values
+    #             ('{}')
+    # """.format(
+    #         BRANDING_GOVUK
+    #     )
+    # )

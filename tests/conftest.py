@@ -107,14 +107,7 @@ def notify_db_session(_notify_db):
     _notify_db.session.remove()
     for tbl in reversed(_notify_db.metadata.sorted_tables):
         if tbl.name not in [
-            "provider_details",
             "key_types",
-            "branding_type",
-            # "job_status",
-            "provider_details_history",
-            "template_process_type",
-            # "notifications_all_time_view",
-            # "notification_status_types",
             "organisation_types",
             "service_permission_types",
             "auth_type",
