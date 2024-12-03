@@ -4,6 +4,8 @@ from app.dao.broadcast_message_dao import (
     create_broadcast_provider_message,
     dao_get_all_broadcast_messages,
     dao_get_all_pre_broadcast_messages,
+    dao_get_broadcast_message_by_id_and_service_id_with_user,
+    dao_get_broadcast_messages_for_service_with_user,
     dao_purge_old_broadcast_messages,
     get_earlier_events_for_broadcast_event,
 )
@@ -13,6 +15,7 @@ from app.dao.broadcast_service_dao import (
 from app.models import (
     BROADCAST_TYPE,
     BroadcastEventMessageType,
+    BroadcastMessage,
     BroadcastStatusType,
 )
 from tests.app.db import create_broadcast_event, create_broadcast_message
@@ -364,3 +367,36 @@ def test_dao_purge_old_broadcastmessages_events_providermessages_and_providermes
 
     assert str(remaining_messages[0][0]) in expected_remaining_messages_ids
     assert str(remaining_messages[1][0]) in expected_remaining_messages_ids
+
+
+def test_dao_get_broadcast_message_by_id_and_service_id_with_user(sample_broadcast_service):
+    template_1 = create_template(sample_broadcast_service, "broadcast")
+    message = create_broadcast_message(
+        template_1,
+        stubbed=False,
+        status="broadcasting",
+        starts_at=datetime(2021, 6, 20, 12, 0, 0),
+    )
+    broadcast_message = dao_get_broadcast_message_by_id_and_service_id_with_user(
+        message.id, sample_broadcast_service.id
+    )
+    assert broadcast_message == {}
+
+
+def test_dao_get_broadcast_messages_for_service_with_user(sample_broadcast_service):
+    template_1 = create_template(sample_broadcast_service, "broadcast")
+    create_broadcast_message(
+        template_1,
+        stubbed=False,
+        status="broadcasting",
+        starts_at=datetime(2021, 6, 20, 12, 0, 0),
+    )
+    create_broadcast_message(
+        template_1,
+        stubbed=False,
+        status="broadcasting",
+        starts_at=datetime(2021, 6, 20, 12, 0, 0),
+    )
+    broadcast_messages = dao_get_broadcast_messages_for_service_with_user(sample_broadcast_service.id)
+    assert len(broadcast_messages) == 3
+    assert isinstance(broadcast_messages[0][0], BroadcastMessage)
