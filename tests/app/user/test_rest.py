@@ -578,9 +578,7 @@ def test_remove_user_folder_permissions(admin_request, sample_user, sample_servi
 
 
 @freeze_time("2016-01-01 11:09:00.061258")
-def test_send_user_reset_password_should_send_reset_password_link(
-    admin_request, sample_user, mocker, password_reset_email_template
-):
+def test_send_user_reset_password_should_send_reset_password_link(admin_request, sample_user, mocker):
     mocked = mocker.patch("app.user.rest.notify_send")
     mocker.patch("app.user.rest._create_reset_password_url", return_value="dummy_url")
     data = {"email": sample_user.email_address}
@@ -657,7 +655,7 @@ def test_send_user_reset_password_should_use_provided_base_url(
 
 @freeze_time("2016-01-01 11:09:00.061258")
 def test_send_user_reset_password_reset_password_link_contains_redirect_link_if_present_in_request(
-    admin_request, sample_user, mocker, password_reset_email_template
+    admin_request, sample_user, mocker
 ):
     mocked = mocker.patch("app.user.rest.notify_send")
     fake_token = "0123456789"
@@ -770,9 +768,7 @@ def test_send_already_registered_email_returns_400_when_data_is_missing(admin_re
     assert json_resp["message"] == {"email": ["Missing data for required field."]}
 
 
-def test_send_user_confirm_new_email_returns_204(
-    admin_request, sample_user, change_email_confirmation_template, mocker
-):
+def test_send_user_confirm_new_email_returns_204(admin_request, sample_user, mocker):
     mocked = mocker.patch("app.user.rest.notify_send")
     fake_token = "0123456789"
     mocker.patch("app.utils.generate_token", return_value=fake_token)

@@ -16,13 +16,7 @@ from app.dao.users_dao import save_model_user
 from app.models import (
     BROADCAST_TYPE,
     EMAIL_AUTH_TYPE,
-    EMAIL_TYPE,
-    INTERNATIONAL_LETTERS,
-    INTERNATIONAL_SMS_TYPE,
-    LETTER_TYPE,
     SERVICE_PERMISSION_TYPES,
-    SMS_TYPE,
-    UPLOAD_LETTERS,
     Permission,
     Service,
     ServiceBroadcastSettings,
@@ -136,43 +130,26 @@ def test_get_service_by_id(admin_request, sample_service):
     json_resp = admin_request.get("service.get_service_by_id", service_id=sample_service.id)
     assert json_resp["data"]["name"] == sample_service.name
     assert json_resp["data"]["id"] == str(sample_service.id)
-    assert not json_resp["data"]["research_mode"]
-    assert json_resp["data"]["prefix_sms"] is True
     assert json_resp["data"]["allowed_broadcast_provider"] is None
     assert json_resp["data"]["broadcast_channel"] is None
 
     assert set(json_resp["data"].keys()) == {
         "active",
         "allowed_broadcast_provider",
-        "billing_contact_email_addresses",
-        "billing_contact_names",
-        "billing_reference",
         "broadcast_channel",
-        "consent_to_research",
-        "contact_link",
-        "count_as_live",
         "created_at",
         "created_by",
-        "email_from",
         "go_live_at",
         "go_live_user",
         "id",
         "inbound_api",
-        "message_limit",
         "name",
         "notes",
         "organisation",
         "organisation_type",
         "permissions",
-        "prefix_sms",
-        "purchase_order_number",
-        "rate_limit",
-        "research_mode",
         "restricted",
         "service_callback_api",
-        "volume_email",
-        "volume_letter",
-        "volume_sms",
     }
 
 
@@ -215,33 +192,13 @@ def test_get_service_list_has_default_permissions(admin_request, service_factory
 
     json_resp = admin_request.get("service.get_services")
     assert len(json_resp["data"]) == 3
-    assert all(
-        set(json["permissions"])
-        == {
-            BROADCAST_TYPE,
-            EMAIL_TYPE,
-            SMS_TYPE,
-            INTERNATIONAL_SMS_TYPE,
-            LETTER_TYPE,
-            UPLOAD_LETTERS,
-            INTERNATIONAL_LETTERS,
-        }
-        for json in json_resp["data"]
-    )
+    assert all(set(json["permissions"]) == {BROADCAST_TYPE} for json in json_resp["data"])
 
 
 def test_get_service_by_id_has_default_service_permissions(admin_request, sample_service):
     json_resp = admin_request.get("service.get_service_by_id", service_id=sample_service.id)
 
-    assert set(json_resp["data"]["permissions"]) == {
-        BROADCAST_TYPE,
-        EMAIL_TYPE,
-        SMS_TYPE,
-        INTERNATIONAL_SMS_TYPE,
-        LETTER_TYPE,
-        UPLOAD_LETTERS,
-        INTERNATIONAL_LETTERS,
-    }
+    assert set(json_resp["data"]["permissions"]) == {BROADCAST_TYPE}
 
 
 def test_get_service_by_id_should_404_if_no_service(admin_request, notify_db_session):
@@ -282,26 +239,23 @@ def test_get_service_by_id_returns_go_live_user_and_go_live_at(admin_request, sa
 
 
 @pytest.mark.parametrize(
-    "platform_admin, expected_count_as_live",
+    "platform_admin",
     (
-        (True, False),
-        (False, True),
+        True,
+        False,
     ),
 )
 def test_create_service(
     admin_request,
     sample_user,
     platform_admin,
-    expected_count_as_live,
 ):
     sample_user.platform_admin = platform_admin
     data = {
         "name": "created service",
         "user_id": str(sample_user.id),
-        "message_limit": 1000,
         "restricted": False,
         "active": False,
-        "email_from": "created.service",
         "created_by": str(sample_user.id),
     }
 
@@ -309,9 +263,6 @@ def test_create_service(
 
     assert json_resp["data"]["id"]
     assert json_resp["data"]["name"] == "created service"
-    assert json_resp["data"]["email_from"] == "created.service"
-    assert not json_resp["data"]["research_mode"]
-    assert json_resp["data"]["count_as_live"] is expected_count_as_live
 
     service_db = Service.query.get(json_resp["data"]["id"])
     assert service_db.name == "created service"
@@ -321,7 +272,6 @@ def test_create_service(
     )
 
     assert json_resp["data"]["name"] == "created service"
-    assert not json_resp["data"]["research_mode"]
 
 
 @pytest.mark.parametrize(
@@ -359,10 +309,8 @@ def test_create_service_with_domain_sets_organisation(
     data = {
         "name": "created service",
         "user_id": str(sample_user.id),
-        "message_limit": 1000,
         "restricted": False,
         "active": False,
-        "email_from": "created.service",
         "created_by": str(sample_user.id),
         "service_domain": domain,
     }
@@ -379,9 +327,7 @@ def test_should_not_create_service_with_missing_user_id_field(notify_api, fake_u
     with notify_api.test_request_context():
         with notify_api.test_client() as client:
             data = {
-                "email_from": "service",
                 "name": "created service",
-                "message_limit": 1000,
                 "restricted": False,
                 "active": False,
                 "created_by": str(fake_uuid),
@@ -399,9 +345,7 @@ def test_should_error_if_created_by_missing(notify_api, sample_user):
     with notify_api.test_request_context():
         with notify_api.test_client() as client:
             data = {
-                "email_from": "service",
                 "name": "created service",
-                "message_limit": 1000,
                 "restricted": False,
                 "active": False,
                 "user_id": str(sample_user.id),
@@ -419,10 +363,8 @@ def test_should_not_create_service_with_missing_if_user_id_is_not_in_database(no
     with notify_api.test_request_context():
         with notify_api.test_client() as client:
             data = {
-                "email_from": "service",
                 "user_id": fake_uuid,
                 "name": "created service",
-                "message_limit": 1000,
                 "restricted": False,
                 "active": False,
                 "created_by": str(fake_uuid),
@@ -447,7 +389,6 @@ def test_should_not_create_service_if_missing_data(notify_api, sample_user):
             assert resp.status_code == 400
             assert json_resp["result"] == "error"
             assert "Missing data for required field." in json_resp["message"]["name"]
-            assert "Missing data for required field." in json_resp["message"]["message_limit"]
             assert "Missing data for required field." in json_resp["message"]["restricted"]
 
 
@@ -457,10 +398,8 @@ def test_should_not_create_service_with_duplicate_name(notify_api, sample_user, 
             data = {
                 "name": sample_service.name,
                 "user_id": str(sample_service.users[0].id),
-                "message_limit": 1000,
                 "restricted": False,
                 "active": False,
-                "email_from": "sample.service2",
                 "created_by": str(sample_user.id),
             }
             auth_header = create_admin_authorization_header()
@@ -471,69 +410,9 @@ def test_should_not_create_service_with_duplicate_name(notify_api, sample_user, 
             assert "Duplicate service name '{}'".format(sample_service.name) in json_resp["message"]["name"]
 
 
-def test_create_service_should_throw_duplicate_key_constraint_for_existing_email_from(
-    notify_api, service_factory, sample_user
-):
-    first_service = service_factory.get("First service", email_from="first.service")
-    with notify_api.test_request_context():
-        with notify_api.test_client() as client:
-            service_name = "First SERVICE"
-            data = {
-                "name": service_name,
-                "user_id": str(first_service.users[0].id),
-                "message_limit": 1000,
-                "restricted": False,
-                "active": False,
-                "email_from": "first.service",
-                "created_by": str(sample_user.id),
-            }
-            auth_header = create_admin_authorization_header()
-            headers = [("Content-Type", "application/json"), auth_header]
-            resp = client.post("/service", data=json.dumps(data), headers=headers)
-            json_resp = resp.json
-            assert json_resp["result"] == "error"
-            assert "Duplicate service name '{}'".format(service_name) in json_resp["message"]["name"]
-
-
-@pytest.mark.parametrize(
-    "email_from, should_error",
-    (
-        ("sams.sarnies", False),  # We are happy with plain ascii alnum/full-stops.
-        ("SAMS.SARNIES", True),  # We will reject anything with uppercase characters
-        ("sam's.sarnies", True),  # We reject punctuation other than a full-stop `.`
-        ("sams.Бутерброды", True),  # We reject unicode outside of the ascii charset
-        ("sams.ü", True),  # Even if it could theoretically be downcast to ascii
-        ("sams.u", False),  # Like this, which would be fine
-    ),
-)
-def test_create_service_allows_only_lowercase_digits_and_fullstops_in_email_from(
-    admin_request, service_factory, sample_user, email_from, should_error
-):
-    first_service = service_factory.get("First service", email_from="first.service")
-    service_name = "First SERVICE"
-    data = {
-        "name": service_name,
-        "user_id": str(first_service.users[0].id),
-        "message_limit": 1000,
-        "restricted": False,
-        "active": False,
-        "email_from": email_from,
-        "created_by": str(sample_user.id),
-    }
-    json_resp = admin_request.post("service.create_service", _data=data, _expected_status=400 if should_error else 201)
-
-    if should_error:
-        assert json_resp["result"] == "error"
-        assert (
-            "Unacceptable characters: `email_from` may only contain letters, numbers and full stops."
-            in json_resp["message"]["email_from"]
-        )
-
-
 def test_update_service(client, notify_db_session, sample_service):
     data = {
         "name": "updated service name",
-        "email_from": "updated.service.name",
         "created_by": str(sample_service.created_by.id),
         "organisation_type": "school_or_college",
     }
@@ -548,14 +427,12 @@ def test_update_service(client, notify_db_session, sample_service):
     result = resp.json
     assert resp.status_code == 200
     assert result["data"]["name"] == "updated service name"
-    assert result["data"]["email_from"] == "updated.service.name"
     assert result["data"]["organisation_type"] == "school_or_college"
 
 
 def test_cant_update_service_org_type_to_random_value(client, sample_service):
     data = {
         "name": "updated service name",
-        "email_from": "updated.service.name",
         "created_by": str(sample_service.created_by.id),
         "organisation_type": "foo",
     }
@@ -576,9 +453,8 @@ def test_update_service_flags(client, sample_service):
     json_resp = resp.json
     assert resp.status_code == 200
     assert json_resp["data"]["name"] == sample_service.name
-    assert json_resp["data"]["research_mode"] is False
 
-    data = {"research_mode": True, "permissions": [LETTER_TYPE, INTERNATIONAL_SMS_TYPE]}
+    data = {"permissions": [BROADCAST_TYPE]}
 
     auth_header = create_admin_authorization_header()
 
@@ -589,70 +465,7 @@ def test_update_service_flags(client, sample_service):
     )
     result = resp.json
     assert resp.status_code == 200
-    assert result["data"]["research_mode"] is True
-    assert set(result["data"]["permissions"]) == set([LETTER_TYPE, INTERNATIONAL_SMS_TYPE])
-
-
-@pytest.mark.parametrize(
-    "field",
-    (
-        "volume_email",
-        "volume_sms",
-        "volume_letter",
-    ),
-)
-@pytest.mark.parametrize(
-    "value, expected_status, expected_persisted",
-    (
-        (1234, 200, 1234),
-        (None, 200, None),
-        ("Aa", 400, None),
-    ),
-)
-def test_update_service_sets_volumes(
-    admin_request,
-    sample_service,
-    field,
-    value,
-    expected_status,
-    expected_persisted,
-):
-    admin_request.post(
-        "service.update_service",
-        service_id=sample_service.id,
-        _data={
-            field: value,
-        },
-        _expected_status=expected_status,
-    )
-    assert getattr(sample_service, field) == expected_persisted
-
-
-@pytest.mark.parametrize(
-    "value, expected_status, expected_persisted",
-    (
-        (True, 200, True),
-        (False, 200, False),
-        ("unknown", 400, None),
-    ),
-)
-def test_update_service_sets_research_consent(
-    admin_request,
-    sample_service,
-    value,
-    expected_status,
-    expected_persisted,
-):
-    assert sample_service.consent_to_research is None
-    admin_request.post(
-        "service.update_service",
-        service_id=sample_service.id,
-        _data={
-            "consent_to_research": value,
-        },
-        _expected_status=expected_status,
-    )
-    assert sample_service.consent_to_research is expected_persisted
+    assert set(result["data"]["permissions"]) == set([BROADCAST_TYPE])
 
 
 @pytest.fixture(scope="function")
@@ -663,7 +476,7 @@ def service_with_no_permissions(notify_db_session):
 def test_update_service_flags_with_service_without_default_service_permissions(client, service_with_no_permissions):
     auth_header = create_admin_authorization_header()
     data = {
-        "permissions": [LETTER_TYPE, INTERNATIONAL_SMS_TYPE],
+        "permissions": [BROADCAST_TYPE],
     }
 
     resp = client.post(
@@ -674,17 +487,17 @@ def test_update_service_flags_with_service_without_default_service_permissions(c
     result = resp.json
 
     assert resp.status_code == 200
-    assert set(result["data"]["permissions"]) == set([LETTER_TYPE, INTERNATIONAL_SMS_TYPE])
+    assert set(result["data"]["permissions"]) == set([BROADCAST_TYPE])
 
 
 def test_update_service_flags_will_remove_service_permissions(client, notify_db_session):
     auth_header = create_admin_authorization_header()
 
-    service = create_service(service_permissions=[SMS_TYPE, EMAIL_TYPE, INTERNATIONAL_SMS_TYPE])
+    service = create_service(service_permissions=[BROADCAST_TYPE, EMAIL_AUTH_TYPE])
 
-    assert INTERNATIONAL_SMS_TYPE in [p.permission for p in service.permissions]
+    assert EMAIL_AUTH_TYPE in [p.permission for p in service.permissions]
 
-    data = {"permissions": [SMS_TYPE, EMAIL_TYPE]}
+    data = {"permissions": [BROADCAST_TYPE]}
 
     resp = client.post(
         "/service/{}".format(service.id),
@@ -694,16 +507,16 @@ def test_update_service_flags_will_remove_service_permissions(client, notify_db_
     result = resp.json
 
     assert resp.status_code == 200
-    assert INTERNATIONAL_SMS_TYPE not in result["data"]["permissions"]
+    assert EMAIL_AUTH_TYPE not in result["data"]["permissions"]
 
     permissions = ServicePermission.query.filter_by(service_id=service.id).all()
-    assert set([p.permission for p in permissions]) == set([SMS_TYPE, EMAIL_TYPE])
+    assert set([p.permission for p in permissions]) == set([BROADCAST_TYPE])
 
 
 def test_update_permissions_will_override_permission_flags(client, service_with_no_permissions):
     auth_header = create_admin_authorization_header()
 
-    data = {"permissions": [LETTER_TYPE, INTERNATIONAL_SMS_TYPE]}
+    data = {"permissions": [BROADCAST_TYPE, EMAIL_AUTH_TYPE]}
 
     resp = client.post(
         "/service/{}".format(service_with_no_permissions.id),
@@ -713,13 +526,13 @@ def test_update_permissions_will_override_permission_flags(client, service_with_
     result = resp.json
 
     assert resp.status_code == 200
-    assert set(result["data"]["permissions"]) == set([LETTER_TYPE, INTERNATIONAL_SMS_TYPE])
+    assert set(result["data"]["permissions"]) == set([BROADCAST_TYPE, EMAIL_AUTH_TYPE])
 
 
 def test_update_service_permissions_will_add_service_permissions(client, sample_service):
     auth_header = create_admin_authorization_header()
 
-    data = {"permissions": [EMAIL_TYPE, SMS_TYPE, LETTER_TYPE]}
+    data = {"permissions": [BROADCAST_TYPE]}
 
     resp = client.post(
         "/service/{}".format(sample_service.id),
@@ -729,38 +542,7 @@ def test_update_service_permissions_will_add_service_permissions(client, sample_
     result = resp.json
 
     assert resp.status_code == 200
-    assert set(result["data"]["permissions"]) == set([SMS_TYPE, EMAIL_TYPE, LETTER_TYPE])
-
-
-@pytest.mark.parametrize(
-    "email_from, should_error",
-    (
-        ("sams.sarnies", False),  # We are happy with plain ascii alnum/full-stops.
-        ("SAMS.SARNIES", True),  # We will reject anything with uppercase characters
-        ("sam's.sarnies", True),  # We reject punctuation other than a full-stop `.`
-        ("sams.Бутерброды", True),  # We reject unicode outside of the ascii charset
-        ("sams.ü", True),  # Even if it could theoretically be downcast to ascii
-        ("sams.u", False),  # Like this, which would be fine
-    ),
-)
-def test_update_service_allows_only_lowercase_digits_and_fullstops_in_email_from(
-    admin_request, sample_service, email_from, should_error
-):
-    data = {"service_name": "Sam's sarnies", "email_from": email_from}
-
-    result = admin_request.post(
-        "service.update_service",
-        service_id=sample_service.id,
-        _data=data,
-        _expected_status=400 if should_error else 200,
-    )
-
-    if should_error:
-        assert result["result"] == "error"
-        assert (
-            "Unacceptable characters: `email_from` may only contain letters, numbers and full stops."
-            in result["message"]["email_from"]
-        )
+    assert set(result["data"]["permissions"]) == set([BROADCAST_TYPE])
 
 
 @pytest.mark.parametrize(
@@ -790,7 +572,7 @@ def test_update_permissions_with_an_invalid_permission_will_raise_error(client, 
     auth_header = create_admin_authorization_header()
     invalid_permission = "invalid_permission"
 
-    data = {"permissions": [EMAIL_TYPE, SMS_TYPE, invalid_permission]}
+    data = {"permissions": [BROADCAST_TYPE, invalid_permission]}
 
     resp = client.post(
         "/service/{}".format(sample_service.id),
@@ -807,7 +589,7 @@ def test_update_permissions_with_an_invalid_permission_will_raise_error(client, 
 def test_update_permissions_with_duplicate_permissions_will_raise_error(client, sample_service):
     auth_header = create_admin_authorization_header()
 
-    data = {"permissions": [EMAIL_TYPE, SMS_TYPE, LETTER_TYPE, LETTER_TYPE]}
+    data = {"permissions": [BROADCAST_TYPE, BROADCAST_TYPE]}
 
     resp = client.post(
         "/service/{}".format(sample_service.id),
@@ -818,38 +600,14 @@ def test_update_permissions_with_duplicate_permissions_will_raise_error(client, 
 
     assert resp.status_code == 400
     assert result["result"] == "error"
-    assert "Duplicate Service Permission: ['{}']".format(LETTER_TYPE) in result["message"]["permissions"]
-
-
-def test_update_service_research_mode_throws_validation_error(notify_api, sample_service):
-    with notify_api.test_request_context():
-        with notify_api.test_client() as client:
-            auth_header = create_admin_authorization_header()
-            resp = client.get("/service/{}".format(sample_service.id), headers=[auth_header])
-            json_resp = resp.json
-            assert resp.status_code == 200
-            assert json_resp["data"]["name"] == sample_service.name
-            assert not json_resp["data"]["research_mode"]
-
-            data = {"research_mode": "dedede"}
-
-            auth_header = create_admin_authorization_header()
-
-            resp = client.post(
-                "/service/{}".format(sample_service.id),
-                data=json.dumps(data),
-                headers=[("Content-Type", "application/json"), auth_header],
-            )
-            result = resp.json
-            assert result["message"]["research_mode"][0] == "Not a valid boolean."
-            assert resp.status_code == 400
+    assert "Duplicate Service Permission: ['{}']".format(BROADCAST_TYPE) in result["message"]["permissions"]
 
 
 def test_should_not_update_service_with_duplicate_name(notify_api, notify_db_session, sample_user, sample_service):
     with notify_api.test_request_context():
         with notify_api.test_client() as client:
             service_name = "another name"
-            service = create_service(service_name=service_name, user=sample_user, email_from="another.name")
+            service = create_service(service_name=service_name, user=sample_user)
             data = {"name": service_name, "created_by": str(service.created_by.id)}
 
             auth_header = create_admin_authorization_header()
@@ -870,10 +628,9 @@ def test_should_not_update_service_with_duplicate_email_from(
 ):
     with notify_api.test_request_context():
         with notify_api.test_client() as client:
-            email_from = "duplicate.name"
             service_name = "duplicate name"
-            service = create_service(service_name=service_name, user=sample_user, email_from=email_from)
-            data = {"name": service_name, "email_from": email_from, "created_by": str(service.created_by.id)}
+            service = create_service(service_name=service_name, user=sample_user)
+            data = {"name": service_name, "created_by": str(service.created_by.id)}
 
             auth_header = create_admin_authorization_header()
 
@@ -885,10 +642,7 @@ def test_should_not_update_service_with_duplicate_email_from(
             assert resp.status_code == 400
             json_resp = resp.json
             assert json_resp["result"] == "error"
-            assert (
-                "Duplicate service name '{}'".format(service_name) in json_resp["message"]["name"]
-                or "Duplicate service name '{}'".format(email_from) in json_resp["message"]["name"]
-            )
+            assert "Duplicate service name '{}'".format(service_name) in json_resp["message"]["name"]
 
 
 def test_update_service_should_404_if_id_is_invalid(notify_api):
@@ -963,10 +717,8 @@ def test_default_permissions_are_added_for_user_service(notify_api, notify_db_se
             data = {
                 "name": "created service",
                 "user_id": str(sample_user.id),
-                "message_limit": 1000,
                 "restricted": False,
                 "active": False,
-                "email_from": "created.service",
                 "created_by": str(sample_user.id),
             }
             auth_header = create_admin_authorization_header()
@@ -976,7 +728,6 @@ def test_default_permissions_are_added_for_user_service(notify_api, notify_db_se
             assert resp.status_code == 201
             assert json_resp["data"]["id"]
             assert json_resp["data"]["name"] == "created service"
-            assert json_resp["data"]["email_from"] == "created.service"
 
             auth_header_fetch = create_admin_authorization_header()
 
@@ -1025,9 +776,6 @@ def test_add_existing_user_to_another_service_with_all_permissions(
 
             data = {
                 "permissions": [
-                    {"permission": "send_emails"},
-                    {"permission": "send_letters"},
-                    {"permission": "send_texts"},
                     {"permission": "manage_users"},
                     {"permission": "manage_settings"},
                     {"permission": "manage_api_keys"},
@@ -1068,9 +816,6 @@ def test_add_existing_user_to_another_service_with_all_permissions(
             json_resp = resp.json
             permissions = json_resp["data"]["permissions"][str(sample_service.id)]
             expected_permissions = [
-                "send_texts",
-                "send_emails",
-                "send_letters",
                 "manage_users",
                 "manage_settings",
                 "manage_templates",
@@ -1096,9 +841,9 @@ def test_add_existing_user_to_another_service_with_send_permissions(
 
             data = {
                 "permissions": [
-                    {"permission": "send_emails"},
-                    {"permission": "send_letters"},
-                    {"permission": "send_texts"},
+                    {"permission": "create_broadcasts"},
+                    {"permission": "approve_broadcasts"},
+                    {"permission": "reject_broadcasts"},
                 ],
                 "folder_permissions": [],
             }
@@ -1124,7 +869,7 @@ def test_add_existing_user_to_another_service_with_send_permissions(
             json_resp = resp.json
 
             permissions = json_resp["data"]["permissions"][str(sample_service.id)]
-            expected_permissions = ["send_texts", "send_emails", "send_letters"]
+            expected_permissions = ["create_broadcasts", "approve_broadcasts", "reject_broadcasts"]
             assert sorted(expected_permissions) == sorted(permissions)
 
 
@@ -1268,7 +1013,7 @@ def test_add_existing_user_to_non_existing_service_returns404(notify_api, notify
 
             incorrect_id = uuid.uuid4()
 
-            data = {"permissions": ["send_messages", "manage_service", "manage_api_keys"]}
+            data = {"permissions": ["create_broadcasts", "manage_service", "manage_api_keys"]}
             auth_header = create_admin_authorization_header()
 
             resp = client.post(
@@ -1290,7 +1035,7 @@ def test_add_existing_user_of_service_to_service_returns400(notify_api, notify_d
         with notify_api.test_client() as client:
             existing_user_id = sample_service.users[0].id
 
-            data = {"permissions": ["send_messages", "manage_service", "manage_api_keys"]}
+            data = {"permissions": ["create_broadcasts", "manage_service", "manage_api_keys"]}
             auth_header = create_admin_authorization_header()
 
             resp = client.post(
@@ -1312,7 +1057,7 @@ def test_add_unknown_user_to_service_returns404(notify_api, notify_db_session, s
         with notify_api.test_client() as client:
             incorrect_id = 9876
 
-            data = {"permissions": ["send_messages", "manage_service", "manage_api_keys"]}
+            data = {"permissions": ["create_broadcasts", "manage_service", "manage_api_keys"]}
             auth_header = create_admin_authorization_header()
 
             resp = client.post(
@@ -1387,64 +1132,6 @@ def test_get_service_and_api_key_history(notify_api, sample_service, sample_api_
             assert json_resp["data"]["api_key_history"][0]["id"] == str(sample_api_key.id)
 
 
-@pytest.mark.parametrize(
-    "should_prefix",
-    [
-        True,
-        False,
-    ],
-)
-def test_prefixing_messages_based_on_prefix_sms(
-    client,
-    notify_db_session,
-    should_prefix,
-):
-    service = create_service(prefix_sms=should_prefix)
-
-    result = client.get(
-        url_for("service.get_service_by_id", service_id=service.id),
-        headers=[("Content-Type", "application/json"), create_admin_authorization_header()],
-    )
-    service = json.loads(result.get_data(as_text=True))["data"]
-    assert service["prefix_sms"] == should_prefix
-
-
-@pytest.mark.parametrize(
-    "posted_value, stored_value, returned_value",
-    [
-        (True, True, True),
-        (False, False, False),
-    ],
-)
-def test_set_sms_prefixing_for_service(
-    admin_request,
-    client,
-    sample_service,
-    posted_value,
-    stored_value,
-    returned_value,
-):
-    result = admin_request.post(
-        "service.update_service",
-        service_id=sample_service.id,
-        _data={"prefix_sms": posted_value},
-    )
-    assert result["data"]["prefix_sms"] == stored_value
-
-
-def test_set_sms_prefixing_for_service_cant_be_none(
-    admin_request,
-    sample_service,
-):
-    resp = admin_request.post(
-        "service.update_service",
-        service_id=sample_service.id,
-        _data={"prefix_sms": None},
-        _expected_status=400,
-    )
-    assert resp["message"] == {"prefix_sms": ["Field may not be null."]}
-
-
 def test_update_service_calls_send_notification_as_service_becomes_live(notify_db_session, client, mocker):
     send_notification_mock = mocker.patch("app.service.rest.send_notification_to_service_users")
 
@@ -1464,7 +1151,7 @@ def test_update_service_calls_send_notification_as_service_becomes_live(notify_d
     send_notification_mock.assert_called_once_with(
         service_id=restricted_service.id,
         template_id="9e10c154-d989-4cfe-80ca-481cd09b7251",
-        personalisation={"service_name": restricted_service.name, "message_limit": "1,000"},
+        personalisation={"service_name": restricted_service.name},
         include_user_fields=["name"],
     )
 
@@ -1657,25 +1344,6 @@ def test_set_as_broadcast_service_maintains_broadcast_permission_for_existing_br
 
     permissions = ServicePermission.query.filter_by(service_id=sample_broadcast_service.id).all()
     assert set([p.permission for p in permissions]) == set(ending_permissions)
-
-
-def test_set_as_broadcast_service_sets_count_as_live_to_false(admin_request, sample_service, broadcast_organisation):
-    assert sample_service.count_as_live is True
-
-    data = {
-        "broadcast_channel": "severe",
-        "service_mode": "live",
-        "provider_restriction": "all",
-    }
-    result = admin_request.post(
-        "service.set_as_broadcast_service",
-        service_id=sample_service.id,
-        _data=data,
-    )
-    assert result["data"]["count_as_live"] is False
-
-    service_from_db = Service.query.filter_by(id=sample_service.id).all()[0]
-    assert service_from_db.count_as_live is False
 
 
 def test_set_as_broadcast_service_sets_service_org_to_broadcast_org(
@@ -1932,10 +1600,12 @@ def test_set_as_broadcast_service_removes_user_permissions(
         sample_service_full_permissions,
         service_user,
         permissions=[
-            Permission(service_id=sample_service_full_permissions.id, user_id=service_user.id, permission="send_emails")
+            Permission(
+                service_id=sample_service_full_permissions.id, user_id=service_user.id, permission="create_broadcasts"
+            )
         ],
     )
-    assert len(service_user.get_permissions(service_id=sample_service.id)) == 8
+    assert len(service_user.get_permissions(service_id=sample_service.id)) == 5
     assert len(sample_invited_user.get_permissions()) == 3
 
     admin_request.post(
@@ -1951,7 +1621,7 @@ def test_set_as_broadcast_service_removes_user_permissions(
     assert sample_invited_user.permissions == "view_activity"
 
     # Permissions for other services remain
-    assert service_user.get_permissions(service_id=sample_service_full_permissions.id) == ["send_emails"]
+    assert service_user.get_permissions(service_id=sample_service_full_permissions.id) == ["create_broadcasts"]
 
 
 @freeze_time("2021-12-21")

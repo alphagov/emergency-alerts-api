@@ -1,32 +1,6 @@
 import pytest
 
-from app.models import PRECOMPILED_TEMPLATE_NAME
 from tests.app.db import create_template_folder
-
-
-def test_email_notification_serializes_with_subject(client, sample_email_template):
-    res = sample_email_template.serialize_for_v2()
-    assert res["subject"] == "Email Subject"
-
-
-def test_is_precompiled_letter_false(sample_letter_template):
-    assert not sample_letter_template.is_precompiled_letter
-
-
-def test_is_precompiled_letter_true(sample_letter_template):
-    sample_letter_template.hidden = True
-    sample_letter_template.name = PRECOMPILED_TEMPLATE_NAME
-    assert sample_letter_template.is_precompiled_letter
-
-
-def test_is_precompiled_letter_hidden_true_not_name(sample_letter_template):
-    sample_letter_template.hidden = True
-    assert not sample_letter_template.is_precompiled_letter
-
-
-def test_is_precompiled_letter_name_correct_not_hidden(sample_letter_template):
-    sample_letter_template.name = PRECOMPILED_TEMPLATE_NAME
-    assert not sample_letter_template.is_precompiled_letter
 
 
 def test_template_folder_is_parent(sample_service):

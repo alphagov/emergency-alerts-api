@@ -26,7 +26,7 @@ def test_create_invited_user(notify_db_session, sample_service):
         "service": sample_service,
         "email_address": email_address,
         "from_user": invite_from,
-        "permissions": "send_messages,manage_service",
+        "permissions": "create_broadcasts,manage_service",
         "folder_permissions": [],
     }
 
@@ -38,7 +38,7 @@ def test_create_invited_user(notify_db_session, sample_service):
     assert invited_user.from_user == invite_from
     permissions = invited_user.get_permissions()
     assert len(permissions) == 2
-    assert "send_messages" in permissions
+    assert "create_broadcasts" in permissions
     assert "manage_service" in permissions
     assert invited_user.folder_permissions == []
 
@@ -53,7 +53,7 @@ def test_create_invited_user_sets_default_folder_permissions_of_empty_list(
         "service": sample_service,
         "email_address": "invited_user@service.gov.uk",
         "from_user": invite_from,
-        "permissions": "send_messages,manage_service",
+        "permissions": "create_broadcasts,manage_service",
     }
 
     invited_user = InvitedUser(**data)

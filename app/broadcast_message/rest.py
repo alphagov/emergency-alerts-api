@@ -105,12 +105,11 @@ def create_broadcast_message(service_id):
     validate(data, create_broadcast_message_schema)
     service = dao_fetch_service_by_id(data["service_id"])
     user = get_user_by_id(data["created_by"])
-    personalisation = data.get("personalisation", {})
     template_id = data.get("template_id")
 
     if template_id:
         template = dao_get_template_by_id_and_service_id(template_id, data["service_id"])
-        content = str(template._as_utils_template_with_personalisation(personalisation))
+        content = str(template._as_utils_template())
         reference = None
     else:
         temporary_template = BroadcastMessageTemplate.from_content(data["content"])
@@ -128,7 +127,6 @@ def create_broadcast_message(service_id):
         service_id=service.id,
         template_id=template_id,
         template_version=template.version if template else None,
-        personalisation=personalisation,
         areas=data.get("areas", {}),
         status=BroadcastStatusType.DRAFT,
         starts_at=_parse_nullable_datetime(data.get("starts_at")),

@@ -15,39 +15,26 @@ from app.models import Template, TemplateHistory, template_folder_map
 from tests.app.db import create_template, create_template_folder
 
 
-@pytest.mark.parametrize(
-    "template_type, subject",
-    [
-        ("sms", None),
-        ("email", "subject"),
-        ("letter", "subject"),
-    ],
-)
-def test_create_template(sample_service, sample_user, template_type, subject):
+def test_create_template(sample_service, sample_user):
     data = {
         "name": "Sample Template",
-        "template_type": template_type,
+        "template_type": "broadcast",
         "content": "Template content",
         "service": sample_service,
         "created_by": sample_user,
     }
-    if template_type == "letter":
-        data["postage"] = "second"
-    if subject:
-        data.update({"subject": subject})
     template = Template(**data)
     dao_create_template(template)
 
     assert Template.query.count() == 1
     assert len(dao_get_all_templates_for_service(sample_service.id)) == 1
     assert dao_get_all_templates_for_service(sample_service.id)[0].name == "Sample Template"
-    assert dao_get_all_templates_for_service(sample_service.id)[0].process_type == "normal"
 
 
 def test_update_template(sample_service, sample_user):
     data = {
         "name": "Sample Template",
-        "template_type": "sms",
+        "template_type": "broadcast",
         "content": "Template content",
         "service": sample_service,
         "created_by": sample_user,
@@ -63,8 +50,8 @@ def test_update_template(sample_service, sample_user):
 
 
 def test_get_all_templates_for_service(service_factory):
-    service_1 = service_factory.get("service 1", email_from="service.1")
-    service_2 = service_factory.get("service 2", email_from="service.2")
+    service_1 = service_factory.get("service 1")
+    service_2 = service_factory.get("service 2")
 
     assert Template.query.count() == 2
     assert len(dao_get_all_templates_for_service(service_1.id)) == 1
@@ -73,19 +60,19 @@ def test_get_all_templates_for_service(service_factory):
     create_template(
         service=service_1,
         template_name="Sample Template 1",
-        template_type="sms",
+        template_type="broadcast",
         content="Template content",
     )
     create_template(
         service=service_1,
         template_name="Sample Template 2",
-        template_type="sms",
+        template_type="broadcast",
         content="Template content",
     )
     create_template(
         service=service_2,
         template_name="Sample Template 3",
-        template_type="sms",
+        template_type="broadcast",
         content="Template content",
     )
 
@@ -96,13 +83,13 @@ def test_get_all_templates_for_service(service_factory):
 
 def test_get_all_templates_for_service_is_alphabetised(sample_service):
     create_template(
-        template_name="Sample Template 1", template_type="sms", content="Template content", service=sample_service
+        template_name="Sample Template 1", template_type="broadcast", content="Template content", service=sample_service
     )
     template_2 = create_template(
-        template_name="Sample Template 2", template_type="sms", content="Template content", service=sample_service
+        template_name="Sample Template 2", template_type="broadcast", content="Template content", service=sample_service
     )
     create_template(
-        template_name="Sample Template 3", template_type="sms", content="Template content", service=sample_service
+        template_name="Sample Template 3", template_type="broadcast", content="Template content", service=sample_service
     )
 
     assert Template.query.count() == 3
@@ -134,37 +121,12 @@ def test_get_all_templates_ignores_archived_templates(sample_service):
     assert templates[0] == normal_template
 
 
-def test_get_all_templates_ignores_hidden_templates(sample_service):
-    normal_template = create_template(template_name="Normal Template", service=sample_service, archived=False)
-
-    create_template(template_name="Hidden Template", hidden=True, service=sample_service)
-
-    templates = dao_get_all_templates_for_service(sample_service.id)
-
-    assert len(templates) == 1
-    assert templates[0] == normal_template
-
-
 def test_get_template_by_id_and_service(sample_service):
     sample_template = create_template(template_name="Test Template", service=sample_service)
     template = dao_get_template_by_id_and_service_id(template_id=sample_template.id, service_id=sample_service.id)
     assert template.id == sample_template.id
     assert template.name == "Test Template"
     assert template.version == sample_template.version
-
-
-def test_get_template_by_id_and_service_returns_none_for_hidden_templates(sample_service):
-    sample_template = create_template(template_name="Test Template", hidden=True, service=sample_service)
-
-    with pytest.raises(NoResultFound):
-        dao_get_template_by_id_and_service_id(template_id=sample_template.id, service_id=sample_service.id)
-
-
-def test_get_template_version_returns_none_for_hidden_templates(sample_service):
-    sample_template = create_template(template_name="Test Template", hidden=True, service=sample_service)
-
-    with pytest.raises(NoResultFound):
-        dao_get_template_by_id_and_service_id(sample_template.id, sample_service.id, "1")
 
 
 def test_get_template_by_id_and_service_returns_none_if_no_template(sample_service, fake_uuid):
@@ -178,8 +140,7 @@ def test_create_template_creates_a_history_record_with_current_data(sample_servi
     assert TemplateHistory.query.count() == 0
     data = {
         "name": "Sample Template",
-        "template_type": "email",
-        "subject": "subject",
+        "template_type": "broadcast",
         "content": "Template content",
         "service": sample_service,
         "created_by": sample_user,
@@ -205,8 +166,7 @@ def test_update_template_creates_a_history_record_with_current_data(sample_servi
     assert TemplateHistory.query.count() == 0
     data = {
         "name": "Sample Template",
-        "template_type": "email",
-        "subject": "subject",
+        "template_type": "broadcast",
         "content": "Template content",
         "service": sample_service,
         "created_by": sample_user,
@@ -264,12 +224,6 @@ def test_get_template_versions(sample_template):
     assert {template_history["version"] for template_history in v} == {1, 2}
 
 
-def test_get_template_versions_is_empty_for_hidden_templates(sample_service):
-    sample_template = create_template(template_name="Test Template", hidden=True, service=sample_service)
-    versions = dao_get_template_versions(service_id=sample_template.service_id, template_id=sample_template.id)
-    assert len(versions) == 0
-
-
 def test_purge_templates_for_service(sample_user, sample_service):
     service_user = dao_get_service_user(sample_user.id, sample_service.id)
     folder_1 = create_template_folder(sample_service, name="folder_1", users=[service_user])
@@ -277,7 +231,6 @@ def test_purge_templates_for_service(sample_user, sample_service):
     data = {
         "name": "Sample Template 1",
         "template_type": "broadcast",
-        "subject": "Alert subject 1",
         "content": "Alert template content",
         "service": sample_service,
         "created_by": sample_user,
@@ -289,7 +242,6 @@ def test_purge_templates_for_service(sample_user, sample_service):
     data = {
         "name": "Sample Template 2",
         "template_type": "broadcast",
-        "subject": "Alert subject 2",
         "content": "Alert template content",
         "service": sample_service,
         "created_by": sample_user,

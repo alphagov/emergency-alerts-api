@@ -23,15 +23,12 @@ from tests.app.db import (
 
 
 def test_get_broadcast_message(admin_request, sample_broadcast_service):
-    t = create_template(sample_broadcast_service, BROADCAST_TYPE, content="This is a ((thing))")
+    t = create_template(sample_broadcast_service, BROADCAST_TYPE, content="This is a test")
     bm = create_broadcast_message(
         t,
         areas={
             "ids": ["place A", "region B"],
             "simple_polygons": [[[50.1, 1.2], [50.12, 1.2], [50.13, 1.2]]],
-        },
-        personalisation={
-            "thing": "test",
         },
     )
 
@@ -51,7 +48,6 @@ def test_get_broadcast_message(admin_request, sample_broadcast_service):
     assert response["starts_at"] is None
     assert response["areas"]["ids"] == ["place A", "region B"]
     assert response["areas"]["simple_polygons"] == [[[50.1, 1.2], [50.12, 1.2], [50.13, 1.2]]]
-    assert response["personalisation"] == {"thing": "test"}
 
 
 def test_get_broadcast_provider_messages(admin_request, sample_broadcast_service):
@@ -158,9 +154,9 @@ def test_get_broadcast_messages_for_service(admin_request, sample_broadcast_serv
     t = create_template(sample_broadcast_service, BROADCAST_TYPE)
 
     with freeze_time("2020-01-01 12:00"):
-        bm1 = create_broadcast_message(t, personalisation={"foo": "bar"})
+        bm1 = create_broadcast_message(t)
     with freeze_time("2020-01-01 13:00"):
-        bm2 = create_broadcast_message(t, personalisation={"foo": "baz"})
+        bm2 = create_broadcast_message(t)
 
     response = admin_request.get(
         "broadcast_message.get_broadcast_messages_for_service", service_id=t.service_id, _expected_status=200

@@ -1,4 +1,3 @@
-import json
 import os
 
 from celery.schedules import crontab
@@ -95,10 +94,6 @@ class Config(object):
         print("Overriding db connection string for local running")
         SQLALCHEMY_DATABASE_URI = os.environ.get("SQLALCHEMY_LOCAL_OVERRIDE")
 
-    MMG_API_KEY = os.getenv("MMG_API_KEY")
-    FIRETEXT_API_KEY = os.getenv("FIRETEXT_API_KEY")
-    FIRETEXT_INTERNATIONAL_API_KEY = os.getenv("FIRETEXT_INTERNATIONAL_API_KEY", "placeholder")
-
     # Prefix to identify queues in SQS
     NOTIFICATION_QUEUE_PREFIX = (
         f"{os.getenv('NOTIFICATION_QUEUE_PREFIX')}-"
@@ -106,23 +101,12 @@ class Config(object):
         else f"{os.getenv('ENVIRONMENT')}-"
     )
 
-    REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-    REDIS_ENABLED = os.getenv("REDIS_ENABLED") == "1"
-    EXPIRE_CACHE_TEN_MINUTES = 600
-    EXPIRE_CACHE_EIGHT_DAYS = 8 * 24 * 60 * 60
-
     ZENDESK_API_KEY = os.environ.get("ZENDESK_API_KEY")
     REPORTS_SLACK_WEBHOOK_URL = os.environ.get("REPORTS_SLACK_WEBHOOK_URL")
 
     # Logging
     DEBUG = True
-    NOTIFY_LOG_PATH = "application.log"
     SQLALCHEMY_ECHO = False
-
-    CRONITOR_ENABLED = False
-    CRONITOR_KEYS = json.loads(os.environ.get("CRONITOR_KEYS", "{}"))
-
-    ANTIVIRUS_ENABLED = os.getenv("ANTIVIRUS_ENABLED") == "1"
 
     HOST = "local"
     AWS_REGION = os.environ.get("AWS_REGION", "eu-west-2")
@@ -141,23 +125,7 @@ class Config(object):
     MAX_FAILED_LOGIN_COUNT = 10
     MIN_ENTROPY_THRESHOLD = 70
 
-    MAX_LETTER_PDF_ZIP_FILESIZE = 40 * 1024 * 1024  # 40mb
-    MAX_LETTER_PDF_COUNT_PER_ZIP = 500
-
     CHECK_PROXY_HEADER = False
-
-    CSV_UPLOAD_BUCKET_NAME = "development-notifications-csv-upload"
-    CONTACT_LIST_BUCKET_NAME = "development-contact-list"
-    TEST_LETTERS_BUCKET_NAME = "development-test-letters"
-    DVLA_RESPONSE_BUCKET_NAME = "notify.tools-ftp"
-    LETTERS_PDF_BUCKET_NAME = "development-letters-pdf"
-    LETTERS_SCAN_BUCKET_NAME = "development-letters-scan"
-    INVALID_PDF_BUCKET_NAME = "development-letters-invalid-pdf"
-    TRANSIENT_UPLOADED_LETTERS = "development-transient-uploaded-letters"
-    LETTER_SANITISE_BUCKET_NAME = "development-letters-sanitise"
-
-    # these should always add up to 100%
-    SMS_PROVIDER_RESTING_POINTS = {"mmg": 51, "firetext": 49}
 
     NOTIFY_SERVICE_ID = "d6aa2c68-a2d9-4437-ab19-3ae8eb202553"
     NOTIFY_USER_ID = "6af522d0-2915-4e52-83a3-3690455a5fe6"
@@ -259,35 +227,16 @@ class Config(object):
         "simulate-delivered-3@notifications.service.gov.uk",
     )
 
-    SIMULATED_SMS_NUMBERS = ("+447700900000", "+447700900111", "+447700900222")
-
-    FREE_SMS_TIER_FRAGMENT_COUNT = 250000
-
-    SMS_INBOUND_WHITELIST = json.loads(os.environ.get("SMS_INBOUND_WHITELIST", "[]"))
-    FIRETEXT_INBOUND_SMS_AUTH = json.loads(os.environ.get("FIRETEXT_INBOUND_SMS_AUTH", "[]"))
-    LOW_INBOUND_SMS_NUMBER_THRESHOLD = 50
     ROUTE_SECRET_KEY_1 = os.environ.get("ROUTE_SECRET_KEY_1", "")
     ROUTE_SECRET_KEY_2 = os.environ.get("ROUTE_SECRET_KEY_2", "")
 
-    HIGH_VOLUME_SERVICE = json.loads(os.environ.get("HIGH_VOLUME_SERVICE", "[]"))
-
     TEMPLATE_PREVIEW_API_HOST = os.environ.get("TEMPLATE_PREVIEW_API_HOST", "http://localhost:6013")
     TEMPLATE_PREVIEW_API_KEY = os.environ.get("TEMPLATE_PREVIEW_API_KEY", "my-secret-key")
-
-    DOCUMENT_DOWNLOAD_API_HOST = os.environ.get("DOCUMENT_DOWNLOAD_API_HOST", "http://localhost:7000")
-    DOCUMENT_DOWNLOAD_API_KEY = os.environ.get("DOCUMENT_DOWNLOAD_API_KEY", "auth-token")
-
-    # these environment vars aren't defined in the manifest so to set them on paas use `cf set-env`
-    MMG_URL = os.environ.get("MMG_URL", "https://api.mmg.co.uk/jsonv2a/api.php")
-    FIRETEXT_URL = os.environ.get("FIRETEXT_URL", "https://www.firetext.co.uk/api/sendsms/json")
-    SES_STUB_URL = os.environ.get("SES_STUB_URL")
 
     EAS_EMAIL_REPLY_TO_ID = "591164ac-721d-46e5-b329-fe40f5253241"
 
     # as defined in api db migration 0331_add_broadcast_org.py
     BROADCAST_ORGANISATION_ID = "38e4bf69-93b0-445d-acee-53ea53fe02df"
-
-    DVLA_EMAIL_ADDRESSES = ["success@simulator.amazonses.com"]
 
     FUNCTIONAL_TESTS_BROADCAST_SERVICE_NAME = "Functional Tests Broadcast Service"
     FUNCTIONAL_TESTS_BROADCAST_SERVICE_ID = "8e1d56fa-12a8-4d00-bed2-db47180bed0a"
@@ -331,7 +280,6 @@ class Hosted(Config):
             )
         )
     CBC_PROXY_ENABLED = True
-
     DEBUG = False
 
 
@@ -340,23 +288,6 @@ class Test(Config):
     FROM_NUMBER = "testing"
     HOST = "test"
     TESTING = True
-
-    HIGH_VOLUME_SERVICE = [
-        "941b6f9a-50d7-4742-8d50-f365ca74bf27",
-        "63f95b86-2d19-4497-b8b2-ccf25457df4e",
-        "7e5950cb-9954-41f5-8376-962b8c8555cf",
-        "10d1b9c9-0072-4fa9-ae1c-595e333841da",
-    ]
-
-    CSV_UPLOAD_BUCKET_NAME = "test-notifications-csv-upload"
-    CONTACT_LIST_BUCKET_NAME = "test-contact-list"
-    TEST_LETTERS_BUCKET_NAME = "test-test-letters"
-    DVLA_RESPONSE_BUCKET_NAME = "test.notify.com-ftp"
-    LETTERS_PDF_BUCKET_NAME = "test-letters-pdf"
-    LETTERS_SCAN_BUCKET_NAME = "test-letters-scan"
-    INVALID_PDF_BUCKET_NAME = "test-letters-invalid-pdf"
-    TRANSIENT_UPLOADED_LETTERS = "test-transient-uploaded-letters"
-    LETTER_SANITISE_BUCKET_NAME = "test-letters-sanitise"
 
     SQLALCHEMY_DATABASE_URI = "postgresql://{user}:{password}@{host}:{port}/{database}".format(
         user=os.environ.get("TEST_RDS_USER", "postgres"),
@@ -369,17 +300,9 @@ class Test(Config):
 
     CELERY = {**Config.CELERY, "broker_url": "you-forgot-to-mock-celery-in-your-tests://"}
 
-    ANTIVIRUS_ENABLED = True
-
     API_RATE_LIMIT_ENABLED = True
     API_HOST_NAME = "http://localhost:6011"
 
-    SMS_INBOUND_WHITELIST = ["203.0.113.195"]
-    FIRETEXT_INBOUND_SMS_AUTH = ["testkey"]
-    TEMPLATE_PREVIEW_API_HOST = "http://localhost:9999"
-
-    MMG_URL = "https://example.com/mmg"
-    FIRETEXT_URL = "https://example.com/firetext"
     TENANT = f"{os.environ.get('TENANT')}." if os.environ.get("TENANT") is not None else ""
     SUBDOMAIN = (
         "dev."
@@ -389,11 +312,8 @@ class Test(Config):
         else ""
     )
     ADMIN_EXTERNAL_URL = f"https://{TENANT}admin.{SUBDOMAIN}emergency-alerts.service.gov.uk"
-
     REPORTS_SLACK_WEBHOOK_URL = "https://hooks.slack.com/somewhere"
-
     CBC_PROXY_ENABLED = True
-    DVLA_EMAIL_ADDRESSES = ["success@simulator.amazonses.com", "success+2@simulator.amazonses.com"]
 
 
 configs = {
