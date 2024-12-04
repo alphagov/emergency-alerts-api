@@ -1,7 +1,7 @@
 """
 
-Revision ID: 0405_add_rejection_reason_cols
-Revises: 0403_add_common_passwords_table
+Revision ID: 0406_add_rejection_reason_cols
+Revises: 0405_drop_notify_org_fields
 Create Date: 2024-11-22 10:08:10
 
 """
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision = "0405_add_rejection_reason_cols"
-down_revision = "0404_drop_constraints"
+revision = "0406_add_rejection_reason_cols"
+down_revision = "0405_drop_notify_org_fields"
 
 
 def upgrade():
