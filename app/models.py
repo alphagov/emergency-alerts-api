@@ -215,7 +215,6 @@ ORGANISATION_TYPES = [
 
 CROWN_ORGANISATION_TYPES = ["nhs_central"]
 NON_CROWN_ORGANISATION_TYPES = ["local", "nhs_local", "nhs_gp", "emergency_service", "school_or_college"]
-NHS_ORGANISATION_TYPES = ["nhs_central", "nhs_local", "nhs_gp"]
 
 
 class OrganisationTypes(db.Model):
@@ -223,7 +222,6 @@ class OrganisationTypes(db.Model):
 
     name = db.Column(db.String(255), primary_key=True)
     is_crown = db.Column(db.Boolean, nullable=True)
-    annual_free_sms_fragment_limit = db.Column(db.BigInteger, nullable=False)
 
 
 class Organisation(db.Model):
@@ -233,17 +231,6 @@ class Organisation(db.Model):
     active = db.Column(db.Boolean, nullable=False, default=True)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
     updated_at = db.Column(db.DateTime, nullable=True, onupdate=datetime.datetime.utcnow)
-    agreement_signed = db.Column(db.Boolean, nullable=True)
-    agreement_signed_at = db.Column(db.DateTime, nullable=True)
-    agreement_signed_by_id = db.Column(
-        UUID(as_uuid=True),
-        db.ForeignKey("users.id"),
-        nullable=True,
-    )
-    agreement_signed_by = db.relationship("User")
-    agreement_signed_on_behalf_of_name = db.Column(db.String(255), nullable=True)
-    agreement_signed_on_behalf_of_email_address = db.Column(db.String(255), nullable=True)
-    agreement_signed_version = db.Column(db.Float, nullable=True)
     crown = db.Column(db.Boolean, nullable=True)
     organisation_type = db.Column(
         db.String(255),
@@ -251,7 +238,6 @@ class Organisation(db.Model):
         unique=False,
         nullable=True,
     )
-    request_to_go_live_notes = db.Column(db.Text)
 
     domains = db.relationship(
         "Domain",
@@ -274,14 +260,7 @@ class Organisation(db.Model):
             "active": self.active,
             "crown": self.crown,
             "organisation_type": self.organisation_type,
-            "agreement_signed": self.agreement_signed,
-            "agreement_signed_at": self.agreement_signed_at,
-            "agreement_signed_by_id": self.agreement_signed_by_id,
-            "agreement_signed_on_behalf_of_name": self.agreement_signed_on_behalf_of_name,
-            "agreement_signed_on_behalf_of_email_address": self.agreement_signed_on_behalf_of_email_address,
-            "agreement_signed_version": self.agreement_signed_version,
             "domains": self.domain_list,
-            "request_to_go_live_notes": self.request_to_go_live_notes,
             "count_of_live_services": len(self.live_services),
             "notes": self.notes,
         }

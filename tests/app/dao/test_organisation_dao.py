@@ -1,4 +1,3 @@
-import datetime
 import uuid
 
 import pytest
@@ -56,16 +55,11 @@ def test_update_organisation(notify_db_session):
     create_organisation()
 
     organisation = Organisation.query.one()
-    user = create_user()
 
     data = {
         "name": "new name",
         "crown": True,
         "organisation_type": "local",
-        "agreement_signed": True,
-        "agreement_signed_at": datetime.datetime.utcnow(),
-        "agreement_signed_by_id": user.id,
-        "agreement_signed_version": 999.99,
     }
 
     for attribute, value in data.items():

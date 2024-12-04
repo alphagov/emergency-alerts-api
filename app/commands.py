@@ -193,7 +193,6 @@ def populate_organisations_from_file(file_name):
             data = {
                 "name": columns[0],
                 "active": True,
-                "agreement_signed": boolean_or_none(columns[3]),
                 "crown": boolean_or_none(columns[2]),
                 "organisation_type": columns[1].lower(),
             }
