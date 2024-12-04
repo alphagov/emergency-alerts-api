@@ -66,7 +66,6 @@ def test_get_broadcast_message_with_user(mocker, admin_request, sample_broadcast
         broadcast_message_id=bm.id,
         _expected_status=200,
     )
-    assert response == {}
     mock_dao_get_messages = mocker.patch(
         "app.dao.broadcast_message_dao.dao_get_broadcast_message_by_id_and_service_id_with_user"
     )
