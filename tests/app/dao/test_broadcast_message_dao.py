@@ -369,7 +369,7 @@ def test_dao_purge_old_broadcastmessages_events_providermessages_and_providermes
     assert str(remaining_messages[1][0]) in expected_remaining_messages_ids
 
 
-def test_dao_get_broadcast_message_by_id_and_service_id_with_user(sample_broadcast_service):
+def test_dao_get_broadcast_message_by_id_and_service_id_with_user(sample_broadcast_service, sample_user):
     template_1 = create_template(sample_broadcast_service, "broadcast")
     message = create_broadcast_message(
         template_1,
@@ -380,10 +380,14 @@ def test_dao_get_broadcast_message_by_id_and_service_id_with_user(sample_broadca
     broadcast_message = dao_get_broadcast_message_by_id_and_service_id_with_user(
         message.id, sample_broadcast_service.id
     )
-    assert broadcast_message == {}
+    assert isinstance(broadcast_message[0], BroadcastMessage)
+    assert broadcast_message[1] == sample_user.name
+    assert broadcast_message[2:5] == (None, None, None)
 
 
-def test_dao_get_broadcast_messages_for_service_with_user(sample_broadcast_service):
+def test_dao_get_broadcast_messages_for_service_with_user(
+    sample_broadcast_service, sample_user, sample_broadcast_service_3, sample_user_2
+):
     template_1 = create_template(sample_broadcast_service, "broadcast")
     create_broadcast_message(
         template_1,
@@ -392,11 +396,27 @@ def test_dao_get_broadcast_messages_for_service_with_user(sample_broadcast_servi
         starts_at=datetime(2021, 6, 20, 12, 0, 0),
     )
     create_broadcast_message(
-        template_1,
+        service=sample_broadcast_service_3,
+        content="test",
         stubbed=False,
         status="broadcasting",
         starts_at=datetime(2021, 6, 20, 12, 0, 0),
     )
-    broadcast_messages = dao_get_broadcast_messages_for_service_with_user(sample_broadcast_service.id)
-    assert len(broadcast_messages) == 3
-    assert isinstance(broadcast_messages[0][0], BroadcastMessage)
+    create_broadcast_message(
+        service=sample_broadcast_service_3,
+        content="test",
+        stubbed=False,
+        status="broadcasting",
+        starts_at=datetime(2021, 6, 20, 12, 0, 0),
+    )
+    broadcast_messages_service_1 = dao_get_broadcast_messages_for_service_with_user(sample_broadcast_service.id)
+    broadcast_messages_service_2 = dao_get_broadcast_messages_for_service_with_user(sample_broadcast_service_3.id)
+
+    assert len(broadcast_messages_service_1) == 1
+    assert len(broadcast_messages_service_2) == 2
+    assert isinstance(broadcast_messages_service_1[0][0], BroadcastMessage)
+    assert isinstance(broadcast_messages_service_2[0][0], BroadcastMessage)
+    assert isinstance(broadcast_messages_service_2[1][0], BroadcastMessage)
+    assert broadcast_messages_service_1[0][1] == sample_user.name
+    assert broadcast_messages_service_2[1][1] == sample_user_2.name
+    assert broadcast_messages_service_2[0][2:5] == (None, None, None)
