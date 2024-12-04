@@ -28,6 +28,12 @@ def dao_get_broadcast_message_by_id_and_service_id(broadcast_message_id, service
 
 
 def dao_get_broadcast_message_by_id_and_service_id_with_user(broadcast_message_id, service_id):
+    """
+    This function returns a tuple that consists of BroadcastMessage and additional values
+    for created_by, rejected_by, approved_by & cancelled_by.
+    These values are the names of the users sourced using joins with User table.
+    """
+
     UserCreated = aliased(User)
     UserRejected = aliased(User)
     UserApproved = aliased(User)
@@ -74,6 +80,11 @@ def dao_get_broadcast_messages_for_service(service_id):
 
 
 def dao_get_broadcast_messages_for_service_with_user(service_id):
+    """
+    This function returns a list of BroadcastMessages for the service, with additional values
+    for created_by, rejected_by, approved_by & cancelled_by.
+    These values are the names of the users sourced using joins with User table.
+    """
     UserCreated = aliased(User)
     UserRejected = aliased(User)
     UserApproved = aliased(User)
