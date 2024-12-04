@@ -31,16 +31,12 @@ def upgrade():
     op.alter_column("templates_history", "process_type", nullable=True)
     op.alter_column("templates_history", "hidden", nullable=True)
 
-    op.execute("DELETE FROM service_permission_types WHERE name = 'email'")
-    op.execute("DELETE FROM service_permission_types WHERE name = 'inbound_sms'")
-    op.execute("DELETE FROM service_permission_types WHERE name = 'international_letters'")
-    op.execute("DELETE FROM service_permission_types WHERE name = 'international_sms'")
-    op.execute("DELETE FROM service_permission_types WHERE name = 'letter'")
-    op.execute("DELETE FROM service_permission_types WHERE name = 'letters_as_pdf'")
-    op.execute("DELETE FROM service_permission_types WHERE name = 'schedule_notifications'")
-    op.execute("DELETE FROM service_permission_types WHERE name = 'sms'")
-    op.execute("DELETE FROM service_permission_types WHERE name = 'upload_document'")
-    op.execute("DELETE FROM service_permission_types WHERE name = 'upload_letters'")
+    op.execute(
+        """
+            DELETE FROM permissions
+            WHERE permission in ('send_letters', 'send_emails', 'send_texts');
+        """
+    )
 
 
 def downgrade():
