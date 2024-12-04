@@ -46,7 +46,7 @@ def get_broadcast_messages_for_service(service_id):
     return jsonify(broadcast_messages=broadcast_messages)
 
 
-@broadcast_message_blueprint.route("/message=<uuid:broadcast_message_id>", methods=["GET"])
+@broadcast_message_blueprint.route("/<uuid:broadcast_message_id>", methods=["GET"])
 def get_broadcast_message(service_id, broadcast_message_id):
     return jsonify(dao_get_broadcast_message_by_id_and_service_id(broadcast_message_id, service_id).serialize())
 
@@ -68,7 +68,7 @@ def get_broadcast_msgs_for_service(service_id):
     return jsonify(broadcast_messages=broadcast_messages)
 
 
-@broadcast_message_blueprint.route("/<uuid:broadcast_message_id>", methods=["GET"])
+@broadcast_message_blueprint.route("/message=<uuid:broadcast_message_id>", methods=["GET"])
 def get_broadcast_message_by_id_and_service(service_id, broadcast_message_id):
     result = dao_get_broadcast_message_by_id_and_service_id_with_user(broadcast_message_id, service_id)
     return {
