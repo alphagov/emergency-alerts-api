@@ -10,7 +10,9 @@ from app.broadcast_message.broadcast_message_schema import (
 )
 from app.dao.broadcast_message_dao import (
     dao_get_broadcast_message_by_id_and_service_id,
+    dao_get_broadcast_message_by_id_and_service_id_with_user,
     dao_get_broadcast_messages_for_service,
+    dao_get_broadcast_messages_for_service_with_user,
     dao_get_broadcast_provider_messages_by_broadcast_message_id,
     dao_purge_old_broadcast_messages,
 )
@@ -47,6 +49,35 @@ def get_broadcast_messages_for_service(service_id):
 @broadcast_message_blueprint.route("/<uuid:broadcast_message_id>", methods=["GET"])
 def get_broadcast_message(service_id, broadcast_message_id):
     return jsonify(dao_get_broadcast_message_by_id_and_service_id(broadcast_message_id, service_id).serialize())
+
+
+@broadcast_message_blueprint.route("/messages", methods=["GET"])
+def get_broadcast_msgs_for_service(service_id):
+    broadcast_messages = [
+        {
+            **message.serialize(),
+            "created_by": creatd_by or None,
+            "rejected_by": rejectd_by or None,
+            "approved_by": approvd_by or None,
+            "cancelled_by": cancelld_by or None,
+        }
+        for message, creatd_by, rejectd_by, approvd_by, cancelld_by in dao_get_broadcast_messages_for_service_with_user(
+            service_id
+        )
+    ]
+    return jsonify(broadcast_messages=broadcast_messages)
+
+
+@broadcast_message_blueprint.route("/message=<uuid:broadcast_message_id>", methods=["GET"])
+def get_broadcast_message_by_id_and_service(service_id, broadcast_message_id):
+    result = dao_get_broadcast_message_by_id_and_service_id_with_user(broadcast_message_id, service_id)
+    return {
+        **result[0].serialize(),
+        "created_by": result[1] or None,
+        "rejected_by": result[2] or None,
+        "approved_by": result[3] or None,
+        "cancelled_by": result[4] or None,
+    }
 
 
 @broadcast_message_blueprint.route("/<uuid:broadcast_message_id>/provider-messages", methods=["GET"])
@@ -174,6 +205,7 @@ def update_broadcast_message_status(service_id, broadcast_message_id):
 
     new_status = data["status"]
     updating_user = get_user_by_id(data["created_by"])
+    rejection_reason = data.get("rejection_reason", "")
 
     if updating_user not in broadcast_message.service.users:
         #  we allow platform admins to cancel broadcasts, and we don't check user if request was done via API
@@ -183,7 +215,9 @@ def update_broadcast_message_status(service_id, broadcast_message_id):
                 status_code=400,
             )
 
-    broadcast_utils.update_broadcast_message_status(broadcast_message, new_status, updating_user)
+    broadcast_utils.update_broadcast_message_status(
+        broadcast_message, new_status, updating_user, rejection_reason=rejection_reason or None
+    )
 
     return jsonify(broadcast_message.serialize()), 200
 
