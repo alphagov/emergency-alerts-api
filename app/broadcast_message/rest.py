@@ -186,6 +186,38 @@ def update_broadcast_message(service_id, broadcast_message_id):
 @broadcast_message_blueprint.route("/<uuid:broadcast_message_id>/status", methods=["POST"])
 def update_broadcast_message_status(service_id, broadcast_message_id):
     data = request.get_json()
+    validate(data, update_broadcast_message_status_schema)
+    broadcast_message = dao_get_broadcast_message_by_id_and_service_id(broadcast_message_id, service_id)
+    current_app.logger.info(
+        "update_broadcast_message_status",
+        extra={
+            "python_module": __name__,
+            "service_id": service_id,
+            "broadcast_message_id": broadcast_message_id,
+            "status": data["status"],
+        },
+    )
+    if not broadcast_message.service.active:
+        raise InvalidRequest("Updating broadcast message is not allowed: service is inactive ", 403)
+
+    new_status = data["status"]
+    updating_user = get_user_by_id(data["created_by"])
+
+    if updating_user not in broadcast_message.service.users:
+        #  we allow platform admins to cancel broadcasts, and we don't check user if request was done via API
+        if not (new_status == BroadcastStatusType.CANCELLED and updating_user.platform_admin):
+            raise InvalidRequest(
+                f"User {updating_user.id} cannot update broadcast_message {broadcast_message.id} from other service",
+                status_code=400,
+            )
+
+    broadcast_utils.update_broadcast_message_status(broadcast_message, new_status, updating_user)
+    return jsonify(broadcast_message.serialize()), 200
+
+
+@broadcast_message_blueprint.route("/<uuid:broadcast_message_id>/status-with-reason", methods=["POST"])
+def update_broadcast_message_status_with_reason(service_id, broadcast_message_id):
+    data = request.get_json()
 
     validate(data, update_broadcast_message_status_schema)
     broadcast_message = dao_get_broadcast_message_by_id_and_service_id(broadcast_message_id, service_id)
@@ -204,8 +236,13 @@ def update_broadcast_message_status(service_id, broadcast_message_id):
         raise InvalidRequest("Updating broadcast message is not allowed: service is inactive ", 403)
 
     new_status = data["status"]
-    updating_user = get_user_by_id(data["created_by"])
     rejection_reason = data.get("rejection_reason", "")
+    if new_status == "rejected" and rejection_reason == "":
+        return (
+            jsonify({"errors": ["Enter rejection reason."]}),
+            400,
+        )
+    updating_user = get_user_by_id(data["created_by"])
 
     if updating_user not in broadcast_message.service.users:
         #  we allow platform admins to cancel broadcasts, and we don't check user if request was done via API
