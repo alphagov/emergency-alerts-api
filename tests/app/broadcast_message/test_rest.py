@@ -621,6 +621,39 @@ def test_update_broadcast_message_status(admin_request, sample_broadcast_service
     assert response["updated_at"] is not None
 
 
+def test_update_broadcast_message_status_rejects_with_reason(admin_request, sample_broadcast_service, sample_user):
+    t = create_template(sample_broadcast_service, BROADCAST_TYPE)
+    bm = create_broadcast_message(t, status=BroadcastStatusType.PENDING_APPROVAL)
+
+    response = admin_request.post(
+        "broadcast_message.update_broadcast_message_status_with_reason",
+        _data={"status": BroadcastStatusType.REJECTED, "rejection_reason": "TEST", "created_by": str(t.created_by_id)},
+        service_id=t.service_id,
+        broadcast_message_id=bm.id,
+        _expected_status=200,
+    )
+
+    assert response["status"] == BroadcastStatusType.REJECTED
+    assert response["updated_at"] is not None
+    assert response["rejection_reason"] == "TEST"
+    assert response["rejected_by"] == sample_user.name
+
+
+def test_update_broadcast_message_status_errors_as_missing_reason(admin_request, sample_broadcast_service):
+    t = create_template(sample_broadcast_service, BROADCAST_TYPE)
+    bm = create_broadcast_message(t, status=BroadcastStatusType.PENDING_APPROVAL)
+
+    response = admin_request.post(
+        "broadcast_message.update_broadcast_message_status_with_reason",
+        _data={"status": BroadcastStatusType.REJECTED, "created_by": str(t.created_by_id)},
+        service_id=t.service_id,
+        broadcast_message_id=bm.id,
+        _expected_status=400,
+    )
+
+    assert response["errors"] == ["Enter rejection reason."]
+
+
 def test_update_broadcast_message_status_doesnt_let_you_update_other_things(admin_request, sample_broadcast_service):
     t = create_template(sample_broadcast_service, BROADCAST_TYPE)
     bm = create_broadcast_message(t)
