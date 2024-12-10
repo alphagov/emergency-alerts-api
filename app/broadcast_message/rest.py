@@ -239,7 +239,7 @@ def update_broadcast_message_status_with_reason(service_id, broadcast_message_id
     rejection_reason = data.get("rejection_reason", "")
     if new_status == "rejected" and rejection_reason == "":
         return (
-            jsonify({"errors": ["Enter rejection reason."]}),
+            jsonify({"errors": ["Enter the reason for rejecting the alert."]}),
             400,
         )
     updating_user = get_user_by_id(data["created_by"])

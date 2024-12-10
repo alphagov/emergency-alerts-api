@@ -650,7 +650,7 @@ def test_update_broadcast_message_status_errors_as_missing_reason(admin_request,
         _expected_status=400,
     )
 
-    assert response["errors"] == ["Enter rejection reason."]
+    assert response["errors"] == ["Enter the reason for rejecting the alert."]
 
 
 def test_update_broadcast_message_status_doesnt_let_you_update_other_things(admin_request, sample_broadcast_service):
