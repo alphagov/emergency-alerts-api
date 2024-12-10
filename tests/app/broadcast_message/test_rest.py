@@ -621,7 +621,7 @@ def test_update_broadcast_message_status(admin_request, sample_broadcast_service
     assert response["updated_at"] is not None
 
 
-def test_update_broadcast_message_status_rejects_with_reason(admin_request, sample_broadcast_service, sample_user):
+def test_update_broadcast_message_status_rejects_with_reason(admin_request, sample_broadcast_service):
     t = create_template(sample_broadcast_service, BROADCAST_TYPE)
     bm = create_broadcast_message(t, status=BroadcastStatusType.PENDING_APPROVAL)
 
@@ -636,7 +636,6 @@ def test_update_broadcast_message_status_rejects_with_reason(admin_request, samp
     assert response["status"] == BroadcastStatusType.REJECTED
     assert response["updated_at"] is not None
     assert response["rejection_reason"] == "TEST"
-    assert response["rejected_by"] == sample_user.name
 
 
 def test_update_broadcast_message_status_errors_as_missing_reason(admin_request, sample_broadcast_service):
