@@ -77,7 +77,7 @@ def create_app(application):
 
     application.config.from_object(configs[host])
 
-    application.config["NOTIFY_APP_NAME"] = application.name
+    application.config["EAS_APP_NAME"] = application.name
     init_app(application)
 
     # Metrics intentionally high up to give the most accurate timing and reliability that the metric is recorded
@@ -332,7 +332,7 @@ def setup_sqlalchemy_events(app):
                 elif current_task:
                     connection_record.info["request_data"] = {
                         "method": "celery",
-                        "host": current_app.config["NOTIFY_APP_NAME"],  # worker name
+                        "host": current_app.config["EAS_APP_NAME"],  # worker name
                         "url_rule": current_task.name,  # task name
                     }
                 # anything else. migrations possibly, or flask cli commands.
