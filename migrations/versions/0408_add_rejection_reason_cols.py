@@ -1,7 +1,7 @@
 """
 
-Revision ID: 0407_add_rejection_reason_cols
-Revises: 0406_drop_notify_service_fields
+Revision ID: 0408_add_rejection_reason_cols
+Revises: 0407_drop_notify_template_fields
 Create Date: 2024-11-22 10:08:10
 
 """
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision = "0407_add_rejection_reason_cols"
-down_revision = "0406_drop_notify_service_fields"
+revision = "0408_add_rejection_reason_cols"
+down_revision = "0407_drop_notify_template_fields"
 
 
 def upgrade():
