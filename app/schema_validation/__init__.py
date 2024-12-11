@@ -3,12 +3,6 @@ import re
 from datetime import datetime, timedelta
 from uuid import UUID
 
-from emergency_alerts_utils.recipients import (
-    InvalidEmailError,
-    InvalidPhoneError,
-    validate_email_address,
-    validate_phone_number,
-)
 from iso8601 import ParseError, iso8601
 from jsonschema import Draft7Validator, FormatChecker, ValidationError
 
@@ -19,20 +13,6 @@ format_checker = FormatChecker()
 def validate_uuid(instance):
     if isinstance(instance, str):
         UUID(instance)
-    return True
-
-
-@format_checker.checks("phone_number", raises=InvalidPhoneError)
-def validate_schema_phone_number(instance):
-    if isinstance(instance, str):
-        validate_phone_number(instance, international=True)
-    return True
-
-
-@format_checker.checks("email_address", raises=InvalidEmailError)
-def validate_schema_email_address(instance):
-    if isinstance(instance, str):
-        validate_email_address(instance)
     return True
 
 
@@ -150,7 +130,7 @@ def __format_message(e):
         return error_path
 
     def get_error_message(e):
-        # e.cause is an exception (such as InvalidPhoneError). if it's not present it was a standard jsonschema error
+        # e.cause is an exception. if it's not present it was a standard jsonschema error
         # such as a required field not being present
         error_message = str(e.cause) if e.cause else e.message
         return error_message.replace("'", "")

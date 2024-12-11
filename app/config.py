@@ -111,7 +111,7 @@ class Config(object):
     HOST = "local"
     AWS_REGION = os.environ.get("AWS_REGION", "eu-west-2")
     INVITATION_EXPIRATION_DAYS = 2
-    NOTIFY_APP_NAME = "api"
+    EAS_APP_NAME = "api"
     NOTIFY_EMAIL_DOMAIN = "notify.tools"
     SQLALCHEMY_POOL_SIZE = int(os.environ.get("SQLALCHEMY_POOL_SIZE", 5))
     SQLALCHEMY_POOL_TIMEOUT = 30
