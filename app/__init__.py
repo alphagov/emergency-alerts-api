@@ -13,7 +13,6 @@ from emergency_alerts_utils.clients.encryption.encryption_client import (
     Encryption,
 )
 from emergency_alerts_utils.clients.slack.slack_client import SlackClient
-from emergency_alerts_utils.clients.statsd.statsd_client import StatsdClient
 from emergency_alerts_utils.clients.zendesk.zendesk_client import ZendeskClient
 from flask import (
     current_app,
@@ -55,7 +54,6 @@ notify_celery = NotifyCelery()
 encryption = Encryption()
 zendesk_client = ZendeskClient()
 slack_client = SlackClient()
-statsd_client = StatsdClient()
 cbc_proxy_client = CBCProxyClient()
 metrics = GDSMetrics()
 
@@ -99,8 +97,7 @@ def create_app(application):
     migrate.init_app(application, db=db)
     ma.init_app(application)
     zendesk_client.init_app(application)
-    statsd_client.init_app(application)
-    logging.init_app(application, statsd_client)
+    logging.init_app(application)
 
     notify_celery.init_app(application)
     encryption.init_app(application)
