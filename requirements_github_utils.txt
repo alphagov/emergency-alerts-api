@@ -1,2 +1,2 @@
 -r requirements.txt
-emergency-alerts-utils @ git+https://github.com/alphagov/emergency-alerts-utils.git@7c8aa25353a1800fe1b5100c6cc642bf50b52db6
+emergency-alerts-utils @ git+https://github.com/alphagov/emergency-alerts-utils.git
