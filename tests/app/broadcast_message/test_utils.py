@@ -130,6 +130,8 @@ def test_update_broadcast_message_status_for_rejecting_broadcast_via_admin_inter
     assert broadcast_message.cancelled_at is None
     assert broadcast_message.cancelled_by_id is None
     assert broadcast_message.updated_at is not None
+    assert broadcast_message.rejection_reason is None
+    assert broadcast_message.rejected_by is sample_broadcast_service.created_by
 
     assert not mock_task.called
     assert len(broadcast_message.events) == 0
@@ -152,6 +154,8 @@ def test_update_broadcast_message_status_for_rejecting_broadcast_from_API_call(s
     assert broadcast_message.cancelled_by_id is None
     assert broadcast_message.cancelled_by_api_key_id is None
     assert broadcast_message.updated_at is not None
+    assert broadcast_message.rejection_reason is None
+    assert broadcast_message.rejected_by is None
 
     assert not mock_task.called
     assert len(broadcast_message.events) == 0
@@ -421,3 +425,63 @@ def test_create_p1_zendesk_alert_doesnt_alert_for_stubbed_messages(mocker, notif
         _create_p1_zendesk_alert(broadcast_message)
 
     mock_send_ticket_to_zendesk.assert_not_called()
+
+
+def test_update_broadcast_message_status_for_rejecting_broadcast_message_with_reason_via_admin_ui(
+    mocker, notify_api, sample_broadcast_service
+):
+    template = create_template(sample_broadcast_service, BROADCAST_TYPE, content="emergency broadcast")
+    broadcast_message = create_broadcast_message(
+        template,
+        status=BroadcastStatusType.PENDING_APPROVAL,
+        areas={"ids": ["london"], "simple_polygons": [[[51.30, 0.7], [51.28, 0.8], [51.25, -0.7]]]},
+    )
+    mock_task = mocker.patch("app.celery.broadcast_message_tasks.send_broadcast_event.apply_async")
+
+    update_broadcast_message_status(
+        broadcast_message,
+        BroadcastStatusType.REJECTED,
+        updating_user=sample_broadcast_service.created_by,
+        rejection_reason="This is a test rejection reason",
+    )
+
+    assert broadcast_message.status == BroadcastStatusType.REJECTED
+    assert broadcast_message.cancelled_at is None
+    assert broadcast_message.cancelled_by_id is None
+    assert broadcast_message.updated_at is not None
+    assert broadcast_message.rejection_reason == "This is a test rejection reason"
+    assert broadcast_message.rejected_by is sample_broadcast_service.created_by
+
+    assert not mock_task.called
+    assert len(broadcast_message.events) == 0
+
+
+def test_update_broadcast_message_status_for_rejecting_broadcast_message_with_reason_via_api_call(
+    mocker, notify_api, sample_broadcast_service
+):
+    api_key = create_api_key(service=sample_broadcast_service)
+    template = create_template(sample_broadcast_service, BROADCAST_TYPE, content="emergency broadcast")
+    broadcast_message = create_broadcast_message(
+        template,
+        status=BroadcastStatusType.PENDING_APPROVAL,
+        areas={"ids": ["london"], "simple_polygons": [[[51.30, 0.7], [51.28, 0.8], [51.25, -0.7]]]},
+    )
+    mock_task = mocker.patch("app.celery.broadcast_message_tasks.send_broadcast_event.apply_async")
+
+    update_broadcast_message_status(
+        broadcast_message,
+        BroadcastStatusType.REJECTED,
+        api_key_id=api_key.id,
+        rejection_reason="This is a test rejection reason",
+    )
+
+    assert broadcast_message.status == BroadcastStatusType.REJECTED
+    assert broadcast_message.cancelled_at is None
+    assert broadcast_message.cancelled_by_id is None
+    assert broadcast_message.cancelled_by_api_key_id is None
+    assert broadcast_message.updated_at is not None
+    assert broadcast_message.rejection_reason == "This is a test rejection reason"
+    assert broadcast_message.rejected_by is None
+
+    assert not mock_task.called
+    assert len(broadcast_message.events) == 0
