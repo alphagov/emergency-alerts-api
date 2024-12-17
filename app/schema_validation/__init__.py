@@ -1,8 +1,12 @@
 import json
-import re
-from datetime import datetime, timedelta
 from uuid import UUID
 
+from emergency_alerts_utils.validation import (
+    InvalidEmailError,
+    InvalidPhoneError,
+    validate_email_address,
+    validate_phone_number,
+)
 from iso8601 import ParseError, iso8601
 from jsonschema import Draft7Validator, FormatChecker, ValidationError
 
@@ -16,63 +20,18 @@ def validate_uuid(instance):
     return True
 
 
-@format_checker.checks("postage", raises=ValidationError)
-def validate_schema_postage(instance):
+@format_checker.checks("phone_number", raises=InvalidPhoneError)
+def validate_schema_phone_number(instance):
     if isinstance(instance, str):
-        if instance not in ["first", "second", "europe", "rest-of-world"]:
-            raise ValidationError("invalid. It must be first, second, europe or rest-of-world.")
+        validate_phone_number(instance, international=True)
     return True
 
 
-@format_checker.checks("datetime_within_next_day", raises=ValidationError)
-def validate_schema_date_with_hour(instance):
+@format_checker.checks("email_address", raises=InvalidEmailError)
+def validate_schema_email_address(instance):
     if isinstance(instance, str):
-        try:
-            dt = iso8601.parse_date(instance).replace(tzinfo=None)
-            if dt < datetime.utcnow():
-                raise ValidationError("datetime can not be in the past")
-            if dt > datetime.utcnow() + timedelta(hours=24):
-                raise ValidationError("datetime can only be 24 hours in the future")
-        except ParseError:
-            raise ValidationError(
-                "datetime format is invalid. It must be a valid ISO8601 date time format, "
-                "https://en.wikipedia.org/wiki/ISO_8601"
-            )
+        validate_email_address(instance)
     return True
-
-
-@format_checker.checks("send_a_file_retention_period", raises=ValidationError)
-def validate_schema_retention_period(instance):
-    if instance is None:
-        return True
-
-    if isinstance(instance, str):
-        period = instance.strip().lower()
-        match = re.match(r"^(\d+) weeks?$", period)
-        if match and 1 <= int(match.group(1)) <= 78:
-            return True
-
-    raise ValidationError(
-        f"Unsupported value for retention_period: {instance}. Supported periods are from 1 to 78 weeks."
-    )
-
-
-@format_checker.checks("send_a_file_is_csv", raises=ValidationError)
-def send_a_file_is_csv(instance):
-    if instance is None or isinstance(instance, bool):
-        return True
-
-    raise ValidationError(f"Unsupported value for is_csv: {instance}. Use a boolean true or false value.")
-
-
-@format_checker.checks("send_a_file_confirm_email_before_download", raises=ValidationError)
-def send_a_file_confirm_email_before_download(instance):
-    if instance is None or isinstance(instance, bool):
-        return True
-
-    raise ValidationError(
-        f"Unsupported value for confirm_email_before_download: {instance}. Use a boolean true or false value."
-    )
 
 
 @format_checker.checks("datetime", raises=ValidationError)
@@ -130,7 +89,7 @@ def __format_message(e):
         return error_path
 
     def get_error_message(e):
-        # e.cause is an exception. if it's not present it was a standard jsonschema error
+        # e.cause is an exception (such as InvalidPhoneError). if it's not present it was a standard jsonschema error
         # such as a required field not being present
         error_message = str(e.cause) if e.cause else e.message
         return error_message.replace("'", "")
