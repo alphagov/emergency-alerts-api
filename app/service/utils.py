@@ -1,6 +1,6 @@
 import itertools
 
-from emergency_alerts_utils.recipients import allowed_to_send_to
+from emergency_alerts_utils.validation import allowed_to_send_to
 
 from app.dao.services_dao import dao_fetch_service_by_id
 from app.models import KEY_TYPE_NORMAL, KEY_TYPE_TEAM, KEY_TYPE_TEST

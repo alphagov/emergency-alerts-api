@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from dateutil.parser import parse
-from emergency_alerts_utils.recipients import (
+from emergency_alerts_utils.validation import (
     InvalidEmailError,
     InvalidPhoneError,
     validate_email_address,

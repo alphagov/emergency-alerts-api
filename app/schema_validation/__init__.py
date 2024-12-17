@@ -1,9 +1,7 @@
 import json
-import re
-from datetime import datetime, timedelta
 from uuid import UUID
 
-from emergency_alerts_utils.recipients import (
+from emergency_alerts_utils.validation import (
     InvalidEmailError,
     InvalidPhoneError,
     validate_email_address,
@@ -34,65 +32,6 @@ def validate_schema_email_address(instance):
     if isinstance(instance, str):
         validate_email_address(instance)
     return True
-
-
-@format_checker.checks("postage", raises=ValidationError)
-def validate_schema_postage(instance):
-    if isinstance(instance, str):
-        if instance not in ["first", "second", "europe", "rest-of-world"]:
-            raise ValidationError("invalid. It must be first, second, europe or rest-of-world.")
-    return True
-
-
-@format_checker.checks("datetime_within_next_day", raises=ValidationError)
-def validate_schema_date_with_hour(instance):
-    if isinstance(instance, str):
-        try:
-            dt = iso8601.parse_date(instance).replace(tzinfo=None)
-            if dt < datetime.utcnow():
-                raise ValidationError("datetime can not be in the past")
-            if dt > datetime.utcnow() + timedelta(hours=24):
-                raise ValidationError("datetime can only be 24 hours in the future")
-        except ParseError:
-            raise ValidationError(
-                "datetime format is invalid. It must be a valid ISO8601 date time format, "
-                "https://en.wikipedia.org/wiki/ISO_8601"
-            )
-    return True
-
-
-@format_checker.checks("send_a_file_retention_period", raises=ValidationError)
-def validate_schema_retention_period(instance):
-    if instance is None:
-        return True
-
-    if isinstance(instance, str):
-        period = instance.strip().lower()
-        match = re.match(r"^(\d+) weeks?$", period)
-        if match and 1 <= int(match.group(1)) <= 78:
-            return True
-
-    raise ValidationError(
-        f"Unsupported value for retention_period: {instance}. Supported periods are from 1 to 78 weeks."
-    )
-
-
-@format_checker.checks("send_a_file_is_csv", raises=ValidationError)
-def send_a_file_is_csv(instance):
-    if instance is None or isinstance(instance, bool):
-        return True
-
-    raise ValidationError(f"Unsupported value for is_csv: {instance}. Use a boolean true or false value.")
-
-
-@format_checker.checks("send_a_file_confirm_email_before_download", raises=ValidationError)
-def send_a_file_confirm_email_before_download(instance):
-    if instance is None or isinstance(instance, bool):
-        return True
-
-    raise ValidationError(
-        f"Unsupported value for confirm_email_before_download: {instance}. Use a boolean true or false value."
-    )
 
 
 @format_checker.checks("datetime", raises=ValidationError)
