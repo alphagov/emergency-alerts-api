@@ -112,6 +112,7 @@ def update_user_attribute(user_id):
 
     existing_email_address = user_to_update.email_address
     existing_mobile_number = user_to_update.mobile_number
+    updated_name = req_json.get("name")
 
     update_dct = user_update_schema_load_json.load(req_json)
 
@@ -156,13 +157,15 @@ def update_user_attribute(user_id):
             send_security_change_sms(user_to_update.mobile_number, "this phone")
             # Sending notification to previous mobile number
             send_security_change_sms(existing_mobile_number, "the requested phone")
+        elif "name" in update_dct:
+            security_measure = "name"
 
         # Sending notification to previous/unchanged email address
         send_security_change_email(
             current_app.config["SECURITY_INFO_CHANGE_EMAIL_TEMPLATE_ID"],
             existing_email_address,
             current_app.config["EAS_EMAIL_REPLY_TO_ID"],
-            user_to_update.name,
+            updated_name or user_to_update.name,
             security_measure,
         )
 
@@ -610,6 +613,13 @@ def update_password(user_id):
 
     current_app.logger.info("update_password", extra={"python_module": __name__, "user_id": user_id})
     update_user_password(user, password)
+    send_security_change_email(
+        current_app.config["SECURITY_INFO_CHANGE_EMAIL_TEMPLATE_ID"],
+        user.email_address,
+        current_app.config["EAS_EMAIL_REPLY_TO_ID"],
+        user.name,
+        "password",
+    )
     return jsonify(data=user.serialize()), 200
 
 
