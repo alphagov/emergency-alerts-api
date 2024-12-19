@@ -5,19 +5,14 @@ Revises: 0138_sms_sender_nullable.py
 Create Date: 2017-11-10 21:42:59.715203
 
 """
-import uuid
-from datetime import datetime
-
 from alembic import op
-
-from app.dao.date_util import get_current_financial_year_start_year
 
 revision = "0139_migrate_sms_allowance_data"
 down_revision = "0138_sms_sender_nullable"
 
 
 def upgrade():
-    current_year = get_current_financial_year_start_year()
+    # current_year = get_current_financial_year_start_year()
     default_limit = 250000
 
     # Step 1: update the column free_sms_fragment_limit in service table if it is empty
@@ -30,16 +25,16 @@ def upgrade():
     op.execute(update_service_table)
 
     # Step 2: insert at least one row for every service in current year if none exist for that service
-    insert_row_if_not_exist = """
-        INSERT INTO annual_billing
-        (id, service_id, financial_year_start, free_sms_fragment_limit, created_at, updated_at)
-         SELECT uuid_in(md5(random()::text)::cstring), id, {}, {}, '{}', '{}'
-         FROM services WHERE id NOT IN
-        (select service_id from annual_billing)
-    """.format(
-        current_year, default_limit, datetime.utcnow(), datetime.utcnow()
-    )
-    op.execute(insert_row_if_not_exist)
+    # insert_row_if_not_exist = """
+    #     INSERT INTO annual_billing
+    #     (id, service_id, financial_year_start, free_sms_fragment_limit, created_at, updated_at)
+    #      SELECT uuid_in(md5(random()::text)::cstring), id, {}, {}, '{}', '{}'
+    #      FROM services WHERE id NOT IN
+    #     (select service_id from annual_billing)
+    # """.format(
+    #     current_year, default_limit, datetime.utcnow(), datetime.utcnow()
+    # )
+    # op.execute(insert_row_if_not_exist)
 
     # Step 3: copy the free_sms_fragment_limit data from the services table across to annual_billing table.
     update_sms_allowance = """
@@ -48,6 +43,7 @@ def upgrade():
         WHERE annual_billing.service_id = services.id
     """
     op.execute(update_sms_allowance)
+    pass
 
 
 def downgrade():
