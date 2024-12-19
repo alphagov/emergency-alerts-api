@@ -67,6 +67,7 @@ from app.user.users_schema import (
     post_verify_code_schema,
     post_verify_webauthn_schema,
 )
+from app.user.utils import send_security_change_email, send_security_change_sms
 from app.utils import is_local_host, log_auth_activity, log_user, url_with_token
 
 user_blueprint = Blueprint("user", __name__)
@@ -109,6 +110,9 @@ def update_user_attribute(user_id):
     else:
         updated_by = None
 
+    existing_email_address = user_to_update.email_address
+    existing_mobile_number = user_to_update.mobile_number
+
     update_dct = user_update_schema_load_json.load(req_json)
 
     save_user_attribute(user_to_update, update_dict=update_dct)
@@ -133,6 +137,34 @@ def update_user_attribute(user_id):
         }
 
         notify_send(notification)
+    else:
+        security_measure = ""
+        if "email_address" in update_dct:
+            security_measure = "email address"
+            # Sending notification to previous email address
+            send_security_change_email(
+                current_app.config["SECURITY_INFO_CHANGE_EMAIL_TEMPLATE_ID"],
+                user_to_update.email_address,
+                current_app.config["EAS_EMAIL_REPLY_TO_ID"],
+                user_to_update.name,
+                "email address",
+            )
+
+        elif "mobile_number" in update_dct:
+            security_measure = "mobile number"
+            # Sending notification to updated mobile number
+            send_security_change_sms(user_to_update.mobile_number, "this phone")
+            # Sending notification to previous mobile number
+            send_security_change_sms(existing_mobile_number, "the requested phone")
+
+        # Sending notification to previous/unchanged email address
+        send_security_change_email(
+            current_app.config["SECURITY_INFO_CHANGE_EMAIL_TEMPLATE_ID"],
+            existing_email_address,
+            current_app.config["EAS_EMAIL_REPLY_TO_ID"],
+            user_to_update.name,
+            security_measure,
+        )
 
     return jsonify(data=user_to_update.serialize()), 200
 
