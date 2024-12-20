@@ -40,7 +40,7 @@ from tests.app.db import (
 @pytest.mark.parametrize(
     "phone_number",
     [
-        "+441234123412",
+        "+447712345678",
         "+1-800-555-5555",
     ],
 )

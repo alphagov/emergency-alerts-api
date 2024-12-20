@@ -747,7 +747,7 @@ def test_add_existing_user_to_another_service_with_all_permissions(
                 name="Invited User",
                 email_address="invited@digital.cabinet-office.gov.uk",
                 password="password",
-                mobile_number="+4477123456",
+                mobile_number="+447712345678",
             )
             # they must exist in db first
             save_model_user(user_to_add, validated_email_access=True)
@@ -813,7 +813,7 @@ def test_add_existing_user_to_another_service_with_send_permissions(
                 name="Invited User",
                 email_address="invited@digital.cabinet-office.gov.uk",
                 password="password",
-                mobile_number="+4477123456",
+                mobile_number="+447712345678",
             )
             save_model_user(user_to_add, validated_email_access=True)
 
@@ -861,7 +861,7 @@ def test_add_existing_user_to_another_service_with_manage_permissions(
                 name="Invited User",
                 email_address="invited@digital.cabinet-office.gov.uk",
                 password="password",
-                mobile_number="+4477123456",
+                mobile_number="+447712345678",
             )
             save_model_user(user_to_add, validated_email_access=True)
 
@@ -908,7 +908,7 @@ def test_add_existing_user_to_another_service_with_folder_permissions(
                 name="Invited User",
                 email_address="invited@digital.cabinet-office.gov.uk",
                 password="password",
-                mobile_number="+4477123456",
+                mobile_number="+447712345678",
             )
             save_model_user(user_to_add, validated_email_access=True)
 
@@ -947,7 +947,7 @@ def test_add_existing_user_to_another_service_with_manage_api_keys(
                 name="Invited User",
                 email_address="invited@digital.cabinet-office.gov.uk",
                 password="password",
-                mobile_number="+4477123456",
+                mobile_number="+447712345678",
             )
             save_model_user(user_to_add, validated_email_access=True)
 
@@ -985,7 +985,7 @@ def test_add_existing_user_to_non_existing_service_returns404(notify_api, notify
                 name="Invited User",
                 email_address="invited@digital.cabinet-office.gov.uk",
                 password="password",
-                mobile_number="+4477123456",
+                mobile_number="+447712345678",
             )
             save_model_user(user_to_add, validated_email_access=True)
 
