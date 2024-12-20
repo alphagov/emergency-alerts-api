@@ -138,7 +138,7 @@ def update_user_attribute(user_id):
         }
 
         notify_send(notification)
-    else:
+    elif any(measure in req_json for measure in ["name", "email_address", "mobile_number"]):
         security_measure = ""
         if "email_address" in update_dct:
             security_measure = "email address"
