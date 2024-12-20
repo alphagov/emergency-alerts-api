@@ -43,7 +43,7 @@ from app.models import (
 )
 
 
-def create_user(*, mobile_number="+447700900986", email=None, state="active", id_=None, name="Test User"):
+def create_user(*, mobile_number="+447712345678", email=None, state="active", id_=None, name="Test User"):
     data = {
         "id": id_ or uuid.uuid4(),
         "name": name,
