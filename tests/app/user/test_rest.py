@@ -102,7 +102,7 @@ def test_post_user(admin_request, notify_db_session):
         "name": "Test User",
         "email_address": "user@digital.cabinet-office.gov.uk",
         "password": "password123456",
-        "mobile_number": "+447700900986",
+        "mobile_number": "+441234123412",
         "logged_in_at": None,
         "state": "active",
         "failed_login_count": 0,
@@ -124,7 +124,7 @@ def test_post_user_without_auth_type(admin_request, notify_db_session):
         "name": "Test User",
         "email_address": "user@digital.cabinet-office.gov.uk",
         "password": "password123456",
-        "mobile_number": "+447700900986",
+        "mobile_number": "+441234123412",
         "permissions": {},
     }
 
@@ -143,7 +143,7 @@ def test_post_user_missing_attribute_email(admin_request, notify_db_session):
     data = {
         "name": "Test User",
         "password": "password123456",
-        "mobile_number": "+447700900986",
+        "mobile_number": "+441234123412",
         "logged_in_at": None,
         "state": "active",
         "failed_login_count": 0,
@@ -163,7 +163,7 @@ def test_create_user_missing_attribute_password(admin_request, notify_db_session
     data = {
         "name": "Test User",
         "email_address": "user@digital.cabinet-office.gov.uk",
-        "mobile_number": "+447700900986",
+        "mobile_number": "+441234123412",
         "logged_in_at": None,
         "state": "active",
         "failed_login_count": 0,
@@ -265,7 +265,7 @@ def test_post_user_attribute(admin_request, sample_user, user_attribute, user_va
                 personalisation={
                     "name": "Test User",
                     "servicemanagername": "Service Manago",
-                    "email address": "notify@digital.cabinet-office.gov.uk",
+                    "email address": "emergency-alerts-tests@digital.cabinet-office.gov.uk",
                 },
                 recipient="+4407700900460",
                 service=mock.ANY,
@@ -608,13 +608,13 @@ def test_send_user_reset_password_should_send_reset_password_link(admin_request,
     (
         (
             {
-                "email": "notify@digital.cabinet-office.gov.uk",
+                "email": "emergency-alerts-tests@digital.cabinet-office.gov.uk",
             },
             (f"https://admin.{os.environ.get('ENVIRONMENT')}.emergency-alerts.service.gov.uk/new-password/"),
         ),
         (
             {
-                "email": "notify@digital.cabinet-office.gov.uk",
+                "email": "emergency-alerts-tests@digital.cabinet-office.gov.uk",
                 "admin_base_url": "https://different.example.com",
             },
             ("https://different.example.com/new-password/"),

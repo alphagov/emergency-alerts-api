@@ -40,12 +40,12 @@ from tests.app.db import (
 @pytest.mark.parametrize(
     "phone_number",
     [
-        "+447700900986",
+        "+441234123412",
         "+1-800-555-5555",
     ],
 )
 def test_create_user(notify_db_session, phone_number):
-    email = "notify@digital.cabinet-office.gov.uk"
+    email = "emergency-alerts-tests@digital.cabinet-office.gov.uk"
     data = {"name": "Test User", "email_address": email, "password": "password", "mobile_number": phone_number}
     user = User(**data)
     save_model_user(user, password="password", validated_email_access=True)
