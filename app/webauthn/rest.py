@@ -10,6 +10,7 @@ from app.dao.webauthn_credential_dao import (
 from app.errors import InvalidRequest, register_errors
 from app.schema_validation import validate
 from app.user.utils import send_security_change_email
+from app.webauthn.utils import send_security_key_change_email
 from app.webauthn.webauthn_schema import (
     post_create_webauthn_credential_schema,
     post_update_webauthn_credential_schema,
@@ -43,6 +44,13 @@ def create_webauthn_credential(user_id):
         user.name,
         "security key",
     )
+    send_security_key_change_email(
+        user.email_address,
+        current_app.config["EAS_EMAIL_REPLY_TO_ID"],
+        user.name,
+        "added to",
+        "add this security key to",
+    )
 
     return jsonify(data=webauthn_credential.serialize()), 201
 
@@ -69,5 +77,12 @@ def delete_webauthn_credential(user_id, webauthn_credential_id):
         raise InvalidRequest("Cannot delete last remaining webauthn credential for user", status_code=400)
 
     dao_delete_webauthn_credential(webauthn_credential)
+    send_security_key_change_email(
+        user.email_address,
+        current_app.config["EAS_EMAIL_REPLY_TO_ID"],
+        user.name,
+        "deleted from",
+        "delete this security key from",
+    )
 
     return "", 204
