@@ -50,6 +50,41 @@ def test_get_broadcast_message(admin_request, sample_broadcast_service):
     assert response["areas"]["simple_polygons"] == [[[50.1, 1.2], [50.12, 1.2], [50.13, 1.2]]]
 
 
+def test_get_broadcast_message_with_user(mocker, admin_request, sample_broadcast_service, sample_user):
+    t = create_template(sample_broadcast_service, BROADCAST_TYPE, content="This is a test")
+    bm = create_broadcast_message(
+        t,
+        areas={
+            "ids": ["place A", "region B"],
+            "simple_polygons": [[[50.1, 1.2], [50.12, 1.2], [50.13, 1.2]]],
+        },
+    )
+
+    response = admin_request.get(
+        "broadcast_message.get_broadcast_message_by_id_and_service",
+        service_id=t.service_id,
+        broadcast_message_id=bm.id,
+        _expected_status=200,
+    )
+    mock_dao_get_messages = mocker.patch(
+        "app.dao.broadcast_message_dao.dao_get_broadcast_message_by_id_and_service_id_with_user"
+    )
+
+    assert mock_dao_get_messages.assert_called_once
+
+    assert response["id"] == str(bm.id)
+    assert response["template_id"] == str(t.id)
+    assert response["content"] == "This is a test"
+    assert response["template_name"] == t.name
+    assert response["status"] == BroadcastStatusType.DRAFT
+    assert response["created_at"] is not None
+    assert response["starts_at"] is None
+    assert response["areas"]["ids"] == ["place A", "region B"]
+    assert response["areas"]["simple_polygons"] == [[[50.1, 1.2], [50.12, 1.2], [50.13, 1.2]]]
+    assert response["created_by"] == sample_user.name
+    assert response["rejected_by"] is None
+
+
 def test_get_broadcast_provider_messages(admin_request, sample_broadcast_service):
     bm = create_broadcast_message(
         service=sample_broadcast_service,
@@ -164,6 +199,43 @@ def test_get_broadcast_messages_for_service(admin_request, sample_broadcast_serv
 
     assert response["broadcast_messages"][0]["id"] == str(bm1.id)
     assert response["broadcast_messages"][1]["id"] == str(bm2.id)
+
+
+@freeze_time("2020-01-01")
+def test_get_broadcast_messages_for_service_with_user(
+    admin_request, sample_broadcast_service, sample_broadcast_service_3, sample_user, sample_user_2
+):
+    """
+    This test invovles the creation of multiple messages across 2 different services
+    and asserting that the responses are as we'd expect.
+    """
+    t = create_template(sample_broadcast_service, BROADCAST_TYPE)
+    t_2 = create_template(sample_broadcast_service_3, BROADCAST_TYPE)
+
+    with freeze_time("2020-01-01 12:00"):
+        bm1 = create_broadcast_message(t)
+    with freeze_time("2020-01-01 13:00"):
+        bm2 = create_broadcast_message(t)
+    with freeze_time("2020-01-01 13:00"):
+        bm3 = create_broadcast_message(t_2)
+
+    # Getting all Broadcast messages from first sample service and making relevant assertions
+    response_service_1 = admin_request.get(
+        "broadcast_message.get_broadcast_msgs_for_service", service_id=t.service_id, _expected_status=200
+    )
+    assert len(response_service_1["broadcast_messages"]) == 2
+    assert response_service_1["broadcast_messages"][0]["id"] == str(bm1.id)
+    assert response_service_1["broadcast_messages"][1]["id"] == str(bm2.id)
+    assert response_service_1["broadcast_messages"][0]["created_by"] == sample_user.name
+
+    # Getting all Broadcast messages from second sample service and making relevant assertions
+    response_service_2 = admin_request.get(
+        "broadcast_message.get_broadcast_msgs_for_service", service_id=t_2.service_id, _expected_status=200
+    )
+
+    assert len(response_service_2["broadcast_messages"]) == 1
+    assert response_service_2["broadcast_messages"][0]["created_by"] == sample_user_2.name
+    assert response_service_2["broadcast_messages"][0]["id"] == str(bm3.id)
 
 
 @freeze_time("2020-01-01")
@@ -547,6 +619,38 @@ def test_update_broadcast_message_status(admin_request, sample_broadcast_service
 
     assert response["status"] == BroadcastStatusType.PENDING_APPROVAL
     assert response["updated_at"] is not None
+
+
+def test_update_broadcast_message_status_rejects_with_reason(admin_request, sample_broadcast_service):
+    t = create_template(sample_broadcast_service, BROADCAST_TYPE)
+    bm = create_broadcast_message(t, status=BroadcastStatusType.PENDING_APPROVAL)
+
+    response = admin_request.post(
+        "broadcast_message.update_broadcast_message_status_with_reason",
+        _data={"status": BroadcastStatusType.REJECTED, "rejection_reason": "TEST", "created_by": str(t.created_by_id)},
+        service_id=t.service_id,
+        broadcast_message_id=bm.id,
+        _expected_status=200,
+    )
+
+    assert response["status"] == BroadcastStatusType.REJECTED
+    assert response["updated_at"] is not None
+    assert response["rejection_reason"] == "TEST"
+
+
+def test_update_broadcast_message_status_errors_as_missing_reason(admin_request, sample_broadcast_service):
+    t = create_template(sample_broadcast_service, BROADCAST_TYPE)
+    bm = create_broadcast_message(t, status=BroadcastStatusType.PENDING_APPROVAL)
+
+    response = admin_request.post(
+        "broadcast_message.update_broadcast_message_status_with_reason",
+        _data={"status": BroadcastStatusType.REJECTED, "created_by": str(t.created_by_id)},
+        service_id=t.service_id,
+        broadcast_message_id=bm.id,
+        _expected_status=400,
+    )
+
+    assert response["errors"] == ["Enter the reason for rejecting the alert."]
 
 
 def test_update_broadcast_message_status_doesnt_let_you_update_other_things(admin_request, sample_broadcast_service):
