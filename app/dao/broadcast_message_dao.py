@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 
 from flask import current_app
 from sqlalchemy import desc
+from sqlalchemy.orm import aliased
 
 from app import db
 from app.dao.dao_utils import autocommit
@@ -16,6 +17,7 @@ from app.models import (
     BroadcastStatusType,
     Service,
     ServiceBroadcastSettings,
+    User,
 )
 
 
@@ -23,6 +25,35 @@ def dao_get_broadcast_message_by_id_and_service_id(broadcast_message_id, service
     return BroadcastMessage.query.filter(
         BroadcastMessage.id == broadcast_message_id, BroadcastMessage.service_id == service_id
     ).one()
+
+
+def dao_get_broadcast_message_by_id_and_service_id_with_user(broadcast_message_id, service_id):
+    """
+    This function returns a tuple that consists of BroadcastMessage and additional values
+    for created_by, rejected_by, approved_by & cancelled_by.
+    These values are the names of the users sourced using joins with User table.
+    """
+
+    UserCreated = aliased(User)
+    UserRejected = aliased(User)
+    UserApproved = aliased(User)
+    UserCancelled = aliased(User)
+
+    return (
+        db.session.query(
+            BroadcastMessage,
+            UserCreated.name.label("created_by"),
+            UserRejected.name.label("rejected_by"),
+            UserApproved.name.label("approved_by"),
+            UserCancelled.name.label("cancelled_by"),
+        )
+        .outerjoin(UserCreated, BroadcastMessage.created_by_id == UserCreated.id)
+        .outerjoin(UserRejected, BroadcastMessage.rejected_by_id == UserRejected.id)
+        .outerjoin(UserApproved, BroadcastMessage.approved_by_id == UserApproved.id)
+        .outerjoin(UserCancelled, BroadcastMessage.cancelled_by_id == UserCancelled.id)
+        .filter(BroadcastMessage.id == broadcast_message_id, BroadcastMessage.service_id == service_id)
+        .one()
+    )
 
 
 def dao_get_broadcast_message_by_references_and_service_id(references_to_original_broadcast, service_id):
@@ -45,6 +76,34 @@ def dao_get_broadcast_event_by_id(broadcast_event_id):
 def dao_get_broadcast_messages_for_service(service_id):
     return BroadcastMessage.query.filter(BroadcastMessage.service_id == service_id).order_by(
         BroadcastMessage.created_at
+    )
+
+
+def dao_get_broadcast_messages_for_service_with_user(service_id):
+    """
+    This function returns a list of BroadcastMessages for the service, with additional values
+    for created_by, rejected_by, approved_by & cancelled_by.
+    These values are the names of the users sourced using joins with User table.
+    """
+    UserCreated = aliased(User)
+    UserRejected = aliased(User)
+    UserApproved = aliased(User)
+    UserCancelled = aliased(User)
+
+    return (
+        db.session.query(
+            BroadcastMessage,
+            UserCreated.name.label("created_by"),
+            UserRejected.name.label("rejected_by"),
+            UserApproved.name.label("approved_by"),
+            UserCancelled.name.label("cancelled_by"),
+        )
+        .outerjoin(UserCreated, BroadcastMessage.created_by_id == UserCreated.id)
+        .outerjoin(UserRejected, BroadcastMessage.rejected_by_id == UserRejected.id)
+        .outerjoin(UserApproved, BroadcastMessage.approved_by_id == UserApproved.id)
+        .outerjoin(UserCancelled, BroadcastMessage.cancelled_by_id == UserCancelled.id)
+        .filter(BroadcastMessage.service_id == service_id)
+        .all()
     )
 
 
