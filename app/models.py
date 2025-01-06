@@ -882,6 +882,8 @@ class BroadcastMessage(db.Model):
     cancelled_by_api_key_id = db.Column(UUID(as_uuid=True), db.ForeignKey("api_keys.id"), nullable=True)
     created_by_api_key = db.relationship("ApiKey", foreign_keys=[created_by_api_key_id])
     cancelled_by_api_key = db.relationship("ApiKey", foreign_keys=[cancelled_by_api_key_id])
+    rejected_by_api_key_id = db.Column(UUID(as_uuid=True), db.ForeignKey("api_keys.id"), nullable=True)
+    rejected_by_api_key = db.relationship("ApiKey", foreign_keys=[rejected_by_api_key_id])
 
     reference = db.Column(db.String(255), nullable=True)
     cap_event = db.Column(db.String(255), nullable=True)

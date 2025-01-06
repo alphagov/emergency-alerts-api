@@ -36,6 +36,7 @@ def update_broadcast_message_status(
         broadcast_message.rejected_at = datetime.utcnow()
         broadcast_message.rejected_by = updating_user
         broadcast_message.rejection_reason = rejection_reason
+        broadcast_message.rejected_by_api_key_id = api_key_id
 
     current_app.logger.info(
         f"broadcast_message {broadcast_message.id} moving from {broadcast_message.status} to {new_status}"
