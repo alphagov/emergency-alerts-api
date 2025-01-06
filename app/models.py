@@ -928,6 +928,7 @@ class BroadcastMessage(db.Model):
             "cancelled_by_id": get_uuid_string_or_none(self.cancelled_by_id),
             "rejected_by_id": get_uuid_string_or_none(self.rejected_by_id),
             "rejection_reason": self.rejection_reason if self.rejection_reason else None,
+            "rejected_by_api_key_id": self.rejected_by_api_key_id or None,
         }
 
 
