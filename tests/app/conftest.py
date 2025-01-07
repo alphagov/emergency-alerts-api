@@ -86,6 +86,11 @@ def sample_user(notify_db_session):
     return create_user(email="emergency-alerts-tests@digital.cabinet-office.gov.uk")
 
 
+@pytest.fixture(scope="function")
+def sample_user_2(notify_db_session):
+    return create_user(email="notify@digital.cabinet-office.gov.uk", name="Test User 2")
+
+
 def create_code(notify_db_session, code_type):
     code = create_secret_code()
     usr = create_user()
@@ -162,6 +167,29 @@ def sample_broadcast_service_2(broadcast_organisation, sample_user):
     else:
         if sample_user not in service.users:
             dao_add_user_to_service(service, sample_user)
+
+    return service
+
+
+@pytest.fixture(scope="function")
+def sample_broadcast_service_3(broadcast_organisation, sample_user_2):
+    service_name = "Sample broadcast service 3"
+
+    data = {
+        "name": service_name,
+        "restricted": False,
+        "created_by": sample_user_2,
+        "crown": True,
+    }
+    service = Service.query.filter_by(name=service_name).first()
+    if not service:
+        service = Service(**data)
+        dao_create_service(service, sample_user_2, service_permissions=[BROADCAST_TYPE])
+        insert_or_update_service_broadcast_settings(service, channel="severe")
+        dao_add_service_to_organisation(service, current_app.config["BROADCAST_ORGANISATION_ID"])
+    else:
+        if sample_user_2 not in service.users:
+            dao_add_user_to_service(service, sample_user_2)
 
     return service
 
