@@ -108,7 +108,7 @@ install-node: install-nvm
 ## DEVELOPMENT
 
 .PHONY: legacy-bootstrap
-legacy-bootstrap: generate-version-file ## Set up everything to run the app after db migrations
+legacy-bootstrap: generate-version-file ## Bootstrap, apply migrations and run the app
 	pip3 install -r requirements_local_utils.txt
 	createdb emergency_alerts || true
 	(. environment.sh && flask db upgrade) || true
