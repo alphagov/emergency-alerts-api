@@ -5,6 +5,7 @@ import uuid
 
 import pytest
 import requests_mock
+from emergency_alerts_utils import MAX_BROADCAST_CHAR_COUNT
 
 from app.dao.templates_dao import dao_get_template_by_id
 from app.models import (
@@ -15,8 +16,6 @@ from app.models import (
 )
 from tests import create_admin_authorization_header
 from tests.app.db import create_service, create_template, create_template_folder
-
-MAX_BROADCAST_CHAR_COUNT = 1395
 
 
 def test_should_create_a_new_template_for_a_service(client, sample_user):
