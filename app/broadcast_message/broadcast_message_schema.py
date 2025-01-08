@@ -61,6 +61,7 @@ update_broadcast_message_status_schema = {
     "title": "Update broadcast_message",
     "properties": {
         "status": {"type": "string", "enum": BroadcastStatusType.STATUSES},
+        "rejection_reason": {"type": "string"},
         "created_by": uuid,
     },
     "required": ["status", "created_by"],
