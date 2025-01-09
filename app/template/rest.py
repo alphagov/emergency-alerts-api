@@ -1,3 +1,4 @@
+from emergency_alerts_utils import MAX_BROADCAST_CHAR_COUNT
 from emergency_alerts_utils.template import BroadcastMessageTemplate
 from flask import Blueprint, jsonify, request
 from sqlalchemy.orm.exc import NoResultFound
@@ -28,8 +29,6 @@ from app.template.template_schemas import (
     post_update_template_schema,
 )
 from app.utils import get_public_notify_type_text, is_public_environment
-
-MAX_BROADCAST_CHAR_COUNT = 1395
 
 template_blueprint = Blueprint("template", __name__, url_prefix="/service/<uuid:service_id>/template")
 

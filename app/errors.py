@@ -1,4 +1,4 @@
-from emergency_alerts_utils.recipients import InvalidEmailError
+from emergency_alerts_utils.validation import InvalidEmailError
 from flask import current_app, json, jsonify
 from jsonschema import ValidationError as JsonSchemaValidationError
 from marshmallow import ValidationError
