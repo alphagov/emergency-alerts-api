@@ -209,7 +209,7 @@ class Config(object):
             },
             "trigger-link-tests": {
                 "task": "trigger-link-tests",
-                "schedule": crontab(minute="*/15"),
+                "schedule": crontab(minute="*/1"),
                 "options": {"queue": QueueNames.PERIODIC},
             },
             "delete-verify-codes": {
