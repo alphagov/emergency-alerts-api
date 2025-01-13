@@ -540,7 +540,7 @@ def fetch_user_by_email():
 def check_email_already_in_use():
     email = request.get_json()["email"]
     if email != "":
-        return jsonify(is_email_in_db(email["email"]))
+        return jsonify(is_email_in_db(email))
     else:
         return (
             jsonify({"errors": ["Enter a valid email address"]}),
