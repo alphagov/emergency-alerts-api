@@ -1241,7 +1241,10 @@ def test_update_user_password_rejects_common_password(admin_request, sample_serv
 
 @pytest.mark.parametrize(
     "email, to_be_created, return_value",
-    [("test@digital.cabinet-office.gov.uk", False, False), ("findel.mestro@foo.com", True, True)],
+    [
+        ("test@digital.cabinet-office.gov.uk", False, False),
+        ("findel.mestro@foo.com", True, True),
+    ],
 )
 def test_check_email_already_in_use(admin_request, email, to_be_created, return_value):
     if to_be_created:
@@ -1249,3 +1252,55 @@ def test_check_email_already_in_use(admin_request, email, to_be_created, return_
     data = {"email": email}
     json_resp = admin_request.post("user.check_email_already_in_use", _data=data, _expected_status=200)
     assert json_resp is return_value
+
+
+def test_check_email_already_in_use_for_invalid_email(admin_request):
+    data = {"email": ""}
+    json_resp = admin_request.post("user.check_email_already_in_use", _data=data, _expected_status=400)
+    assert json_resp == {"errors": ["Enter a valid email address"]}
+
+
+def test_check_name_is_valid_rejects_current_name(admin_request, sample_service):
+    data = {"_name": ""}
+    sample_user = sample_service.users[0]
+    new_name = {"_name": sample_user.name}
+
+    json_resp = admin_request.post("user.check_name_is_valid", user_id=sample_user.id, _data=data, _expected_status=400)
+    assert json_resp["errors"] == ["Enter a name"]
+
+    json_resp = admin_request.post(
+        "user.check_name_is_valid", user_id=sample_user.id, _data=new_name, _expected_status=400
+    )
+    assert json_resp["errors"] == ["Name must be different to current name"]
+
+
+def test_check_email_is_valid_rejects_current_email_address(admin_request, sample_service):
+    data = {"_email_address": ""}
+    sample_user = sample_service.users[0]
+    new_email = {"_email_address": sample_user.email_address}
+
+    json_resp = admin_request.post(
+        "user.check_email_address_is_valid", user_id=sample_user.id, _data=data, _expected_status=400
+    )
+    assert json_resp["errors"] == ["Enter a valid email address"]
+
+    json_resp = admin_request.post(
+        "user.check_email_address_is_valid", user_id=sample_user.id, _data=new_email, _expected_status=400
+    )
+    assert json_resp["errors"] == ["Email address must be different to current email address"]
+
+
+def test_check_mobile_number_is_valid_rejects_current_number(admin_request, sample_service):
+    data = {"_mobile_number": ""}
+    sample_user = sample_service.users[0]
+    new_number = {"_mobile_number": sample_user.mobile_number}
+
+    json_resp = admin_request.post(
+        "user.check_mobile_number_is_valid", user_id=sample_user.id, _data=data, _expected_status=400
+    )
+    assert json_resp["errors"] == ["Enter a valid mobile number"]
+
+    json_resp = admin_request.post(
+        "user.check_mobile_number_is_valid", user_id=sample_user.id, _data=new_number, _expected_status=400
+    )
+    assert json_resp["errors"] == ["Mobile number must be different to current mobile number"]
