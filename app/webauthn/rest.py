@@ -9,7 +9,6 @@ from app.dao.webauthn_credential_dao import (
 )
 from app.errors import InvalidRequest, register_errors
 from app.schema_validation import validate
-from app.user.utils import send_security_change_email
 from app.webauthn.utils import send_security_key_change_email
 from app.webauthn.webauthn_schema import (
     post_create_webauthn_credential_schema,
@@ -36,13 +35,6 @@ def create_webauthn_credential(user_id):
         name=data["name"],
         credential_data=data["credential_data"],
         registration_response=data["registration_response"],
-    )
-    send_security_change_email(
-        current_app.config["SECURITY_INFO_CHANGE_EMAIL_TEMPLATE_ID"],
-        user.email_address,
-        current_app.config["EAS_EMAIL_REPLY_TO_ID"],
-        user.name,
-        "security key",
     )
     send_security_key_change_email(
         user.email_address,
