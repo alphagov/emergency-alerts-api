@@ -543,7 +543,7 @@ def check_email_already_in_use():
         return jsonify(is_email_in_db(email["email"]))
     else:
         return (
-            jsonify({"errors": ["Enter an email address"]}),
+            jsonify({"errors": ["Enter a valid email address"]}),
             400,
         )
 
@@ -675,7 +675,7 @@ def check_mobile_number_is_valid(user_id):
     user = get_user_by_id(user_id=user_id)
     if mobile_number == "":
         return (
-            jsonify({"errors": ["Enter a mobile number"]}),
+            jsonify({"errors": ["Enter a valid mobile number"]}),
             400,
         )
     if user.mobile_number == mobile_number:
@@ -693,7 +693,7 @@ def check_email_address_is_valid(user_id):
     user = get_user_by_id(user_id=user_id)
     if email_address == "":
         return (
-            jsonify({"errors": ["Enter an email address"]}),
+            jsonify({"errors": ["Enter a valid email address"]}),
             400,
         )
     if user.email_address == email_address:
