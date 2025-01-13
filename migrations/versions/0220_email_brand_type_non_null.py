@@ -10,8 +10,10 @@ down_revision = "0219_default_email_branding"
 
 
 def upgrade():
-    op.alter_column("email_branding", "brand_type", nullable=False)
+    # op.alter_column("email_branding", "brand_type", nullable=False)
+    pass
 
 
 def downgrade():
-    op.alter_column("email_branding", "brand_type", nullable=True)
+    # op.alter_column("email_branding", "brand_type", nullable=True)
+    pass

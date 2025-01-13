@@ -12,13 +12,7 @@ from app.dao.template_folder_dao import dao_get_valid_template_folders_by_id
 from app.models import (
     BROADCAST_TYPE,
     CROWN_ORGANISATION_TYPES,
-    EMAIL_TYPE,
-    INTERNATIONAL_LETTERS,
-    INTERNATIONAL_SMS_TYPE,
-    LETTER_TYPE,
     NON_CROWN_ORGANISATION_TYPES,
-    SMS_TYPE,
-    UPLOAD_LETTERS,
     ApiKey,
     InvitedUser,
     Organisation,
@@ -34,15 +28,7 @@ from app.models import (
 )
 from app.utils import escape_special_characters, get_archived_db_column_value
 
-DEFAULT_SERVICE_PERMISSIONS = [
-    BROADCAST_TYPE,
-    SMS_TYPE,
-    EMAIL_TYPE,
-    LETTER_TYPE,
-    INTERNATIONAL_SMS_TYPE,
-    UPLOAD_LETTERS,
-    INTERNATIONAL_LETTERS,
-]
+DEFAULT_SERVICE_PERMISSIONS = [BROADCAST_TYPE]
 
 
 def dao_fetch_all_services(only_active=False):
@@ -63,7 +49,6 @@ def dao_count_live_services():
     return Service.query.filter_by(
         active=True,
         restricted=False,
-        count_as_live=True,
     ).count()
 
 
@@ -124,7 +109,6 @@ def dao_archive_service(service_id):
 
     service.active = False
     service.name = get_archived_db_column_value(service.name)
-    service.email_from = get_archived_db_column_value(service.email_from)
 
     for template in service.templates:
         if not template.archived:
@@ -163,7 +147,6 @@ def dao_create_service(
     permission_dao.add_default_service_permissions_for_user(user, service)
     service.id = service_id or uuid.uuid4()  # must be set now so version history model can use same id
     service.active = True
-    service.research_mode = False
 
     for permission in service_permissions:
         service_permission = ServicePermission(service_id=service.id, permission=permission)
@@ -179,7 +162,6 @@ def dao_create_service(
         service.crown = True
     elif service.organisation_type in NON_CROWN_ORGANISATION_TYPES:
         service.crown = False
-    service.count_as_live = not user.platform_admin
 
     db.session.add(service)
 
@@ -286,7 +268,7 @@ def get_live_services_with_organisation():
             Organisation.name.label("organisation_name"),
         )
         .outerjoin(Service.organisation)
-        .filter(Service.count_as_live.is_(True), Service.active.is_(True), Service.restricted.is_(False))
+        .filter(Service.active.is_(True), Service.restricted.is_(False))
         .order_by(Organisation.name, Service.name)
     )
 

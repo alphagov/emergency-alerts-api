@@ -12,9 +12,7 @@ from emergency_alerts_utils.celery import NotifyCelery
 from emergency_alerts_utils.clients.encryption.encryption_client import (
     Encryption,
 )
-from emergency_alerts_utils.clients.redis.redis_client import RedisClient
 from emergency_alerts_utils.clients.slack.slack_client import SlackClient
-from emergency_alerts_utils.clients.statsd.statsd_client import StatsdClient
 from emergency_alerts_utils.clients.zendesk.zendesk_client import ZendeskClient
 from flask import (
     current_app,
@@ -56,8 +54,6 @@ notify_celery = NotifyCelery()
 encryption = Encryption()
 zendesk_client = ZendeskClient()
 slack_client = SlackClient()
-statsd_client = StatsdClient()
-redis_store = RedisClient()
 cbc_proxy_client = CBCProxyClient()
 metrics = GDSMetrics()
 
@@ -79,7 +75,7 @@ def create_app(application):
 
     application.config.from_object(configs[host])
 
-    application.config["NOTIFY_APP_NAME"] = application.name
+    application.config["EAS_APP_NAME"] = application.name
     init_app(application)
 
     # Metrics intentionally high up to give the most accurate timing and reliability that the metric is recorded
@@ -101,12 +97,10 @@ def create_app(application):
     migrate.init_app(application, db=db)
     ma.init_app(application)
     zendesk_client.init_app(application)
-    statsd_client.init_app(application)
-    logging.init_app(application, statsd_client)
+    logging.init_app(application)
 
     notify_celery.init_app(application)
     encryption.init_app(application)
-    redis_store.init_app(application)
 
     cbc_proxy_client.init_app(application)
 
@@ -335,7 +329,7 @@ def setup_sqlalchemy_events(app):
                 elif current_task:
                     connection_record.info["request_data"] = {
                         "method": "celery",
-                        "host": current_app.config["NOTIFY_APP_NAME"],  # worker name
+                        "host": current_app.config["EAS_APP_NAME"],  # worker name
                         "url_rule": current_task.name,  # task name
                     }
                 # anything else. migrations possibly, or flask cli commands.

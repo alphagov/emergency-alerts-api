@@ -1,8 +1,7 @@
-import string
 from uuid import UUID
 
 from dateutil.parser import parse
-from emergency_alerts_utils.recipients import (
+from emergency_alerts_utils.validation import (
     InvalidEmailError,
     InvalidPhoneError,
     validate_email_address,
@@ -238,13 +237,6 @@ class ServiceSchema(BaseSchema, UUIDsAsStringsMixin):
             duplicates = list(set([x for x in permissions if permissions.count(x) > 1]))
             raise ValidationError("Duplicate Service Permission: {}".format(duplicates))
 
-    @validates("email_from")
-    def validate_email_from(self, value):
-        if not all(char in string.ascii_lowercase + string.digits + "." for char in value):
-            raise ValidationError(
-                "Unacceptable characters: `email_from` may only contain letters, numbers and full stops."
-            )
-
     @pre_load()
     def format_for_data_model(self, in_data, **kwargs):
         if isinstance(in_data, dict) and "permissions" in in_data:
@@ -274,11 +266,8 @@ class DetailedServiceSchema(BaseSchema):
             "broadcast_messages",
             "created_by",
             "crown",
-            "email_from",
             "inbound_api",
-            "message_limit",
             "permissions",
-            "rate_limit",
             "templates",
             "users",
             "version",
@@ -293,16 +282,12 @@ class BaseTemplateSchema(BaseSchema):
 
 class TemplateSchema(BaseTemplateSchema, UUIDsAsStringsMixin):
     created_by = field_for(models.Template, "created_by", required=True)
-    process_type = field_for(models.Template, "process_type")
     created_at = FlexibleDateTime()
     updated_at = FlexibleDateTime()
 
     @validates_schema
     def validate_type(self, data, **kwargs):
-        if data.get("template_type") in {models.EMAIL_TYPE, models.LETTER_TYPE}:
-            subject = data.get("subject")
-            if not subject or subject.strip() == "":
-                raise ValidationError("Invalid template subject", "subject")
+        pass
 
 
 class TemplateSchemaNested(TemplateSchema):
@@ -324,11 +309,7 @@ class TemplateSchemaNoDetail(TemplateSchema):
             "created_at",
             "created_by",
             "created_by_id",
-            "hidden",
-            "postage",
-            "process_type",
             "service",
-            "subject",
             "updated_at",
             "version",
         )
@@ -342,8 +323,6 @@ class TemplateSchemaNoDetail(TemplateSchema):
 
 
 class TemplateHistorySchema(BaseSchema):
-    process_type = field_for(models.Template, "process_type")
-
     created_by = fields.Nested(UserSchema, only=["id", "name", "email_address"], dump_only=True)
     created_at = field_for(models.Template, "created_at", format=DATETIME_FORMAT_NO_TIMEZONE)
     updated_at = FlexibleDateTime()
@@ -411,9 +390,7 @@ class ServiceHistorySchema(ma.Schema):
     created_at = FlexibleDateTime()
     updated_at = FlexibleDateTime()
     active = fields.Boolean()
-    message_limit = fields.Integer()
     restricted = fields.Boolean()
-    email_from = fields.String()
     created_by_id = fields.UUID()
     version = fields.Integer()
 

@@ -5,9 +5,6 @@ from app.models import (
     MANAGE_SETTINGS,
     MANAGE_TEMPLATES,
     MANAGE_USERS,
-    SEND_EMAILS,
-    SEND_LETTERS,
-    SEND_TEXTS,
     VIEW_ACTIVITY,
     Permission,
 )
@@ -17,9 +14,6 @@ default_service_permissions = [
     MANAGE_USERS,
     MANAGE_TEMPLATES,
     MANAGE_SETTINGS,
-    SEND_TEXTS,
-    SEND_EMAILS,
-    SEND_LETTERS,
     MANAGE_API_KEYS,
     VIEW_ACTIVITY,
 ]

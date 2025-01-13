@@ -3,7 +3,6 @@ from functools import partial
 from threading import RLock
 
 import cachetools
-from emergency_alerts_utils.clients.redis import RequestCache
 from emergency_alerts_utils.serialised_model import (
     SerialisedModel,
     SerialisedModelCollection,
@@ -11,13 +10,12 @@ from emergency_alerts_utils.serialised_model import (
 from flask import current_app
 from werkzeug.utils import cached_property
 
-from app import db, redis_store
+from app import db
 from app.dao.api_key_dao import get_model_api_keys
 from app.dao.services_dao import dao_fetch_service_by_id
 
 caches = defaultdict(partial(cachetools.TTLCache, maxsize=1024, ttl=2))
 locks = defaultdict(RLock)
-redis_cache = RequestCache(redis_store)
 
 
 def memory_cache(func):
@@ -41,9 +39,6 @@ class SerialisedTemplate(SerialisedModel):
         "archived",
         "content",
         "id",
-        "postage",
-        "process_type",
-        "subject",
         "template_type",
         "version",
     }
@@ -54,7 +49,6 @@ class SerialisedTemplate(SerialisedModel):
         return cls(cls.get_dict(template_id, service_id, version)["data"])
 
     @staticmethod
-    @redis_cache.set("service-{service_id}-template-{template_id}-version-{version}")
     def get_dict(template_id, service_id, version):
         from app.dao import templates_dao
         from app.schemas import template_schema
@@ -76,14 +70,8 @@ class SerialisedService(SerialisedModel):
         "id",
         "name",
         "active",
-        "contact_link",
-        "email_from",
-        "message_limit",
         "permissions",
-        "rate_limit",
-        "research_mode",
         "restricted",
-        "prefix_sms",
     }
 
     @classmethod
@@ -92,7 +80,6 @@ class SerialisedService(SerialisedModel):
         return cls(cls.get_dict(service_id)["data"])
 
     @staticmethod
-    @redis_cache.set("service-{service_id}")
     def get_dict(service_id):
         from app.schemas import service_schema
 

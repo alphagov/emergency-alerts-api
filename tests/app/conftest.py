@@ -1,10 +1,8 @@
 import json
 import os
 import uuid
-from datetime import datetime, timedelta
 
 import pytest
-import pytz
 import requests_mock
 from flask import current_app, url_for
 
@@ -24,13 +22,10 @@ from app.dao.users_dao import create_secret_code, create_user_code
 from app.history_meta import create_history
 from app.models import (
     BROADCAST_TYPE,
-    EMAIL_TYPE,
     KEY_TYPE_NORMAL,
     KEY_TYPE_TEAM,
     KEY_TYPE_TEST,
-    LETTER_TYPE,
     SERVICE_PERMISSION_TYPES,
-    SMS_TYPE,
     ApiKey,
     InvitedUser,
     Organisation,
@@ -66,32 +61,21 @@ def rmock():
 @pytest.fixture(scope="function")
 def service_factory(sample_user):
     class ServiceFactory(object):
-        def get(self, service_name, user=None, template_type=None, email_from=None):
+        def get(self, service_name, user=None):
             if not user:
                 user = sample_user
-            if not email_from:
-                email_from = service_name
 
             service = create_service(
-                email_from=email_from,
                 service_name=service_name,
                 service_permissions=None,
                 user=user,
                 check_if_service_exists=True,
             )
-            if template_type == "email":
-                create_template(
-                    service,
-                    template_name="Template Name",
-                    template_type=template_type,
-                    subject=service.email_from,
-                )
-            else:
-                create_template(
-                    service,
-                    template_name="Template Name",
-                    template_type="sms",
-                )
+            create_template(
+                service,
+                template_name="Template Name",
+                template_type="broadcast",
+            )
             return service
 
     return ServiceFactory()
@@ -103,10 +87,8 @@ def sample_user(notify_db_session):
 
 
 @pytest.fixture(scope="function")
-def notify_user(notify_db_session):
-    return create_user(
-        email="notify-service-user@digital.cabinet-office.gov.uk", id_=current_app.config["NOTIFY_USER_ID"]
-    )
+def sample_user_2(notify_db_session):
+    return create_user(email="notify@digital.cabinet-office.gov.uk", name="Test User 2")
 
 
 def create_code(notify_db_session, code_type):
@@ -125,13 +107,10 @@ def sample_sms_code(notify_db_session):
 @pytest.fixture(scope="function")
 def sample_service(sample_user):
     service_name = "Sample service"
-    email_from = service_name.lower().replace(" ", ".")
 
     data = {
         "name": service_name,
-        "message_limit": 1000,
         "restricted": False,
-        "email_from": email_from,
         "created_by": sample_user,
         "crown": True,
     }
@@ -149,16 +128,12 @@ def sample_service(sample_user):
 @pytest.fixture(scope="function")
 def sample_broadcast_service(broadcast_organisation, sample_user):
     service_name = "Sample broadcast service"
-    email_from = service_name.lower().replace(" ", ".")
 
     data = {
         "name": service_name,
-        "message_limit": 1000,
         "restricted": False,
-        "email_from": email_from,
         "created_by": sample_user,
         "crown": True,
-        "count_as_live": False,
     }
     service = Service.query.filter_by(name=service_name).first()
     if not service:
@@ -176,16 +151,12 @@ def sample_broadcast_service(broadcast_organisation, sample_user):
 @pytest.fixture(scope="function")
 def sample_broadcast_service_2(broadcast_organisation, sample_user):
     service_name = "Sample broadcast service 2"
-    email_from = service_name.lower().replace(" ", ".")
 
     data = {
         "name": service_name,
-        "message_limit": 1000,
         "restricted": False,
-        "email_from": email_from,
         "created_by": sample_user,
         "crown": True,
-        "count_as_live": False,
     }
     service = Service.query.filter_by(name=service_name).first()
     if not service:
@@ -200,8 +171,31 @@ def sample_broadcast_service_2(broadcast_organisation, sample_user):
     return service
 
 
-@pytest.fixture(scope="function", name="sample_service_full_permissions")
-def _sample_service_full_permissions(notify_db_session):
+@pytest.fixture(scope="function")
+def sample_broadcast_service_3(broadcast_organisation, sample_user_2):
+    service_name = "Sample broadcast service 3"
+
+    data = {
+        "name": service_name,
+        "restricted": False,
+        "created_by": sample_user_2,
+        "crown": True,
+    }
+    service = Service.query.filter_by(name=service_name).first()
+    if not service:
+        service = Service(**data)
+        dao_create_service(service, sample_user_2, service_permissions=[BROADCAST_TYPE])
+        insert_or_update_service_broadcast_settings(service, channel="severe")
+        dao_add_service_to_organisation(service, current_app.config["BROADCAST_ORGANISATION_ID"])
+    else:
+        if sample_user_2 not in service.users:
+            dao_add_user_to_service(service, sample_user_2)
+
+    return service
+
+
+@pytest.fixture(scope="function")
+def sample_service_full_permissions(notify_db_session):
     service = create_service(
         service_name="sample service full permissions",
         service_permissions=set(SERVICE_PERMISSION_TYPES),
@@ -214,98 +208,20 @@ def _sample_service_full_permissions(notify_db_session):
 def sample_template(sample_user):
     # This will be the same service as the one returned by the sample_service fixture as we look for a
     # service with the same name - "Sample service" - before creating a new one.
-    service = create_service(service_permissions=[EMAIL_TYPE, SMS_TYPE], check_if_service_exists=True)
+    service = create_service(service_permissions=[BROADCAST_TYPE], check_if_service_exists=True)
 
     data = {
         "name": "Template Name",
-        "template_type": "sms",
+        "template_type": BROADCAST_TYPE,
         "content": "This is a template:\nwith a newline",
         "service": service,
         "created_by": sample_user,
         "archived": False,
-        "hidden": False,
-        "process_type": "normal",
     }
     template = Template(**data)
     dao_create_template(template)
 
     return template
-
-
-@pytest.fixture
-def sample_sms_template(sample_template):
-    return sample_template
-
-
-@pytest.fixture(scope="function")
-def sample_template_without_sms_permission(notify_db_session):
-    service = create_service(service_permissions=[EMAIL_TYPE], check_if_service_exists=True)
-    return create_template(service, template_type=SMS_TYPE)
-
-
-@pytest.fixture(scope="function")
-def sample_template_with_placeholders(sample_service):
-    # deliberate space and title case in placeholder
-    return create_template(sample_service, content="Hello (( Name))\nYour thing is due soon")
-
-
-@pytest.fixture(scope="function")
-def sample_sms_template_with_html(sample_service):
-    # deliberate space and title case in placeholder
-    return create_template(sample_service, content="Hello (( Name))\nHere is <em>some HTML</em> & entities")
-
-
-@pytest.fixture(scope="function")
-def sample_email_template(sample_user):
-    service = create_service(user=sample_user, service_permissions=[EMAIL_TYPE, SMS_TYPE], check_if_service_exists=True)
-    data = {
-        "name": "Email Template Name",
-        "template_type": EMAIL_TYPE,
-        "content": "This is a template",
-        "service": service,
-        "created_by": sample_user,
-        "subject": "Email Subject",
-    }
-    template = Template(**data)
-    dao_create_template(template)
-    return template
-
-
-@pytest.fixture(scope="function")
-def sample_template_without_email_permission(notify_db_session):
-    service = create_service(service_permissions=[SMS_TYPE], check_if_service_exists=True)
-    return create_template(service, template_type=EMAIL_TYPE)
-
-
-@pytest.fixture
-def sample_letter_template(sample_service_full_permissions):
-    return create_template(sample_service_full_permissions, template_type=LETTER_TYPE, postage="second")
-
-
-@pytest.fixture
-def sample_trial_letter_template(sample_service_full_permissions):
-    sample_service_full_permissions.restricted = True
-    return create_template(sample_service_full_permissions, template_type=LETTER_TYPE)
-
-
-@pytest.fixture(scope="function")
-def sample_email_template_with_placeholders(sample_service):
-    return create_template(
-        sample_service,
-        template_type=EMAIL_TYPE,
-        subject="((name))",
-        content="Hello ((name))\nThis is an email from GOV.UK",
-    )
-
-
-@pytest.fixture(scope="function")
-def sample_email_template_with_html(sample_service):
-    return create_template(
-        sample_service,
-        template_type=EMAIL_TYPE,
-        subject="((name)) <em>some HTML</em>",
-        content="Hello ((name))\nThis is an email from GOV.UK with <em>some HTML</em>",
-    )
 
 
 @pytest.fixture(scope="function")
@@ -342,7 +258,7 @@ def sample_invited_user(notify_db_session):
         "service": service,
         "email_address": to_email_address,
         "from_user": from_user,
-        "permissions": "send_messages,manage_service,manage_api_keys",
+        "permissions": "create_broadcasts,manage_service,manage_api_keys",
         "folder_permissions": ["folder_1_id", "folder_2_id"],
     }
     invited_user = InvitedUser(**data)
@@ -374,130 +290,6 @@ def fake_uuid():
     return "6ce466d0-fd6a-11e5-82f5-e0accb9d11a6"
 
 
-@pytest.fixture(scope="function")
-def sms_code_template(notify_service):
-    return create_custom_template(
-        service=notify_service,
-        user=notify_service.users[0],
-        template_config_name="SMS_CODE_TEMPLATE_ID",
-        content="((verify_code))",
-        template_type="sms",
-    )
-
-
-@pytest.fixture(scope="function")
-def email_2fa_code_template(notify_service):
-    return create_custom_template(
-        service=notify_service,
-        user=notify_service.users[0],
-        template_config_name="EMAIL_2FA_TEMPLATE_ID",
-        content=("Hi ((name))," "" "To sign in to GOV.​UK Notify please open this link:" "((url))"),
-        subject="Sign in to GOV.UK Notify",
-        template_type="email",
-    )
-
-
-@pytest.fixture(scope="function")
-def email_verification_template(notify_service):
-    return create_custom_template(
-        service=notify_service,
-        user=notify_service.users[0],
-        template_config_name="NEW_USER_EMAIL_VERIFICATION_TEMPLATE_ID",
-        content="((user_name)) use ((url)) to complete registration",
-        template_type="email",
-    )
-
-
-@pytest.fixture(scope="function")
-def invitation_email_template(notify_service):
-    content = ("((user_name)) is invited to Notify by ((service_name)) ((url)) to complete registration",)
-    return create_custom_template(
-        service=notify_service,
-        user=notify_service.users[0],
-        template_config_name="INVITATION_EMAIL_TEMPLATE_ID",
-        content=content,
-        subject="Invitation to ((service_name))",
-        template_type="email",
-    )
-
-
-@pytest.fixture(scope="function")
-def broadcast_invitation_email_template(notify_service):
-    content = ("((user_name)) is invited to broadcast Notify by ((service_name)) ((url)) to complete registration",)
-    return create_custom_template(
-        service=notify_service,
-        user=notify_service.users[0],
-        template_config_name="BROADCAST_INVITATION_EMAIL_TEMPLATE_ID",
-        content=content,
-        subject="Invitation to ((service_name))",
-        template_type="email",
-    )
-
-
-@pytest.fixture(scope="function")
-def org_invite_email_template(notify_service):
-    return create_custom_template(
-        service=notify_service,
-        user=notify_service.users[0],
-        template_config_name="ORGANISATION_INVITATION_EMAIL_TEMPLATE_ID",
-        content="((user_name)) ((organisation_name)) ((url))",
-        subject="Invitation to ((organisation_name))",
-        template_type="email",
-    )
-
-
-@pytest.fixture(scope="function")
-def password_reset_email_template(notify_service):
-    return create_custom_template(
-        service=notify_service,
-        user=notify_service.users[0],
-        template_config_name="PASSWORD_RESET_TEMPLATE_ID",
-        content="((user_name)) you can reset password by clicking ((url))",
-        subject="Reset your password",
-        template_type="email",
-    )
-
-
-@pytest.fixture(scope="function")
-def team_member_email_edit_template(notify_service):
-    return create_custom_template(
-        service=notify_service,
-        user=notify_service.users[0],
-        template_config_name="TEAM_MEMBER_EDIT_EMAIL_TEMPLATE_ID",
-        content="Hi ((name)) ((servicemanagername)) changed your email to ((email address))",
-        subject="Your GOV.UK Notify email address has changed",
-        template_type="email",
-    )
-
-
-@pytest.fixture(scope="function")
-def team_member_mobile_edit_template(notify_service):
-    return create_custom_template(
-        service=notify_service,
-        user=notify_service.users[0],
-        template_config_name="TEAM_MEMBER_EDIT_MOBILE_TEMPLATE_ID",
-        content="Your mobile number was changed by ((servicemanagername)).",
-        template_type="sms",
-    )
-
-
-@pytest.fixture(scope="function")
-def change_email_confirmation_template(notify_service):
-    content = """Hi ((name)),
-              Click this link to confirm your new email address:
-              ((url))
-              If you didn’t try to change the email address for your GOV.UK Notify account, let us know here:
-              ((feedback_url))"""
-    template = create_custom_template(
-        service=notify_service,
-        user=notify_service.users[0],
-        template_config_name="CHANGE_EMAIL_CONFIRMATION_TEMPLATE_ID",
-        content=content,
-        template_type="email",
-    )
-    return template
-
-
 def create_custom_template(service, user, template_config_name, template_type, content="", subject=None):
     template = Template.query.get(current_app.config[template_config_name])
     if not template:
@@ -524,11 +316,8 @@ def notify_service(notify_db_session, sample_user):
     if not service:
         service = Service(
             name="Notify Service",
-            message_limit=1000,
             restricted=False,
-            email_from="notify.service",
             created_by=sample_user,
-            prefix_sms=False,
         )
         dao_create_service(service=service, service_id=current_app.config["NOTIFY_SERVICE_ID"], user=sample_user)
     return service
@@ -595,7 +384,7 @@ def admin_request(client):
 
 
 @pytest.fixture
-def api_client_request(client, notify_user):
+def api_client_request(client):
     """
     For v2 endpoints. Same as admin_request, except all functions take a required service_id and an optional
     _api_key_type field.
@@ -641,7 +430,3 @@ def api_client_request(client, notify_user):
             return json_resp
 
     return ApiClientRequest
-
-
-def datetime_in_past(days=0, seconds=0):
-    return datetime.now(tz=pytz.utc) - timedelta(days=days, seconds=seconds)

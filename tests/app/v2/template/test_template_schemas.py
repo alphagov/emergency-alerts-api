@@ -9,8 +9,6 @@ from app.schema_validation import validate
 from app.v2.template.template_schemas import (
     get_template_by_id_request,
     get_template_by_id_response,
-    post_template_preview_request,
-    post_template_preview_response,
 )
 
 valid_json_get_response = {
@@ -34,7 +32,6 @@ valid_json_get_response_with_optionals = {
     "body": "some body",
     "subject": "some subject",
     "name": "some name",
-    "postage": "first",
 }
 
 valid_request_args = [{"id": str(uuid.uuid4()), "version": 1}, {"id": str(uuid.uuid4())}]
@@ -71,7 +68,6 @@ valid_json_post_response_with_optionals = {
     "version": 1,
     "body": "some body",
     "subject": "some subject",
-    "postage": "second",
     "html": "<p>some body</p>",
 }
 
@@ -103,27 +99,3 @@ def test_get_template_response_schema_is_valid(response, template_type, updated_
     response["type"] = template_type
 
     assert validate(response, get_template_by_id_response) == response
-
-
-def test_post_template_preview_against_valid_args_is_valid():
-    assert validate(valid_json_post_args, post_template_preview_request) == valid_json_post_args
-
-
-@pytest.mark.parametrize("args,error_messages", invalid_json_post_args)
-def test_post_template_preview_against_invalid_args_is_invalid(args, error_messages):
-    with pytest.raises(ValidationError) as e:
-        validate(args, post_template_preview_request)
-    errors = json.loads(str(e.value))
-
-    assert errors["status_code"] == 400
-    assert len(errors["errors"]) == len(error_messages)
-    for error in errors["errors"]:
-        assert error["message"] in error_messages
-
-
-@pytest.mark.parametrize("template_type", TEMPLATE_TYPES)
-@pytest.mark.parametrize("response", [valid_json_post_response, valid_json_post_response_with_optionals])
-def test_post_template_preview_response_schema_is_valid(response, template_type):
-    response["type"] = template_type
-
-    assert validate(response, post_template_preview_response) == response

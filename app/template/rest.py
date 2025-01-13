@@ -1,8 +1,5 @@
-from emergency_alerts_utils import SMS_CHAR_COUNT_LIMIT
-from emergency_alerts_utils.template import (
-    BroadcastMessageTemplate,
-    SMSMessageTemplate,
-)
+from emergency_alerts_utils import MAX_BROADCAST_CHAR_COUNT
+from emergency_alerts_utils.template import BroadcastMessageTemplate
 from flask import Blueprint, jsonify, request
 from sqlalchemy.orm.exc import NoResultFound
 
@@ -20,13 +17,7 @@ from app.dao.templates_dao import (
     dao_update_template,
 )
 from app.errors import InvalidRequest, register_errors
-from app.models import (
-    BROADCAST_TYPE,
-    LETTER_TYPE,
-    SECOND_CLASS,
-    SMS_TYPE,
-    Template,
-)
+from app.models import BROADCAST_TYPE, Template
 from app.schema_validation import validate
 from app.schemas import (
     template_history_schema,
@@ -45,9 +36,6 @@ register_errors(template_blueprint)
 
 
 def _content_count_greater_than_limit(content, template_type):
-    if template_type == SMS_TYPE:
-        template = SMSMessageTemplate({"content": content, "template_type": template_type})
-        return template.is_message_too_long()
     if template_type == BROADCAST_TYPE:
         template = BroadcastMessageTemplate({"content": content, "template_type": template_type})
         return template.is_message_too_long()
@@ -80,14 +68,11 @@ def create_template(service_id):
         errors = {"template_type": [message]}
         raise InvalidRequest(errors, 403)
 
-    if not new_template.postage and new_template.template_type == LETTER_TYPE:
-        new_template.postage = SECOND_CLASS
-
     new_template.service = fetched_service
 
     over_limit = _content_count_greater_than_limit(new_template.content, new_template.template_type)
     if over_limit:
-        message = "Content has a character count greater than the limit of {}".format(SMS_CHAR_COUNT_LIMIT)
+        message = "Content has a character count greater than the limit of {}".format(MAX_BROADCAST_CHAR_COUNT)
         errors = {"content": [message]}
         raise InvalidRequest(errors, status_code=400)
 
@@ -122,7 +107,7 @@ def update_template(service_id, template_id):
 
     over_limit = _content_count_greater_than_limit(updated_template["content"], fetched_template.template_type)
     if over_limit:
-        message = "Content has a character count greater than the limit of {}".format(SMS_CHAR_COUNT_LIMIT)
+        message = "Content has a character count greater than the limit of {}".format(MAX_BROADCAST_CHAR_COUNT)
         errors = {"content": [message]}
         raise InvalidRequest(errors, status_code=400)
 
@@ -148,24 +133,6 @@ def get_template_by_id_and_service_id(service_id, template_id):
     fetched_template = dao_get_template_by_id_and_service_id(template_id=template_id, service_id=service_id)
     data = template_schema.dump(fetched_template)
     return jsonify(data=data)
-
-
-@template_blueprint.route("/<uuid:template_id>/preview", methods=["GET"])
-def preview_template_by_id_and_service_id(service_id, template_id):
-    fetched_template = dao_get_template_by_id_and_service_id(template_id=template_id, service_id=service_id)
-    data = template_schema.dump(fetched_template)
-    template_object = fetched_template._as_utils_template_with_personalisation(request.args.to_dict())
-
-    if template_object.missing_data:
-        raise InvalidRequest(
-            {"template": ["Missing personalisation: {}".format(", ".join(template_object.missing_data))]},
-            status_code=400,
-        )
-
-    data["subject"] = template_object.subject
-    data["content"] = template_object.content_with_placeholders_filled_in
-
-    return jsonify(data)
 
 
 @template_blueprint.route("/<uuid:template_id>/version/<int:version>")
@@ -199,7 +166,4 @@ def purge_templates_and_folders_for_service(service_id):
 
 
 def _template_has_not_changed(current_data, updated_template):
-    return all(
-        current_data[key] == updated_template[key]
-        for key in ("name", "content", "subject", "archived", "process_type", "postage")
-    )
+    return all(current_data[key] == updated_template[key] for key in ("name", "content", "archived"))

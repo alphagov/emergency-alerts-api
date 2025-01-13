@@ -5,7 +5,7 @@ from emergency_alerts_utils.template import BroadcastMessageTemplate
 from flask import current_app, jsonify, make_response, request
 from sqlalchemy.orm.exc import MultipleResultsFound
 
-from app import api_user, authenticated_service, redis_store
+from app import api_user, authenticated_service
 from app.broadcast_message import utils as broadcast_utils
 from app.broadcast_message.translators import cap_xml_to_dict
 from app.dao.broadcast_message_dao import (
@@ -124,7 +124,6 @@ def _cancel_or_reject_broadcast(references_to_original_broadcast, service_id):
     else:
         new_status = BroadcastStatusType.CANCELLED
     broadcast_utils.update_broadcast_message_status(broadcast_message, new_status, api_key_id=api_user.id)
-    redis_store.delete(f"service-{broadcast_message.service_id}-broadcast-message-{broadcast_message.id}")
     return broadcast_message
 
 
