@@ -538,8 +538,14 @@ def fetch_user_by_email():
 
 @user_blueprint.route("/email-in-db", methods=["POST"])
 def check_email_already_in_use():
-    email = email_data_request_schema.load(request.get_json())
-    return jsonify(is_email_in_db(email["email"]))
+    email = request.get_json()["email"]
+    if email != "":
+        return jsonify(is_email_in_db(email["email"]))
+    else:
+        return (
+            jsonify({"errors": ["Enter an email address"]}),
+            400,
+        )
 
 
 @user_blueprint.route("/invited", methods=["POST"])
@@ -641,6 +647,60 @@ def check_password_is_valid(user_id):
     if password and has_user_already_used_password(user_id, password):
         return jsonify({"errors": ["You've used this password before. Please choose a new one."]}), 400
     add_old_password_for_user(user.id, password)
+    return jsonify(data=user.serialize()), 200
+
+
+@user_blueprint.route("/<uuid:user_id>/check-name-validity", methods=["POST"])
+def check_name_is_valid(user_id):
+    req_json = request.get_json()
+    name = req_json.get("_name")
+    user = get_user_by_id(user_id=user_id)
+    if name == "":
+        return (
+            jsonify({"errors": ["Enter a name"]}),
+            400,
+        )
+    if user.name == name:
+        return (
+            jsonify({"errors": ["Name must be different to current name"]}),
+            400,
+        )
+    return jsonify(data=user.serialize()), 200
+
+
+@user_blueprint.route("/<uuid:user_id>/check-number-validity", methods=["POST"])
+def check_mobile_number_is_valid(user_id):
+    req_json = request.get_json()
+    mobile_number = req_json.get("_mobile_number")
+    user = get_user_by_id(user_id=user_id)
+    if mobile_number == "":
+        return (
+            jsonify({"errors": ["Enter a mobile number"]}),
+            400,
+        )
+    if user.mobile_number == mobile_number:
+        return (
+            jsonify({"errors": ["Mobile number must be different to current mobile number"]}),
+            400,
+        )
+    return jsonify(data=user.serialize()), 200
+
+
+@user_blueprint.route("/<uuid:user_id>/check-email-validity", methods=["POST"])
+def check_email_address_is_valid(user_id):
+    req_json = request.get_json()
+    email_address = req_json.get("_email_address")
+    user = get_user_by_id(user_id=user_id)
+    if email_address == "":
+        return (
+            jsonify({"errors": ["Enter an email address"]}),
+            400,
+        )
+    if user.email_address == email_address:
+        return (
+            jsonify({"errors": ["Email address must be different to current email address"]}),
+            400,
+        )
     return jsonify(data=user.serialize()), 200
 
 
