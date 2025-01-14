@@ -25,6 +25,12 @@ def get_webauthn_credentials(user_id):
     return jsonify(data=[cred.serialize() for cred in user.webauthn_credentials]), 200
 
 
+@webauthn_blueprint.route("/check-credentials", methods=["GET"])
+def get_count_of_credentials_by_user(user_id):
+    user = get_user_by_id(user_id)
+    return jsonify(data=str(len(user.webauthn_credentials))), 200
+
+
 @webauthn_blueprint.route("", methods=["POST"])
 def create_webauthn_credential(user_id):
     data = request.get_json()

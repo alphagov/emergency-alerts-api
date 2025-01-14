@@ -39,6 +39,31 @@ def test_get_webauthn_credentials_returns_empty_list_if_no_creds(admin_request, 
     assert response == {"data": []}
 
 
+def test_get_count_of_credentials_by_user(admin_request, sample_user):
+    admin_request.post(
+        "webauthn.create_webauthn_credential",
+        user_id=sample_user.id,
+        _data={
+            "name": "my key",
+            "credential_data": "ABC123",
+            "registration_response": "DEF456",
+        },
+        _expected_status=201,
+    )
+    admin_request.post(
+        "webauthn.create_webauthn_credential",
+        user_id=sample_user.id,
+        _data={
+            "name": "my key",
+            "credential_data": "ABC123",
+            "registration_response": "DEF456",
+        },
+        _expected_status=201,
+    )
+    response = admin_request.get("webauthn.get_count_of_credentials_by_user", user_id=sample_user.id)
+    assert response == {"data": str(2)}
+
+
 def test_get_webauthn_credentials_errors_if_user_doesnt_exist(admin_request, sample_user):
     create_webauthn_credential(sample_user, "1")
 
