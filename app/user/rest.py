@@ -67,6 +67,7 @@ from app.user.users_schema import (
     post_verify_code_schema,
     post_verify_webauthn_schema,
 )
+from app.user.utils import send_security_change_email, send_security_change_sms
 from app.utils import is_local_host, log_auth_activity, log_user, url_with_token
 
 user_blueprint = Blueprint("user", __name__)
@@ -109,6 +110,10 @@ def update_user_attribute(user_id):
     else:
         updated_by = None
 
+    existing_email_address = user_to_update.email_address
+    existing_mobile_number = user_to_update.mobile_number
+    updated_name = req_json.get("name")
+
     update_dct = user_update_schema_load_json.load(req_json)
 
     save_user_attribute(user_to_update, update_dict=update_dct)
@@ -133,6 +138,36 @@ def update_user_attribute(user_id):
         }
 
         notify_send(notification)
+    elif any(measure in req_json for measure in ["name", "email_address", "mobile_number"]):
+        security_measure = ""
+        if "email_address" in update_dct:
+            security_measure = "email address"
+            # Sending notification to previous email address
+            send_security_change_email(
+                current_app.config["SECURITY_INFO_CHANGE_EMAIL_TEMPLATE_ID"],
+                user_to_update.email_address,
+                current_app.config["EAS_EMAIL_REPLY_TO_ID"],
+                user_to_update.name,
+                "email address",
+            )
+
+        elif "mobile_number" in update_dct:
+            security_measure = "mobile number"
+            # Sending notification to updated mobile number
+            send_security_change_sms(user_to_update.mobile_number, "this phone")
+            # Sending notification to previous mobile number
+            send_security_change_sms(existing_mobile_number, "the requested phone")
+        elif "name" in update_dct:
+            security_measure = "name"
+
+        # Sending notification to previous/unchanged email address
+        send_security_change_email(
+            current_app.config["SECURITY_INFO_CHANGE_EMAIL_TEMPLATE_ID"],
+            existing_email_address,
+            current_app.config["EAS_EMAIL_REPLY_TO_ID"],
+            updated_name or user_to_update.name,
+            security_measure,
+        )
 
     return jsonify(data=user_to_update.serialize()), 200
 
@@ -501,10 +536,22 @@ def fetch_user_by_email():
     return jsonify(data=result)
 
 
-@user_blueprint.route("/email-in-db", methods=["POST"])
-def check_email_already_in_use():
-    email = email_data_request_schema.load(request.get_json())
-    return jsonify(is_email_in_db(email["email"]))
+@user_blueprint.route("/<uuid:user_id>/email-in-db", methods=["POST"])
+def check_email_already_in_use(user_id):
+    email = request.get_json()["email"]
+    user = get_user_by_id(user_id)
+    if email == user.email_address:
+        return (
+            jsonify({"errors": ["Email address must be different to current email address"]}),
+            400,
+        )
+    elif email != "":
+        return jsonify(is_email_in_db(email))
+    else:
+        return (
+            jsonify({"errors": ["Enter a valid email address"]}),
+            400,
+        )
 
 
 @user_blueprint.route("/invited", methods=["POST"])
@@ -578,6 +625,13 @@ def update_password(user_id):
 
     current_app.logger.info("update_password", extra={"python_module": __name__, "user_id": user_id})
     update_user_password(user, password)
+    send_security_change_email(
+        current_app.config["SECURITY_INFO_CHANGE_EMAIL_TEMPLATE_ID"],
+        user.email_address,
+        current_app.config["EAS_EMAIL_REPLY_TO_ID"],
+        user.name,
+        "password",
+    )
     return jsonify(data=user.serialize()), 200
 
 
@@ -599,6 +653,60 @@ def check_password_is_valid(user_id):
     if password and has_user_already_used_password(user_id, password):
         return jsonify({"errors": ["You've used this password before. Please choose a new one."]}), 400
     add_old_password_for_user(user.id, password)
+    return jsonify(data=user.serialize()), 200
+
+
+@user_blueprint.route("/<uuid:user_id>/check-name-validity", methods=["POST"])
+def check_name_is_valid(user_id):
+    req_json = request.get_json()
+    name = req_json.get("_name")
+    user = get_user_by_id(user_id=user_id)
+    if name == "":
+        return (
+            jsonify({"errors": ["Enter a name"]}),
+            400,
+        )
+    if user.name == name:
+        return (
+            jsonify({"errors": ["Name must be different to current name"]}),
+            400,
+        )
+    return jsonify(data=user.serialize()), 200
+
+
+@user_blueprint.route("/<uuid:user_id>/check-number-validity", methods=["POST"])
+def check_mobile_number_is_valid(user_id):
+    req_json = request.get_json()
+    mobile_number = req_json.get("_mobile_number")
+    user = get_user_by_id(user_id=user_id)
+    if mobile_number == "":
+        return (
+            jsonify({"errors": ["Enter a valid mobile number"]}),
+            400,
+        )
+    if user.mobile_number == mobile_number:
+        return (
+            jsonify({"errors": ["Mobile number must be different to current mobile number"]}),
+            400,
+        )
+    return jsonify(data=user.serialize()), 200
+
+
+@user_blueprint.route("/<uuid:user_id>/check-email-validity", methods=["POST"])
+def check_email_address_is_valid(user_id):
+    req_json = request.get_json()
+    email_address = req_json.get("_email_address")
+    user = get_user_by_id(user_id=user_id)
+    if email_address == "":
+        return (
+            jsonify({"errors": ["Enter a valid email address"]}),
+            400,
+        )
+    if user.email_address == email_address:
+        return (
+            jsonify({"errors": ["Email address must be different to current email address"]}),
+            400,
+        )
     return jsonify(data=user.serialize()), 200
 
 
