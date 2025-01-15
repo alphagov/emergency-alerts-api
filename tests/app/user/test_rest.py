@@ -1246,17 +1246,23 @@ def test_update_user_password_rejects_common_password(admin_request, sample_serv
         ("findel.mestro@foo.com", True, True),
     ],
 )
-def test_check_email_already_in_use(admin_request, email, to_be_created, return_value):
+def test_check_email_already_in_use(admin_request, email, to_be_created, return_value, sample_service):
     if to_be_created:
         create_user(email=email)
+    sample_user = sample_service.users[0]
     data = {"email": email}
-    json_resp = admin_request.post("user.check_email_already_in_use", _data=data, _expected_status=200)
+    json_resp = admin_request.post(
+        "user.check_email_already_in_use", user_id=sample_user.id, _data=data, _expected_status=200
+    )
     assert json_resp is return_value
 
 
-def test_check_email_already_in_use_for_invalid_email(admin_request):
+def test_check_email_already_in_use_for_invalid_email(admin_request, sample_service):
     data = {"email": ""}
-    json_resp = admin_request.post("user.check_email_already_in_use", _data=data, _expected_status=400)
+    sample_user = sample_service.users[0]
+    json_resp = admin_request.post(
+        "user.check_email_already_in_use", user_id=sample_user.id, _data=data, _expected_status=400
+    )
     assert json_resp == {"errors": ["Enter a valid email address"]}
 
 
