@@ -46,6 +46,7 @@ def create_webauthn_credential(user_id):
         user.email_address,
         current_app.config["EAS_EMAIL_REPLY_TO_ID"],
         user.name,
+        "added",
         "added to",
         "add this security key to",
     )
@@ -79,6 +80,7 @@ def delete_webauthn_credential(user_id, webauthn_credential_id):
         user.email_address,
         current_app.config["EAS_EMAIL_REPLY_TO_ID"],
         user.name,
+        "deleted",
         "deleted from",
         "delete this security key from",
     )
