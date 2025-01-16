@@ -1,4 +1,4 @@
-from flask import current_app
+from flask import current_app, jsonify
 
 from app.clients.notify_client import notify_send
 from app.models import EMAIL_TYPE, SMS_TYPE
@@ -27,3 +27,20 @@ def send_security_change_sms(mobile_number, sent_to_text):
         "personalisation": {"sent_to": sent_to_text},
     }
     notify_send(notification)
+
+
+def validate_field(field, current_value, updated_value, req_json):
+    if field in req_json:
+        field_str = field.replace("_", " ")
+        updated_value = req_json[field]
+        if updated_value == "":
+            return (
+                jsonify({"errors": [f"Enter a valid {field_str}"]}),
+                400,
+            )
+        elif updated_value == current_value:
+            return (
+                jsonify({"errors": [f"{field_str.capitalize()} must be different to current {field_str}"]}),
+                400,
+            )
+    return None
