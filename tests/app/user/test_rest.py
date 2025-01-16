@@ -1194,14 +1194,14 @@ def test_check_password_is_valid_rejects_reused_password(admin_request, sample_s
     new_data = {"_password": "1234567890TEST!!!!"}
     sample_user = sample_service.users[0]
 
-    json_resp = admin_request.post(
-        "user.check_password_is_valid", user_id=sample_user.id, _data=data, _expected_status=200
-    )
+    json_resp = admin_request.post("user.update_password", user_id=sample_user.id, _data=data, _expected_status=200)
     assert json_resp["data"]["password_changed_at"] is not None
 
     json_resp = admin_request.post(
         "user.check_password_is_valid", user_id=sample_user.id, _data=new_data, _expected_status=200
     )
+
+    json_resp = admin_request.post("user.update_password", user_id=sample_user.id, _data=new_data, _expected_status=200)
 
     assert json_resp["data"]["password_changed_at"] is not None
 
@@ -1211,7 +1211,7 @@ def test_check_password_is_valid_rejects_reused_password(admin_request, sample_s
     assert json_resp["errors"] == ["You've used this password before. Please choose a new one."]
 
 
-def test_update_user_password_low_entropy_password(admin_request, sample_service):
+def test_check_password_is_valid_low_entropy_password(admin_request, sample_service):
     new_password = "low entropy"
     data = {"_password": new_password}
     sample_user = sample_service.users[0]
@@ -1219,6 +1219,48 @@ def test_update_user_password_low_entropy_password(admin_request, sample_service
     json_resp = admin_request.post(
         "user.check_password_is_valid", user_id=sample_user.id, _data=data, _expected_status=400
     )
+
+    assert json_resp["errors"] == ["Your password is not strong enough, try adding more words"]
+
+
+def test_check_password_is_valid_rejects_common_password(admin_request, sample_service, notify_db_session):
+    new_password = "common password 123"
+    data = {"_password": new_password}
+    sample_user = sample_service.users[0]
+
+    common_password = CommonPasswords(password=new_password)
+    notify_db_session.add(common_password)
+    notify_db_session.commit()
+
+    json_resp = admin_request.post(
+        "user.check_password_is_valid", user_id=sample_user.id, _data=data, _expected_status=400
+    )
+
+    assert json_resp["errors"] == ["Your password is too common. Please choose a new one."]
+
+
+def test_update_password_rejects_reused_password(admin_request, sample_service):
+    data = {"_password": "1234567890TEST!!!"}
+    new_data = {"_password": "1234567890TEST!!!!"}
+    sample_user = sample_service.users[0]
+
+    json_resp = admin_request.post("user.update_password", user_id=sample_user.id, _data=data, _expected_status=200)
+    assert json_resp["data"]["password_changed_at"] is not None
+
+    json_resp = admin_request.post("user.update_password", user_id=sample_user.id, _data=new_data, _expected_status=200)
+
+    assert json_resp["data"]["password_changed_at"] is not None
+
+    json_resp = admin_request.post("user.update_password", user_id=sample_user.id, _data=data, _expected_status=400)
+    assert json_resp["errors"] == ["You've used this password before. Please choose a new one."]
+
+
+def test_update_password_rejects_low_entropy_password(admin_request, sample_service):
+    new_password = "low entropy"
+    data = {"_password": new_password}
+    sample_user = sample_service.users[0]
+
+    json_resp = admin_request.post("user.update_password", user_id=sample_user.id, _data=data, _expected_status=400)
 
     assert json_resp["errors"] == ["Your password is not strong enough, try adding more words"]
 
@@ -1232,9 +1274,7 @@ def test_update_user_password_rejects_common_password(admin_request, sample_serv
     notify_db_session.add(common_password)
     notify_db_session.commit()
 
-    json_resp = admin_request.post(
-        "user.check_password_is_valid", user_id=sample_user.id, _data=data, _expected_status=400
-    )
+    json_resp = admin_request.post("user.update_password", user_id=sample_user.id, _data=data, _expected_status=400)
 
     assert json_resp["errors"] == ["Your password is too common. Please choose a new one."]
 
