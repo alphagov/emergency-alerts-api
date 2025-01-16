@@ -573,6 +573,19 @@ def update_password(user_id):
     req_json = request.get_json()
 
     password = req_json.get("_password")
+    if is_password_common(password):
+        return (
+            jsonify({"errors": ["Your password is too common. Please choose a new one."]}),
+            400,
+        )
+    user = get_user_by_id(user_id=user_id)
+    if password and (pwdpy.entropy(password) < current_app.config["MIN_ENTROPY_THRESHOLD"]):
+        return (
+            jsonify({"errors": ["Your password is not strong enough, try adding more words"]}),
+            400,
+        )
+    if password and has_user_already_used_password(user_id, password):
+        return jsonify({"errors": ["You've used this password before. Please choose a new one."]}), 400
     user_update_password_schema_load_json.load(req_json)
     add_old_password_for_user(user_id, password)
 
@@ -598,7 +611,6 @@ def check_password_is_valid(user_id):
         )
     if password and has_user_already_used_password(user_id, password):
         return jsonify({"errors": ["You've used this password before. Please choose a new one."]}), 400
-    add_old_password_for_user(user.id, password)
     return jsonify(data=user.serialize()), 200
 
 
