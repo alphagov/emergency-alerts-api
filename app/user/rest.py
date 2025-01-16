@@ -67,7 +67,11 @@ from app.user.users_schema import (
     post_verify_code_schema,
     post_verify_webauthn_schema,
 )
-from app.user.utils import send_security_change_email, send_security_change_sms
+from app.user.utils import (
+    send_security_change_email,
+    send_security_change_sms,
+    validate_field,
+)
 from app.utils import is_local_host, log_auth_activity, log_user, url_with_token
 
 user_blueprint = Blueprint("user", __name__)
@@ -112,9 +116,23 @@ def update_user_attribute(user_id):
 
     existing_email_address = user_to_update.email_address
     existing_mobile_number = user_to_update.mobile_number
+
     updated_name = req_json.get("name")
+    updated_mobile_number = req_json.get("mobile_number")
+    updated_email_address = req_json.get("email_address")
 
     update_dct = user_update_schema_load_json.load(req_json)
+
+    fields = [
+        ("email_address", updated_email_address, existing_email_address),
+        ("mobile_number", updated_mobile_number, existing_mobile_number),
+        ("name", updated_name, user_to_update.name),
+    ]
+    print(fields)
+    for field, updated_value, current_value in fields:
+        error_response = validate_field(field, current_value, updated_value, req_json)
+        if error_response:
+            return error_response
 
     save_user_attribute(user_to_update, update_dict=update_dct)
     notification = {}
@@ -655,60 +673,6 @@ def check_password_is_valid(user_id):
         )
     if password and has_user_already_used_password(user_id, password):
         return jsonify({"errors": ["You've used this password before. Please choose a new one."]}), 400
-    return jsonify(data=user.serialize()), 200
-
-
-@user_blueprint.route("/<uuid:user_id>/check-name-validity", methods=["POST"])
-def check_name_is_valid(user_id):
-    req_json = request.get_json()
-    name = req_json.get("_name")
-    user = get_user_by_id(user_id=user_id)
-    if name == "":
-        return (
-            jsonify({"errors": ["Enter a name"]}),
-            400,
-        )
-    if user.name == name:
-        return (
-            jsonify({"errors": ["Name must be different to current name"]}),
-            400,
-        )
-    return jsonify(data=user.serialize()), 200
-
-
-@user_blueprint.route("/<uuid:user_id>/check-number-validity", methods=["POST"])
-def check_mobile_number_is_valid(user_id):
-    req_json = request.get_json()
-    mobile_number = req_json.get("_mobile_number")
-    user = get_user_by_id(user_id=user_id)
-    if mobile_number == "":
-        return (
-            jsonify({"errors": ["Enter a valid mobile number"]}),
-            400,
-        )
-    if user.mobile_number == mobile_number:
-        return (
-            jsonify({"errors": ["Mobile number must be different to current mobile number"]}),
-            400,
-        )
-    return jsonify(data=user.serialize()), 200
-
-
-@user_blueprint.route("/<uuid:user_id>/check-email-validity", methods=["POST"])
-def check_email_address_is_valid(user_id):
-    req_json = request.get_json()
-    email_address = req_json.get("_email_address")
-    user = get_user_by_id(user_id=user_id)
-    if email_address == "":
-        return (
-            jsonify({"errors": ["Enter a valid email address"]}),
-            400,
-        )
-    if user.email_address == email_address:
-        return (
-            jsonify({"errors": ["Email address must be different to current email address"]}),
-            400,
-        )
     return jsonify(data=user.serialize()), 200
 
 
