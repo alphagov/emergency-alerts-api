@@ -536,22 +536,10 @@ def fetch_user_by_email():
     return jsonify(data=result)
 
 
-@user_blueprint.route("/<uuid:user_id>/email-in-db", methods=["POST"])
-def check_email_already_in_use(user_id):
-    email = request.get_json()["email"]
-    user = get_user_by_id(user_id)
-    if email == user.email_address:
-        return (
-            jsonify({"errors": ["Email address must be different to current email address"]}),
-            400,
-        )
-    elif email != "":
-        return jsonify(is_email_in_db(email))
-    else:
-        return (
-            jsonify({"errors": ["Enter a valid email address"]}),
-            400,
-        )
+@user_blueprint.route("/email-in-db", methods=["POST"])
+def check_email_already_in_use():
+    email = email_data_request_schema.load(request.get_json())
+    return jsonify(is_email_in_db(email["email"]))
 
 
 @user_blueprint.route("/invited", methods=["POST"])
