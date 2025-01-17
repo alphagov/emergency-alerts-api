@@ -1,3 +1,9 @@
+from emergency_alerts_utils.validation import (
+    InvalidPhoneError,
+    is_uk_phone_number,
+    validate_email_address,
+    validate_phone_number,
+)
 from flask import current_app, jsonify
 
 from app.clients.notify_client import notify_send
@@ -43,4 +49,27 @@ def validate_field(field, current_value, updated_value, req_json):
                 jsonify({"errors": [f"{field_str.capitalize()} must be different to current {field_str}"]}),
                 400,
             )
+        else:
+            try:
+                if field == "mobile_number":
+                    validate_mobile_number(updated_value)
+                elif field == "email_address":
+                    validate_email_address(updated_value)
+            except Exception as error:
+                return (
+                    jsonify({"errors": [f"{error}"]}),
+                    400,
+                )
+
+    return None
+
+
+def validate_mobile_number(mobile_number):
+    try:
+        validate_phone_number(mobile_number, international=not (is_uk_phone_number(mobile_number)))
+    except InvalidPhoneError as error:
+        return (
+            jsonify({"errors": [f"{error}"]}),
+            400,
+        )
     return None
