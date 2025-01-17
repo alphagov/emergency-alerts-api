@@ -4,6 +4,7 @@ from datetime import datetime
 from urllib.parse import urlencode
 
 import pwdpy
+from emergency_alerts_utils.validation import validate_email_address
 from flask import Blueprint, abort, current_app, jsonify, request
 from notifications_python_client.errors import HTTPError
 from sqlalchemy.exc import IntegrityError
@@ -71,6 +72,7 @@ from app.user.utils import (
     send_security_change_email,
     send_security_change_sms,
     validate_field,
+    validate_mobile_number,
 )
 from app.utils import is_local_host, log_auth_activity, log_user, url_with_token
 
@@ -128,7 +130,6 @@ def update_user_attribute(user_id):
         ("mobile_number", updated_mobile_number, existing_mobile_number),
         ("name", updated_name, user_to_update.name),
     ]
-    print(fields)
     for field, updated_value, current_value in fields:
         error_response = validate_field(field, current_value, updated_value, req_json)
         if error_response:
@@ -329,9 +330,33 @@ def send_user_2fa_code(user_id, code_type):
         current_app.logger.info("2FA code requested", extra={"request_data": data, "python_module": __name__})
         if code_type == SMS_TYPE:
             validate(data, post_send_user_sms_code_schema)
+            mobile_number = data["to"]
+            if mobile_number == "":
+                return (
+                    jsonify({"errors": ["Enter a valid mobile number"]}),
+                    400,
+                )
+            else:
+                error_response = validate_mobile_number(mobile_number)
+                if error_response:
+                    return error_response
             send_user_sms_code(user_to_send_to, data)
         elif code_type == EMAIL_TYPE:
             validate(data, post_send_user_email_code_schema)
+            email_address = data["to"]
+            if email_address == "":
+                return (
+                    jsonify({"errors": ["Enter a valid email address"]}),
+                    400,
+                )
+            else:
+                try:
+                    validate_email_address(email_address)
+                except Exception as e:
+                    return (
+                        jsonify({"errors": [f"{e.message}"]}),
+                        400,
+                    )
             send_user_email_code(user_to_send_to, data)
         else:
             abort(404)
@@ -399,7 +424,13 @@ def create_2fa_code(template_id, code_type, user_to_send_to, secret_code, recipi
 @user_blueprint.route("/<uuid:user_id>/change-email-verification", methods=["POST"])
 def send_user_confirm_new_email(user_id):
     user_to_send_to = get_user_by_id(user_id=user_id)
-    email = email_data_request_schema.load(request.get_json())
+    try:
+        email = email_data_request_schema.load(request.get_json())
+    except Exception as e:
+        return (
+            jsonify({"errors": e.messages.get("email")}),
+            400,
+        )
 
     notification = {
         "type": EMAIL_TYPE,
