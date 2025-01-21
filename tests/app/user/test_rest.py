@@ -302,7 +302,7 @@ def test_update_email_with_already_used_email(
 ):
     create_user(name="Service Manago1", email="newuser@mail.com")
     updater = create_user(name="Service Manago2", email="notify_manago@digital.cabinet-office.gov.uk")
-    assert getattr(sample_user, "email_address") != "newuser@mail.com"
+    assert sample_user.email_address != "newuser@mail.com"
     update_dict = {"email_address": "newuser@mail.com", "updated_by": str(updater.id)}
     mocked = mocker.patch("app.user.rest.notify_send")
     json_resp = admin_request.post(
