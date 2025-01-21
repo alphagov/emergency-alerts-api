@@ -4,7 +4,6 @@ from datetime import datetime
 from urllib.parse import urlencode
 
 import pwdpy
-from emergency_alerts_utils.validation import validate_email_address
 from flask import Blueprint, abort, current_app, jsonify, request
 from notifications_python_client.errors import HTTPError
 from sqlalchemy.exc import IntegrityError
@@ -375,24 +374,10 @@ def send_user_2fa_code_new_auth(user_id, code_type):
         elif code_type == EMAIL_TYPE:
             validate(data, post_send_user_email_code_schema)
             email_address = data["to"]
-            if email_address == "":
-                return (
-                    jsonify({"errors": ["Enter a valid email address"]}),
-                    400,
-                )
-            elif email_address == user_to_send_to.email_address:
-                return (
-                    jsonify({"errors": ["Email address must be different to current email address"]}),
-                    400,
-                )
-            else:
-                try:
-                    validate_email_address(email_address)
-                except Exception as e:
-                    return (
-                        jsonify({"errors": [f"{e.message}"]}),
-                        400,
-                    )
+            if error_response := validate_field(
+                "to", user_to_send_to.email_address, email_address, data, "email address"
+            ):
+                return error_response
             send_user_email_code(user_to_send_to, data)
         else:
             abort(404)
