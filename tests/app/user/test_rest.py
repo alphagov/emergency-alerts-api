@@ -295,6 +295,23 @@ def test_post_user_attribute_with_updated_by(
         mocked.assert_not_called()
 
 
+def test_update_email_with_already_used_email(
+    admin_request,
+    mocker,
+    sample_user,
+):
+    create_user(name="Service Manago1", email="newuser@mail.com")
+    updater = create_user(name="Service Manago2", email="notify_manago@digital.cabinet-office.gov.uk")
+    assert getattr(sample_user, "email_address") != "newuser@mail.com"
+    update_dict = {"email_address": "newuser@mail.com", "updated_by": str(updater.id)}
+    mocked = mocker.patch("app.user.rest.notify_send")
+    json_resp = admin_request.post(
+        "user.update_user_attribute", user_id=sample_user.id, _data=update_dict, _expected_status=400
+    )
+    assert json_resp == {"errors": ["Email address is already in use"]}
+    mocked.assert_not_called()
+
+
 def test_archive_user(mocker, admin_request, sample_user):
     archive_mock = mocker.patch("app.user.rest.dao_archive_user")
 
@@ -807,7 +824,7 @@ def test_send_user_confirm_new_email_returns_400_when_email_missing(admin_reques
         _data=data,
         _expected_status=400,
     )
-    assert json_resp["message"] == {"email": ["Missing data for required field."]}
+    assert json_resp == {"errors": ["Enter a valid email address"]}
     mocked.assert_not_called()
 
 
@@ -875,8 +892,7 @@ def test_cannot_remove_mobile_if_sms_auth(admin_request, sample_user):
     json_resp = admin_request.post(
         "user.update_user_attribute", user_id=sample_user.id, _data={"mobile_number": None}, _expected_status=400
     )
-
-    assert json_resp["message"] == "Mobile number must be set if auth_type is set to sms_auth"
+    assert json_resp["errors"] == ["Enter a valid mobile number"]
 
 
 def test_can_remove_mobile_if_email_auth(admin_request, sample_user):
@@ -892,12 +908,12 @@ def test_can_remove_mobile_if_email_auth(admin_request, sample_user):
 
 
 def test_cannot_update_user_with_mobile_number_as_empty_string(admin_request, sample_user):
-    sample_user.auth_type = EMAIL_AUTH_TYPE
+    sample_user.auth_type = SMS_AUTH_TYPE
 
     resp = admin_request.post(
         "user.update_user_attribute", user_id=sample_user.id, _data={"mobile_number": ""}, _expected_status=400
     )
-    assert resp["message"]["mobile_number"] == ["Invalid phone number: Not enough digits"]
+    assert resp["errors"] == ["Enter a valid mobile number"]
 
 
 def test_cannot_update_user_password_using_attributes_method(admin_request, sample_user):
@@ -1189,26 +1205,29 @@ def test_complete_login_after_webauthn_authentication_attempt_raises_400_if_sche
     )
 
 
-def test_check_password_is_valid_rejects_reused_password(admin_request, sample_service):
+def test_check_password_is_valid_rejects_reused_password(admin_request, sample_service, mocker):
     data = {"_password": "1234567890TEST!!!"}
     new_data = {"_password": "1234567890TEST!!!!"}
     sample_user = sample_service.users[0]
 
-    json_resp = admin_request.post(
-        "user.check_password_is_valid", user_id=sample_user.id, _data=data, _expected_status=200
+    json_resp1 = admin_request.post("user.update_password", user_id=sample_user.id, _data=data, _expected_status=200)
+    assert json_resp1["data"]["password_changed_at"] is not None
+
+    admin_request.post("user.check_password_is_valid", user_id=sample_user.id, _data=new_data)
+
+    json_resp2 = admin_request.post(
+        "user.update_password", user_id=sample_user.id, _data=new_data, _expected_status=200
     )
-    assert json_resp["data"]["password_changed_at"] is not None
 
-    json_resp = admin_request.post(
-        "user.check_password_is_valid", user_id=sample_user.id, _data=new_data, _expected_status=200
-    )
+    assert json_resp2["data"]["password_changed_at"] is not None
 
-    assert json_resp["data"]["password_changed_at"] is not None
+    json_resp3 = admin_request.post("user.update_password", user_id=sample_user.id, _data=data, _expected_status=400)
+    assert json_resp3["errors"] == ["You've used this password before. Please choose a new one."]
 
-    json_resp = admin_request.post(
+    json_resp4 = admin_request.post(
         "user.check_password_is_valid", user_id=sample_user.id, _data=data, _expected_status=400
     )
-    assert json_resp["errors"] == ["You've used this password before. Please choose a new one."]
+    assert json_resp4["errors"] == ["You've used this password before. Please choose a new one."]
 
 
 def test_update_user_password_low_entropy_password(admin_request, sample_service):
@@ -1266,47 +1285,49 @@ def test_check_email_already_in_use_for_invalid_email(admin_request, sample_serv
     assert json_resp == {"errors": ["Enter a valid email address"]}
 
 
-def test_check_name_is_valid_rejects_current_name(admin_request, sample_service):
-    data = {"_name": ""}
+def test_update_user_attribute_rejects_current_name(admin_request, sample_service):
+    data = {"name": ""}
     sample_user = sample_service.users[0]
-    new_name = {"_name": sample_user.name}
+    new_name = {"name": sample_user.name}
 
-    json_resp = admin_request.post("user.check_name_is_valid", user_id=sample_user.id, _data=data, _expected_status=400)
+    json_resp = admin_request.post(
+        "user.update_user_attribute", user_id=sample_user.id, _data=data, _expected_status=400
+    )
     assert json_resp["errors"] == ["Enter a name"]
 
     json_resp = admin_request.post(
-        "user.check_name_is_valid", user_id=sample_user.id, _data=new_name, _expected_status=400
+        "user.update_user_attribute", user_id=sample_user.id, _data=new_name, _expected_status=400
     )
     assert json_resp["errors"] == ["Name must be different to current name"]
 
 
 def test_check_email_is_valid_rejects_current_email_address(admin_request, sample_service):
-    data = {"_email_address": ""}
+    data = {"email_address": ""}
     sample_user = sample_service.users[0]
-    new_email = {"_email_address": sample_user.email_address}
+    new_email = {"email_address": sample_user.email_address}
 
     json_resp = admin_request.post(
-        "user.check_email_address_is_valid", user_id=sample_user.id, _data=data, _expected_status=400
+        "user.update_user_attribute", user_id=sample_user.id, _data=data, _expected_status=400
     )
     assert json_resp["errors"] == ["Enter a valid email address"]
 
     json_resp = admin_request.post(
-        "user.check_email_address_is_valid", user_id=sample_user.id, _data=new_email, _expected_status=400
+        "user.update_user_attribute", user_id=sample_user.id, _data=new_email, _expected_status=400
     )
     assert json_resp["errors"] == ["Email address must be different to current email address"]
 
 
-def test_check_mobile_number_is_valid_rejects_current_number(admin_request, sample_service):
-    data = {"_mobile_number": ""}
+def test_update_user_attribute_rejects_current_number(admin_request, sample_service):
+    data = {"mobile_number": ""}
     sample_user = sample_service.users[0]
-    new_number = {"_mobile_number": sample_user.mobile_number}
+    new_number = {"mobile_number": sample_user.mobile_number}
 
     json_resp = admin_request.post(
-        "user.check_mobile_number_is_valid", user_id=sample_user.id, _data=data, _expected_status=400
+        "user.update_user_attribute", user_id=sample_user.id, _data=data, _expected_status=400
     )
     assert json_resp["errors"] == ["Enter a valid mobile number"]
 
     json_resp = admin_request.post(
-        "user.check_mobile_number_is_valid", user_id=sample_user.id, _data=new_number, _expected_status=400
+        "user.update_user_attribute", user_id=sample_user.id, _data=new_number, _expected_status=400
     )
     assert json_resp["errors"] == ["Mobile number must be different to current mobile number"]
