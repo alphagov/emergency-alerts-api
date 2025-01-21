@@ -56,9 +56,9 @@ def validate_field(field, current_value, updated_value, data, field_label):
         )
     else:
         try:
-            if field == "mobile_number":
+            if field_label == "mobile number":
                 validate_mobile_number(updated_value)
-            elif field == "email_address":
+            elif field_label == "email address":
                 try:
                     validate_email_address(updated_value)
                 except InvalidEmailError:
