@@ -40,15 +40,15 @@ def validate_field(field, current_value, updated_value, req_json):
     if field in req_json:
         field_str = field.replace("_", " ")
         updated_value = req_json[field]
-        if updated_value == "":
-            if field_str != "name":
-                return (
-                    jsonify({"errors": [f"Enter a valid {field_str}"]}),
-                    400,
-                )
-            elif field_str == "name":
+        if updated_value == "" or updated_value is None:
+            if field_str == "name":
                 return (
                     jsonify({"errors": ["Enter a name"]}),
+                    400,
+                )
+            else:
+                return (
+                    jsonify({"errors": [f"Enter a valid {field_str}"]}),
                     400,
                 )
         elif updated_value == current_value:
