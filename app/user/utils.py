@@ -1,4 +1,5 @@
 from emergency_alerts_utils.validation import (
+    InvalidEmailError,
     InvalidPhoneError,
     is_uk_phone_number,
     validate_email_address,
@@ -40,10 +41,16 @@ def validate_field(field, current_value, updated_value, req_json):
         field_str = field.replace("_", " ")
         updated_value = req_json[field]
         if updated_value == "":
-            return (
-                jsonify({"errors": [f"Enter a valid {field_str}"]}),
-                400,
-            )
+            if field_str != "name":
+                return (
+                    jsonify({"errors": [f"Enter a valid {field_str}"]}),
+                    400,
+                )
+            elif field_str == "name":
+                return (
+                    jsonify({"errors": ["Enter a name"]}),
+                    400,
+                )
         elif updated_value == current_value:
             return (
                 jsonify({"errors": [f"{field_str.capitalize()} must be different to current {field_str}"]}),
@@ -54,7 +61,10 @@ def validate_field(field, current_value, updated_value, req_json):
                 if field == "mobile_number":
                     validate_mobile_number(updated_value)
                 elif field == "email_address":
-                    validate_email_address(updated_value)
+                    try:
+                        validate_email_address(updated_value)
+                    except InvalidEmailError:
+                        raise InvalidEmailError("Enter a valid email address")
             except Exception as error:
                 return (
                     jsonify({"errors": [f"{error}"]}),
