@@ -114,6 +114,43 @@ def update_user_attribute(user_id):
     else:
         updated_by = None
 
+    update_dct = user_update_schema_load_json.load(req_json)
+
+    save_user_attribute(user_to_update, update_dict=update_dct)
+    notification = {}
+    if updated_by:
+        if "email_address" in update_dct:
+            notification["type"] = EMAIL_TYPE
+            notification["template_id"] = current_app.config["TEAM_MEMBER_EDIT_EMAIL_TEMPLATE_ID"]
+            notification["recipient"] = user_to_update.email_address
+            notification["reply_to"] = current_app.config["EAS_EMAIL_REPLY_TO_ID"]
+        elif "mobile_number" in update_dct:
+            notification["type"] = SMS_TYPE
+            notification["template_id"] = current_app.config["TEAM_MEMBER_EDIT_MOBILE_TEMPLATE_ID"]
+            notification["recipient"] = user_to_update.mobile_number
+        else:
+            return jsonify(data=user_to_update.serialize()), 200
+
+        notification["personalisation"] = {
+            "name": user_to_update.name,
+            "servicemanagername": updated_by.name,
+            "email address": user_to_update.email_address,
+        }
+
+        notify_send(notification)
+
+    return jsonify(data=user_to_update.serialize()), 200
+
+
+@user_blueprint.route("/<uuid:user_id>/update", methods=["POST"])
+def update_user_attribute_with_validation(user_id):
+    user_to_update = get_user_by_id(user_id=user_id)
+    req_json = request.get_json()
+    if "updated_by" in req_json:
+        updated_by = get_user_by_id(user_id=req_json.pop("updated_by"))
+    else:
+        updated_by = None
+
     existing_email_address = user_to_update.email_address
     existing_mobile_number = user_to_update.mobile_number
 
