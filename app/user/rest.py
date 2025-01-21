@@ -72,7 +72,6 @@ from app.user.utils import (
     send_security_change_email,
     send_security_change_sms,
     validate_field,
-    validate_mobile_number,
 )
 from app.utils import is_local_host, log_auth_activity, log_user, url_with_token
 
@@ -129,11 +128,14 @@ def update_user_attribute(user_id):
         ("name", updated_name, user_to_update.name),
     ]
     for field, updated_value, current_value in fields:
-        if not (
-            (field == "mobile_number" and user_to_update.auth_type == EMAIL_AUTH_TYPE)
-            or ((field == "mobile_number" and req_json.get("auth_type") == EMAIL_AUTH_TYPE))
+        if (
+            not (
+                (field == "mobile_number" and user_to_update.auth_type == EMAIL_AUTH_TYPE)
+                or ((field == "mobile_number" and req_json.get("auth_type") == EMAIL_AUTH_TYPE))
+            )
+            and field in req_json
         ):
-            if error_response := validate_field(field, current_value, updated_value, req_json):
+            if error_response := validate_field(field, current_value, updated_value, req_json, field.replace("_", " ")):
                 return error_response
 
     # Check email not already in db
@@ -179,13 +181,13 @@ def update_user_attribute(user_id):
                 user_to_update.name,
                 "email address",
             )
-
         elif "mobile_number" in update_dct and updated_mobile_number:
             security_measure = "mobile number"
             # Sending notification to updated mobile number
             send_security_change_sms(user_to_update.mobile_number, "this phone")
             # Sending notification to previous mobile number
-            send_security_change_sms(existing_mobile_number, "the requested phone")
+            if existing_mobile_number:
+                send_security_change_sms(existing_mobile_number, "the requested phone")
         elif "name" in update_dct:
             security_measure = "name"
 
@@ -365,19 +367,10 @@ def send_user_2fa_code_new_auth(user_id, code_type):
         if code_type == SMS_TYPE:
             validate(data, post_send_user_sms_code_schema)
             mobile_number = data["to"]
-            if mobile_number == "":
-                return (
-                    jsonify({"errors": ["Enter a valid mobile number"]}),
-                    400,
-                )
-            elif mobile_number == user_to_send_to.mobile_number:
-                return (
-                    jsonify({"errors": ["Mobile number must be different to current mobile number"]}),
-                    400,
-                )
-            else:
-                if error_response := validate_mobile_number(mobile_number):
-                    return error_response
+            if error_response := validate_field(
+                "to", user_to_send_to.mobile_number, mobile_number, data, "mobile number"
+            ):
+                return error_response
             send_user_sms_code(user_to_send_to, data)
         elif code_type == EMAIL_TYPE:
             validate(data, post_send_user_email_code_schema)

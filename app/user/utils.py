@@ -36,40 +36,38 @@ def send_security_change_sms(mobile_number, sent_to_text):
     notify_send(notification)
 
 
-def validate_field(field, current_value, updated_value, req_json):
-    if field in req_json:
-        field_str = field.replace("_", " ")
-        updated_value = req_json[field]
-        if updated_value == "" or updated_value is None:
-            if field_str == "name":
-                return (
-                    jsonify({"errors": ["Enter a name"]}),
-                    400,
-                )
-            else:
-                return (
-                    jsonify({"errors": [f"Enter a valid {field_str}"]}),
-                    400,
-                )
-        elif updated_value == current_value:
+def validate_field(field, current_value, updated_value, data, field_label):
+    updated_value = data[field]
+    if updated_value == "" or updated_value is None:
+        if field_label == "name":
             return (
-                jsonify({"errors": [f"{field_str.capitalize()} must be different to current {field_str}"]}),
+                jsonify({"errors": ["Enter a name"]}),
                 400,
             )
         else:
-            try:
-                if field == "mobile_number":
-                    validate_mobile_number(updated_value)
-                elif field == "email_address":
-                    try:
-                        validate_email_address(updated_value)
-                    except InvalidEmailError:
-                        raise InvalidEmailError("Enter a valid email address")
-            except Exception as error:
-                return (
-                    jsonify({"errors": [f"{error}"]}),
-                    400,
-                )
+            return (
+                jsonify({"errors": [f"Enter a valid {field_label}"]}),
+                400,
+            )
+    elif updated_value == current_value:
+        return (
+            jsonify({"errors": [f"{field_label.capitalize()} must be different to current {field_label}"]}),
+            400,
+        )
+    else:
+        try:
+            if field == "mobile_number":
+                validate_mobile_number(updated_value)
+            elif field == "email_address":
+                try:
+                    validate_email_address(updated_value)
+                except InvalidEmailError:
+                    raise InvalidEmailError("Enter a valid email address")
+        except Exception as error:
+            return (
+                jsonify({"errors": [f"{error}"]}),
+                400,
+            )
 
     return None
 
