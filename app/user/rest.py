@@ -376,6 +376,7 @@ def send_user_2fa_code(user_id, code_type):
         )
     else:
         data = request.get_json()
+        current_app.logger.info("2FA code requested", extra={"request_data": data, "python_module": __name__})
         if code_type == SMS_TYPE:
             validate(data, post_send_user_sms_code_schema)
             send_user_sms_code(user_to_send_to, data)
@@ -384,7 +385,6 @@ def send_user_2fa_code(user_id, code_type):
             send_user_email_code(user_to_send_to, data)
         else:
             abort(404)
-        current_app.logger.info("2FA code requested", extra={"request_data": data, "python_module": __name__})
 
     return "{}", 204
 
@@ -400,6 +400,7 @@ def send_user_2fa_code_new_auth(user_id, code_type):
         )
     else:
         data = request.get_json()
+        current_app.logger.info("2FA code requested", extra={"request_data": data, "python_module": __name__})
         if code_type == SMS_TYPE:
             validate(data, post_send_user_sms_code_schema)
             mobile_number = data["to"]
@@ -418,7 +419,6 @@ def send_user_2fa_code_new_auth(user_id, code_type):
             send_user_email_code(user_to_send_to, data)
         else:
             abort(404)
-        current_app.logger.info("2FA code requested", extra={"request_data": data, "python_module": __name__})
 
     return "{}", 204
 
