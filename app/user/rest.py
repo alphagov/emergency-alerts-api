@@ -47,7 +47,7 @@ from app.failed_logins.rest import (
     add_failed_login_for_requester,
     check_throttle_for_requester,
 )
-from app.models import EMAIL_AUTH_TYPE, EMAIL_TYPE, SMS_TYPE, Permission
+from app.models import EMAIL_TYPE, SMS_TYPE, Permission
 from app.password_history.rest import (
     add_old_password_for_user,
     has_user_already_used_password,
@@ -67,9 +67,13 @@ from app.user.users_schema import (
     post_verify_code_schema,
     post_verify_webauthn_schema,
 )
-from app.user.utils import (
+from app.user.utils import (  # send_user_updated_by_notification,
+    get_existing_attributes,
+    get_updated_attributes,
+    get_user_updated_by,
+    relevant_field_updated,
     send_security_change_email,
-    send_security_change_sms,
+    send_security_change_notification,
     validate_field,
 )
 from app.utils import is_local_host, log_auth_activity, log_user, url_with_token
@@ -146,35 +150,26 @@ def update_user_attribute(user_id):
 def update_user_attribute_with_validation(user_id):
     user_to_update = get_user_by_id(user_id=user_id)
     req_json = request.get_json()
-    if "updated_by" in req_json:
-        updated_by = get_user_by_id(user_id=req_json.pop("updated_by"))
-    else:
-        updated_by = None
+    updated_by = get_user_updated_by(req_json)
 
-    existing_email_address = user_to_update.email_address
-    existing_mobile_number = user_to_update.mobile_number
+    # Retrieving existing fields
+    existing_email_address, existing_mobile_number, existing_name = get_existing_attributes(user_to_update)
 
-    updated_name = req_json.get("name")
-    updated_mobile_number = req_json.get("mobile_number")
-    updated_email_address = req_json.get("email_address")
+    # Retrieving fields that have been updated
+    updated_name, updated_mobile_number, updated_email_address = get_updated_attributes(req_json)
 
+    # Validation of the updated field, using utils validation & validators consistent with admin application
     fields = [
         ("email_address", updated_email_address, existing_email_address),
         ("mobile_number", updated_mobile_number, existing_mobile_number),
-        ("name", updated_name, user_to_update.name),
+        ("name", updated_name, existing_name),
     ]
     for field, updated_value, current_value in fields:
-        if (
-            not (
-                (field == "mobile_number" and user_to_update.auth_type == EMAIL_AUTH_TYPE)
-                or ((field == "mobile_number" and req_json.get("auth_type") == EMAIL_AUTH_TYPE))
-            )
-            and field in req_json
-        ):
+        if relevant_field_updated(user_to_update, req_json, field):
             if error_response := validate_field(field, current_value, updated_value, req_json, field.replace("_", " ")):
                 return error_response
 
-    # Check email not already in db
+    # Check updated email not already in database
     if updated_email_address and is_email_in_db(updated_email_address):
         return (
             jsonify({"errors": ["Email address is already in use"]}),
@@ -184,8 +179,8 @@ def update_user_attribute_with_validation(user_id):
     update_dict = user_update_schema_load_json.load(req_json)
 
     save_user_attribute(user_to_update, update_dict=update_dict)
-    notification = {}
     if updated_by:
+        notification = {}
         if "email_address" in update_dict:
             notification["type"] = EMAIL_TYPE
             notification["template_id"] = current_app.config["TEAM_MEMBER_EDIT_EMAIL_TEMPLATE_ID"]
@@ -206,28 +201,19 @@ def update_user_attribute_with_validation(user_id):
 
         notify_send(notification)
     elif any(measure in req_json for measure in ["name", "email_address", "mobile_number"]):
-        security_measure = ""
-        if "email_address" in update_dict and updated_email_address:
-            security_measure = "email address"
-            # Sending notification to previous email address
-            send_security_change_email(
-                current_app.config["SECURITY_INFO_CHANGE_EMAIL_TEMPLATE_ID"],
-                user_to_update.email_address,
-                current_app.config["EAS_EMAIL_REPLY_TO_ID"],
-                user_to_update.name,
-                "email address",
-            )
-        elif "mobile_number" in update_dict and updated_mobile_number:
-            security_measure = "mobile number"
-            # Sending notification to updated mobile number
-            send_security_change_sms(user_to_update.mobile_number, "this phone")
-            # Sending notification to previous mobile number
-            if existing_mobile_number:
-                send_security_change_sms(existing_mobile_number, "the requested phone")
-        elif "name" in update_dict:
-            security_measure = "name"
+        """
+        If any of the relevant user attribute fields have been updated,
+        send the "Your {security measure} has been changed" notification
+        """
+        security_measure = send_security_change_notification(
+            update_dict,
+            user_to_update,
+            updated_email_address,
+            updated_mobile_number,
+            existing_mobile_number,
+        )
 
-        # Sending notification to previous/unchanged email address
+        # Sending notification to previous/unchanged email address to inform of updated field
         if security_measure in {"name", "mobile number", "email address"}:
             send_security_change_email(
                 current_app.config["SECURITY_INFO_CHANGE_EMAIL_TEMPLATE_ID"],

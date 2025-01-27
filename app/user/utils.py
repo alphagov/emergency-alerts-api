@@ -120,7 +120,7 @@ def relevant_field_updated(user_to_update, req_json, field):
     )
 
 
-def get__user_updated_by(req_json):
+def get_user_updated_by(req_json):
     return get_user_by_id(user_id=req_json.pop("updated_by")) if "updated_by" in req_json else None
 
 
