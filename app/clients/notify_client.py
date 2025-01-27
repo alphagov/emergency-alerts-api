@@ -53,20 +53,45 @@ def notify_send(notification):
 
     try:
         response = None
-        if notification["type"] == SMS_TYPE:
+        msg_type = notification["type"]
+        if msg_type == SMS_TYPE:
             response = __notify.client.send_sms_notification(
                 phone_number=notification["recipient"],
                 template_id=notification["template_id"],
                 personalisation=notification["personalisation"],
             )
-        if notification["type"] == EMAIL_TYPE:
+        if msg_type == EMAIL_TYPE:
             response = __notify.client.send_email_notification(
                 email_address=notification["recipient"],
                 template_id=notification["template_id"],
                 personalisation=notification["personalisation"],
                 email_reply_to_id=notification["reply_to"],
             )
+        if response is None:
+            current_app.logger.warning(
+                "Empty response from Notify API",
+                extra={
+                    "python_module": __name__,
+                    "notification": notification,
+                },
+            )
+        else:
+            current_app.logger.info(
+                f"Success sending {msg_type} to Notify API",
+                extra={
+                    "python_module": __name__,
+                    "notification": notification,
+                    "response": response,
+                },
+            )
     except Exception:
-        current_app.logger.exception("Error sending notification", extra={"python_module": __name__})
+        current_app.logger.exception(
+            "Error sending notification",
+            extra={
+                "python_module": __name__,
+                "notification": notification,
+                "response": response,
+            },
+        )
 
     return response

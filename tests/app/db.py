@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -336,13 +336,13 @@ def create_broadcast_event(
     b_e = BroadcastEvent(
         service=broadcast_message.service,
         broadcast_message=broadcast_message,
-        sent_at=sent_at or datetime.utcnow(),
+        sent_at=sent_at or datetime.now(timezone.utc),
         message_type=message_type,
         transmitted_content=transmitted_content or {"body": "this is an emergency broadcast message"},
         transmitted_areas=transmitted_areas or broadcast_message.areas,
         transmitted_sender=transmitted_sender or "www.notifications.service.gov.uk",
         transmitted_starts_at=transmitted_starts_at,
-        transmitted_finishes_at=transmitted_finishes_at or datetime.utcnow() + timedelta(hours=24),
+        transmitted_finishes_at=transmitted_finishes_at or datetime.now(timezone.utc) + timedelta(hours=24),
     )
     db.session.add(b_e)
     db.session.commit()

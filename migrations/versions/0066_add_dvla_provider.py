@@ -28,7 +28,7 @@ def upgrade():
     )
     op.execute(
         "INSERT INTO provider_rates (id, valid_from, rate, provider_id) VALUES ('{}', '{}', 1.0, '{}')".format(
-            uuid.uuid4(), datetime.utcnow(), provider_id
+            uuid.uuid4(), datetime.now(timezone.utc), provider_id
         )
     )
 

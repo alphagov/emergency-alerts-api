@@ -43,7 +43,7 @@ def upgrade():
             template_id,
             template_name,
             "email",
-            datetime.utcnow(),
+            datetime.now(timezone.utc),
             template_content,
             current_app.config["NOTIFY_SERVICE_ID"],
             template_subject,
@@ -57,7 +57,7 @@ def upgrade():
             template_id,
             template_name,
             "email",
-            datetime.utcnow(),
+            datetime.now(timezone.utc),
             template_content,
             current_app.config["NOTIFY_SERVICE_ID"],
             template_subject,
@@ -74,7 +74,7 @@ def upgrade():
 #         INSERT INTO template_redacted (template_id, redact_personalisation, updated_at, updated_by_id)
 #         VALUES ('{}', '{}', '{}', '{}')
 #         ;
-#     """.format(template_id, False, datetime.utcnow(), current_app.config['NOTIFY_USER_ID'])
+#     """.format(template_id, False, datetime.now(timezone.utc), current_app.config['NOTIFY_USER_ID'])
 # )
 
 

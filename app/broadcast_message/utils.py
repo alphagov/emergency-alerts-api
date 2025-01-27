@@ -1,5 +1,5 @@
 import inspect
-from datetime import datetime
+from datetime import datetime, timezone
 
 from emergency_alerts_utils.clients.zendesk.zendesk_client import (
     EASSupportTicket,
@@ -24,16 +24,16 @@ def update_broadcast_message_status(
     _validate_broadcast_update(broadcast_message, new_status, updating_user)
 
     if new_status == BroadcastStatusType.BROADCASTING:
-        broadcast_message.approved_at = datetime.utcnow()
+        broadcast_message.approved_at = datetime.now(timezone.utc)
         broadcast_message.approved_by = updating_user
 
     if new_status == BroadcastStatusType.CANCELLED:
-        broadcast_message.cancelled_at = datetime.utcnow()
+        broadcast_message.cancelled_at = datetime.now(timezone.utc)
         broadcast_message.cancelled_by = updating_user
         broadcast_message.cancelled_by_api_key_id = api_key_id
 
     if new_status == BroadcastStatusType.REJECTED:
-        broadcast_message.rejected_at = datetime.utcnow()
+        broadcast_message.rejected_at = datetime.now(timezone.utc)
         broadcast_message.rejected_by = updating_user
         broadcast_message.rejection_reason = rejection_reason
         broadcast_message.rejected_by_api_key_id = api_key_id

@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy.orm import joinedload
 from sqlalchemy.sql.expression import asc
@@ -116,7 +116,7 @@ def dao_archive_service(service_id):
 
     for api_key in service.api_keys:
         if not api_key.expiry_date:
-            api_key.expiry_date = datetime.utcnow()
+            api_key.expiry_date = datetime.now(timezone.utc)
 
 
 def dao_fetch_service_by_id_and_user(service_id, user_id):
