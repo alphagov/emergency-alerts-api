@@ -114,17 +114,17 @@ def update_user_attribute(user_id):
     else:
         updated_by = None
 
-    update_dct = user_update_schema_load_json.load(req_json)
+    update_dict = user_update_schema_load_json.load(req_json)
 
-    save_user_attribute(user_to_update, update_dict=update_dct)
+    save_user_attribute(user_to_update, update_dict=update_dict)
     notification = {}
     if updated_by:
-        if "email_address" in update_dct:
+        if "email_address" in update_dict:
             notification["type"] = EMAIL_TYPE
             notification["template_id"] = current_app.config["TEAM_MEMBER_EDIT_EMAIL_TEMPLATE_ID"]
             notification["recipient"] = user_to_update.email_address
             notification["reply_to"] = current_app.config["EAS_EMAIL_REPLY_TO_ID"]
-        elif "mobile_number" in update_dct:
+        elif "mobile_number" in update_dict:
             notification["type"] = SMS_TYPE
             notification["template_id"] = current_app.config["TEAM_MEMBER_EDIT_MOBILE_TEMPLATE_ID"]
             notification["recipient"] = user_to_update.mobile_number
@@ -181,17 +181,17 @@ def update_user_attribute_with_validation(user_id):
             400,
         )
 
-    update_dct = user_update_schema_load_json.load(req_json)
+    update_dict = user_update_schema_load_json.load(req_json)
 
-    save_user_attribute(user_to_update, update_dict=update_dct)
+    save_user_attribute(user_to_update, update_dict=update_dict)
     notification = {}
     if updated_by:
-        if "email_address" in update_dct:
+        if "email_address" in update_dict:
             notification["type"] = EMAIL_TYPE
             notification["template_id"] = current_app.config["TEAM_MEMBER_EDIT_EMAIL_TEMPLATE_ID"]
             notification["recipient"] = user_to_update.email_address
             notification["reply_to"] = current_app.config["EAS_EMAIL_REPLY_TO_ID"]
-        elif "mobile_number" in update_dct:
+        elif "mobile_number" in update_dict:
             notification["type"] = SMS_TYPE
             notification["template_id"] = current_app.config["TEAM_MEMBER_EDIT_MOBILE_TEMPLATE_ID"]
             notification["recipient"] = user_to_update.mobile_number
@@ -207,7 +207,7 @@ def update_user_attribute_with_validation(user_id):
         notify_send(notification)
     elif any(measure in req_json for measure in ["name", "email_address", "mobile_number"]):
         security_measure = ""
-        if "email_address" in update_dct and updated_email_address:
+        if "email_address" in update_dict and updated_email_address:
             security_measure = "email address"
             # Sending notification to previous email address
             send_security_change_email(
@@ -217,14 +217,14 @@ def update_user_attribute_with_validation(user_id):
                 user_to_update.name,
                 "email address",
             )
-        elif "mobile_number" in update_dct and updated_mobile_number:
+        elif "mobile_number" in update_dict and updated_mobile_number:
             security_measure = "mobile number"
             # Sending notification to updated mobile number
             send_security_change_sms(user_to_update.mobile_number, "this phone")
             # Sending notification to previous mobile number
             if existing_mobile_number:
                 send_security_change_sms(existing_mobile_number, "the requested phone")
-        elif "name" in update_dct:
+        elif "name" in update_dict:
             security_measure = "name"
 
         # Sending notification to previous/unchanged email address
