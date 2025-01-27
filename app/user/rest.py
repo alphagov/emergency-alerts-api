@@ -74,6 +74,7 @@ from app.user.utils import (  # send_user_updated_by_notification,
     relevant_field_updated,
     send_security_change_email,
     send_security_change_notification,
+    send_updated_by_notification,
     validate_field,
 )
 from app.utils import is_local_host, log_auth_activity, log_user, url_with_token
@@ -180,26 +181,10 @@ def update_user_attribute_with_validation(user_id):
 
     save_user_attribute(user_to_update, update_dict=update_dict)
     if updated_by:
-        notification = {}
-        if "email_address" in update_dict:
-            notification["type"] = EMAIL_TYPE
-            notification["template_id"] = current_app.config["TEAM_MEMBER_EDIT_EMAIL_TEMPLATE_ID"]
-            notification["recipient"] = user_to_update.email_address
-            notification["reply_to"] = current_app.config["EAS_EMAIL_REPLY_TO_ID"]
-        elif "mobile_number" in update_dict:
-            notification["type"] = SMS_TYPE
-            notification["template_id"] = current_app.config["TEAM_MEMBER_EDIT_MOBILE_TEMPLATE_ID"]
-            notification["recipient"] = user_to_update.mobile_number
+        if notification := send_updated_by_notification(update_dict, user_to_update, updated_by):
+            notify_send(notification)
         else:
             return jsonify(data=user_to_update.serialize()), 200
-
-        notification["personalisation"] = {
-            "name": user_to_update.name,
-            "servicemanagername": updated_by.name,
-            "email address": user_to_update.email_address,
-        }
-
-        notify_send(notification)
     elif any(measure in req_json for measure in ["name", "email_address", "mobile_number"]):
         """
         If any of the relevant user attribute fields have been updated,

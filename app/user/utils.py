@@ -136,3 +136,31 @@ def get_existing_attributes(user_to_update):
     existing_mobile_number = user_to_update.mobile_number
     existing_name = user_to_update.name
     return existing_email_address, existing_mobile_number, existing_name
+
+
+def send_updated_by_notification(update_dict, user_to_update, updated_by):
+    notification = {}
+    if "email_address" in update_dict:
+        notification["type"] = EMAIL_TYPE
+        notification["template_id"] = current_app.config["TEAM_MEMBER_EDIT_EMAIL_TEMPLATE_ID"]
+        notification["recipient"] = user_to_update.email_address
+        notification["reply_to"] = current_app.config["EAS_EMAIL_REPLY_TO_ID"]
+        notification = add_personalisation_to_notification(notification, user_to_update, updated_by)
+        return notification
+    elif "mobile_number" in update_dict:
+        notification["type"] = SMS_TYPE
+        notification["template_id"] = current_app.config["TEAM_MEMBER_EDIT_MOBILE_TEMPLATE_ID"]
+        notification["recipient"] = user_to_update.mobile_number
+        notification = add_personalisation_to_notification(notification, user_to_update, updated_by)
+        return notification
+    else:
+        return None
+
+
+def add_personalisation_to_notification(notification, user_to_update, updated_by):
+    notification["personalisation"] = {
+        "name": user_to_update.name,
+        "servicemanagername": updated_by.name,
+        "email address": user_to_update.email_address,
+    }
+    return notification
