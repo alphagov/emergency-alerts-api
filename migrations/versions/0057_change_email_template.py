@@ -37,12 +37,26 @@ def upgrade():
     template_name = "Confirm new email address"
     op.execute(
         template_history_insert.format(
-            template_id, template_name, "email", datetime.now(timezone.utc), template_content, service_id, template_name, user_id
+            template_id,
+            template_name,
+            "email",
+            datetime.now(timezone.utc),
+            template_content,
+            service_id,
+            template_name,
+            user_id,
         )
     )
     op.execute(
         template_insert.format(
-            template_id, template_name, "email", datetime.now(timezone.utc), template_content, service_id, template_name, user_id
+            template_id,
+            template_name,
+            "email",
+            datetime.now(timezone.utc),
+            template_content,
+            service_id,
+            template_name,
+            user_id,
         )
     )
 
