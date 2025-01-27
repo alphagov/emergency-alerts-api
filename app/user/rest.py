@@ -391,7 +391,7 @@ def send_user_2fa_code_new_auth(user_id, code_type):
         else:
             abort(404)
 
-    return "{}", 204
+    return jsonify({}), 204
 
 
 def send_user_sms_code(user_to_send_to, data):
