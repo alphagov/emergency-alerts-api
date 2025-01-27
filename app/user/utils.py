@@ -8,7 +8,8 @@ from emergency_alerts_utils.validation import (
 from flask import current_app, jsonify
 
 from app.clients.notify_client import notify_send
-from app.models import EMAIL_TYPE, SMS_TYPE
+from app.dao.users_dao import get_user_by_id
+from app.models import EMAIL_AUTH_TYPE, EMAIL_TYPE, SMS_TYPE
 
 
 def send_security_change_email(template_id, email, reply_to, name, security_measure):
@@ -81,3 +82,57 @@ def validate_mobile_number(mobile_number):
             400,
         )
     return None
+
+
+def send_security_change_notification(
+    update_dict, user_to_update, updated_email_address=None, updated_mobile_number=None, existing_mobile_number=None
+):
+    security_measure = ""
+    if "email_address" in update_dict and updated_email_address:
+        security_measure = "email address"
+        # Sending notification to previous email address
+        send_security_change_email(
+            current_app.config["SECURITY_INFO_CHANGE_EMAIL_TEMPLATE_ID"],
+            user_to_update.email_address,
+            current_app.config["EAS_EMAIL_REPLY_TO_ID"],
+            user_to_update.name,
+            "email address",
+        )
+    elif "mobile_number" in update_dict and updated_mobile_number:
+        security_measure = "mobile number"
+        # Sending notification to updated mobile number
+        send_security_change_sms(user_to_update.mobile_number, "this phone")
+        # Sending notification to previous mobile number
+        if existing_mobile_number:
+            send_security_change_sms(existing_mobile_number, "the requested phone")
+    elif "name" in update_dict:
+        security_measure = "name"
+    return security_measure
+
+
+def relevant_field_updated(user_to_update, req_json, field):
+    return (
+        not (
+            (field == "mobile_number" and user_to_update.auth_type == EMAIL_AUTH_TYPE)
+            or ((field == "mobile_number" and req_json.get("auth_type") == EMAIL_AUTH_TYPE))
+        )
+        and field in req_json
+    )
+
+
+def get__user_updated_by(req_json):
+    return get_user_by_id(user_id=req_json.pop("updated_by")) if "updated_by" in req_json else None
+
+
+def get_updated_attributes(req_json):
+    updated_name = req_json.get("name")
+    updated_mobile_number = req_json.get("mobile_number")
+    updated_email_address = req_json.get("email_address")
+    return updated_name, updated_mobile_number, updated_email_address
+
+
+def get_existing_attributes(user_to_update):
+    existing_email_address = user_to_update.email_address
+    existing_mobile_number = user_to_update.mobile_number
+    existing_name = user_to_update.name
+    return existing_email_address, existing_mobile_number, existing_name
