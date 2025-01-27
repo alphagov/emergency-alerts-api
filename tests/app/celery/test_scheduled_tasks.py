@@ -1,6 +1,6 @@
 import time
 from collections import namedtuple
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from unittest.mock import call
 
 import pytest
@@ -119,9 +119,7 @@ def test_remove_yesterdays_planned_tests_on_govuk_alerts(mocker):
 
 
 def test_delete_old_records_from_events_table(notify_db_session):
-    old_datetime, recent_datetime = datetime.now(timezone.utc) - timedelta(weeks=78), datetime.now(
-        timezone.utc
-    ) - timedelta(weeks=50)
+    old_datetime, recent_datetime = datetime.now() - timedelta(weeks=78), datetime.now() - timedelta(weeks=50)
     old_event = Event(event_type="test_event", created_at=old_datetime, data={})
     recent_event = Event(event_type="test_event", created_at=recent_datetime, data={})
 
@@ -156,7 +154,7 @@ def test_validate_functional_test_account_emails(notify_db_session):
     notify_db_session.add(user2)
     notify_db_session.commit()
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now()
     time.sleep(1)
 
     validate_functional_test_account_emails()

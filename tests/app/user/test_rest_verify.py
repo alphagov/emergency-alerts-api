@@ -27,8 +27,8 @@ def test_user_verify_sms_code(client, sample_sms_code):
     )
     assert resp.status_code == 204
     assert VerifyCode.query.first().code_used
-    assert sample_sms_code.user.logged_in_at == datetime.now(timezone.utc)
-    assert sample_sms_code.user.email_access_validated_at != datetime.now(timezone.utc)
+    assert sample_sms_code.user.logged_in_at == datetime.now()
+    assert sample_sms_code.user.email_access_validated_at != datetime.now()
     assert sample_sms_code.user.current_session_id is not None
 
 
@@ -514,8 +514,8 @@ def test_user_verify_email_code(admin_request, sample_user, auth_type):
     admin_request.post("user.verify_user_code", user_id=sample_user.id, _data=data, _expected_status=204)
 
     assert verify_code.code_used
-    assert sample_user.logged_in_at == datetime.now(timezone.utc)
-    assert sample_user.email_access_validated_at == datetime.now(timezone.utc)
+    assert sample_user.logged_in_at == datetime.now()
+    assert sample_user.email_access_validated_at == datetime.now()
     assert sample_user.current_session_id is not None
 
 

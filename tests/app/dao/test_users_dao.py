@@ -54,7 +54,7 @@ def test_create_user(notify_db_session, phone_number):
     assert user_query.email_address == email
     assert user_query.id == user.id
     assert user_query.mobile_number == phone_number
-    assert user_query.email_access_validated_at == datetime.now(timezone.utc)
+    assert user_query.email_access_validated_at == datetime.now()
     assert not user_query.platform_admin
 
 
@@ -160,7 +160,7 @@ def test_update_user_password(notify_api, notify_db_session, sample_user):
     assert not sample_user.check_password(password)
     update_user_password(sample_user, password)
     assert sample_user.check_password(password)
-    assert sample_user.password_changed_at == datetime.now(timezone.utc)
+    assert sample_user.password_changed_at == datetime.now()
 
 
 def test_count_user_verify_codes(sample_user):

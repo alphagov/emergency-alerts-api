@@ -231,7 +231,7 @@ def test_get_service_by_id_should_404_if_no_service_for_user(notify_api, sample_
 
 
 def test_get_service_by_id_returns_go_live_user_and_go_live_at(admin_request, sample_user):
-    now = datetime.now(timezone.utc)
+    now = datetime.now()
     service = create_service(user=sample_user, go_live_user=sample_user, go_live_at=now)
     json_resp = admin_request.get("service.get_service_by_id", service_id=service.id)
     assert json_resp["data"]["go_live_user"] == str(sample_user.id)
