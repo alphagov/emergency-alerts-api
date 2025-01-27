@@ -68,13 +68,13 @@ from app.user.users_schema import (
     post_verify_webauthn_schema,
 )
 from app.user.utils import (  # send_user_updated_by_notification,
+    create_updated_by_notification,
     get_existing_attributes,
     get_updated_attributes,
     get_user_updated_by,
     relevant_field_updated,
     send_security_change_email,
     send_security_change_notification,
-    send_updated_by_notification,
     validate_field,
 )
 from app.utils import is_local_host, log_auth_activity, log_user, url_with_token
@@ -181,7 +181,7 @@ def update_user_attribute_with_validation(user_id):
 
     save_user_attribute(user_to_update, update_dict=update_dict)
     if updated_by:
-        if notification := send_updated_by_notification(update_dict, user_to_update, updated_by):
+        if notification := create_updated_by_notification(update_dict, user_to_update, updated_by):
             notify_send(notification)
         else:
             return jsonify(data=user_to_update.serialize()), 200

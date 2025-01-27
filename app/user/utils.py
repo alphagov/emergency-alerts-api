@@ -138,7 +138,7 @@ def get_existing_attributes(user_to_update):
     return existing_email_address, existing_mobile_number, existing_name
 
 
-def send_updated_by_notification(update_dict, user_to_update, updated_by):
+def create_updated_by_notification(update_dict, user_to_update, updated_by):
     notification = {}
     if "email_address" in update_dict:
         notification["type"] = EMAIL_TYPE
