@@ -166,7 +166,7 @@ def update_user_attribute_with_validation(user_id):
         ("name", updated_name, existing_name),
     ]
     for field, updated_value, current_value in fields:
-        if relevant_field_updated(user_to_update, req_json, field, updated_by):
+        if relevant_field_updated(user_to_update, req_json, field):
             if error_response := validate_field(field, current_value, updated_value, req_json, field.replace("_", " ")):
                 return error_response
 

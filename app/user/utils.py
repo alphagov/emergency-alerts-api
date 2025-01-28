@@ -110,10 +110,9 @@ def send_security_change_notification(
     return security_measure
 
 
-def relevant_field_updated(user_to_update, req_json, field, updated_by):
+def relevant_field_updated(user_to_update, req_json, field):
     return (
-        updated_by is None
-        and not (
+        not (
             (field == "mobile_number" and user_to_update.auth_type == EMAIL_AUTH_TYPE)
             or ((field == "mobile_number" and req_json.get("auth_type") == EMAIL_AUTH_TYPE))
         )
