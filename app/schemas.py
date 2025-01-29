@@ -158,7 +158,7 @@ class UserUpdateAttributeSchema(BaseSchema):
     @validates("mobile_number")
     def validate_mobile_number(self, value):
         try:
-            if value is not None:
+            if value is not None and value != "":
                 validate_phone_number(value, international=True)
         except InvalidPhoneError as error:
             raise ValidationError("Invalid phone number: {}".format(error))

@@ -67,6 +67,16 @@ from app.user.users_schema import (
     post_verify_code_schema,
     post_verify_webauthn_schema,
 )
+from app.user.utils import (  # send_user_updated_by_notification,
+    create_updated_by_notification,
+    get_existing_attributes,
+    get_updated_attributes,
+    get_user_updated_by,
+    relevant_field_updated,
+    send_security_change_email,
+    send_security_change_notification,
+    validate_field,
+)
 from app.utils import is_local_host, log_auth_activity, log_user, url_with_token
 
 user_blueprint = Blueprint("user", __name__)
@@ -109,17 +119,17 @@ def update_user_attribute(user_id):
     else:
         updated_by = None
 
-    update_dct = user_update_schema_load_json.load(req_json)
+    update_dict = user_update_schema_load_json.load(req_json)
 
-    save_user_attribute(user_to_update, update_dict=update_dct)
+    save_user_attribute(user_to_update, update_dict=update_dict)
     notification = {}
     if updated_by:
-        if "email_address" in update_dct:
+        if "email_address" in update_dict:
             notification["type"] = EMAIL_TYPE
             notification["template_id"] = current_app.config["TEAM_MEMBER_EDIT_EMAIL_TEMPLATE_ID"]
             notification["recipient"] = user_to_update.email_address
             notification["reply_to"] = current_app.config["EAS_EMAIL_REPLY_TO_ID"]
-        elif "mobile_number" in update_dct:
+        elif "mobile_number" in update_dict:
             notification["type"] = SMS_TYPE
             notification["template_id"] = current_app.config["TEAM_MEMBER_EDIT_MOBILE_TEMPLATE_ID"]
             notification["recipient"] = user_to_update.mobile_number
@@ -133,6 +143,70 @@ def update_user_attribute(user_id):
         }
 
         notify_send(notification)
+
+    return jsonify(data=user_to_update.serialize()), 200
+
+
+@user_blueprint.route("/<uuid:user_id>/update", methods=["POST"])
+def update_user_attribute_with_validation(user_id):
+    user_to_update = get_user_by_id(user_id=user_id)
+    req_json = request.get_json()
+    updated_by = get_user_updated_by(req_json)
+
+    # Retrieving existing fields
+    existing_email_address, existing_mobile_number, existing_name = get_existing_attributes(user_to_update)
+
+    # Retrieving fields that have been updated
+    updated_name, updated_mobile_number, updated_email_address = get_updated_attributes(req_json)
+
+    # Validation of the updated field, using utils validation & validators consistent with admin application
+    fields = [
+        ("email_address", updated_email_address, existing_email_address),
+        ("mobile_number", updated_mobile_number, existing_mobile_number),
+        ("name", updated_name, existing_name),
+    ]
+    for field, updated_value, current_value in fields:
+        if relevant_field_updated(user_to_update, req_json, field):
+            if error_response := validate_field(field, current_value, updated_value, req_json, field.replace("_", " ")):
+                return error_response
+
+    # Check updated email not already in database
+    if updated_email_address and is_email_in_db(updated_email_address):
+        return (
+            jsonify({"errors": ["Email address is already in use"]}),
+            400,
+        )
+
+    update_dict = user_update_schema_load_json.load(req_json)
+
+    save_user_attribute(user_to_update, update_dict=update_dict)
+    if updated_by:
+        if notification := create_updated_by_notification(update_dict, user_to_update, updated_by):
+            notify_send(notification)
+        else:
+            return jsonify(data=user_to_update.serialize()), 200
+    elif any(measure in req_json for measure in ["name", "email_address", "mobile_number"]):
+        """
+        If any of the relevant user attribute fields have been updated,
+        send the "Your {security measure} has been changed" notification
+        """
+        security_measure = send_security_change_notification(
+            update_dict,
+            user_to_update,
+            updated_email_address,
+            updated_mobile_number,
+            existing_mobile_number,
+        )
+
+        # Sending notification to previous/unchanged email address to inform of updated field
+        if security_measure in {"name", "mobile number", "email address"}:
+            send_security_change_email(
+                current_app.config["SECURITY_INFO_CHANGE_EMAIL_TEMPLATE_ID"],
+                existing_email_address,
+                current_app.config["EAS_EMAIL_REPLY_TO_ID"],
+                updated_name or user_to_update.name,
+                security_measure,
+            )
 
     return jsonify(data=user_to_update.serialize()), 200
 
@@ -286,6 +360,40 @@ def send_user_2fa_code(user_id, code_type):
     return "{}", 204
 
 
+@user_blueprint.route("/<uuid:user_id>/<code_type>-code-new-auth", methods=["POST"])
+def send_user_2fa_code_new_auth(user_id, code_type):
+    user_to_send_to = get_user_by_id(user_id=user_id)
+
+    if count_user_verify_codes(user_to_send_to) >= current_app.config.get("MAX_VERIFY_CODE_COUNT"):
+        # Prevent more than `MAX_VERIFY_CODE_COUNT` active verify codes at a time
+        current_app.logger.warning(
+            "Too many verify codes created", extra={"user_id": user_to_send_to.id, "python_module": __name__}
+        )
+    else:
+        data = request.get_json()
+        current_app.logger.info("2FA code requested", extra={"request_data": data, "python_module": __name__})
+        if code_type == SMS_TYPE:
+            validate(data, post_send_user_sms_code_schema)
+            mobile_number = data["to"]
+            if error_response := validate_field(
+                "to", user_to_send_to.mobile_number, mobile_number, data, "mobile number"
+            ):
+                return error_response
+            send_user_sms_code(user_to_send_to, data)
+        elif code_type == EMAIL_TYPE:
+            validate(data, post_send_user_email_code_schema)
+            email_address = data["to"]
+            if error_response := validate_field(
+                "to", user_to_send_to.email_address, email_address, data, "email address"
+            ):
+                return error_response
+            send_user_email_code(user_to_send_to, data)
+        else:
+            abort(404)
+
+    return jsonify({}), 204
+
+
 def send_user_sms_code(user_to_send_to, data):
     recipient = data.get("to") or user_to_send_to.mobile_number
 
@@ -346,16 +454,38 @@ def create_2fa_code(template_id, code_type, user_to_send_to, secret_code, recipi
 @user_blueprint.route("/<uuid:user_id>/change-email-verification", methods=["POST"])
 def send_user_confirm_new_email(user_id):
     user_to_send_to = get_user_by_id(user_id=user_id)
-    email = email_data_request_schema.load(request.get_json())
+    try:
+        email = email_data_request_schema.load(request.get_json())
+    except Exception:
+        return (
+            jsonify({"errors": ["Enter a valid email address"]}),
+            400,
+        )
+    email = email["email"]
+    if email == "" or email is None:
+        return (
+            jsonify({"errors": ["Enter a valid email address"]}),
+            400,
+        )
+    elif email == user_to_send_to.email_address:
+        return (
+            jsonify({"errors": ["Email address must be different to current email address"]}),
+            400,
+        )
+    elif is_email_in_db(email):
+        return (
+            jsonify({"errors": ["Email address is already in use"]}),
+            400,
+        )
 
     notification = {
         "type": EMAIL_TYPE,
         "template_id": current_app.config["CHANGE_EMAIL_CONFIRMATION_TEMPLATE_ID"],
-        "recipient": email["email"],
+        "recipient": email,
         "reply_to": current_app.config["EAS_EMAIL_REPLY_TO_ID"],
         "personalisation": {
             "name": user_to_send_to.name,
-            "url": _create_confirmation_url(user=user_to_send_to, email_address=email["email"]),
+            "url": _create_confirmation_url(user=user_to_send_to, email_address=email),
             "feedback_url": current_app.config["ADMIN_EXTERNAL_URL"] + "/support",
         },
     }
@@ -502,9 +632,21 @@ def fetch_user_by_email():
 
 
 @user_blueprint.route("/email-in-db", methods=["POST"])
-def check_email_already_in_use():
+def check_email_already_in_db():
     email = email_data_request_schema.load(request.get_json())
     return jsonify(is_email_in_db(email["email"]))
+
+
+@user_blueprint.route("/email-in-use", methods=["POST"])
+def check_email_already_in_use():
+    try:
+        email = email_data_request_schema.load(request.get_json())
+        return jsonify(is_email_in_db(email["email"]))
+    except Exception:
+        return (
+            jsonify({"errors": ["Enter a valid email address"]}),
+            400,
+        )
 
 
 @user_blueprint.route("/invited", methods=["POST"])
@@ -574,10 +716,32 @@ def update_password(user_id):
 
     password = req_json.get("_password")
     user_update_password_schema_load_json.load(req_json)
+
+    if is_password_common(password):
+        return (
+            jsonify({"errors": ["Your password is too common. Please choose a new one."]}),
+            400,
+        )
+    user = get_user_by_id(user_id=user_id)
+    if password and (pwdpy.entropy(password) < current_app.config["MIN_ENTROPY_THRESHOLD"]):
+        return (
+            jsonify({"errors": ["Your password is not strong enough, try adding more words"]}),
+            400,
+        )
+    if password and has_user_already_used_password(user_id, password):
+        return jsonify({"errors": ["You've used this password before. Please choose a new one."]}), 400
+
     add_old_password_for_user(user_id, password)
 
     current_app.logger.info("update_password", extra={"python_module": __name__, "user_id": user_id})
     update_user_password(user, password)
+    send_security_change_email(
+        current_app.config["SECURITY_INFO_CHANGE_EMAIL_TEMPLATE_ID"],
+        user.email_address,
+        current_app.config["EAS_EMAIL_REPLY_TO_ID"],
+        user.name,
+        "password",
+    )
     return jsonify(data=user.serialize()), 200
 
 
@@ -598,7 +762,6 @@ def check_password_is_valid(user_id):
         )
     if password and has_user_already_used_password(user_id, password):
         return jsonify({"errors": ["You've used this password before. Please choose a new one."]}), 400
-    add_old_password_for_user(user.id, password)
     return jsonify(data=user.serialize()), 200
 
 
