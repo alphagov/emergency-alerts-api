@@ -543,7 +543,7 @@ def test_send_user_2fa_code_sends_from_number_for_international_numbers(client, 
 
     resp = client.post(
         url_for("user.send_user_2fa_code", code_type="sms", user_id=sample_user.id),
-        data=json.dumps({}),
+        data=json.dumps({"to": sample_user.mobile_number}),
         headers=[("Content-Type", "application/json"), auth_header],
     )
     assert resp.status_code == 204

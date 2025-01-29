@@ -83,7 +83,7 @@ def service_factory(sample_user):
 
 @pytest.fixture(scope="function")
 def sample_user(notify_db_session):
-    return create_user(email="notify@digital.cabinet-office.gov.uk")
+    return create_user(email="emergency-alerts-tests@digital.cabinet-office.gov.uk")
 
 
 @pytest.fixture(scope="function")
