@@ -24,13 +24,13 @@ def upgrade():
         (
             "INSERT INTO provider_rates (id, valid_from, rate, provider_id) VALUES ('{}', '{}', 1.8, "
             "(SELECT id FROM provider_details WHERE identifier = 'mmg'))"
-        ).format(uuid.uuid4(), datetime.utcnow())
+        ).format(uuid.uuid4(), datetime.now(timezone.utc))
     )
     op.execute(
         (
             "INSERT INTO provider_rates (id, valid_from, rate, provider_id) VALUES ('{}', '{}', 2.5, "
             "(SELECT id FROM provider_details WHERE identifier = 'firetext'))"
-        ).format(uuid.uuid4(), datetime.utcnow())
+        ).format(uuid.uuid4(), datetime.now(timezone.utc))
     )
     ### end Alembic commands ###
 

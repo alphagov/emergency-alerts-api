@@ -32,7 +32,7 @@ def upgrade():
     #      FROM services WHERE id NOT IN
     #     (select service_id from annual_billing)
     # """.format(
-    #     current_year, default_limit, datetime.utcnow(), datetime.utcnow()
+    #     current_year, default_limit, datetime.now(timezone.utc), datetime.now(timezone.utc)
     # )
     # op.execute(insert_row_if_not_exist)
 

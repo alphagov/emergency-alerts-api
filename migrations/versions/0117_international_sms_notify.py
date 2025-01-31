@@ -23,7 +23,7 @@ def upgrade():
         INSERT INTO service_permissions VALUES
         ('{}', 'international_sms', '{}')
     """.format(
-            NOTIFY_SERVICE_ID, datetime.utcnow()
+            NOTIFY_SERVICE_ID, datetime.now(timezone.utc)
         )
     )
 

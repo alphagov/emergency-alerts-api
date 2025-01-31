@@ -36,7 +36,7 @@ def upgrade():
             "ece42649-22a8-4d06-b87f-d52d5d3f0a27",
             "Notify email verification code",
             "email",
-            datetime.utcnow(),
+            datetime.now(timezone.utc),
             email_verification_content,
             service_id,
             "Confirm GOV.UK Notify registration",
