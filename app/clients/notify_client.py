@@ -51,22 +51,58 @@ def notify_send(notification):
     if __notify.client is None:
         get_notify_client()
 
+    msg_type = notification["type"]
+    if msg_type not in [SMS_TYPE, EMAIL_TYPE]:
+        current_app.logger.error(
+            "Invalid notification type. Must be either 'sms' or 'email'",
+            extra={
+                "python_module": __name__,
+                "notification": notification,
+            },
+        )
+        return
+
     try:
         response = None
-        if notification["type"] == SMS_TYPE:
+        if msg_type == SMS_TYPE:
             response = __notify.client.send_sms_notification(
                 phone_number=notification["recipient"],
                 template_id=notification["template_id"],
                 personalisation=notification["personalisation"],
             )
-        if notification["type"] == EMAIL_TYPE:
+        if msg_type == EMAIL_TYPE:
             response = __notify.client.send_email_notification(
                 email_address=notification["recipient"],
                 template_id=notification["template_id"],
                 personalisation=notification["personalisation"],
                 email_reply_to_id=notification["reply_to"],
             )
-    except Exception:
-        current_app.logger.exception("Error sending notification", extra={"python_module": __name__})
+        if response is None:
+            current_app.logger.error(
+                f"Empty response sending {msg_type} to Notify API",
+                extra={
+                    "python_module": __name__,
+                    "notification": notification,
+                },
+            )
+        else:
+            current_app.logger.info(
+                f"Success sending {msg_type} to Notify API",
+                extra={
+                    "python_module": __name__,
+                    "notification": notification,
+                    "response": response,
+                },
+            )
+    except Exception as e:
+        current_app.logger.exception(
+            f"Error sending {msg_type} to Notify API",
+            extra={
+                "python_module": __name__,
+                "notification": notification,
+                "response": response,
+                "exception": e,
+            },
+        )
 
     return response
