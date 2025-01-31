@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytz
 from emergency_alerts_utils.url_safe_token import generate_token
@@ -32,7 +32,7 @@ def escape_special_characters(string):
 
 
 def get_archived_db_column_value(column):
-    date = datetime.utcnow().strftime("%Y-%m-%d")
+    date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     return f"_archived_{date}_{column}"
 
 

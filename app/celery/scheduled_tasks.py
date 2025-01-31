@@ -1,5 +1,5 @@
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
@@ -35,10 +35,10 @@ def run_health_check():
 @notify_celery.task(name="delete-verify-codes")
 def delete_verify_codes():
     try:
-        start = datetime.utcnow()
+        start = datetime.now(timezone.utc)
         deleted = delete_codes_older_created_more_than_a_day_ago()
         current_app.logger.info(
-            f"Delete job started {start} finished {datetime.utcnow()} deleted {deleted} verify codes",
+            f"Delete job started {start} finished {datetime.now(timezone.utc)} deleted {deleted} verify codes",
             extra={"python_module": __name__},
         )
     except SQLAlchemyError:
@@ -49,11 +49,11 @@ def delete_verify_codes():
 @notify_celery.task(name="delete-invitations")
 def delete_invitations():
     try:
-        start = datetime.utcnow()
+        start = datetime.now(timezone.utc)
         deleted_invites = delete_invitations_created_more_than_two_days_ago()
         deleted_invites += delete_org_invitations_created_more_than_two_days_ago()
         current_app.logger.info(
-            f"Delete job started {start} finished {datetime.utcnow()} deleted {deleted_invites} invitations",
+            f"Delete job started {start} finished {datetime.now(timezone.utc)} deleted {deleted_invites} invitations",
             extra={"python_module": __name__},
         )
     except SQLAlchemyError:
@@ -110,7 +110,7 @@ def remove_yesterdays_planned_tests_on_govuk_alerts():
 
 @notify_celery.task(name="delete-old-records-from-events-table")
 def delete_old_records_from_events_table():
-    delete_events_before = datetime.utcnow() - timedelta(weeks=52)
+    delete_events_before = datetime.now(timezone.utc) - timedelta(weeks=52)
     event_query = Event.query.filter(Event.created_at < delete_events_before)
 
     deleted_count = event_query.delete()
@@ -148,7 +148,7 @@ def validate_functional_test_account_emails():
         current_app.logger.exception(e)
     else:
         current_app.logger.info(
-            f"Functional test account emails validated on {datetime.utcnow().date}",
+            f"Functional test account emails validated on {datetime.now(timezone.utc).date}",
             extra={
                 "python_module": __name__,
                 "celery_task": "validate-functional-test-account-emails",

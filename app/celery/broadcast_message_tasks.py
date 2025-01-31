@@ -68,7 +68,7 @@ def check_event_makes_sense_in_sequence(broadcast_event, provider):
             + f"It is in status {current_provider_message.status}"
         )
 
-    if broadcast_event.transmitted_finishes_at < datetime.utcnow():
+    if broadcast_event.transmitted_finishes_at < datetime.now():
         raise BroadcastIntegrityError(
             f"Cannot send broadcast_event {broadcast_event.id} "
             + f"to provider {provider}: "
