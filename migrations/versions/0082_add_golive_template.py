@@ -7,7 +7,7 @@ Create Date: 2017-05-10 16:06:04.070874
 """
 
 # revision identifiers, used by Alembic.
-from datetime import datetime
+from datetime import datetime, timezone
 
 import sqlalchemy as sa
 from alembic import op

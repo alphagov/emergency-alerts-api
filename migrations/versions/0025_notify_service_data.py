@@ -9,7 +9,7 @@ Create Date: 2016-06-01 14:17:01.963181
 import uuid
 
 # revision identifiers, used by Alembic.
-from datetime import datetime
+from datetime import datetime, timezone
 
 from alembic import op
 

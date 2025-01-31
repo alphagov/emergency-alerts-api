@@ -7,7 +7,7 @@ Create Date: 2016-07-07 16:02:06.241769
 """
 
 # revision identifiers, used by Alembic.
-from datetime import datetime
+from datetime import datetime, timezone
 
 revision = "0041_email_template"
 down_revision = "0040_adjust_mmg_provider_rate"

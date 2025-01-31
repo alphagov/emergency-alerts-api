@@ -6,7 +6,7 @@ Create Date: 2021-02-15 15:36:34.654275
 
 """
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 
 from alembic import op
 from flask import current_app

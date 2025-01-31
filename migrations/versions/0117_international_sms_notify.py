@@ -10,7 +10,7 @@ Create Date: 2017-08-29 14:09:41.042061
 revision = "0117_international_sms_notify"
 down_revision = "0116_another_letter_org"
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from alembic import op
 
