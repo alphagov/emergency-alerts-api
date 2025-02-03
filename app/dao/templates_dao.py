@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import asc, desc
 
@@ -27,7 +27,7 @@ def dao_update_template_reply_to(template_id, reply_to):
     Template.query.filter_by(id=template_id).update(
         {
             "service_letter_contact_id": reply_to,
-            "updated_at": datetime.utcnow(),
+            "updated_at": datetime.now(timezone.utc),
             "version": Template.version + 1,
         }
     )

@@ -1,6 +1,6 @@
 import json
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from flask import current_app, url_for
@@ -231,7 +231,7 @@ def test_get_service_by_id_should_404_if_no_service_for_user(notify_api, sample_
 
 
 def test_get_service_by_id_returns_go_live_user_and_go_live_at(admin_request, sample_user):
-    now = datetime.utcnow()
+    now = datetime.now()
     service = create_service(user=sample_user, go_live_user=sample_user, go_live_at=now)
     json_resp = admin_request.get("service.get_service_by_id", service_id=service.id)
     assert json_resp["data"]["go_live_user"] == str(sample_user.id)
@@ -1613,7 +1613,7 @@ def test_set_as_broadcast_service_revokes_api_keys(
     api_key_2 = create_api_key(service=sample_service)
     api_key_3 = create_api_key(service=sample_service_full_permissions)
 
-    api_key_2.expiry_date = datetime.utcnow() - timedelta(days=365)
+    api_key_2.expiry_date = datetime.now(timezone.utc) - timedelta(days=365)
 
     admin_request.post(
         "service.set_as_broadcast_service",

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from flask import current_app
 
@@ -49,7 +49,7 @@ def set_broadcast_service_type(service, service_mode, broadcast_channel, provide
         if service.restricted:
             # Only update the go live at timestamp if this if moving from training mode
             # to live mode, not if it's moving from one type of live mode service to another
-            service.go_live_at = datetime.utcnow()
+            service.go_live_at = datetime.now(timezone.utc)
         service.restricted = False
     else:
         service.restricted = True
@@ -63,7 +63,7 @@ def set_broadcast_service_type(service, service_mode, broadcast_channel, provide
     ApiKey.query.filter_by(
         service_id=service.id,
         expiry_date=None,
-    ).update({ApiKey.expiry_date: datetime.utcnow()})
+    ).update({ApiKey.expiry_date: datetime.now(timezone.utc)})
 
     # Add service to organisation
     organisation = Organisation.query.filter_by(id=current_app.config["BROADCAST_ORGANISATION_ID"]).one()
