@@ -932,6 +932,19 @@ class BroadcastMessage(db.Model):
         }
 
 
+class BroadcastMessageHistory(TemplateBase):
+    __tablename__ = "broadcast_message_history"
+    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    reference = db.Column(db.String(255), nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=True, onupdate=datetime.datetime.utcnow)
+    content = db.Column(db.String, nullable=False)
+    service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"))
+    created_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=True)
+    version = db.Column(db.Integer, primary_key=True, nullable=False)
+    areas = db.Column(JSONB(none_as_null=True), nullable=False, default=list)
+
+
 class BroadcastEventMessageType:
     ALERT = "alert"
     UPDATE = "update"
