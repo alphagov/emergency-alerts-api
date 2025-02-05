@@ -71,7 +71,9 @@ def test_send_broadcast_event_calls_publish_govuk_alerts_task(
     with set_config(notify_api, "ENABLED_CBCS", ["ee", "vodafone"]):
         send_broadcast_event(event.id)
 
-    mock.assert_called_once_with(name=TaskNames.PUBLISH_GOVUK_ALERTS, queue=QueueNames.GOVUK_ALERTS)
+    mock.assert_called_once_with(
+        name=TaskNames.PUBLISH_GOVUK_ALERTS, queue=QueueNames.GOVUK_ALERTS, kwargs={"broadcast_event_id": event.id}
+    )
 
 
 def test_send_broadcast_event_only_sends_to_one_provider_if_set_on_service(
