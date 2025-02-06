@@ -185,10 +185,10 @@ def create_history(obj, history_cls=None):
 
     if not obj.version:
         obj.version = 1
-        obj.created_at = datetime.datetime.utcnow()
+        obj.created_at = datetime.datetime.now(datetime.timezone.utc)
     else:
         obj.version += 1
-        now = datetime.datetime.utcnow()
+        now = datetime.datetime.now(datetime.timezone.utc)
         obj.updated_at = now
         data["updated_at"] = now
 
