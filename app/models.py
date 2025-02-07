@@ -932,9 +932,9 @@ class BroadcastMessage(db.Model):
         }
 
 
-class BroadcastMessageHistory(TemplateBase):
+class BroadcastMessageHistory(db.Model):
     __tablename__ = "broadcast_message_history"
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = db.Column(UUID(as_uuid=True), default=uuid.uuid4)
     reference = db.Column(db.String(255), nullable=True)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
     updated_at = db.Column(db.DateTime, nullable=True, onupdate=datetime.datetime.utcnow)
@@ -943,6 +943,19 @@ class BroadcastMessageHistory(TemplateBase):
     created_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=True)
     version = db.Column(db.Integer, primary_key=True, nullable=False)
     areas = db.Column(JSONB(none_as_null=True), nullable=False, default=list)
+
+    def serialize(self):
+        return {
+            "id": str(self.id),
+            "reference": self.reference,
+            "service_id": str(self.service_id),
+            "content": self.content,
+            "areas": self.areas,
+            "created_at": get_dt_string_or_none(self.created_at),
+            "updated_at": get_dt_string_or_none(self.updated_at),
+            "created_by_id": get_uuid_string_or_none(self.created_by_id),
+            "version": self.version,
+        }
 
 
 class BroadcastEventMessageType:
