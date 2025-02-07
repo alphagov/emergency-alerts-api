@@ -8,6 +8,7 @@ from app.broadcast_message.broadcast_message_schema import (
     update_broadcast_message_schema,
     update_broadcast_message_status_schema,
 )
+from app.broadcast_message_history.rest import create_broadcast_message_version
 from app.dao.broadcast_message_dao import (
     dao_get_broadcast_message_by_id_and_service_id,
     dao_get_broadcast_message_by_id_and_service_id_with_user,
@@ -178,6 +179,7 @@ def update_broadcast_message(service_id, broadcast_message_id):
     if "ids" in areas and "simple_polygons" in areas:
         broadcast_message.areas = areas
 
+    create_broadcast_message_version(broadcast_message, service_id)
     dao_save_object(broadcast_message)
 
     return jsonify(broadcast_message.serialize()), 200
