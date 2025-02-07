@@ -36,7 +36,6 @@ def upgrade():
         op.f("ix_broadcast_message_history_service_id"), "broadcast_message_history", ["service_id"], unique=False
     )
 
-    op.get_bind()
     op.execute(
         (
             """INSERT INTO broadcast_message_history (id, reference, created_at, updated_at,
