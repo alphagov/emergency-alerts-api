@@ -776,6 +776,53 @@ class Permission(db.Model):
     __table_args__ = (UniqueConstraint("service_id", "user_id", "permission", name="uix_service_user_permission"),)
 
 
+# Tasks which require another platform/org admin to approve before being actioned
+ADMIN_INVITE_USER = "invite_user"
+ADMIN_INVITE_USER_ORG = "invite_user_org"
+ADMIN_EDIT_PERMISSIONS = "edit_permissions"  # Only if adding permissions, removal does not need approval
+ADMIN_CREATE_API_KEY = "create_api_key"
+
+ADMIN_ACTION_LIST = [
+    ADMIN_INVITE_USER,
+    ADMIN_INVITE_USER_ORG,
+    ADMIN_EDIT_PERMISSIONS,
+    ADMIN_CREATE_API_KEY,
+]
+
+ADMIN_STATUS_PENDING = "pending"
+ADMIN_STATUS_APPROVED = "approved"
+ADMIN_STATUS_REJECTED = "rejected"
+
+ADMIN_STATUS_LIST = [
+    ADMIN_STATUS_PENDING,
+    ADMIN_STATUS_APPROVED,
+    ADMIN_STATUS_REJECTED,
+]
+
+
+class AdminAction(db.Model):
+    __tablename__ = "admin_actions"
+
+    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organisation_id = db.Column(UUID(as_uuid=True), db.ForeignKey("organisation.id"), index=True, nullable=False)
+    organisation = db.relationship("Organisation")
+    # Null if an org user invite (not tied to a service):
+    service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"), index=True, nullable=True)
+    service = db.relationship("Service")
+    action_type = db.Column(db.Enum(*ADMIN_ACTION_LIST, name="admin_action_types"), nullable=False)
+    action_data = db.Column(JSON, nullable=False)  # Params for the relevant action
+
+    created_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), index=True, nullable=False)
+    created_by = db.relationship("User", foreign_keys=[created_by_id])
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.now(datetime.timezone.utc))
+
+    status = db.Column(db.Enum(*ADMIN_STATUS_LIST, name="admin_action_status_types"), nullable=False)
+
+    reviewed_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), index=True, nullable=False)
+    reviewed_by = db.relationship("User", foreign_keys=[reviewed_by_id])
+    reviewed_at = db.Column(db.DateTime, nullable=True)
+
+
 class Event(db.Model):
     __tablename__ = "events"
 
