@@ -822,6 +822,20 @@ class AdminAction(db.Model):
     reviewed_by = db.relationship("User", foreign_keys=[reviewed_by_id])
     reviewed_at = db.Column(db.DateTime, nullable=True)
 
+    def serialize(self):
+        return {
+            "id": str(self.id),
+            "organization_id": self.reference,
+            "service_id": self.service_id,
+            "action_type": self.action_type,
+            "action_data": self.action_data,
+            "created_by": str(self.created_by_id),
+            "created_at": str(self.created_at.strftime(DATETIME_FORMAT)),
+            "status": self.status,
+            "reviewed_by": str(self.reviewed_by_id),
+            "reviewed_at": str(self.reviewed_at.strftime(DATETIME_FORMAT)),
+        }
+
 
 class Event(db.Model):
     __tablename__ = "events"
