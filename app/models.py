@@ -825,15 +825,15 @@ class AdminAction(db.Model):
     def serialize(self):
         return {
             "id": str(self.id),
-            "organization_id": self.reference,
+            "organization_id": self.organisation_id,
             "service_id": self.service_id,
             "action_type": self.action_type,
             "action_data": self.action_data,
             "created_by": str(self.created_by_id),
             "created_at": str(self.created_at.strftime(DATETIME_FORMAT)),
             "status": self.status,
-            "reviewed_by": str(self.reviewed_by_id),
-            "reviewed_at": str(self.reviewed_at.strftime(DATETIME_FORMAT)),
+            "reviewed_by": str(self.reviewed_by_id) if self.reviewed_by else None,
+            "reviewed_at": str(self.reviewed_at.strftime(DATETIME_FORMAT)) if self.reviewed_at else None,
         }
 
 
