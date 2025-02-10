@@ -818,7 +818,7 @@ class AdminAction(db.Model):
 
     status = db.Column(db.Enum(*ADMIN_STATUS_LIST, name="admin_action_status_types"), nullable=False)
 
-    reviewed_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), index=True, nullable=False)
+    reviewed_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), index=True, nullable=True)
     reviewed_by = db.relationship("User", foreign_keys=[reviewed_by_id])
     reviewed_at = db.Column(db.DateTime, nullable=True)
 
