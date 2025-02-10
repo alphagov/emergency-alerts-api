@@ -20,7 +20,7 @@ def create_admin_action():
         service_id=data["service_id"],
         action_type=data["action_type"],
         action_data=data["action_data"],
-        created_by=data["created_by"],
+        created_by_id=data["created_by"],
         status=ADMIN_STATUS_PENDING,
     )
 
