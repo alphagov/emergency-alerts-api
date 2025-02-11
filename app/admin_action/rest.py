@@ -66,6 +66,13 @@ def get_pending_admin_actions():
     return jsonify(ret), 200
 
 
+@admin_action_blueprint.route("/<uuid:action_id>", methods=["GET"])
+def get_admin_action_by_id(action_id):
+    action = dao_get_admin_action_by_id(action_id)
+
+    return jsonify(action.serialize()), 200
+
+
 @admin_action_blueprint.route("/<uuid:action_id>/review", methods=["POST"])
 def review_admin_action(action_id):
     data = request.get_json()
