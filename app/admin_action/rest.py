@@ -3,6 +3,8 @@ from flask import Blueprint, jsonify, request
 from app.admin_action.admin_action_schema import create_admin_action_schema
 from app.dao.admin_action_dao import dao_get_pending_admin_actions
 from app.dao.dao_utils import dao_save_object
+from app.dao.organisation_dao import dao_get_organisation_by_id
+from app.dao.services_dao import dao_fetch_service_by_id
 from app.models import ADMIN_STATUS_PENDING, AdminAction
 from app.schema_validation import validate
 
@@ -35,4 +37,17 @@ def create_admin_action():
 def get_pending_admin_actions():
     pending = [x.serialize() for x in dao_get_pending_admin_actions()]
 
-    return jsonify(pending), 200
+    organisation_ids = set(x["organization_id"] for x in pending)
+    service_ids = set(x["service_id"] for x in pending)
+    # user_ids = set(x["action_data"]["user_id"] for x in pending)
+
+    organizations = dict((str(x), dao_get_organisation_by_id(x).serialize_for_list()) for x in organisation_ids)
+    services = dict((str(x), dao_fetch_service_by_id(x).serialize_for_org_dashboard()) for x in service_ids)
+
+    ret = {
+        "pending": pending,
+        "organizations": organizations,
+        "services": services,
+    }
+
+    return jsonify(ret), 200
