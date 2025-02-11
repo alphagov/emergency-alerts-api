@@ -2,6 +2,7 @@ from app.models import (
     ADMIN_ACTION_LIST,
     ADMIN_INVITE_USER,
     ADMIN_INVITE_USER_ORG,
+    ADMIN_STATUS_LIST,
     PERMISSION_LIST,
 )
 from app.schema_validation.definitions import uuid
@@ -48,5 +49,15 @@ create_admin_action_schema = {
             },
         },
     ],
+    "additionalProperties": False,
+}
+
+review_admin_action_schema = {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "description": "POST review admin_action",
+    "type": "object",
+    "title": "Review admin_action",
+    "properties": {"reviewed_by": uuid, "status": {"type": "string", "enum": ADMIN_STATUS_LIST}},
+    "required": ["reviewed_by", "status"],
     "additionalProperties": False,
 }
