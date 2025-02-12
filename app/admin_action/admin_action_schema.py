@@ -4,6 +4,7 @@ from app.models import (
     ADMIN_INVITE_USER_ORG,
     ADMIN_STATUS_LIST,
     PERMISSION_LIST,
+    USER_AUTH_TYPES,
 )
 from app.schema_validation.definitions import uuid
 
@@ -43,6 +44,8 @@ create_admin_action_schema = {
                     "properties": {
                         "email": {"type": "string"},
                         "permissions": {"type": "array", "items": {"type": "string", "enum": PERMISSION_LIST}},
+                        "login_authentication": {"type": "string", "enum": USER_AUTH_TYPES},
+                        "folder_permissions": {"type": "array", "items": uuid},
                     },
                     "required": ["email", "permissions"],
                 },
