@@ -29,7 +29,7 @@ create_admin_action_schema = {
                 "action_data": {
                     "type": "object",
                     "properties": {
-                        "email": {"type": "string"},
+                        "email_address": {"type": "string"},
                     },
                     "required": ["email"],
                 },
@@ -42,12 +42,12 @@ create_admin_action_schema = {
                 "action_data": {
                     "type": "object",
                     "properties": {
-                        "email": {"type": "string"},
+                        "email_address": {"type": "string"},
                         "permissions": {"type": "array", "items": {"type": "string", "enum": PERMISSION_LIST}},
                         "login_authentication": {"type": "string", "enum": USER_AUTH_TYPES},
                         "folder_permissions": {"type": "array", "items": uuid},
                     },
-                    "required": ["email", "permissions"],
+                    "required": ["email_address", "permissions", "login_authentication", "folder_permissions"],
                 },
             },
         },
