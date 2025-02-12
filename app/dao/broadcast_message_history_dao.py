@@ -28,12 +28,15 @@ def dao_get_latest_broadcast_message_version_number_by_id_and_service_id(
 
 
 def dao_get_latest_broadcast_message_version_by_id_and_service_id(broadcast_message_id, service_id):
-    return (
+    latest_broadcast_message = (
         BroadcastMessageHistory.query.filter_by(id=broadcast_message_id, service_id=service_id)
         .order_by(desc(BroadcastMessageHistory.version))
         .first()
-        .version
-    ) or 0
+    )
+    if latest_broadcast_message is not None:
+        return latest_broadcast_message.version
+    else:
+        return 0
 
 
 def get_latest_broadcast_message_draft(broadcast_message_id, service_id):
@@ -48,7 +51,11 @@ def get_latest_broadcast_message_draft(broadcast_message_id, service_id):
 def dao_create_broadcast_message_version(broadcast_message, service_id):
     latest_version = dao_get_latest_broadcast_message_version_by_id_and_service_id(broadcast_message.id, service_id)
     latest_broadcast_message = get_latest_broadcast_message_draft(broadcast_message.id, service_id)
-    if (latest_broadcast_message.reference, latest_broadcast_message.content, latest_broadcast_message.areas) != (
+    if latest_broadcast_message is None or (
+        latest_broadcast_message.reference,
+        latest_broadcast_message.content,
+        latest_broadcast_message.areas,
+    ) != (
         broadcast_message.reference,
         broadcast_message.content,
         broadcast_message.areas,
