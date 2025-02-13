@@ -1,5 +1,6 @@
 from app.models import (
     ADMIN_ACTION_LIST,
+    ADMIN_EDIT_PERMISSIONS,
     ADMIN_INVITE_USER,
     ADMIN_INVITE_USER_ORG,
     ADMIN_STATUS_LIST,
@@ -48,6 +49,22 @@ create_admin_action_schema = {
                         "folder_permissions": {"type": "array", "items": uuid},
                     },
                     "required": ["email_address", "permissions", "login_authentication", "folder_permissions"],
+                },
+            },
+        },
+        {
+            "required": ["service_id"],
+            "properties": {
+                "action_type": {"const": ADMIN_EDIT_PERMISSIONS},
+                "action_data": {
+                    "type": "object",
+                    "properties": {
+                        "user_id": uuid,
+                        "existing_permissions": {"type": "array", "items": {"type": "string", "enum": PERMISSION_LIST}},
+                        "permissions": {"type": "array", "items": {"type": "string", "enum": PERMISSION_LIST}},
+                        "folder_permissions": {"type": "array", "items": uuid},
+                    },
+                    "required": ["user_id", "permissions", "existing_permissions", "folder_permissions"],
                 },
             },
         },
