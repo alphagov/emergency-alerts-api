@@ -15,7 +15,7 @@ from app.dao.organisation_dao import dao_get_organisation_by_id
 from app.dao.services_dao import dao_fetch_service_by_id
 from app.dao.users_dao import get_user_by_id
 from app.errors import InvalidRequest
-from app.models import ADMIN_STATUS_PENDING, AdminAction
+from app.models import ADMIN_EDIT_PERMISSIONS, ADMIN_STATUS_PENDING, AdminAction
 from app.schema_validation import validate
 
 admin_action_blueprint = Blueprint("admin_action", __name__)
@@ -51,6 +51,11 @@ def get_pending_admin_actions():
     organisation_ids = set(x["organization_id"] for x in pending)
     service_ids = set(x["service_id"] for x in pending)
     user_ids = set(x["created_by"] for x in pending)
+
+    for action in pending:
+        # This action contains just a user ID but grab it for related data
+        if action["action_type"] == ADMIN_EDIT_PERMISSIONS:
+            user_ids.add(action["action_data"]["user_id"])
 
     organizations = dict((str(x), dao_get_organisation_by_id(x).serialize_for_list()) for x in organisation_ids)
     services = dict((str(x), dao_fetch_service_by_id(x).serialize_for_org_dashboard()) for x in service_ids)
