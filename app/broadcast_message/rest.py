@@ -8,6 +8,7 @@ from app.broadcast_message.broadcast_message_schema import (
     update_broadcast_message_schema,
     update_broadcast_message_status_schema,
 )
+from app.broadcast_message_history.rest import create_broadcast_message_version
 from app.dao.broadcast_message_dao import (
     dao_get_broadcast_message_by_id_and_service_id,
     dao_get_broadcast_message_by_id_and_service_id_with_user,
@@ -110,7 +111,7 @@ def create_broadcast_message(service_id):
     if template_id:
         template = dao_get_template_by_id_and_service_id(template_id, data["service_id"])
         content = str(template._as_utils_template())
-        reference = None
+        reference = str(template.name)
     else:
         temporary_template = BroadcastMessageTemplate.from_content(data["content"])
         if temporary_template.content_too_long:
@@ -138,6 +139,7 @@ def create_broadcast_message(service_id):
     )
 
     dao_save_object(broadcast_message)
+    create_broadcast_message_version(broadcast_message, service_id)
 
     return jsonify(broadcast_message.serialize()), 201
 
@@ -179,6 +181,7 @@ def update_broadcast_message(service_id, broadcast_message_id):
         broadcast_message.areas = areas
 
     dao_save_object(broadcast_message)
+    create_broadcast_message_version(broadcast_message, service_id)
 
     return jsonify(broadcast_message.serialize()), 200
 
