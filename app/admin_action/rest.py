@@ -11,7 +11,6 @@ from app.dao.admin_action_dao import (
     dao_get_pending_admin_actions,
 )
 from app.dao.dao_utils import dao_save_object
-from app.dao.organisation_dao import dao_get_organisation_by_id
 from app.dao.services_dao import dao_fetch_service_by_id
 from app.dao.users_dao import get_user_by_id
 from app.errors import InvalidRequest
@@ -28,7 +27,6 @@ def create_admin_action():
     validate(data, create_admin_action_schema)
 
     admin_action = AdminAction(
-        organisation_id=data["organisation_id"],
         service_id=data["service_id"],
         action_type=data["action_type"],
         action_data=data["action_data"],
@@ -48,7 +46,6 @@ def get_pending_admin_actions():
     pending = [x.serialize() for x in dao_get_pending_admin_actions()]
 
     # Grab related data to show in the UI:
-    organisation_ids = set(x["organization_id"] for x in pending)
     service_ids = set(x["service_id"] for x in pending)
     user_ids = set(x["created_by"] for x in pending)
 
@@ -57,13 +54,11 @@ def get_pending_admin_actions():
         if action["action_type"] == ADMIN_EDIT_PERMISSIONS:
             user_ids.add(action["action_data"]["user_id"])
 
-    organizations = dict((str(x), dao_get_organisation_by_id(x).serialize_for_list()) for x in organisation_ids)
     services = dict((str(x), dao_fetch_service_by_id(x).serialize_for_org_dashboard()) for x in service_ids)
     users = dict((str(x), get_user_by_id(x).serialize_for_users_list()) for x in user_ids)
 
     ret = {
         "pending": pending,
-        "organizations": organizations,
         "services": services,
         "users": users,
     }

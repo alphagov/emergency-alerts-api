@@ -18,11 +18,10 @@ def upgrade():
     op.create_table(
         "admin_actions",
         sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column("organisation_id", postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column("service_id", postgresql.UUID(as_uuid=True), nullable=True),
+        sa.Column("service_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column(
             "action_type",
-            sa.Enum("invite_user", "invite_user_org", "edit_permissions", "create_api_key", name="admin_action_types"),
+            sa.Enum("invite_user", "edit_permissions", "create_api_key", name="admin_action_types"),
             nullable=False,
         ),
         sa.Column("action_data", postgresql.JSON(astext_type=sa.Text()), nullable=False),
@@ -38,10 +37,6 @@ def upgrade():
             ["users.id"],
         ),
         sa.ForeignKeyConstraint(
-            ["organisation_id"],
-            ["organisation.id"],
-        ),
-        sa.ForeignKeyConstraint(
             ["reviewed_by_id"],
             ["users.id"],
         ),
@@ -52,7 +47,6 @@ def upgrade():
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(op.f("ix_admin_actions_created_by_id"), "admin_actions", ["created_by_id"], unique=False)
-    op.create_index(op.f("ix_admin_actions_organisation_id"), "admin_actions", ["organisation_id"], unique=False)
     op.create_index(op.f("ix_admin_actions_reviewed_by_id"), "admin_actions", ["reviewed_by_id"], unique=False)
     op.create_index(op.f("ix_admin_actions_service_id"), "admin_actions", ["service_id"], unique=False)
 
@@ -60,6 +54,5 @@ def upgrade():
 def downgrade():
     op.drop_index(op.f("ix_admin_actions_service_id"), table_name="admin_actions")
     op.drop_index(op.f("ix_admin_actions_reviewed_by_id"), table_name="admin_actions")
-    op.drop_index(op.f("ix_admin_actions_organisation_id"), table_name="admin_actions")
     op.drop_index(op.f("ix_admin_actions_created_by_id"), table_name="admin_actions")
     op.drop_table("admin_actions")

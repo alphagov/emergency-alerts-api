@@ -3,7 +3,6 @@ from app.models import (
     ADMIN_CREATE_API_KEY,
     ADMIN_EDIT_PERMISSIONS,
     ADMIN_INVITE_USER,
-    ADMIN_INVITE_USER_ORG,
     ADMIN_STATUS_LIST,
     KEY_TYPES,
     PERMISSION_LIST,
@@ -17,29 +16,15 @@ create_admin_action_schema = {
     "type": "object",
     "title": "Create admin_action",
     "properties": {
-        "organisation_id": uuid,
         "service_id": uuid,
         "created_by": uuid,
         "action_type": {"type": "string", "enum": ADMIN_ACTION_LIST},
         "action_data": {"type": "object"},
     },
-    "required": ["organisation_id", "created_by", "action_type", "action_data"],
+    "required": ["service_id", "created_by", "action_type", "action_data"],
     # Use the action_type to narrow down what is allowed in action_data:
     "oneOf": [
         {
-            "properties": {
-                "action_type": {"const": ADMIN_INVITE_USER_ORG},
-                "action_data": {
-                    "type": "object",
-                    "properties": {
-                        "email_address": {"type": "string"},
-                    },
-                    "required": ["email"],
-                },
-            }
-        },
-        {
-            "required": ["service_id"],  # A non-org invite must be against a service
             "properties": {
                 "action_type": {"const": ADMIN_INVITE_USER},
                 "action_data": {
@@ -55,7 +40,6 @@ create_admin_action_schema = {
             },
         },
         {
-            "required": ["service_id"],
             "properties": {
                 "action_type": {"const": ADMIN_EDIT_PERMISSIONS},
                 "action_data": {
@@ -71,7 +55,6 @@ create_admin_action_schema = {
             },
         },
         {
-            "required": ["service_id"],
             "properties": {
                 "action_type": {"const": ADMIN_CREATE_API_KEY},
                 "action_data": {
