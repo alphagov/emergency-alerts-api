@@ -1,9 +1,11 @@
 from app.models import (
     ADMIN_ACTION_LIST,
+    ADMIN_CREATE_API_KEY,
     ADMIN_EDIT_PERMISSIONS,
     ADMIN_INVITE_USER,
     ADMIN_INVITE_USER_ORG,
     ADMIN_STATUS_LIST,
+    KEY_TYPES,
     PERMISSION_LIST,
     USER_AUTH_TYPES,
 )
@@ -65,6 +67,17 @@ create_admin_action_schema = {
                         "folder_permissions": {"type": "array", "items": uuid},
                     },
                     "required": ["user_id", "permissions", "existing_permissions", "folder_permissions"],
+                },
+            },
+        },
+        {
+            "required": ["service_id"],
+            "properties": {
+                "action_type": {"const": ADMIN_CREATE_API_KEY},
+                "action_data": {
+                    "type": "object",
+                    "properties": {"key_type": {"type": "string", "enum": KEY_TYPES}, "key_name": {"type": "string"}},
+                    "required": ["key_type", "key_name"],
                 },
             },
         },

@@ -474,6 +474,12 @@ KEY_TYPE_NORMAL = "normal"
 KEY_TYPE_TEAM = "team"
 KEY_TYPE_TEST = "test"
 
+KEY_TYPES = [
+    KEY_TYPE_NORMAL,
+    KEY_TYPE_TEAM,
+    KEY_TYPE_TEST,
+]
+
 
 class KeyTypes(db.Model):
     __tablename__ = "key_types"
