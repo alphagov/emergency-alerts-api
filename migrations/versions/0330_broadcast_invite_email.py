@@ -7,7 +7,7 @@ Create Date: 2020-09-15 14:17:01.963181
 """
 
 # revision identifiers, used by Alembic.
-from datetime import datetime
+from datetime import datetime, timezone
 
 from alembic import op
 
@@ -50,7 +50,7 @@ def upgrade():
             "templates_history",
             template_id,
             broadcast_invitation_template_name,
-            datetime.utcnow(),
+            datetime.now(timezone.utc),
             broadcast_invitation_content,
             service_id,
             broadcast_invitation_subject,
@@ -63,7 +63,7 @@ def upgrade():
             "templates",
             template_id,
             broadcast_invitation_template_name,
-            datetime.utcnow(),
+            datetime.now(timezone.utc),
             broadcast_invitation_content,
             service_id,
             broadcast_invitation_subject,
