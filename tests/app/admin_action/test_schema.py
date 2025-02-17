@@ -11,17 +11,35 @@ from app.schema_validation import validate
     "under_test",
     [
         {
-            "organisation_id": str(uuid.uuid4()),
             "service_id": str(uuid.uuid4()),
             "created_by": str(uuid.uuid4()),
             "action_type": "invite_user",
-            "action_data": {"email": "test@test.com", "permissions": ["create_broadcasts"]},
+            "action_data": {
+                "email_address": "test@test.com",
+                "permissions": ["create_broadcasts"],
+                "login_authentication": "email_auth",
+                "folder_permissions": [str(uuid.uuid4())],
+            },
         },
         {
-            "organisation_id": str(uuid.uuid4()),
+            "service_id": str(uuid.uuid4()),
             "created_by": str(uuid.uuid4()),
-            "action_type": "invite_user_org",
-            "action_data": {"email": "test@test.com"},
+            "action_type": "edit_permissions",
+            "action_data": {
+                "user_id": str(uuid.uuid4()),
+                "existing_permissions": ["create_broadcasts"],
+                "permissions": ["create_broadcasts", "approve_broadcasts"],
+                "folder_permissions": [str(uuid.uuid4())],
+            },
+        },
+        {
+            "service_id": str(uuid.uuid4()),
+            "created_by": str(uuid.uuid4()),
+            "action_type": "create_api_key",
+            "action_data": {
+                "key_type": "normal",
+                "key_name": "New Key",
+            },
         },
     ],
 )
@@ -34,37 +52,48 @@ def test_positive_schema_validation(under_test):
     "under_test",
     [
         {
-            "organisation_id": str(uuid.uuid4()),
             "service_id": str(uuid.uuid4()),
             "created_by": str(uuid.uuid4()),
             "action_type": "invalid_action",
             "action_data": {},
         },
         {
-            "organisation_id": str(uuid.uuid4()),
             "created_by": str(uuid.uuid4()),
             "action_type": "invite_user",  # Missing service_id
-            "action_data": {"email": "test@test.com", "permissions": ["create_broadcasts"]},
+            "action_data": {
+                "email_address": "test@test.com",
+                "permissions": ["create_broadcasts"],
+                "folder_permissions": [str(uuid.uuid4())],
+            },
         },
         {
-            "organisation_id": str(uuid.uuid4()),
             "service_id": str(uuid.uuid4()),
             "created_by": str(uuid.uuid4()),
             "action_type": "invite_user",
-            "action_data": {"email": "test@test.com", "permissions": ["invalid"]},
+            "action_data": {
+                "email_address": "test@test.com",
+                "permissions": ["invalid"],
+                "folder_permissions": [str(uuid.uuid4())],
+            },
         },
         {
-            "organisation_id": str(uuid.uuid4()),
             "service_id": str(uuid.uuid4()),
             "created_by": str(uuid.uuid4()),
             "action_type": "invite_user",
-            "action_data": {"not_an_email_field": "test@test.com", "permissions": ["create_broadcasts"]},
+            "action_data": {
+                "not_an_email_field": "test@test.com",
+                "permissions": ["create_broadcasts"],
+                "folder_permissions": [str(uuid.uuid4())],
+            },
         },
         {
-            "organisation_id": str(uuid.uuid4()),
+            "service_id": str(uuid.uuid4()),
             "created_by": str(uuid.uuid4()),
-            "action_type": "invite_user_org",
-            "action_data": {"not_an_email_field": "test@test.com"},
+            "action_type": "invite_user",
+            "action_data": {
+                "email_address": "test@test.com",
+                "permissions": ["create_broadcasts"],
+            },
         },
     ],
 )
