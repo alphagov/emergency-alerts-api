@@ -7,6 +7,9 @@ from freezegun import freeze_time
 from app.dao.broadcast_message_dao import (
     dao_get_broadcast_message_by_id_and_service_id,
 )
+from app.dao.broadcast_message_history_dao import (
+    dao_get_latest_broadcast_message_version_number_by_id_and_service_id,
+)
 from app.models import (
     BROADCAST_TYPE,
     BroadcastEventMessageType,
@@ -66,11 +69,6 @@ def test_get_broadcast_message_with_user(mocker, admin_request, sample_broadcast
         broadcast_message_id=bm.id,
         _expected_status=200,
     )
-    mock_dao_get_messages = mocker.patch(
-        "app.dao.broadcast_message_dao.dao_get_broadcast_message_by_id_and_service_id_with_user"
-    )
-
-    assert mock_dao_get_messages.assert_called_once
 
     assert response["id"] == str(bm.id)
     assert response["template_id"] == str(t.id)
@@ -269,6 +267,16 @@ def test_create_broadcast_message(admin_request, sample_broadcast_service, train
 
     broadcast_message = dao_get_broadcast_message_by_id_and_service_id(response["id"], sample_broadcast_service.id)
     assert broadcast_message.stubbed == training_mode_service
+
+    broadcast_message_version = dao_get_latest_broadcast_message_version_number_by_id_and_service_id(
+        broadcast_message.id, sample_broadcast_service.id
+    )
+    assert broadcast_message_version.reference == t.name
+    assert broadcast_message_version.created_by_id == t.created_by_id
+    assert broadcast_message_version.created_at is not None
+    assert broadcast_message_version.updated_at is not None
+    assert broadcast_message_version.version == 1
+    assert broadcast_message_version.areas == {}
 
 
 @pytest.mark.parametrize(
