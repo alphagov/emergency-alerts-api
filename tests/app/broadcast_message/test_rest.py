@@ -514,7 +514,9 @@ def test_update_broadcast_message_doesnt_allow_edits_after_broadcast_goes_live(
 def test_update_broadcast_message_sets_finishes_at_separately(admin_request, sample_broadcast_service):
     t = create_template(sample_broadcast_service, BROADCAST_TYPE)
     bm = create_broadcast_message(
-        t, areas={"ids": ["london"], "simple_polygons": [[[50.12, 1.2], [50.13, 1.2], [50.14, 1.21]]]}
+        t,
+        areas={"ids": ["london"], "simple_polygons": [[[50.12, 1.2], [50.13, 1.2], [50.14, 1.21]]]},
+        reference="Test Alert",
     )
 
     response = admin_request.post(
@@ -541,7 +543,7 @@ def test_update_broadcast_message_sets_finishes_at_separately(admin_request, sam
 )
 def test_update_broadcast_message_allows_sensible_datetime_formats(admin_request, sample_broadcast_service, input_dt):
     t = create_template(sample_broadcast_service, BROADCAST_TYPE)
-    bm = create_broadcast_message(t)
+    bm = create_broadcast_message(t, reference="Test Alert")
 
     response = admin_request.post(
         "broadcast_message.update_broadcast_message",
