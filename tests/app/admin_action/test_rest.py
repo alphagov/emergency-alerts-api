@@ -1,5 +1,7 @@
 import uuid
 
+import pytest
+
 from app.models import ADMIN_INVITE_USER, ADMIN_STATUS_PENDING, AdminAction
 from tests.app.db import create_admin_action
 
@@ -102,3 +104,19 @@ def test_get_admin_action_by_id(admin_request, service_factory, sample_user, not
     assert response["action_type"] == ADMIN_INVITE_USER
     assert "email_address" in response["action_data"]
     assert response["status"] == ADMIN_STATUS_PENDING
+
+
+@pytest.mark.parametrize("status, expected_response_code", (("pending", 200), ("approved", 400), ("rejected", 400)))
+def test_only_pending_can_be_reviewed(
+    status, expected_response_code, admin_request, service_factory, sample_user, notify_db_session
+):
+    service = service_factory.get("test")
+    action = create_admin_action(
+        service.id, sample_user.id, ADMIN_INVITE_USER, {"email_address": "test@test.com"}, status
+    )
+
+    review = {"status": "approved", "reviewed_by": str(sample_user.id)}
+
+    admin_request.post(
+        "admin_action.review_admin_action", review, action_id=str(action.id), _expected_status=expected_response_code
+    )

@@ -13,7 +13,6 @@ from app.dao.admin_action_dao import (
 from app.dao.dao_utils import dao_save_object
 from app.dao.services_dao import dao_fetch_service_by_id
 from app.dao.users_dao import get_user_by_id
-from app.errors import InvalidRequest
 from app.models import ADMIN_EDIT_PERMISSIONS, ADMIN_STATUS_PENDING, AdminAction
 from app.schema_validation import validate
 
@@ -82,8 +81,10 @@ def review_admin_action(action_id):
 
     # Is it already approved/rejected?
     if admin_action.status != ADMIN_STATUS_PENDING:
-        raise InvalidRequest("Action is not pending", status_code=400)
-
+        return (
+            jsonify({"errors": ["The action is not pending"]}),
+            400,
+        )
     admin_action.reviewed_at = datetime.now(timezone.utc)
     admin_action.reviewed_by_id = data["reviewed_by"]
     admin_action.status = data["status"]
