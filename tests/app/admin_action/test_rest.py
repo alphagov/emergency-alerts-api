@@ -6,9 +6,7 @@ from app.models import ADMIN_INVITE_USER, ADMIN_STATUS_PENDING, AdminAction
 from tests.app.db import create_admin_action
 
 
-def test_create_admin_action(admin_request, service_factory, sample_user, notify_db_session):
-    service = service_factory.get("test")
-
+def test_create_admin_action(admin_request, sample_service, sample_user):
     action_data = {
         "email_address": "pending@test.com",
         "permissions": ["create_broadcasts"],
@@ -17,7 +15,7 @@ def test_create_admin_action(admin_request, service_factory, sample_user, notify
     }
 
     action = {
-        "service_id": str(service.id),
+        "service_id": str(sample_service.id),
         "action_type": ADMIN_INVITE_USER,
         "action_data": action_data,
         "created_by": str(sample_user.id),
@@ -27,7 +25,7 @@ def test_create_admin_action(admin_request, service_factory, sample_user, notify
 
     actions = AdminAction.query.all()
     assert len(actions) == 1
-    assert actions[0].service_id == service.id
+    assert actions[0].service_id == sample_service.id
     assert actions[0].action_type == ADMIN_INVITE_USER
     assert actions[0].action_data == action_data
     assert actions[0].created_by_id == sample_user.id
@@ -37,14 +35,15 @@ def test_create_admin_action(admin_request, service_factory, sample_user, notify
     assert actions[0].reviewed_at is None
 
 
-def test_get_all_pending_admin_actions(admin_request, service_factory, sample_user, notify_db_session):
-    service = service_factory.get("test")
-    create_admin_action(service.id, sample_user.id, ADMIN_INVITE_USER, {"email_address": "pending@test.com"}, "pending")
+def test_get_all_pending_admin_actions(admin_request, sample_service, sample_user):
     create_admin_action(
-        service.id, sample_user.id, ADMIN_INVITE_USER, {"email_address": "approved@test.com"}, "approved"
+        sample_service.id, sample_user.id, ADMIN_INVITE_USER, {"email_address": "pending@test.com"}, "pending"
     )
     create_admin_action(
-        service.id, sample_user.id, ADMIN_INVITE_USER, {"email_address": "rejected@test.com"}, "rejected"
+        sample_service.id, sample_user.id, ADMIN_INVITE_USER, {"email_address": "approved@test.com"}, "approved"
+    )
+    create_admin_action(
+        sample_service.id, sample_user.id, ADMIN_INVITE_USER, {"email_address": "rejected@test.com"}, "rejected"
     )
 
     response = admin_request.get("admin_action.get_pending_admin_actions", _expected_status=200)
@@ -69,7 +68,7 @@ def test_get_all_pending_admin_actions(admin_request, service_factory, sample_us
         "reviewed_by",
         "reviewed_at",
     }
-    assert pending[0]["service_id"] == str(service.id)
+    assert pending[0]["service_id"] == str(sample_service.id)
     assert pending[0]["action_type"] == "invite_user"
     assert pending[0]["action_data"] == {"email_address": "pending@test.com"}
     assert pending[0]["created_by"] == str(sample_user.id)
@@ -79,9 +78,9 @@ def test_get_all_pending_admin_actions(admin_request, service_factory, sample_us
 
     services = response["services"]
     assert len(services) == 1
-    assert services[str(service.id)]["id"] == str(service.id)
-    assert services[str(service.id)]["name"] == str(service.name)
-    assert services[str(service.id)]["restricted"] == service.restricted
+    assert services[str(sample_service.id)]["id"] == str(sample_service.id)
+    assert services[str(sample_service.id)]["name"] == str(sample_service.name)
+    assert services[str(sample_service.id)]["restricted"] == sample_service.restricted
 
     users = response["users"]
     assert len(users) == 1
@@ -90,10 +89,9 @@ def test_get_all_pending_admin_actions(admin_request, service_factory, sample_us
     assert users[str(sample_user.id)]["email_address"] == str(sample_user.email_address)
 
 
-def test_get_admin_action_by_id(admin_request, service_factory, sample_user, notify_db_session):
-    service = service_factory.get("test")
+def test_get_admin_action_by_id(admin_request, sample_service, sample_user):
     action = create_admin_action(
-        service.id, sample_user.id, ADMIN_INVITE_USER, {"email_address": "pending@test.com"}, "pending"
+        sample_service.id, sample_user.id, ADMIN_INVITE_USER, {"email_address": "pending@test.com"}, "pending"
     )
 
     response = admin_request.get("admin_action.get_admin_action_by_id", action_id=str(action.id))
@@ -107,12 +105,9 @@ def test_get_admin_action_by_id(admin_request, service_factory, sample_user, not
 
 
 @pytest.mark.parametrize("status, expected_response_code", (("pending", 200), ("approved", 400), ("rejected", 400)))
-def test_only_pending_can_be_reviewed(
-    status, expected_response_code, admin_request, service_factory, sample_user, notify_db_session
-):
-    service = service_factory.get("test")
+def test_only_pending_can_be_reviewed(status, expected_response_code, sample_service, admin_request, sample_user):
     action = create_admin_action(
-        service.id, sample_user.id, ADMIN_INVITE_USER, {"email_address": "test@test.com"}, status
+        sample_service.id, sample_user.id, ADMIN_INVITE_USER, {"email_address": "test@test.com"}, status
     )
 
     review = {"status": "approved", "reviewed_by": str(sample_user.id)}
