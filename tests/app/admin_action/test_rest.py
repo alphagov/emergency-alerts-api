@@ -86,3 +86,19 @@ def test_get_all_pending_admin_actions(admin_request, service_factory, sample_us
     assert users[str(sample_user.id)]["id"] == str(sample_user.id)
     assert users[str(sample_user.id)]["name"] == str(sample_user.name)
     assert users[str(sample_user.id)]["email_address"] == str(sample_user.email_address)
+
+
+def test_get_admin_action_by_id(admin_request, service_factory, sample_user, notify_db_session):
+    service = service_factory.get("test")
+    action = create_admin_action(
+        service.id, sample_user.id, ADMIN_INVITE_USER, {"email_address": "pending@test.com"}, "pending"
+    )
+
+    response = admin_request.get("admin_action.get_admin_action_by_id", action_id=str(action.id))
+
+    assert response["id"] == str(action.id)
+    assert response["created_at"] is not None
+    assert response["created_by"] == str(sample_user.id)
+    assert response["action_type"] == ADMIN_INVITE_USER
+    assert "email_address" in response["action_data"]
+    assert response["status"] == ADMIN_STATUS_PENDING
