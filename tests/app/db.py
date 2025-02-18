@@ -18,6 +18,7 @@ from app.models import (
     BROADCAST_TYPE,
     EMAIL_TYPE,
     KEY_TYPE_NORMAL,
+    AdminAction,
     ApiKey,
     BroadcastEvent,
     BroadcastMessage,
@@ -399,3 +400,13 @@ def create_failed_login(ip, attempted_at):
     db.session.add(failed_login)
     db.session.commit()
     return failed_login
+
+
+def create_admin_action(service_id, created_by, action_type, action_data, status):
+    action = AdminAction(
+        service_id=service_id, created_by_id=created_by, action_type=action_type, action_data=action_data, status=status
+    )
+
+    db.session.add(action)
+    db.session.commit()
+    return action
