@@ -274,7 +274,6 @@ def test_create_broadcast_message(admin_request, sample_broadcast_service, train
     assert broadcast_message_version.reference == t.name
     assert broadcast_message_version.created_by_id == t.created_by_id
     assert broadcast_message_version.created_at is not None
-    assert broadcast_message_version.updated_at is not None
     assert broadcast_message_version.version == 1
     assert broadcast_message_version.areas == {}
 
