@@ -937,7 +937,6 @@ class BroadcastMessageHistory(db.Model):
     id = db.Column(UUID(as_uuid=True), default=uuid.uuid4)
     reference = db.Column(db.String(255), nullable=True)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
-    updated_at = db.Column(db.DateTime, nullable=True, onupdate=datetime.datetime.utcnow)
     content = db.Column(db.String, nullable=False)
     service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"))
     created_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=True)
@@ -952,7 +951,6 @@ class BroadcastMessageHistory(db.Model):
             "content": self.content,
             "areas": self.areas,
             "created_at": get_dt_string_or_none(self.created_at),
-            "updated_at": get_dt_string_or_none(self.updated_at),
             "created_by_id": get_uuid_string_or_none(self.created_by_id),
             "version": self.version,
         }

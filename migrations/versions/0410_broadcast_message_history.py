@@ -21,7 +21,6 @@ def upgrade():
         sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("reference", sa.String(length=255), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(), nullable=True),
         sa.Column("content", sa.Text(), nullable=False),
         sa.Column("service_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("created_by_id", postgresql.UUID(as_uuid=True), nullable=True),
@@ -38,9 +37,9 @@ def upgrade():
 
     op.execute(
         (
-            """INSERT INTO broadcast_message_history (id, reference, created_at, updated_at,
+            """INSERT INTO broadcast_message_history (id, reference, created_at,
             content, service_id, version, created_by_id)
-             SELECT id, reference, created_at, updated_at, content, service_id, 1, created_by_id FROM broadcast_message"""
+             SELECT id, reference, created_at, content, service_id, 1, created_by_id FROM broadcast_message"""
         )
     )
 

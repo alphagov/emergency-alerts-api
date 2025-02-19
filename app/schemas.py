@@ -335,7 +335,6 @@ class TemplateHistorySchema(BaseSchema):
 class BroadcastMessageHistorySchema(BaseSchema):
     created_by = fields.Nested(UserSchema, only=["id"], dump_only=True)
     created_at = field_for(models.BroadcastMessage, "created_at", format=DATETIME_FORMAT_NO_TIMEZONE)
-    updated_at = FlexibleDateTime()
 
     class Meta(BaseSchema.Meta):
         model = models.BroadcastMessageHistory

@@ -65,7 +65,6 @@ def dao_create_broadcast_message_version(broadcast_message, service_id):
                 "id": broadcast_message.id,
                 "reference": broadcast_message.reference,
                 "created_at": broadcast_message.created_at,
-                "updated_at": broadcast_message.updated_at or broadcast_message.created_at,
                 "content": broadcast_message.content,
                 "service_id": broadcast_message.service_id,
                 "created_by_id": broadcast_message.created_by_id,
