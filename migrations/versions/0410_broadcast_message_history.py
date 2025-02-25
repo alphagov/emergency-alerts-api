@@ -35,18 +35,6 @@ def upgrade():
         op.f("ix_broadcast_message_history_service_id"), "broadcast_message_history", ["service_id"], unique=False
     )
 
-    op.execute(
-        (
-            """INSERT INTO broadcast_message_history (id, reference, created_at,
-            content, service_id, version, created_by_id)
-             SELECT id, reference, created_at, content, service_id, 1, created_by_id FROM broadcast_message"""
-        )
-    )
-
-    op.alter_column("broadcast_message_history", "created_at", nullable=False)
-    op.alter_column("broadcast_message_history", "created_by_id", nullable=False)
-    op.alter_column("broadcast_message_history", "version", nullable=False)
-
 
 def downgrade():
     op.drop_index(op.f("ix_broadcast_message_history_service_id"), table_name="broadcast_message_history")
