@@ -1,13 +1,13 @@
-from app.models import (
+from emergency_alerts_utils.admin_action import (
     ADMIN_ACTION_LIST,
     ADMIN_CREATE_API_KEY,
     ADMIN_EDIT_PERMISSIONS,
     ADMIN_INVITE_USER,
     ADMIN_STATUS_LIST,
-    KEY_TYPES,
-    PERMISSION_LIST,
-    USER_AUTH_TYPES,
 )
+from emergency_alerts_utils.api_key import KEY_TYPES
+
+from app.models import PERMISSION_LIST, USER_AUTH_TYPES
 from app.schema_validation.definitions import uuid
 
 create_admin_action_schema = {

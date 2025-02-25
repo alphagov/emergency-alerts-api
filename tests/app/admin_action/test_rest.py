@@ -1,8 +1,12 @@
 import uuid
 
 import pytest
+from emergency_alerts_utils.admin_action import (
+    ADMIN_INVITE_USER,
+    ADMIN_STATUS_PENDING,
+)
 
-from app.models import ADMIN_INVITE_USER, ADMIN_STATUS_PENDING, AdminAction
+from app.models import AdminAction
 from tests.app.db import create_admin_action
 
 

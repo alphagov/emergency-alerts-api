@@ -1,4 +1,6 @@
-from app.models import ADMIN_STATUS_PENDING, AdminAction
+from emergency_alerts_utils.admin_action import ADMIN_STATUS_PENDING
+
+from app.models import AdminAction
 
 
 def dao_get_pending_admin_actions() -> list[AdminAction]:

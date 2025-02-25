@@ -1,6 +1,10 @@
 import datetime
 import uuid
 
+from emergency_alerts_utils.admin_action import (
+    ADMIN_ACTION_LIST,
+    ADMIN_STATUS_LIST,
+)
 from emergency_alerts_utils.template import BroadcastMessageTemplate
 from flask import current_app, url_for
 from sqlalchemy import CheckConstraint, Index, UniqueConstraint
@@ -470,17 +474,6 @@ class ApiKey(db.Model, Versioned):
             self._secret = encryption.encrypt(str(secret))
 
 
-KEY_TYPE_NORMAL = "normal"
-KEY_TYPE_TEAM = "team"
-KEY_TYPE_TEST = "test"
-
-KEY_TYPES = [
-    KEY_TYPE_NORMAL,
-    KEY_TYPE_TEAM,
-    KEY_TYPE_TEST,
-]
-
-
 class KeyTypes(db.Model):
     __tablename__ = "key_types"
 
@@ -780,30 +773,6 @@ class Permission(db.Model):
     created_at = db.Column(db.DateTime, index=False, unique=False, nullable=False, default=datetime.datetime.utcnow)
 
     __table_args__ = (UniqueConstraint("service_id", "user_id", "permission", name="uix_service_user_permission"),)
-
-
-# Tasks which require another platform admin to approve before being actioned
-ADMIN_INVITE_USER = "invite_user"
-ADMIN_EDIT_PERMISSIONS = "edit_permissions"  # Only if adding permissions, removal does not need approval
-ADMIN_CREATE_API_KEY = "create_api_key"
-
-ADMIN_ACTION_LIST = [
-    ADMIN_INVITE_USER,
-    ADMIN_EDIT_PERMISSIONS,
-    ADMIN_CREATE_API_KEY,
-]
-
-ADMIN_STATUS_PENDING = "pending"
-ADMIN_STATUS_APPROVED = "approved"
-ADMIN_STATUS_REJECTED = "rejected"
-ADMIN_STATUS_INVALIDATED = "invalidated"
-
-ADMIN_STATUS_LIST = [
-    ADMIN_STATUS_PENDING,
-    ADMIN_STATUS_APPROVED,
-    ADMIN_STATUS_REJECTED,
-    ADMIN_STATUS_INVALIDATED,
-]
 
 
 class AdminAction(db.Model):

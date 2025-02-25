@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 import pytest
+from emergency_alerts_utils.api_key import KEY_TYPE_NORMAL
 
 from app import db
 from app.dao.invited_org_user_dao import save_invited_org_user
@@ -17,7 +18,6 @@ from app.dao.users_dao import save_model_user
 from app.models import (
     BROADCAST_TYPE,
     EMAIL_TYPE,
-    KEY_TYPE_NORMAL,
     AdminAction,
     ApiKey,
     BroadcastEvent,

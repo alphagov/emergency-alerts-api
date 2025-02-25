@@ -1,5 +1,9 @@
 from datetime import datetime, timezone
 
+from emergency_alerts_utils.admin_action import (
+    ADMIN_EDIT_PERMISSIONS,
+    ADMIN_STATUS_PENDING,
+)
 from flask import Blueprint, jsonify, request
 
 from app.admin_action.admin_action_schema import (
@@ -13,7 +17,7 @@ from app.dao.admin_action_dao import (
 from app.dao.dao_utils import dao_save_object
 from app.dao.services_dao import dao_fetch_service_by_id
 from app.dao.users_dao import get_user_by_id
-from app.models import ADMIN_EDIT_PERMISSIONS, ADMIN_STATUS_PENDING, AdminAction
+from app.models import AdminAction
 from app.schema_validation import validate
 
 admin_action_blueprint = Blueprint("admin_action", __name__)
