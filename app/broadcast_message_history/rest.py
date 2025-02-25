@@ -38,5 +38,5 @@ def get_broadcast_message_versions(service_id, broadcast_message_id):
     return jsonify(broadcast_messages)
 
 
-def create_broadcast_message_version(broadcast_message, service_id):
-    dao_create_broadcast_message_version(broadcast_message, service_id)
+def create_broadcast_message_version(broadcast_message, service_id, user_id=None):
+    dao_create_broadcast_message_version(broadcast_message, service_id, user_id)

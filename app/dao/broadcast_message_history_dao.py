@@ -48,7 +48,7 @@ def get_latest_broadcast_message_draft(broadcast_message_id, service_id):
 
 
 @autocommit
-def dao_create_broadcast_message_version(broadcast_message, service_id):
+def dao_create_broadcast_message_version(broadcast_message, service_id, user_id=None):
     latest_version = dao_get_latest_broadcast_message_version_by_id_and_service_id(broadcast_message.id, service_id)
     latest_broadcast_message = get_latest_broadcast_message_draft(broadcast_message.id, service_id)
     if latest_broadcast_message is None or (
@@ -60,6 +60,7 @@ def dao_create_broadcast_message_version(broadcast_message, service_id):
         broadcast_message.content,
         broadcast_message.areas,
     ):
+        updating_user = broadcast_message.created_by if latest_version is None else user_id
         history = BroadcastMessageHistory(
             **{
                 "id": broadcast_message.id,
@@ -67,7 +68,7 @@ def dao_create_broadcast_message_version(broadcast_message, service_id):
                 "created_at": broadcast_message.created_at,
                 "content": broadcast_message.content,
                 "service_id": broadcast_message.service_id,
-                "created_by_id": broadcast_message.created_by_id,
+                "created_by_id": updating_user,
                 "version": latest_version + 1,
                 "areas": broadcast_message.areas,
             }

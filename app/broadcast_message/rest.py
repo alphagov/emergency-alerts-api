@@ -139,7 +139,7 @@ def create_broadcast_message(service_id):
     )
 
     dao_save_object(broadcast_message)
-    create_broadcast_message_version(broadcast_message, service_id)
+    create_broadcast_message_version(broadcast_message, service_id, user.id)
 
     return jsonify(broadcast_message.serialize()), 201
 
@@ -147,6 +147,7 @@ def create_broadcast_message(service_id):
 @broadcast_message_blueprint.route("/<uuid:broadcast_message_id>", methods=["POST"])
 def update_broadcast_message(service_id, broadcast_message_id):
     data = request.get_json()
+    updating_user = data.get("created_by") or None
     validate(data, update_broadcast_message_schema)
 
     broadcast_message = dao_get_broadcast_message_by_id_and_service_id(broadcast_message_id, service_id)
@@ -181,7 +182,7 @@ def update_broadcast_message(service_id, broadcast_message_id):
         broadcast_message.areas = areas
 
     dao_save_object(broadcast_message)
-    create_broadcast_message_version(broadcast_message, service_id)
+    create_broadcast_message_version(broadcast_message, service_id, updating_user)
 
     return jsonify(broadcast_message.serialize()), 200
 
