@@ -28,7 +28,9 @@ def upgrade():
         sa.Column("created_by_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column(
-            "status", sa.Enum("pending", "approved", "rejected", name="admin_action_status_types"), nullable=False
+            "status",
+            sa.Enum("pending", "approved", "rejected", "invalidated", name="admin_action_status_types"),
+            nullable=False,
         ),
         sa.Column("reviewed_by_id", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("reviewed_at", sa.DateTime(), nullable=True),
