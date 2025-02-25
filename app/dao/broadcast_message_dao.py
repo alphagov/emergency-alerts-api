@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timedelta
 
 from flask import current_app
-from sqlalchemy import desc
+from sqlalchemy import asc, case, desc
 from sqlalchemy.orm import aliased
 
 from app import db
@@ -90,6 +90,12 @@ def dao_get_broadcast_messages_for_service_with_user(service_id):
     UserApproved = aliased(User)
     UserCancelled = aliased(User)
 
+    status_order = case(
+        (BroadcastMessage.status == BroadcastStatusType.BROADCASTING, 1),
+        (BroadcastMessage.status == BroadcastStatusType.PENDING_APPROVAL, 2),
+        (BroadcastMessage.status == BroadcastStatusType.DRAFT, 3),
+    )
+
     return (
         db.session.query(
             BroadcastMessage,
@@ -103,6 +109,7 @@ def dao_get_broadcast_messages_for_service_with_user(service_id):
         .outerjoin(UserApproved, BroadcastMessage.approved_by_id == UserApproved.id)
         .outerjoin(UserCancelled, BroadcastMessage.cancelled_by_id == UserCancelled.id)
         .filter(BroadcastMessage.service_id == service_id)
+        .order_by(status_order, asc(BroadcastMessage.reference))
         .all()
     )
 
