@@ -38,6 +38,7 @@ def dao_get_broadcast_message_by_id_and_service_id_with_user(broadcast_message_i
     UserRejected = aliased(User)
     UserApproved = aliased(User)
     UserCancelled = aliased(User)
+    UserSubmitted = aliased(User)
 
     return (
         db.session.query(
@@ -46,11 +47,13 @@ def dao_get_broadcast_message_by_id_and_service_id_with_user(broadcast_message_i
             UserRejected.name.label("rejected_by"),
             UserApproved.name.label("approved_by"),
             UserCancelled.name.label("cancelled_by"),
+            UserSubmitted.name.label("submitted_by"),
         )
         .outerjoin(UserCreated, BroadcastMessage.created_by_id == UserCreated.id)
         .outerjoin(UserRejected, BroadcastMessage.rejected_by_id == UserRejected.id)
         .outerjoin(UserApproved, BroadcastMessage.approved_by_id == UserApproved.id)
         .outerjoin(UserCancelled, BroadcastMessage.cancelled_by_id == UserCancelled.id)
+        .outerjoin(UserSubmitted, BroadcastMessage.submitted_by_id == UserSubmitted.id)
         .filter(BroadcastMessage.id == broadcast_message_id, BroadcastMessage.service_id == service_id)
         .one()
     )
@@ -89,6 +92,7 @@ def dao_get_broadcast_messages_for_service_with_user(service_id):
     UserRejected = aliased(User)
     UserApproved = aliased(User)
     UserCancelled = aliased(User)
+    UserSubmitted = aliased(User)
 
     status_order = case(
         (BroadcastMessage.status == BroadcastStatusType.BROADCASTING, 1),
@@ -103,11 +107,13 @@ def dao_get_broadcast_messages_for_service_with_user(service_id):
             UserRejected.name.label("rejected_by"),
             UserApproved.name.label("approved_by"),
             UserCancelled.name.label("cancelled_by"),
+            UserCancelled.name.label("submitted_by"),
         )
         .outerjoin(UserCreated, BroadcastMessage.created_by_id == UserCreated.id)
         .outerjoin(UserRejected, BroadcastMessage.rejected_by_id == UserRejected.id)
         .outerjoin(UserApproved, BroadcastMessage.approved_by_id == UserApproved.id)
         .outerjoin(UserCancelled, BroadcastMessage.cancelled_by_id == UserCancelled.id)
+        .outerjoin(UserSubmitted, BroadcastMessage.submitted_by_id == UserSubmitted.id)
         .filter(BroadcastMessage.service_id == service_id)
         .order_by(status_order, asc(BroadcastMessage.reference))
         .all()

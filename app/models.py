@@ -867,16 +867,19 @@ class BroadcastMessage(db.Model):
     cancelled_at = db.Column(db.DateTime, nullable=True)
     rejected_at = db.Column(db.DateTime, nullable=True)
     updated_at = db.Column(db.DateTime, nullable=True, onupdate=datetime.datetime.utcnow)
+    submitted_at = db.Column(db.DateTime, nullable=True)
 
     created_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=True)
     approved_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=True)
     cancelled_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=True)
     rejected_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=True)
+    submitted_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=True)
 
     created_by = db.relationship("User", foreign_keys=[created_by_id])
     approved_by = db.relationship("User", foreign_keys=[approved_by_id])
     cancelled_by = db.relationship("User", foreign_keys=[cancelled_by_id])
     rejected_by = db.relationship("User", foreign_keys=[rejected_by_id])
+    submitted_by = db.relationship("User", foreign_keys=[submitted_by_id])
 
     created_by_api_key_id = db.Column(UUID(as_uuid=True), db.ForeignKey("api_keys.id"), nullable=True)
     cancelled_by_api_key_id = db.Column(UUID(as_uuid=True), db.ForeignKey("api_keys.id"), nullable=True)
@@ -924,6 +927,7 @@ class BroadcastMessage(db.Model):
             "rejected_at": get_dt_string_or_none(self.rejected_at),
             "updated_at": get_dt_string_or_none(self.updated_at),
             "created_by_id": get_uuid_string_or_none(self.created_by_id),
+            "submitted_by_id": get_uuid_string_or_none(self.submitted_by_id),
             "approved_by_id": get_uuid_string_or_none(self.approved_by_id),
             "cancelled_by_id": get_uuid_string_or_none(self.cancelled_by_id),
             "rejected_by_id": get_uuid_string_or_none(self.rejected_by_id),

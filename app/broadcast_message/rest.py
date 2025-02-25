@@ -57,13 +57,14 @@ def get_broadcast_msgs_for_service(service_id):
     broadcast_messages = [
         {
             **message.serialize(),
-            "created_by": creatd_by or None,
-            "rejected_by": rejectd_by or None,
-            "approved_by": approvd_by or None,
-            "cancelled_by": cancelld_by or None,
+            "created_by": created_by or None,
+            "rejected_by": rejected_by or None,
+            "approved_by": approved_by or None,
+            "cancelled_by": cancelled_by or None,
+            "submitted_by": submitted_by or None,
         }
-        for message, creatd_by, rejectd_by, approvd_by, cancelld_by in dao_get_broadcast_messages_for_service_with_user(
-            service_id
+        for message, created_by, rejected_by, approved_by, cancelled_by, submitted_by in (
+            dao_get_broadcast_messages_for_service_with_user(service_id)
         )
     ]
     return jsonify(broadcast_messages=broadcast_messages)
@@ -78,6 +79,7 @@ def get_broadcast_message_by_id_and_service(service_id, broadcast_message_id):
         "rejected_by": result[2] or None,
         "approved_by": result[3] or None,
         "cancelled_by": result[4] or None,
+        "submitted_by": result[5] or None,
     }
 
 

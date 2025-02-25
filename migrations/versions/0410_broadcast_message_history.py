@@ -34,9 +34,13 @@ def upgrade():
     op.create_index(
         op.f("ix_broadcast_message_history_service_id"), "broadcast_message_history", ["service_id"], unique=False
     )
+    op.add_column("broadcast_message", sa.Column("submitted_by_id", postgresql.UUID(as_uuid=True), nullable=True))
+    op.add_column("broadcast_message", sa.Column("submitted_at", sa.DateTime(), nullable=True))
 
 
 def downgrade():
     op.drop_index(op.f("ix_broadcast_message_history_service_id"), table_name="broadcast_message_history")
     op.drop_index(op.f("ix_broadcast_message_history_created_by_id"), table_name="broadcast_message_history")
     op.drop_table("broadcast_message_history")
+    op.drop_column("broadcast_message", "submitted_by_id")
+    op.drop_column("broadcast_message", "submitted_at")
