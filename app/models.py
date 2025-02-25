@@ -810,7 +810,7 @@ class BroadcastStatusType(db.Model):
     # these are only the transitions we expect to administer via the API code.
     ALLOWED_STATUS_TRANSITIONS = {
         DRAFT: {PENDING_APPROVAL},
-        PENDING_APPROVAL: {REJECTED, DRAFT, BROADCASTING},
+        PENDING_APPROVAL: {REJECTED, BROADCASTING},
         REJECTED: {},
         BROADCASTING: {COMPLETED, CANCELLED},
         COMPLETED: {},

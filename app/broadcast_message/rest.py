@@ -218,6 +218,47 @@ def update_broadcast_message_status(service_id, broadcast_message_id):
     return jsonify(broadcast_message.serialize()), 200
 
 
+@broadcast_message_blueprint.route("/<uuid:broadcast_message_id>/check-status", methods=["POST"])
+def check_user_can_update_broadcast_message_status(service_id, broadcast_message_id):
+    data = request.get_json()
+    validate(data, update_broadcast_message_status_schema)
+    broadcast_message = dao_get_broadcast_message_by_id_and_service_id(broadcast_message_id, service_id)
+
+    new_status = data["status"]
+    updating_user = get_user_by_id(data["created_by"])
+
+    try:
+        broadcast_utils._validate_broadcast_update(broadcast_message, new_status, updating_user)
+    except InvalidRequest as e:
+        if new_status in BroadcastStatusType.ALLOWED_STATUS_TRANSITIONS[broadcast_message.status]:
+            raise e  # Raising any other InvalidRequest that has been raised
+
+        if broadcast_message.status == "pending-approval":
+            raise InvalidRequest(
+                "This alert is pending approval, it cannot be edited or submitted again.",
+                400,
+            ) from e
+        elif broadcast_message.status == "rejected":
+            raise InvalidRequest(
+                "This alert has been rejected, it cannot be edited or resubmitted for approval.",
+                400,
+            ) from e
+        elif broadcast_message.status == "broadcasting":
+            raise InvalidRequest(
+                "This alert is live, it cannot be edited or submitted again.",
+                400,
+            ) from e
+        elif broadcast_message.status in ["cancelled", "completed"]:
+            raise InvalidRequest(
+                "This alert has already been broadcast, it cannot be edited or resubmitted for approval.",
+                400,
+            ) from e
+    return (
+        {},
+        200,
+    )
+
+
 @broadcast_message_blueprint.route("/<uuid:broadcast_message_id>/status-with-reason", methods=["POST"])
 def update_broadcast_message_status_with_reason(service_id, broadcast_message_id):
     data = request.get_json()
