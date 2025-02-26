@@ -64,13 +64,25 @@ def dao_create_broadcast_message_version(broadcast_message, service_id, user_id=
         history = BroadcastMessageHistory(
             **{
                 "id": broadcast_message.id,
-                "reference": broadcast_message.reference,
+                "reference": (
+                    broadcast_message.reference
+                    if broadcast_message.reference != latest_broadcast_message.reference
+                    else latest_broadcast_message.reference
+                ),
                 "created_at": broadcast_message.created_at,
-                "content": broadcast_message.content,
+                "content": (
+                    broadcast_message.content
+                    if broadcast_message.content != latest_broadcast_message.content
+                    else latest_broadcast_message.content
+                ),
                 "service_id": broadcast_message.service_id,
                 "created_by_id": updating_user,
                 "version": latest_version + 1,
-                "areas": broadcast_message.areas,
+                "areas": (
+                    broadcast_message.areas
+                    if broadcast_message.areas != latest_broadcast_message.areas
+                    else latest_broadcast_message.areas
+                ),
             }
         )
         db.session.add(history)
