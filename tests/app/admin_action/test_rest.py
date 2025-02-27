@@ -119,3 +119,172 @@ def test_only_pending_can_be_reviewed(status, expected_response_code, sample_ser
     admin_request.post(
         "admin_action.review_admin_action", review, action_id=str(action.id), _expected_status=expected_response_code
     )
+
+
+@pytest.mark.parametrize(
+    "existing_action_objs, proposed_action_obj, expect_conflict",
+    [
+        # User invites
+        (
+            [],
+            {
+                "action_type": "invite_user",
+                "action_data": {
+                    "email_address": "test@test.com",
+                    "permissions": ["create_broadcasts"],
+                    "login_authentication": "email_auth",
+                    "folder_permissions": [str(uuid.uuid4())],
+                },
+            },
+            False,
+        ),
+        (
+            [
+                [
+                    {
+                        "action_type": "invite_user",
+                        "action_data": {
+                            "email_address": "test@test.com",
+                            "permissions": ["create_broadcasts"],
+                            "login_authentication": "email_auth",
+                            "folder_permissions": [str(uuid.uuid4())],
+                        },
+                    }
+                ],
+                {
+                    "action_type": "invite_user",
+                    "action_data": {
+                        "email_address": "test@test.com",
+                        "permissions": ["approve_broadcasts"],
+                        "login_authentication": "email_auth",
+                        "folder_permissions": [str(uuid.uuid4())],
+                    },
+                },
+                True,
+            ]
+        ),
+        (
+            [
+                [
+                    {
+                        "action_type": "invite_user",
+                        "action_data": {
+                            "email_address": "test@test.com",
+                            "permissions": ["create_broadcasts"],
+                            "login_authentication": "email_auth",
+                            "folder_permissions": [str(uuid.uuid4())],
+                        },
+                    }
+                ],
+                {
+                    "action_type": "invite_user",
+                    "action_data": {
+                        "email_address": "test2@test.com",
+                        "permissions": ["approve_broadcasts"],
+                        "login_authentication": "email_auth",
+                        "folder_permissions": [str(uuid.uuid4())],
+                    },
+                },
+                False,  # Different email
+            ]
+        ),
+        # Edit permissions
+        (
+            [],
+            {
+                "action_type": "edit_permissions",
+                "action_data": {
+                    "user_id": "WILL_BE_REPLACED",
+                    "existing_permissions": ["create_broadcasts"],
+                    "permissions": ["create_broadcasts", "approve_broadcasts"],
+                    "folder_permissions": [str(uuid.uuid4())],
+                },
+            },
+            False,
+        ),
+        (
+            [
+                {
+                    "action_type": "edit_permissions",
+                    "action_data": {
+                        "user_id": "WILL_BE_REPLACED",
+                        "existing_permissions": ["create_broadcasts"],
+                        "permissions": ["create_broadcasts", "approve_broadcasts"],
+                        "folder_permissions": [str(uuid.uuid4())],
+                    },
+                }
+            ],
+            {
+                "action_type": "edit_permissions",
+                "action_data": {
+                    "user_id": "WILL_BE_REPLACED",
+                    "existing_permissions": ["create_broadcasts"],
+                    "permissions": ["create_broadcasts", "approve_broadcasts", "manage_templates"],
+                    "folder_permissions": [str(uuid.uuid4())],
+                },
+            },
+            True,
+        ),
+        # API keys
+        (
+            [],
+            {
+                "action_type": "create_api_key",
+                "action_data": {
+                    "key_type": "normal",
+                    "key_name": "New Key",
+                },
+            },
+            False,
+        ),
+        (
+            [
+                {
+                    "action_type": "create_api_key",
+                    "action_data": {
+                        "key_type": "normal",
+                        "key_name": "New Key",
+                    },
+                }
+            ],
+            {
+                "action_type": "create_api_key",
+                "action_data": {
+                    "key_type": "team",
+                    "key_name": "New Key",
+                },
+            },
+            True,
+        ),
+    ],
+)
+def test_similar_admin_actions_are_rejected(
+    existing_action_objs, proposed_action_obj, expect_conflict, admin_request, sample_user, sample_service
+):
+    """
+    The Admin UI is expected to check for this scenario first and invalidate existing ones.
+    This is just an enforcement of that.
+    """
+
+    # We need to inject IDs into the objects so that the DB foreign constraints can be satisfied.
+    proposed_action_obj["created_by"] = str(sample_user.id)
+    proposed_action_obj["service_id"] = str(sample_service.id)
+    if proposed_action_obj["action_type"] == "edit_permissions":
+        proposed_action_obj["action_data"]["user_id"] = str(sample_user.id)
+
+    # Create an existing action (if present)
+    for action in existing_action_objs:
+        action_data = action["action_data"]
+        if action["action_type"] == "edit_permissions":
+            action_data["user_id"] = str(sample_user.id)
+        create_admin_action(sample_service.id, sample_user.id, action["action_type"], action_data, "pending")
+
+    admin_request.post(
+        "admin_action.create_admin_action", proposed_action_obj, _expected_status=409 if expect_conflict else 201
+    )
+
+    actions = AdminAction.query.all()
+    if expect_conflict:
+        assert len(actions) == len(existing_action_objs)
+    else:
+        assert len(actions) == len(existing_action_objs) + 1

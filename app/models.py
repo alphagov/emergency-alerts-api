@@ -797,7 +797,7 @@ class AdminAction(db.Model):
     def serialize(self):
         return {
             "id": str(self.id),
-            "service_id": self.service_id,
+            "service_id": str(self.service_id),
             "action_type": self.action_type,
             "action_data": self.action_data,
             "created_by": str(self.created_by_id),

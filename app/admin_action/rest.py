@@ -1,10 +1,12 @@
 from datetime import datetime, timezone
 
 from emergency_alerts_utils.admin_action import (
+    ADMIN_CREATE_API_KEY,
     ADMIN_EDIT_PERMISSIONS,
+    ADMIN_INVITE_USER,
     ADMIN_STATUS_PENDING,
 )
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, abort, current_app, jsonify, request
 
 from app.admin_action.admin_action_schema import (
     create_admin_action_schema,
@@ -29,6 +31,16 @@ def create_admin_action():
 
     validate(data, create_admin_action_schema)
 
+    pending = dao_get_pending_admin_actions()
+    for pending_action in pending:
+        if _admin_action_is_similar(pending_action.serialize(), data):
+            current_app.logger.error(
+                f"409 Conflict: Requested to create AdminAction {data}, "
+                + f"but this was similar to existing one: {pending_action}.",
+                extra={"python_module": __name__},
+            )
+            return abort(409)  # Conflict
+
     admin_action = AdminAction(
         service_id=data["service_id"],
         action_type=data["action_type"],
@@ -38,8 +50,6 @@ def create_admin_action():
     )
 
     dao_save_object(admin_action)
-
-    # TODO; Assert there isn't already an approval for the same action?
 
     return jsonify(admin_action.serialize()), 201
 
@@ -96,3 +106,23 @@ def review_admin_action(action_id):
     dao_save_object(admin_action)
 
     return jsonify(admin_action.serialize()), 200
+
+
+def _admin_action_is_similar(action_obj1, action_obj2):
+    """
+    Similar being related to the same subject, e.g. inviting the same user to the same service.
+    """
+    if action_obj1["service_id"] != action_obj2["service_id"]:
+        return False
+
+    if action_obj1["action_type"] != action_obj2["action_type"]:
+        return False
+
+    if action_obj1["action_type"] == ADMIN_INVITE_USER:
+        return action_obj1["action_data"]["email_address"] == action_obj2["action_data"]["email_address"]
+    elif action_obj1["action_type"] == ADMIN_EDIT_PERMISSIONS:
+        return action_obj1["action_data"]["user_id"] == action_obj2["action_data"]["user_id"]
+    elif action_obj1["action_type"] == ADMIN_CREATE_API_KEY:
+        return action_obj1["action_data"]["key_name"] == action_obj2["action_data"]["key_name"]
+    else:
+        raise Exception("The action_type {} is unknown".format(action_obj1["action_type"]))
