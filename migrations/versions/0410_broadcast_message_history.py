@@ -16,6 +16,7 @@ from sqlalchemy.dialects import postgresql
 
 
 def upgrade():
+    op.execute("delete from broadcast_message where status = 'draft'")
     op.create_table(
         "broadcast_message_history",
         sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
