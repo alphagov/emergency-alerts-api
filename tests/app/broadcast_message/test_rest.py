@@ -204,7 +204,7 @@ def test_get_broadcast_messages_for_service_with_user(
     admin_request, sample_broadcast_service, sample_broadcast_service_3, sample_user, sample_user_2
 ):
     """
-    This test invovles the creation of multiple messages across 2 different services
+    This test involves the creation of multiple messages across 2 different services
     and asserting that the responses are as we'd expect.
     """
     t = create_template(sample_broadcast_service, BROADCAST_TYPE)
