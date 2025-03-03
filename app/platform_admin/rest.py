@@ -6,6 +6,7 @@ from sqlalchemy.exc import NoResultFound
 from app import db
 from app.errors import register_errors
 from app.models import (
+    AdminAction,
     ApiKey,
     Organisation,
     Service,
@@ -20,6 +21,7 @@ platform_admin_blueprint = Blueprint("platform_admin", __name__)
 register_errors(platform_admin_blueprint)
 
 FIND_BY_UUID_MODELS = {
+    "admin_actions": AdminAction,
     "organisation": Organisation,
     "service": Service,
     "template": Template,

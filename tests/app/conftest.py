@@ -4,6 +4,11 @@ import uuid
 
 import pytest
 import requests_mock
+from emergency_alerts_utils.api_key import (
+    KEY_TYPE_NORMAL,
+    KEY_TYPE_TEAM,
+    KEY_TYPE_TEST,
+)
 from flask import current_app, url_for
 
 from app import db
@@ -22,9 +27,6 @@ from app.dao.users_dao import create_secret_code, create_user_code
 from app.history_meta import create_history
 from app.models import (
     BROADCAST_TYPE,
-    KEY_TYPE_NORMAL,
-    KEY_TYPE_TEAM,
-    KEY_TYPE_TEST,
     SERVICE_PERMISSION_TYPES,
     ApiKey,
     InvitedUser,

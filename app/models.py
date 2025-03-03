@@ -1,6 +1,10 @@
 import datetime
 import uuid
 
+from emergency_alerts_utils.admin_action import (
+    ADMIN_ACTION_LIST,
+    ADMIN_STATUS_LIST,
+)
 from emergency_alerts_utils.template import BroadcastMessageTemplate
 from flask import current_app, url_for
 from sqlalchemy import CheckConstraint, Index, UniqueConstraint
@@ -470,11 +474,6 @@ class ApiKey(db.Model, Versioned):
             self._secret = encryption.encrypt(str(secret))
 
 
-KEY_TYPE_NORMAL = "normal"
-KEY_TYPE_TEAM = "team"
-KEY_TYPE_TEST = "test"
-
-
 class KeyTypes(db.Model):
     __tablename__ = "key_types"
 
@@ -774,6 +773,39 @@ class Permission(db.Model):
     created_at = db.Column(db.DateTime, index=False, unique=False, nullable=False, default=datetime.datetime.utcnow)
 
     __table_args__ = (UniqueConstraint("service_id", "user_id", "permission", name="uix_service_user_permission"),)
+
+
+class AdminAction(db.Model):
+    __tablename__ = "admin_actions"
+
+    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"), index=True, nullable=False)
+    service = db.relationship("Service")
+    action_type = db.Column(db.Enum(*ADMIN_ACTION_LIST, name="admin_action_types"), nullable=False)
+    action_data = db.Column(JSON, nullable=False)  # Params for the relevant action
+
+    created_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), index=True, nullable=False)
+    created_by = db.relationship("User", foreign_keys=[created_by_id])
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.now(datetime.timezone.utc))
+
+    status = db.Column(db.Enum(*ADMIN_STATUS_LIST, name="admin_action_status_types"), nullable=False)
+
+    reviewed_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), index=True, nullable=True)
+    reviewed_by = db.relationship("User", foreign_keys=[reviewed_by_id])
+    reviewed_at = db.Column(db.DateTime, nullable=True)
+
+    def serialize(self):
+        return {
+            "id": str(self.id),
+            "service_id": str(self.service_id),
+            "action_type": self.action_type,
+            "action_data": self.action_data,
+            "created_by": str(self.created_by_id),
+            "created_at": str(self.created_at.strftime(DATETIME_FORMAT)),
+            "status": self.status,
+            "reviewed_by": str(self.reviewed_by_id) if self.reviewed_by else None,
+            "reviewed_at": str(self.reviewed_at.strftime(DATETIME_FORMAT)) if self.reviewed_at else None,
+        }
 
 
 class Event(db.Model):
