@@ -39,6 +39,7 @@ def dao_get_broadcast_message_by_id_and_service_id_with_user(broadcast_message_i
     UserApproved = aliased(User)
     UserCancelled = aliased(User)
     UserSubmitted = aliased(User)
+    UserUpdated = aliased(User)
 
     return (
         db.session.query(
@@ -48,12 +49,14 @@ def dao_get_broadcast_message_by_id_and_service_id_with_user(broadcast_message_i
             UserApproved.name.label("approved_by"),
             UserCancelled.name.label("cancelled_by"),
             UserSubmitted.name.label("submitted_by"),
+            UserUpdated.name.label("updated_by"),
         )
         .outerjoin(UserCreated, BroadcastMessage.created_by_id == UserCreated.id)
         .outerjoin(UserRejected, BroadcastMessage.rejected_by_id == UserRejected.id)
         .outerjoin(UserApproved, BroadcastMessage.approved_by_id == UserApproved.id)
         .outerjoin(UserCancelled, BroadcastMessage.cancelled_by_id == UserCancelled.id)
         .outerjoin(UserSubmitted, BroadcastMessage.submitted_by_id == UserSubmitted.id)
+        .outerjoin(UserUpdated, BroadcastMessage.updated_by_id == UserUpdated.id)
         .filter(BroadcastMessage.id == broadcast_message_id, BroadcastMessage.service_id == service_id)
         .one()
     )

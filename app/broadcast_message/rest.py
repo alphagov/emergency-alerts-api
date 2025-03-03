@@ -80,6 +80,7 @@ def get_broadcast_message_by_id_and_service(service_id, broadcast_message_id):
         "approved_by": result[3] or None,
         "cancelled_by": result[4] or None,
         "submitted_by": result[5] or None,
+        "updated_by": result[6] or None,
     }
 
 
@@ -183,6 +184,7 @@ def update_broadcast_message(service_id, broadcast_message_id):
     if "ids" in areas and "simple_polygons" in areas:
         broadcast_message.areas = areas
 
+    broadcast_message.updated_by_id = updating_user
     dao_save_object(broadcast_message)
     create_broadcast_message_version(broadcast_message, service_id, updating_user)
 
