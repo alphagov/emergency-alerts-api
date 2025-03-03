@@ -1,14 +1,14 @@
 """
 
-Revision ID: 0410_broadcast_message_history
-Revises: 0409_add_rejected_by_api_col
+Revision ID: 0411_broadcast_message_history
+Revises: 5206923870d3
 Create Date: 2025-01-30 10:00:00
 
 """
 
 # revision identifiers, used by Alembic.
-revision = "0410_broadcast_message_history"
-down_revision = "0409_add_rejected_by_api_col"
+revision = "0411_broadcast_message_history"
+down_revision = "5206923870d3"
 
 import sqlalchemy as sa
 from alembic import op
@@ -37,6 +37,7 @@ def upgrade():
     )
     op.add_column("broadcast_message", sa.Column("submitted_by_id", postgresql.UUID(as_uuid=True), nullable=True))
     op.add_column("broadcast_message", sa.Column("submitted_at", sa.DateTime(), nullable=True))
+    op.add_column("broadcast_message", sa.Column("updated_by_id", postgresql.UUID(as_uuid=True), nullable=True))
 
 
 def downgrade():
@@ -45,3 +46,4 @@ def downgrade():
     op.drop_table("broadcast_message_history")
     op.drop_column("broadcast_message", "submitted_by_id")
     op.drop_column("broadcast_message", "submitted_at")
+    op.drop_column("broadcast_message", "updated_by_id")
