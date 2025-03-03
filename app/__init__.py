@@ -119,6 +119,7 @@ def create_app(application):
 
 
 def register_blueprint(application):
+    from app.admin_action.rest import admin_action_blueprint
     from app.authentication.auth import (
         requires_admin_auth,
         requires_govuk_alerts_auth,
@@ -148,6 +149,9 @@ def register_blueprint(application):
     from app.user.rest import user_blueprint
     from app.verify.rest import verify_code_blueprint
     from app.webauthn.rest import webauthn_blueprint
+
+    admin_action_blueprint.before_request(requires_admin_auth)
+    application.register_blueprint(admin_action_blueprint, url_prefix="/admin-action")
 
     service_blueprint.before_request(requires_admin_auth)
     application.register_blueprint(service_blueprint, url_prefix="/service")

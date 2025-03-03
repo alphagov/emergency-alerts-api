@@ -4,7 +4,10 @@ phases:
   pre_build:
     commands:
       - |
-        if [ -n "$COMMIT_ID" ]; then
+        if [ -n "$MANUAL_PIPELINE_BRANCH" ]; then
+          echo Manual pipeline branch provided, checking out branch $MANUAL_PIPELINE_BRANCH
+          git checkout $MANUAL_PIPELINE_BRANCH
+        elif [ -n "$COMMIT_ID" ]; then
           echo Checking out to api_${ENVIRONMENT}_latest tag...
           git checkout tags/api_${ENVIRONMENT}_latest
         fi

@@ -1,9 +1,10 @@
 import json
 
+from emergency_alerts_utils.api_key import KEY_TYPE_NORMAL
 from flask import url_for
 
 from app.dao.api_key_dao import expire_api_key
-from app.models import KEY_TYPE_NORMAL, ApiKey
+from app.models import ApiKey
 from tests import create_admin_authorization_header
 from tests.app.db import create_api_key, create_service, create_user
 
