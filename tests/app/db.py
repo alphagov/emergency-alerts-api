@@ -22,6 +22,7 @@ from app.models import (
     ApiKey,
     BroadcastEvent,
     BroadcastMessage,
+    BroadcastMessageHistory,
     BroadcastProvider,
     BroadcastProviderMessage,
     BroadcastProviderMessageNumber,
@@ -414,3 +415,30 @@ def create_admin_action(service_id, created_by, action_type, action_data, status
     db.session.add(action)
     db.session.commit()
     return action
+
+
+def create_broadcast_message_version(
+    *,
+    id=None,
+    created_by=None,
+    content="Test Broadcast Content",
+    areas=None,
+    created_at=None,
+    reference="Test Broadcast Reference",
+    version=1,
+    created_by_id=None,
+    service_id=None,
+):
+    broadcast_message_version = BroadcastMessageHistory(
+        id=id,
+        service_id=service_id,
+        created_by_id=created_by_id,
+        areas=areas or {"ids": [], "simple_polygons": []},
+        content=content,
+        created_at=created_at,
+        reference=reference,
+        version=version,
+    )
+    db.session.add(broadcast_message_version)
+    db.session.commit()
+    return broadcast_message_version
