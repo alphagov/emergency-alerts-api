@@ -252,6 +252,7 @@ def test_create_broadcast_message(admin_request, sample_broadcast_service, train
             "template_id": str(t.id),
             "service_id": str(t.service_id),
             "created_by": str(t.created_by_id),
+            "areas": {"ids": ["manchester"], "simple_polygons": [[[50.12, 1.2], [50.13, 1.2], [50.14, 1.21]]]},
         },
         service_id=t.service_id,
         _expected_status=201,
@@ -262,7 +263,10 @@ def test_create_broadcast_message(admin_request, sample_broadcast_service, train
     assert response["created_at"] is not None
     assert response["created_by_id"] == str(t.created_by_id)
     assert response["personalisation"] == {}
-    assert response["areas"] == {}
+    assert response["areas"] == {
+        "ids": ["manchester"],
+        "simple_polygons": [[[50.12, 1.2], [50.13, 1.2], [50.14, 1.21]]],
+    }
     assert response["content"] == "Some content\n€ŷŵ~\n''\"\"---"
 
     broadcast_message = dao_get_broadcast_message_by_id_and_service_id(response["id"], sample_broadcast_service.id)
@@ -275,7 +279,10 @@ def test_create_broadcast_message(admin_request, sample_broadcast_service, train
     assert broadcast_message_version.created_by_id == t.created_by_id
     assert broadcast_message_version.created_at is not None
     assert broadcast_message_version.version == 1
-    assert broadcast_message_version.areas == {}
+    assert broadcast_message_version.areas == {
+        "ids": ["manchester"],
+        "simple_polygons": [[[50.12, 1.2], [50.13, 1.2], [50.14, 1.21]]],
+    }
 
 
 @pytest.mark.parametrize(
