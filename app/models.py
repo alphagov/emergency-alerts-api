@@ -786,7 +786,7 @@ class AdminAction(db.Model):
 
     created_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), index=True, nullable=False)
     created_by = db.relationship("User", foreign_keys=[created_by_id])
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.now(datetime.timezone.utc))
+    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.datetime.now(datetime.timezone.utc))
 
     status = db.Column(db.Enum(*ADMIN_STATUS_LIST, name="admin_action_status_types"), nullable=False)
 
