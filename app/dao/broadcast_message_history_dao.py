@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from sqlalchemy import desc
 from sqlalchemy.orm import aliased
 
@@ -49,7 +51,7 @@ def dao_create_broadcast_message_version(broadcast_message, service_id, user_id=
             **{
                 "id": broadcast_message.id,
                 "reference": broadcast_message.reference,
-                "created_at": broadcast_message.created_at,
+                "created_at": datetime.now(timezone.utc),
                 "content": broadcast_message.content,
                 "service_id": broadcast_message.service_id,
                 "created_by_id": updating_user,
@@ -71,7 +73,7 @@ def dao_create_broadcast_message_version(broadcast_message, service_id, user_id=
             **{
                 "id": broadcast_message.id,
                 "reference": broadcast_message.reference or latest_broadcast_message.reference,
-                "created_at": broadcast_message.created_at,
+                "created_at": datetime.now(timezone.utc),
                 "content": broadcast_message.content or latest_broadcast_message.content,
                 "service_id": broadcast_message.service_id,
                 "created_by_id": updating_user,
