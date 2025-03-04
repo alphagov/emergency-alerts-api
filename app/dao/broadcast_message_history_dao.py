@@ -33,6 +33,11 @@ def dao_get_latest_broadcast_message_version_by_id_and_service_id(broadcast_mess
 
 @autocommit
 def dao_create_broadcast_message_version(broadcast_message, service_id, user_id=None):
+    """
+    This function gets latest version of broadcast message from broadcast_message_history, if there is one,
+    compares changes with broadcast_message input (where possible), creates a version using the broadcast_message
+    attributes and increments version number by 1.
+    """
     latest_broadcast_message = dao_get_latest_broadcast_message_version_by_id_and_service_id(
         broadcast_message.id, service_id
     )
@@ -61,6 +66,7 @@ def dao_create_broadcast_message_version(broadcast_message, service_id, user_id=
         broadcast_message.content,
         broadcast_message.areas,
     ):
+        # If any attributes have changed, new version created
         history = BroadcastMessageHistory(
             **{
                 "id": broadcast_message.id,

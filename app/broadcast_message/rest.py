@@ -225,6 +225,12 @@ def update_broadcast_message_status(service_id, broadcast_message_id):
 
 @broadcast_message_blueprint.route("/<uuid:broadcast_message_id>/check-status", methods=["POST"])
 def check_user_can_update_broadcast_message_status(service_id, broadcast_message_id):
+    """
+    This function checks whether the broadcast_message's status can be changed to new_status.
+    _validate_broadcast_update will return an InvalidRequest depending on whether transition is in
+    ALLOWED_STATUS_TRANSITIONS and this exception is then handled and message adjusted to be
+    returned, to be displayed in Admin.
+    """
     data = request.get_json()
     validate(data, update_broadcast_message_status_schema)
     broadcast_message = dao_get_broadcast_message_by_id_and_service_id(broadcast_message_id, service_id)
