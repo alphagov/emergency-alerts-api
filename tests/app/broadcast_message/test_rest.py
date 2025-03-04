@@ -273,7 +273,7 @@ def test_create_broadcast_message(admin_request, sample_broadcast_service, train
     assert broadcast_message.stubbed == training_mode_service
 
     broadcast_message_version = dao_get_broadcast_message_by_id_service_id_and_version_number(
-        broadcast_message.id, sample_broadcast_service.id
+        broadcast_message.id, sample_broadcast_service.id, version=1
     )
     assert broadcast_message_version.reference == t.name
     assert broadcast_message_version.created_by_id == t.created_by_id
