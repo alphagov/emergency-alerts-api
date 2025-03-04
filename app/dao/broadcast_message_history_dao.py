@@ -17,9 +17,7 @@ def dao_get_broadcast_message_versions(service_id, broadcast_message_id):
     )
 
 
-def dao_get_latest_broadcast_message_version_number_by_id_and_service_id(
-    broadcast_message_id, service_id, version=None
-):
+def dao_get_broadcast_message_by_id_service_id_and_version_number(broadcast_message_id, service_id, version=None):
     if version is not None:
         return BroadcastMessageHistory.query.filter_by(
             id=broadcast_message_id, service_id=service_id, version=version
@@ -27,7 +25,7 @@ def dao_get_latest_broadcast_message_version_number_by_id_and_service_id(
     return BroadcastMessageHistory.query.filter_by(id=broadcast_message_id, service_id=service_id).one()
 
 
-def dao_get_latest_broadcast_message_version_by_id_and_service_id(broadcast_message_id, service_id):
+def dao_get_latest_broadcast_message_version_number_by_id_and_service_id(broadcast_message_id, service_id):
     latest_broadcast_message = (
         BroadcastMessageHistory.query.filter_by(id=broadcast_message_id, service_id=service_id)
         .order_by(desc(BroadcastMessageHistory.version))
@@ -39,7 +37,7 @@ def dao_get_latest_broadcast_message_version_by_id_and_service_id(broadcast_mess
         return 0
 
 
-def get_latest_broadcast_message_draft(broadcast_message_id, service_id):
+def get_latest_broadcast_message_version(broadcast_message_id, service_id):
     return (
         BroadcastMessageHistory.query.filter_by(id=broadcast_message_id, service_id=service_id)
         .order_by(desc(BroadcastMessageHistory.version))
@@ -49,8 +47,10 @@ def get_latest_broadcast_message_draft(broadcast_message_id, service_id):
 
 @autocommit
 def dao_create_broadcast_message_version(broadcast_message, service_id, user_id=None):
-    latest_version = dao_get_latest_broadcast_message_version_by_id_and_service_id(broadcast_message.id, service_id)
-    latest_broadcast_message = get_latest_broadcast_message_draft(broadcast_message.id, service_id)
+    latest_version = dao_get_latest_broadcast_message_version_number_by_id_and_service_id(
+        broadcast_message.id, service_id
+    )
+    latest_broadcast_message = get_latest_broadcast_message_version(broadcast_message.id, service_id)
     updating_user = broadcast_message.created_by if latest_version is None else user_id
     history = None
     if latest_broadcast_message is None:
