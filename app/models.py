@@ -975,7 +975,7 @@ class BroadcastMessageHistory(db.Model):
     __tablename__ = "broadcast_message_history"
     id = db.Column(UUID(as_uuid=True), default=uuid.uuid4)
     reference = db.Column(db.String(255), nullable=True)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
+    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.datetime.now(datetime.timezone.utc))
     content = db.Column(db.String, nullable=False)
     service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"))
     created_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=True)
