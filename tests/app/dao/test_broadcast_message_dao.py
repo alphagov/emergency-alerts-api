@@ -126,7 +126,7 @@ def test_dao_get_all_broadcast_messages(sample_broadcast_service):
     assert broadcast_messages == [
         (
             broadcast_message_2.id,
-            None,
+            broadcast_message_2.reference,
             "severe",
             "Dear Sir/Madam, Hello. Yours Truly, The Government.",
             {"ids": [], "simple_polygons": []},
@@ -138,7 +138,7 @@ def test_dao_get_all_broadcast_messages(sample_broadcast_service):
         ),
         (
             broadcast_message_1.id,
-            None,
+            broadcast_message_1.reference,
             "severe",
             "Dear Sir/Madam, Hello. Yours Truly, The Government.",
             {"ids": [], "simple_polygons": []},
