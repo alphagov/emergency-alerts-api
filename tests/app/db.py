@@ -300,6 +300,7 @@ def create_broadcast_message(
         template_id = template.id
         template_version = template.version
         content = template.content
+        reference = template.name
     elif content:
         template_id = None
         template_version = None
