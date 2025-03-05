@@ -35,7 +35,7 @@ def upgrade():
         sa.ForeignKeyConstraint(
             ["created_by_id"],
             ["users.id"],
-        )
+        ),
     )
     op.create_index(
         op.f("ix_broadcast_message_history_created_by_id"), "broadcast_message_history", ["created_by_id"], unique=False
