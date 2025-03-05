@@ -204,11 +204,13 @@ def test_update_broadcast_message_status_restricts_status_transitions_to_explici
 
 
 @pytest.mark.parametrize("is_platform_admin", [True, False])
-def test_update_broadcast_message_status_rejects_approval_from_creator(
+def test_update_broadcast_message_status_rejects_approval_from_submitter(
     sample_broadcast_service, mocker, is_platform_admin
 ):
     template = create_template(sample_broadcast_service, BROADCAST_TYPE)
-    broadcast_message = create_broadcast_message(template, status=BroadcastStatusType.PENDING_APPROVAL)
+    broadcast_message = create_broadcast_message(
+        template, status=BroadcastStatusType.PENDING_APPROVAL, submitted_by=sample_broadcast_service.created_by
+    )
     creator_and_approver = sample_broadcast_service.created_by
     creator_and_approver.platform_admin = is_platform_admin
     mock_task = mocker.patch("app.celery.broadcast_message_tasks.send_broadcast_event.apply_async")
@@ -217,7 +219,7 @@ def test_update_broadcast_message_status_rejects_approval_from_creator(
         update_broadcast_message_status(broadcast_message, BroadcastStatusType.BROADCASTING, creator_and_approver)
 
     assert mock_task.called is False
-    assert "cannot approve their own broadcast" in str(e.value)
+    assert "cannot approve an alert that you submitted for approval" in str(e.value)
 
 
 def test_update_broadcast_message_status_rejects_approval_of_broadcast_with_no_areas(
