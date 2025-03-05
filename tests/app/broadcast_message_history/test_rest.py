@@ -9,11 +9,11 @@ def test_get_broadcast_message_version(admin_request, sample_service):
     id = uuid.uuid4()
 
     with freeze_time("2020-01-01 11:00"):
-        bmv3 = create_broadcast_message_version(service_id=sample_service.id, id=id, version=3)
+        bmv3 = create_broadcast_message_version(service_id=sample_service.id, id=id, version=3, content="Test 3")
     with freeze_time("2020-01-01 12:00"):
-        create_broadcast_message_version(service_id=sample_service.id, id=id, version=1)
+        create_broadcast_message_version(service_id=sample_service.id, id=id, version=1, content="Test 1")
     with freeze_time("2020-01-01 13:00"):
-        create_broadcast_message_version(service_id=sample_service.id, id=id, version=2)
+        create_broadcast_message_version(service_id=sample_service.id, id=id, version=2, content="Test 2")
 
     response = admin_request.get(
         "broadcast_message_history.get_broadcast_message_version",
