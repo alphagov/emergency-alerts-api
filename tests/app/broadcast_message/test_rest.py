@@ -283,6 +283,7 @@ def test_create_broadcast_message(admin_request, sample_broadcast_service, train
         "ids": ["manchester"],
         "simple_polygons": [[[50.12, 1.2], [50.13, 1.2], [50.14, 1.21]]],
     }
+    assert broadcast_message_version.content == response["content"]
 
 
 @pytest.mark.parametrize(
