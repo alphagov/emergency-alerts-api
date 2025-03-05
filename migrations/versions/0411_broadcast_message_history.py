@@ -28,6 +28,14 @@ def upgrade():
         sa.Column("version", sa.Integer(), autoincrement=False, nullable=False),
         sa.Column("areas", postgresql.JSONB(none_as_null=True, astext_type=sa.Text())),
         sa.PrimaryKeyConstraint("id", "version"),
+        sa.ForeignKeyConstraint(
+            ["service_id"],
+            ["services.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["created_by_id"],
+            ["users.id"],
+        )
     )
     op.create_index(
         op.f("ix_broadcast_message_history_created_by_id"), "broadcast_message_history", ["created_by_id"], unique=False
@@ -38,9 +46,25 @@ def upgrade():
     op.add_column("broadcast_message", sa.Column("submitted_by_id", postgresql.UUID(as_uuid=True), nullable=True))
     op.add_column("broadcast_message", sa.Column("submitted_at", sa.DateTime(), nullable=True))
     op.add_column("broadcast_message", sa.Column("updated_by_id", postgresql.UUID(as_uuid=True), nullable=True))
+    op.create_foreign_key(
+        "broadcast_message_submitted_by_id_fkey",
+        "broadcast_message",
+        "users",
+        ["submitted_by_id"],
+        ["id"],
+    )
+    op.create_foreign_key(
+        "broadcast_message_updated_by_id_fkey",
+        "broadcast_message",
+        "users",
+        ["updated_by_id"],
+        ["id"],
+    )
 
 
 def downgrade():
+    op.drop_constraint("broadcast_message_submitted_by_id_fkey", "broadcast_message", type_="foreignkey")
+    op.drop_constraint("broadcast_message_updated_by_id_fkey", "broadcast_message", type_="foreignkey")
     op.drop_index(op.f("ix_broadcast_message_history_service_id"), table_name="broadcast_message_history")
     op.drop_index(op.f("ix_broadcast_message_history_created_by_id"), table_name="broadcast_message_history")
     op.drop_table("broadcast_message_history")
