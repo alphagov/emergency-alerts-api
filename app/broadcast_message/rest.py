@@ -8,7 +8,6 @@ from app.broadcast_message.broadcast_message_schema import (
     update_broadcast_message_schema,
     update_broadcast_message_status_schema,
 )
-from app.broadcast_message_history.rest import create_broadcast_message_version
 from app.dao.broadcast_message_dao import (
     dao_get_broadcast_message_by_id_and_service_id,
     dao_get_broadcast_message_by_id_and_service_id_with_user,
@@ -16,6 +15,9 @@ from app.dao.broadcast_message_dao import (
     dao_get_broadcast_messages_for_service_with_user,
     dao_get_broadcast_provider_messages_by_broadcast_message_id,
     dao_purge_old_broadcast_messages,
+)
+from app.dao.broadcast_message_history_dao import (
+    dao_create_broadcast_message_version,
 )
 from app.dao.dao_utils import dao_save_object
 from app.dao.services_dao import dao_fetch_service_by_id
@@ -142,7 +144,7 @@ def create_broadcast_message(service_id):
     )
 
     dao_save_object(broadcast_message)
-    create_broadcast_message_version(broadcast_message, service_id, user.id)
+    dao_create_broadcast_message_version(broadcast_message, service_id, user.id)
 
     return jsonify(broadcast_message.serialize()), 201
 
@@ -186,7 +188,7 @@ def update_broadcast_message(service_id, broadcast_message_id):
 
     broadcast_message.updated_by_id = updating_user
     dao_save_object(broadcast_message)
-    create_broadcast_message_version(broadcast_message, service_id, updating_user)
+    dao_create_broadcast_message_version(broadcast_message, service_id, broadcast_message.updated_by_id)
 
     return jsonify(broadcast_message.serialize()), 200
 

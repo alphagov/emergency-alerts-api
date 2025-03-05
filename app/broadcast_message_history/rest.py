@@ -1,7 +1,6 @@
 from flask import Blueprint, jsonify
 
 from app.dao.broadcast_message_history_dao import (
-    dao_create_broadcast_message_version,
     dao_get_broadcast_message_by_id_service_id_and_version_number,
     dao_get_broadcast_message_versions,
 )
@@ -36,7 +35,3 @@ def get_broadcast_message_versions(service_id, broadcast_message_id):
         )
     ]
     return jsonify(broadcast_messages)
-
-
-def create_broadcast_message_version(broadcast_message, service_id, user_id=None):
-    dao_create_broadcast_message_version(broadcast_message, service_id, user_id)
