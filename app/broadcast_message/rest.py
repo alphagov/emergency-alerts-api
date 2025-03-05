@@ -244,22 +244,22 @@ def check_user_can_update_broadcast_message_status(service_id, broadcast_message
         if new_status in BroadcastStatusType.ALLOWED_STATUS_TRANSITIONS[broadcast_message.status]:
             raise e  # Raising any other InvalidRequest that has been raised
 
-        if broadcast_message.status == "pending-approval":
+        if broadcast_message.status == BroadcastStatusType.PENDING_APPROVAL:
             raise InvalidRequest(
                 "This alert is pending approval, it cannot be edited or submitted again.",
                 400,
             ) from e
-        elif broadcast_message.status == "rejected":
+        elif broadcast_message.status == BroadcastStatusType.REJECTED:
             raise InvalidRequest(
                 "This alert has been rejected, it cannot be edited or resubmitted for approval.",
                 400,
             ) from e
-        elif broadcast_message.status == "broadcasting":
+        elif broadcast_message.status == BroadcastStatusType.BROADCASTING:
             raise InvalidRequest(
                 "This alert is live, it cannot be edited or submitted again.",
                 400,
             ) from e
-        elif broadcast_message.status in ["cancelled", "completed"]:
+        elif broadcast_message.status in [BroadcastStatusType.CANCELLED, BroadcastStatusType.COMPLETED]:
             raise InvalidRequest(
                 "This alert has already been broadcast, it cannot be edited or resubmitted for approval.",
                 400,
