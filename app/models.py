@@ -76,9 +76,8 @@ class User(db.Model):
     failed_login_count = db.Column(db.Integer, nullable=False, default=0)
     state = db.Column(db.String, nullable=False, default="pending")
     platform_admin_capable = db.Column(db.Boolean, nullable=False, default=False)
-    # To become a platform admin on next login:
-    platform_admin_redeemable = db.Column(db.Boolean, nullable=False, default=False)
-    platform_admin_expiry = db.Column(db.DateTime, nullable=True, default=None)
+    # To become a platform admin on next login if not in the past: (will be NULL-ed on redemption)
+    platform_admin_redemption = db.Column(db.DateTime, nullable=True, default=None)
     current_session_id = db.Column(UUID(as_uuid=True), nullable=True)
     auth_type = db.Column(db.String, db.ForeignKey("auth_type.name"), index=True, nullable=False, default=SMS_AUTH_TYPE)
     email_access_validated_at = db.Column(
@@ -113,10 +112,6 @@ class User(db.Model):
     def password(self, password):
         self._password = hashpw(password)
 
-    @property
-    def platform_admin_active(self):
-        return self.platform_admin_capable and datetime.datetime.now(datetime.timezone.utc) < self.platform_admin_expiry
-
     def check_password(self, password):
         return check_hash(password, self._password)
 
@@ -148,7 +143,8 @@ class User(db.Model):
             "organisations": [x.id for x in self.organisations if x.active],
             "password_changed_at": self.password_changed_at.strftime(DATETIME_FORMAT_NO_TIMEZONE),
             "permissions": self.get_permissions(),
-            "platform_admin_active": self.platform_admin_active,
+            "platform_admin_capable": self.platform_admin_capable,
+            "platform_admin_redemption": self.platform_admin_redemption,
             "services": [x.id for x in self.services if x.active],
             "can_use_webauthn": self.can_use_webauthn,
             "state": self.state,
