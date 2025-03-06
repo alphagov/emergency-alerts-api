@@ -980,7 +980,7 @@ class BroadcastMessageHistory(db.Model):
     service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"))
     created_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=True)
     version = db.Column(db.Integer, primary_key=True, nullable=False)
-    areas = db.Column(JSONB(none_as_null=True), nullable=False, default=list)
+    areas = db.Column(JSONB(none_as_null=True), nullable=False, default=dict)
 
     def serialize(self):
         return {
