@@ -205,7 +205,7 @@ def update_broadcast_message_status(service_id, broadcast_message_id):
 
     if updating_user not in broadcast_message.service.users:
         #  we allow platform admins to cancel broadcasts, and we don't check user if request was done via API
-        if not (new_status == BroadcastStatusType.CANCELLED and updating_user.platform_admin):
+        if not (new_status == BroadcastStatusType.CANCELLED and updating_user.platform_admin_active):
             raise InvalidRequest(
                 f"User {updating_user.id} cannot update broadcast_message {broadcast_message.id} from other service",
                 status_code=400,
@@ -246,7 +246,7 @@ def update_broadcast_message_status_with_reason(service_id, broadcast_message_id
 
     if updating_user not in broadcast_message.service.users:
         #  we allow platform admins to cancel broadcasts, and we don't check user if request was done via API
-        if not (new_status == BroadcastStatusType.CANCELLED and updating_user.platform_admin):
+        if not (new_status == BroadcastStatusType.CANCELLED and updating_user.platform_admin_active):
             raise InvalidRequest(
                 f"User {updating_user.id} cannot update broadcast_message {broadcast_message.id} from other service",
                 status_code=400,

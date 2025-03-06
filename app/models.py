@@ -97,7 +97,7 @@ class User(db.Model):
 
     @property
     def can_use_webauthn(self):
-        if self.platform_admin:
+        if self.platform_admin_capable:
             return True
 
         if self.auth_type == "webauthn_auth":
@@ -112,6 +112,10 @@ class User(db.Model):
     @password.setter
     def password(self, password):
         self._password = hashpw(password)
+
+    @property
+    def platform_admin_active(self):
+        return self.platform_admin_capable and datetime.datetime.now(datetime.timezone.utc) < self.platform_admin_expiry
 
     def check_password(self, password):
         return check_hash(password, self._password)
@@ -144,7 +148,7 @@ class User(db.Model):
             "organisations": [x.id for x in self.organisations if x.active],
             "password_changed_at": self.password_changed_at.strftime(DATETIME_FORMAT_NO_TIMEZONE),
             "permissions": self.get_permissions(),
-            "platform_admin": self.platform_admin,
+            "platform_admin_active": self.platform_admin_active,
             "services": [x.id for x in self.services if x.active],
             "can_use_webauthn": self.can_use_webauthn,
             "state": self.state,
