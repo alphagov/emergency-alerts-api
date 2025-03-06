@@ -75,7 +75,10 @@ class User(db.Model):
     logged_in_at = db.Column(db.DateTime, nullable=True)
     failed_login_count = db.Column(db.Integer, nullable=False, default=0)
     state = db.Column(db.String, nullable=False, default="pending")
-    platform_admin = db.Column(db.Boolean, nullable=False, default=False)
+    platform_admin_capable = db.Column(db.Boolean, nullable=False, default=False)
+    # To become a platform admin on next login:
+    platform_admin_redeemable = db.Column(db.Boolean, nullable=False, default=False)
+    platform_admin_expiry = db.Column(db.DateTime, nullable=True, default=None)
     current_session_id = db.Column(UUID(as_uuid=True), nullable=True)
     auth_type = db.Column(db.String, db.ForeignKey("auth_type.name"), index=True, nullable=False, default=SMS_AUTH_TYPE)
     email_access_validated_at = db.Column(
