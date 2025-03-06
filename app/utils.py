@@ -77,14 +77,16 @@ def log_auth_activity(user, message, admin_only=True):
             "user_name": user.name,
             "email_address": user.email_address,
             "auth_type": user.auth_type,
-            "platform_admin": user.platform_admin,
+            "platform_admin_capable": user.platform_admin_capable,
+            "platform_admin_expiry": user.platform_admin_expiry,
+            "platform_admin_redeemable": user.platform_admin_redeemable,
             "failed_login_count": user.failed_login_count,
             "current_session_id": user.current_session_id,
         }
     else:
         data = {"email_address": user}
 
-    if (admin_only and user.platform_admin) or (not admin_only):
+    if (admin_only and user.platform_admin_capable) or (not admin_only):
         current_app.logger.info(
             message,
             extra=data,

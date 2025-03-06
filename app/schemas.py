@@ -139,6 +139,7 @@ class UserUpdateAttributeSchema(BaseSchema):
             "password_changed_at",
             "platform_admin_capable",
             "platform_admin_expiry",
+            "platform_admin_redeemable",
             "state",
             "updated_at",
             "verify_codes",
