@@ -17,7 +17,11 @@ def upgrade():
     op.add_column("users", sa.Column("platform_admin_capable", sa.Boolean()))
     op.execute("UPDATE users SET platform_admin_capable = platform_admin")
     op.alter_column("users", "platform_admin_capable", nullable=False)
-    op.add_column("users", sa.Column("platform_admin_redeemable", sa.Boolean(), nullable=False, server_default=False))
+
+    op.add_column("users", sa.Column("platform_admin_redeemable", sa.Boolean()))
+    op.execute("UPDATE users SET platform_admin_redeemable = false")
+    op.alter_column("users", "platform_admin_redeemable", nullable=False)
+
     op.add_column("users", sa.Column("platform_admin_expiry", sa.DateTime(), nullable=True))
     op.drop_column("users", "platform_admin")
 
