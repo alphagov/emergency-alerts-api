@@ -256,6 +256,13 @@ def test_only_pending_can_be_reviewed(status, expected_response_code, sample_ser
             },
             True,
         ),
+        # Admin elevation
+        (
+            [{"action_type": "elevate_platform_admin", "action_data": {}}],
+            {"action_type": "elevate_platform_admin", "action_data": {}},
+            # created_by is set in the test and remains static, so expect a conflict
+            True,
+        ),
     ],
 )
 def test_similar_admin_actions_are_rejected(
@@ -274,7 +281,7 @@ def test_similar_admin_actions_are_rejected(
 
     # Create an existing action (if present)
     for action in existing_action_objs:
-        action_data = action["action_data"]
+        action_data = action.get("action_data")
         if action["action_type"] == "edit_permissions":
             action_data["user_id"] = str(sample_user.id)
         create_admin_action(sample_service.id, sample_user.id, action["action_type"], action_data, "pending")
