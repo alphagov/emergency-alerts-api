@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from urllib.parse import urlencode
 
 import pwdpy
+from emergency_alerts_utils.admin_action import ADMIN_ELEVATION_ACTION_TIMEOUT
 from flask import Blueprint, abort, current_app, jsonify, request
 from notifications_python_client.errors import HTTPError
 from sqlalchemy.exc import IntegrityError
@@ -61,6 +62,7 @@ from app.schemas import (
     user_update_schema_load_json,
 )
 from app.user.users_schema import (
+    post_elevate_platform_admin_schema,
     post_send_user_email_code_schema,
     post_send_user_sms_code_schema,
     post_set_permissions_schema,
@@ -763,6 +765,27 @@ def check_password_is_valid(user_id):
     if password and has_user_already_used_password(user_id, password):
         return jsonify({"errors": ["You've used this password before. Please choose a new one."]}), 400
     return jsonify(data=user.serialize()), 200
+
+
+@user_blueprint.route("/<uuid:user_id>/elevate", methods=["POST"])
+def elevate_platform_admin(user_id):
+    req_json = request.get_json()
+    validate(req_json, post_elevate_platform_admin_schema)
+
+    user = get_user_by_id(user_id=user_id)
+
+    if not user.platform_admin_capable:
+        return (
+            jsonify({"errors": ["The user is not platform admin capable"]}),
+            422,
+        )
+
+    new_redemption = datetime.now(timezone.utc) + ADMIN_ELEVATION_ACTION_TIMEOUT
+    save_user_attribute(user, {"platform_admin_redemption": new_redemption})
+
+    # Slack
+
+    return jsonify(new_redemption)
 
 
 @user_blueprint.route("/<uuid:user_id>/organisations-and-services", methods=["GET"])
