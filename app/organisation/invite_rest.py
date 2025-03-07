@@ -42,7 +42,7 @@ def invite_user_to_org(organisation_id):
         "personalisation": {
             "user_name": (
                 "The GOV.UK Emergency Alerts team"
-                if invited_org_user.invited_by.platform_admin_active
+                if invited_org_user.invited_by.platform_admin_capable
                 else invited_org_user.invited_by.name
             ),
             "organisation_name": invited_org_user.organisation.name,
