@@ -78,8 +78,7 @@ def log_auth_activity(user, message, admin_only=True):
             "email_address": user.email_address,
             "auth_type": user.auth_type,
             "platform_admin_capable": user.platform_admin_capable,
-            "platform_admin_expiry": user.platform_admin_expiry,
-            "platform_admin_redeemable": user.platform_admin_redeemable,
+            "platform_admin_redemption": user.platform_admin_redemption,
             "failed_login_count": user.failed_login_count,
             "current_session_id": user.current_session_id,
         }
