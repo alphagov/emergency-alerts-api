@@ -21,6 +21,9 @@ def upgrade():
     op.add_column("users", sa.Column("platform_admin_redemption", sa.DateTime(), nullable=True))
     op.drop_column("users", "platform_admin")
 
+    # We can't easily drop the enum in a downgrade so just make it idempotent
+    op.execute("ALTER TYPE admin_action_types ADD VALUE IF NOT EXISTS 'elevate_platform_admin'")
+
 
 def downgrade():
     op.add_column("users", sa.Column("platform_admin", sa.Boolean()))

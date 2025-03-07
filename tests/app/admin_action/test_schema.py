@@ -41,6 +41,11 @@ from app.schema_validation import validate
                 "key_name": "New Key",
             },
         },
+        {
+            "created_by": str(uuid.uuid4()),
+            "action_type": "elevate_platform_admin",
+            "action_data": {},
+        },
     ],
 )
 def test_positive_schema_validation(under_test):
@@ -94,6 +99,11 @@ def test_positive_schema_validation(under_test):
                 "email_address": "test@test.com",
                 "permissions": ["create_broadcasts"],
             },
+        },
+        {
+            "created_by": str(uuid.uuid4()),
+            "action_type": "elevate_platform_admin",
+            # action_data is required but must be empty
         },
     ],
 )
