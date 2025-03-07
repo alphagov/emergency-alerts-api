@@ -1,6 +1,6 @@
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest import mock
 
 import pytest
@@ -12,6 +12,7 @@ from app.dao.service_user_dao import (
     dao_get_service_user,
     dao_update_service_user,
 )
+from app.dao.users_dao import get_user_by_id
 from app.models import (
     EMAIL_AUTH_TYPE,
     MANAGE_SETTINGS,
@@ -1344,3 +1345,21 @@ def test_update_user_attribute_with_validation_rejects_current_number(admin_requ
         "user.update_user_attribute_with_validation", user_id=sample_user.id, _data=new_number, _expected_status=400
     )
     assert json_resp["errors"] == ["Mobile number must be different to current mobile number"]
+
+
+def test_elevating_user_requires_platform_admin_capable(admin_request, sample_user):
+    assert not sample_user.platform_admin_capable
+    admin_request.post("user.elevate_platform_admin", user_id=sample_user.id, _expected_status=422)
+
+
+def test_elevating_user_updates_and_sends_slack_notification(admin_request, sample_user):
+    assert sample_user.platform_admin_redemption is None
+    sample_user.platform_admin_capable = True
+    dao_update_service_user(sample_user)
+
+    admin_request.post("user.elevate_platform_admin", user_id=sample_user.id)
+
+    updated_user = get_user_by_id(sample_user.id)
+    assert updated_user.platform_admin_redemption > datetime.now(timezone.utc)
+
+    # Assert Slack...
