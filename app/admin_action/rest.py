@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from emergency_alerts_utils.admin_action import (
     ADMIN_CREATE_API_KEY,
     ADMIN_EDIT_PERMISSIONS,
+    ADMIN_ELEVATE_USER,
     ADMIN_INVITE_USER,
     ADMIN_STATUS_PENDING,
 )
@@ -124,5 +125,7 @@ def _admin_action_is_similar(action_obj1, action_obj2):
         return action_obj1["action_data"]["user_id"] == action_obj2["action_data"]["user_id"]
     elif action_obj1["action_type"] == ADMIN_CREATE_API_KEY:
         return action_obj1["action_data"]["key_name"] == action_obj2["action_data"]["key_name"]
+    elif action_obj1["action_type"] == ADMIN_ELEVATE_USER:
+        return action_obj1["created_by"] == action_obj2["created_by"]
     else:
         raise Exception("The action_type {} is unknown".format(action_obj1["action_type"]))
