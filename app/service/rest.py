@@ -14,6 +14,7 @@ from app.dao.broadcast_service_dao import set_broadcast_service_type
 from app.dao.dao_utils import transaction
 from app.dao.failed_logins_dao import dao_delete_all_failed_logins_for_ip
 from app.dao.organisation_dao import dao_get_organisation_by_service_id
+from app.dao.permissions_dao import PermissionDAO
 from app.dao.services_dao import (
     dao_add_user_to_service,
     dao_archive_service,
@@ -327,6 +328,7 @@ def purge_users_created_by_tests():
         users = get_users_by_partial_email("emergency-alerts-fake-")
         for user in users:
             delete_user_verify_codes(user=user)
+            PermissionDAO.remove_user_service_permissions_for_all_services(user=user)
             delete_model_user(user=user)
     except Exception as e:
         return jsonify(result="error", message=f"Unable to purge users created by functional tests: {e}"), 500
