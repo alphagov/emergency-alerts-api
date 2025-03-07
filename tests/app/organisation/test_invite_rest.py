@@ -11,7 +11,7 @@ from tests.app.db import create_invited_org_user
 
 
 @pytest.mark.parametrize(
-    "platform_admin, expected_invited_by", ((True, "The GOV.UK Emergency Alerts team"), (False, "Test User"))
+    "platform_admin_capable, expected_invited_by", ((True, "The GOV.UK Emergency Alerts team"), (False, "Test User"))
 )
 @pytest.mark.parametrize(
     "extra_args, expected_start_of_invite_url",
@@ -25,7 +25,7 @@ def test_create_invited_org_user(
     sample_organisation,
     sample_user,
     mocker,
-    platform_admin,
+    platform_admin_capable,
     expected_invited_by,
     expected_start_of_invite_url,
     extra_args,
@@ -34,7 +34,7 @@ def test_create_invited_org_user(
     fake_token = "0123456789"
     mocker.patch("app.organisation.invite_rest.generate_token", return_value=fake_token)
     email_address = "invited_user@example.com"
-    sample_user.platform_admin = platform_admin
+    sample_user.platform_admin_capable = platform_admin_capable
 
     data = dict(
         organisation=str(sample_organisation.id),

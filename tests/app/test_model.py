@@ -17,10 +17,10 @@ def test_template_folder_is_parent(sample_service):
     assert not folders[1].is_parent_of(folders[0])
 
 
-@pytest.mark.parametrize("is_platform_admin", (False, True))
-def test_user_can_use_webauthn_if_platform_admin(sample_user, is_platform_admin):
-    sample_user.platform_admin = is_platform_admin
-    assert sample_user.can_use_webauthn == is_platform_admin
+@pytest.mark.parametrize("is_platform_admin_capable", (False, True))
+def test_user_can_use_webauthn_if_platform_admin(sample_user, is_platform_admin_capable):
+    sample_user.platform_admin_capable = is_platform_admin_capable
+    assert sample_user.can_use_webauthn == is_platform_admin_capable
 
 
 @pytest.mark.parametrize(

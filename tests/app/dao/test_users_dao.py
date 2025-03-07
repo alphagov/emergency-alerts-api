@@ -55,7 +55,7 @@ def test_create_user(notify_db_session, phone_number):
     assert user_query.id == user.id
     assert user_query.mobile_number == phone_number
     assert user_query.email_access_validated_at == datetime.now()
-    assert not user_query.platform_admin
+    assert not user_query.platform_admin_capable
 
 
 def test_get_all_users(notify_db_session):
