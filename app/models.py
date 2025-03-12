@@ -981,6 +981,7 @@ class BroadcastMessageHistory(db.Model):
     created_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=True)
     version = db.Column(db.Integer, primary_key=True, nullable=False)
     areas = db.Column(JSONB(none_as_null=True), nullable=False, default=dict)
+    duration = db.Column(db.Interval, nullable=True)
 
     def serialize(self):
         return {
@@ -992,6 +993,7 @@ class BroadcastMessageHistory(db.Model):
             "created_at": get_dt_string_or_none(self.created_at),
             "created_by_id": get_uuid_string_or_none(self.created_by_id),
             "version": self.version,
+            "duration": get_interval_seconds_or_none(self.duration),
         }
 
 

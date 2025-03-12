@@ -57,6 +57,7 @@ def dao_create_broadcast_message_version(broadcast_message, service_id, user_id=
                 "created_by_id": updating_user,
                 "version": 1,
                 "areas": broadcast_message.areas or None,
+                "duration": broadcast_message.duration,
             }
         )
     elif (
@@ -79,6 +80,7 @@ def dao_create_broadcast_message_version(broadcast_message, service_id, user_id=
                 "created_by_id": updating_user,
                 "version": latest_version + 1,
                 "areas": broadcast_message.areas or latest_broadcast_message.areas,
+                "duration": broadcast_message.duration or latest_broadcast_message.duration,
             }
         )
     if history:
