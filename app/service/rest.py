@@ -29,6 +29,7 @@ from app.dao.services_dao import (
 )
 from app.dao.users_dao import (
     delete_model_user,
+    delete_permissions_for_user,
     delete_user_verify_codes,
     get_user_by_id,
     get_users_by_partial_email,
@@ -327,6 +328,7 @@ def purge_users_created_by_tests():
         users = get_users_by_partial_email("emergency-alerts-fake-")
         for user in users:
             delete_user_verify_codes(user=user)
+            delete_permissions_for_user(user=user)
             delete_model_user(user=user)
     except Exception as e:
         return jsonify(result="error", message=f"Unable to purge users created by functional tests: {e}"), 500
