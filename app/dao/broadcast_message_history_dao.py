@@ -64,11 +64,8 @@ def dao_create_broadcast_message_version(broadcast_message, service_id, user_id=
         latest_broadcast_message.reference,
         latest_broadcast_message.content,
         latest_broadcast_message.areas,
-    ) != (
-        broadcast_message.reference,
-        broadcast_message.content,
-        broadcast_message.areas,
-    ):
+        latest_broadcast_message.duration,
+    ) != (broadcast_message.reference, broadcast_message.content, broadcast_message.areas, broadcast_message.duration):
         # If any attributes have changed, new version created
         history = BroadcastMessageHistory(
             **{
