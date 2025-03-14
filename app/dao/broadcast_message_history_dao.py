@@ -12,7 +12,7 @@ def dao_get_broadcast_message_versions(service_id, broadcast_message_id):
     UserCreated = aliased(User)
     return (
         db.session.query(BroadcastMessageHistory, UserCreated.name.label("created_by"))
-        .filter_by(service_id=service_id, id=broadcast_message_id)
+        .filter_by(service_id=service_id, broadcast_message_id=broadcast_message_id)
         .outerjoin(UserCreated, BroadcastMessageHistory.created_by_id == UserCreated.id)
         .order_by(desc(BroadcastMessageHistory.version))
         .all()
@@ -21,13 +21,13 @@ def dao_get_broadcast_message_versions(service_id, broadcast_message_id):
 
 def dao_get_broadcast_message_by_id_service_id_and_version_number(broadcast_message_id, service_id, version):
     return BroadcastMessageHistory.query.filter_by(
-        id=broadcast_message_id, service_id=service_id, version=version
+        broadcast_message_id=broadcast_message_id, service_id=service_id, version=version
     ).one()
 
 
 def dao_get_latest_broadcast_message_version_by_id_and_service_id(broadcast_message_id, service_id):
     return (
-        BroadcastMessageHistory.query.filter_by(id=broadcast_message_id, service_id=service_id)
+        BroadcastMessageHistory.query.filter_by(broadcast_message_id=broadcast_message_id, service_id=service_id)
         .order_by(desc(BroadcastMessageHistory.version))
         .first()
     )
@@ -49,7 +49,7 @@ def dao_create_broadcast_message_version(broadcast_message, service_id, user_id=
     if latest_broadcast_message is None:
         history = BroadcastMessageHistory(
             **{
-                "id": broadcast_message.id,
+                "broadcast_message_id": broadcast_message.id,
                 "reference": broadcast_message.reference,
                 "created_at": datetime.now(timezone.utc),
                 "content": broadcast_message.content,
@@ -69,7 +69,7 @@ def dao_create_broadcast_message_version(broadcast_message, service_id, user_id=
         # If any attributes have changed, new version created
         history = BroadcastMessageHistory(
             **{
-                "id": broadcast_message.id,
+                "broadcast_message_id": broadcast_message.id,
                 "reference": broadcast_message.reference or latest_broadcast_message.reference,
                 "created_at": datetime.now(timezone.utc),
                 "content": broadcast_message.content or latest_broadcast_message.content,

@@ -19,7 +19,7 @@ def upgrade():
     op.execute("delete from broadcast_message where status = 'draft'")
     op.create_table(
         "broadcast_message_history",
-        sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("broadcast_message_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("reference", sa.String(length=255), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("content", sa.Text(), nullable=False),
@@ -28,7 +28,7 @@ def upgrade():
         sa.Column("version", sa.Integer(), autoincrement=False, nullable=False),
         sa.Column("areas", postgresql.JSONB(none_as_null=True, astext_type=sa.Text())),
         sa.Column("duration", sa.Interval(), nullable=True),
-        sa.PrimaryKeyConstraint("id", "version"),
+        sa.PrimaryKeyConstraint("broadcast_message_id", "version"),
         sa.ForeignKeyConstraint(
             ["service_id"],
             ["services.id"],

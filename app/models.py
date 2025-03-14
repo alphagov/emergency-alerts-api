@@ -973,7 +973,7 @@ class BroadcastMessage(db.Model):
 
 class BroadcastMessageHistory(db.Model):
     __tablename__ = "broadcast_message_history"
-    id = db.Column(UUID(as_uuid=True), default=uuid.uuid4)
+    broadcast_message_id = db.Column(UUID(as_uuid=True), db.ForeignKey("broadcast_message.id"))
     reference = db.Column(db.String(255), nullable=True)
     created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.datetime.now(datetime.timezone.utc))
     content = db.Column(db.String, nullable=False)
@@ -985,7 +985,7 @@ class BroadcastMessageHistory(db.Model):
 
     def serialize(self):
         return {
-            "id": str(self.id),
+            "broadcast_message_id": str(self.broadcast_message_id),
             "reference": self.reference,
             "service_id": str(self.service_id),
             "content": self.content,
