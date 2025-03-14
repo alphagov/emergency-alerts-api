@@ -25,13 +25,15 @@ def get_broadcast_message_version(service_id, broadcast_message_id, version):
 
 @broadcast_message_history_blueprint.route("/<uuid:broadcast_message_id>/versions")
 def get_broadcast_message_versions(service_id, broadcast_message_id):
-    broadcast_messages = [
-        {
-            **message.serialize(),
-            "created_by": creatd_by or None,
-        }
-        for message, creatd_by in dao_get_broadcast_message_versions(
-            service_id=service_id, broadcast_message_id=broadcast_message_id
+    broadcast_messages = []
+    for message, created_by in dao_get_broadcast_message_versions(
+        service_id=service_id, broadcast_message_id=broadcast_message_id
+    ):
+        broadcast_messages.append(
+            {
+                **message.serialize(),
+                "created_by": created_by or None,
+            }
         )
-    ]
+
     return jsonify(broadcast_messages)
