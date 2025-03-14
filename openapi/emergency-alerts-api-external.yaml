@@ -58,8 +58,6 @@ servers:
     description: Production environment
   - url: https://api.staging.emergency-alerts.service.gov.uk/v2
     description: Staging environment
-  - url: https://api.preview.emergency-alerts.service.gov.uk/v2
-    description: Preview environment
 
 paths:
   /broadcast:
