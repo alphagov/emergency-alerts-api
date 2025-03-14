@@ -332,6 +332,14 @@ class TemplateHistorySchema(BaseSchema):
         exclude = ("broadcast_messages",)
 
 
+class BroadcastMessageHistorySchema(BaseSchema):
+    created_by = fields.Nested(UserSchema, only=["id"], dump_only=True)
+    created_at = field_for(models.BroadcastMessage, "created_at", format=DATETIME_FORMAT_NO_TIMEZONE)
+
+    class Meta(BaseSchema.Meta):
+        model = models.BroadcastMessageHistory
+
+
 class ApiKeySchema(BaseSchema):
     created_by = field_for(models.ApiKey, "created_by", required=True)
     key_type = field_for(models.ApiKey, "key_type", required=True)
@@ -439,5 +447,6 @@ partial_email_data_request_schema = EmailDataSchema(partial_email=True)
 service_history_schema = ServiceHistorySchema()
 api_key_history_schema = ApiKeyHistorySchema()
 template_history_schema = TemplateHistorySchema()
+broadcast_message_history_schema = BroadcastMessageHistorySchema()
 event_schema = EventSchema()
 unarchived_template_schema = UnarchivedTemplateSchema()

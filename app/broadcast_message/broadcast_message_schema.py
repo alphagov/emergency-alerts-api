@@ -49,6 +49,7 @@ update_broadcast_message_schema = {
         "starts_at": {"type": "string", "format": "datetime"},
         "finishes_at": {"type": "string", "format": "datetime"},
         "areas": {"type": "object"},
+        "created_by": uuid,
     },
     "required": [],
     "additionalProperties": False,

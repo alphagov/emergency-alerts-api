@@ -38,6 +38,11 @@ def update_broadcast_message_status(
         broadcast_message.rejection_reason = rejection_reason
         broadcast_message.rejected_by_api_key_id = api_key_id
 
+    if new_status == BroadcastStatusType.PENDING_APPROVAL:
+        # Check here to see if same user was creator
+        broadcast_message.submitted_at = datetime.now(timezone.utc)
+        broadcast_message.submitted_by = updating_user
+
     current_app.logger.info(
         f"broadcast_message {broadcast_message.id} moving from {broadcast_message.status} to {new_status}"
     )
@@ -59,9 +64,9 @@ def _validate_broadcast_update(broadcast_message, new_status, updating_user):
 
     if new_status == BroadcastStatusType.BROADCASTING:
         # training mode services can approve their own broadcasts
-        if updating_user == broadcast_message.created_by and not broadcast_message.service.restricted:
+        if updating_user == broadcast_message.submitted_by and not broadcast_message.service.restricted:
             raise InvalidRequest(
-                f"User {updating_user.id} cannot approve their own broadcast_message {broadcast_message.id}",
+                "You cannot approve an alert that you submitted for approval.",
                 status_code=400,
             )
         elif len(broadcast_message.areas["simple_polygons"]) == 0:
