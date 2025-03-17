@@ -420,7 +420,7 @@ def create_admin_action(service_id, created_by, action_type, action_data, status
 
 def create_broadcast_message_version(
     *,
-    id=None,
+    broadcast_message_id=None,
     created_by=None,
     content="Test Broadcast Content",
     areas=None,
@@ -432,7 +432,7 @@ def create_broadcast_message_version(
     duration=None,
 ):
     broadcast_message_version = BroadcastMessageHistory(
-        id=id,
+        broadcast_message_id=broadcast_message_id,
         service_id=service_id,
         created_by_id=created_by_id,
         areas=areas or {"ids": [], "simple_polygons": []},
