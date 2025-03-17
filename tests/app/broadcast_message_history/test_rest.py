@@ -13,28 +13,22 @@ def test_get_broadcast_message_version(admin_request, sample_service):
         bmv3 = create_broadcast_message_version(
             service_id=sample_service.id,
             broadcast_message_id=id,
-            version=uuid.uuid4(),
             content="Test 3",
             duration="04:00:00",
         )
     with freeze_time("2020-01-01 12:00"):
-        create_broadcast_message_version(
-            service_id=sample_service.id, broadcast_message_id=id, version=uuid.uuid4(), content="Test 1"
-        )
+        create_broadcast_message_version(service_id=sample_service.id, broadcast_message_id=id, content="Test 1")
     with freeze_time("2020-01-01 13:00"):
         create_broadcast_message_version(
             service_id=sample_service.id,
             broadcast_message_id=id,
-            version=uuid.uuid4(),
             content="Test 2",
             duration="01:00:00",
         )
 
     response = admin_request.get(
         "broadcast_message_history.get_broadcast_message_version",
-        service_id=str(sample_service.id),
-        broadcast_message_id=id,
-        version=uuid.UUID(str(bmv3.version)),
+        bmv3.id,
         _expected_status=200,
     )
 
@@ -48,13 +42,9 @@ def test_get_broadcast_message_version(admin_request, sample_service):
 def test_get_broadcast_message_versions(admin_request, sample_service):
     id = uuid.uuid4()
     with freeze_time("2020-01-01 12:00"):
-        bmv1 = create_broadcast_message_version(
-            service_id=sample_service.id, broadcast_message_id=id, version=uuid.uuid4()
-        )
+        bmv1 = create_broadcast_message_version(service_id=sample_service.id, broadcast_message_id=id)
     with freeze_time("2020-01-01 13:00"):
-        bmv2 = create_broadcast_message_version(
-            service_id=sample_service.id, broadcast_message_id=id, version=uuid.uuid4()
-        )
+        bmv2 = create_broadcast_message_version(service_id=sample_service.id, broadcast_message_id=id)
 
     response = admin_request.get(
         "broadcast_message_history.get_broadcast_message_versions",

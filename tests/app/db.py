@@ -420,19 +420,19 @@ def create_admin_action(service_id, created_by, action_type, action_data, status
 
 def create_broadcast_message_version(
     *,
+    id=None,
     broadcast_message_id=None,
     created_by=None,
     content="Test Broadcast Content",
     areas=None,
     created_at=None,
     reference="Test Broadcast Reference",
-    version=None,
     created_by_id=None,
     service_id=None,
     duration=None,
 ):
     broadcast_message_version = BroadcastMessageHistory(
-        id=uuid.uuid4(),
+        id=id,
         broadcast_message_id=broadcast_message_id,
         service_id=service_id,
         created_by_id=created_by_id,
@@ -440,7 +440,6 @@ def create_broadcast_message_version(
         content=content,
         created_at=created_at,
         reference=reference,
-        version=version,
         duration=duration,
     )
     db.session.add(broadcast_message_version)

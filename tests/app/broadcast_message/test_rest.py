@@ -8,8 +8,8 @@ from app.dao.broadcast_message_dao import (
     dao_get_broadcast_message_by_id_and_service_id,
 )
 from app.dao.broadcast_message_history_dao import (
-    dao_get_broadcast_message_by_id_service_id_and_version,
-    dao_get_latest_broadcast_message_version_by_id_and_service_id,
+    dao_get_broadcast_message_version_by_id,
+    dao_get_latest_broadcast_message_version_bybroadcast_message_id_and_service_id,
 )
 from app.models import (
     BROADCAST_TYPE,
@@ -273,16 +273,13 @@ def test_create_broadcast_message(admin_request, sample_broadcast_service, train
     broadcast_message = dao_get_broadcast_message_by_id_and_service_id(response["id"], sample_broadcast_service.id)
     assert broadcast_message.stubbed == training_mode_service
 
-    latest_version = dao_get_latest_broadcast_message_version_by_id_and_service_id(
+    latest_version = dao_get_latest_broadcast_message_version_bybroadcast_message_id_and_service_id(
         broadcast_message.id, sample_broadcast_service.id
     )
-    broadcast_message_version = dao_get_broadcast_message_by_id_service_id_and_version(
-        broadcast_message.id, sample_broadcast_service.id, version=latest_version.version
-    )
+    broadcast_message_version = dao_get_broadcast_message_version_by_id(latest_version.id)
     assert broadcast_message_version.reference == t.name
     assert broadcast_message_version.created_by_id == t.created_by_id
     assert broadcast_message_version.created_at is not None
-    assert broadcast_message_version.version == latest_version.version
     assert broadcast_message_version.areas == {
         "ids": ["manchester"],
         "simple_polygons": [[[50.12, 1.2], [50.13, 1.2], [50.14, 1.21]]],
