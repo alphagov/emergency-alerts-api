@@ -26,7 +26,6 @@ def upgrade():
         sa.Column("content", sa.Text(), nullable=False),
         sa.Column("service_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("created_by_id", postgresql.UUID(as_uuid=True), nullable=True),
-        sa.Column("version", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("areas", postgresql.JSONB(none_as_null=True, astext_type=sa.Text())),
         sa.Column("duration", sa.Interval(), nullable=True),
         sa.PrimaryKeyConstraint("id"),
