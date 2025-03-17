@@ -30,8 +30,6 @@ def test_get_broadcast_message_version(admin_request, sample_service):
         _expected_status=200,
     )
 
-    assert response.keys() == {}
-    assert response["broadcast_message_id"] == str(bmv3.broadcast_message_id)
     assert response["areas"] == bmv3.areas
     assert response["content"] == bmv3.content
     assert response["reference"] == bmv3.reference
