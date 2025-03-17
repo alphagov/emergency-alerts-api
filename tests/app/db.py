@@ -426,12 +426,13 @@ def create_broadcast_message_version(
     areas=None,
     created_at=None,
     reference="Test Broadcast Reference",
-    version=1,
+    version=None,
     created_by_id=None,
     service_id=None,
     duration=None,
 ):
     broadcast_message_version = BroadcastMessageHistory(
+        id=uuid.uuid4(),
         broadcast_message_id=broadcast_message_id,
         service_id=service_id,
         created_by_id=created_by_id,
