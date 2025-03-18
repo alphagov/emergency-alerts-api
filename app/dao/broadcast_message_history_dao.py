@@ -42,7 +42,7 @@ def dao_create_broadcast_message_version(broadcast_message, service_id, user_id=
     latest_broadcast_message = dao_get_latest_broadcast_message_version_bybroadcast_message_id_and_service_id(
         broadcast_message.id, service_id
     )
-    updating_user = broadcast_message.created_by if latest_broadcast_message is None else user_id
+    updating_user = broadcast_message.created_by.id if latest_broadcast_message is None else user_id
     history = None
     if latest_broadcast_message is None:
         history = BroadcastMessageHistory(
