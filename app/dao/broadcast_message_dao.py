@@ -172,9 +172,11 @@ def dao_get_all_pre_broadcast_messages():
 
 
 def dao_purge_old_broadcast_messages(service, days_older_than=30, dry_run=False):
+    print("Checking for service")
     if service is None:
         raise ValueError("Service ID is required")
 
+    print("Resolving service")
     service_id = _resolve_service_id(service)
     if service_id is None:
         raise ValueError("Unable to find service ID")
@@ -184,6 +186,7 @@ def dao_purge_old_broadcast_messages(service, days_older_than=30, dry_run=False)
 
     counter = {"msgs": 0, "events": 0, "provider_msgs": 0, "msg_numbers": 0}
     for message_id in message_ids:
+        print("Message ID: ", message_id)
         try:
             broadcast_event_ids = _get_broadcast_event_ids(message_id)
             broadcast_provider_message_ids = _broadcast_provider_message_ids(broadcast_event_ids)
@@ -255,16 +258,19 @@ def update_broadcast_provider_message_status(broadcast_provider_message, *, stat
 
 
 def _resolve_service_id(service):
+    print("Service is None", service)
     if service is None:
         service = uuid.UUID(current_app.config["FUNCTIONAL_TESTS_BROADCAST_SERVICE_ID"])
     else:
+        print("Service is UUID", isinstance(service, uuid.UUID))
         if not isinstance(service, uuid.UUID):
             try:
                 service = uuid.UUID(service)
             except ValueError:
                 return None
-
+    print("Retreiving service from db")
     if db.session.query(Service).filter(Service.id == service).one():
+        print("Service is in db", service)
         return str(service)
 
     return None
