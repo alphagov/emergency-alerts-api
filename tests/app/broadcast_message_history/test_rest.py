@@ -7,28 +7,34 @@ from tests.app.db import create_broadcast_message_version
 
 
 def test_get_broadcast_message_version(admin_request, sample_service):
-    id = uuid.uuid4()
+    broadcast_message_id = uuid.uuid4()
 
     with freeze_time("2020-01-01 11:00"):
         bmv3 = create_broadcast_message_version(
             service_id=sample_service.id,
-            broadcast_message_id=id,
+            broadcast_message_id=broadcast_message_id,
+            id=uuid.uuid4(),
             content="Test 3",
             duration="04:00:00",
         )
     with freeze_time("2020-01-01 12:00"):
-        create_broadcast_message_version(service_id=sample_service.id, broadcast_message_id=id, content="Test 1")
+        create_broadcast_message_version(
+            service_id=sample_service.id, broadcast_message_id=broadcast_message_id, id=uuid.uuid4(), content="Test 1"
+        )
     with freeze_time("2020-01-01 13:00"):
         create_broadcast_message_version(
             service_id=sample_service.id,
-            broadcast_message_id=id,
+            broadcast_message_id=broadcast_message_id,
             content="Test 2",
             duration="01:00:00",
+            id=uuid.uuid4(),
         )
 
     response = admin_request.get(
-        "broadcast_message_history.get_broadcast_message_version",
-        bmv3.id,
+        "broadcast_message_history.get_broadcast_message_version_by_id",
+        service_id=sample_service.id,
+        broadcast_message_id=broadcast_message_id,
+        id=bmv3.id,
         _expected_status=200,
     )
 

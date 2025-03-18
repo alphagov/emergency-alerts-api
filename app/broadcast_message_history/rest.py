@@ -14,7 +14,7 @@ register_errors(broadcast_message_history_blueprint)
 
 
 @broadcast_message_history_blueprint.route("/<uuid:broadcast_message_id>/version/<uuid:id>")
-def get_broadcast_message_version_by_id(broadcast_message_id, id):
+def get_broadcast_message_version_by_id(service_id, broadcast_message_id, id):
     data = broadcast_message_history_schema.dump(dao_get_broadcast_message_version_by_id(id))
     return jsonify(data)
 
