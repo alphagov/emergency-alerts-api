@@ -654,7 +654,7 @@ def fetch_invited_user_by_email():
     email = email_data_request_schema.load(request.get_json())
 
     fetched_user = get_invited_user_by_email(email["email"])
-    result = fetched_user.serialize()
+    result = fetched_user.serialize() if fetched_user else None
     return jsonify(data=result)
 
 
