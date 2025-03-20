@@ -13,14 +13,18 @@ from app.admin_action.admin_action_schema import (
     review_admin_action_schema,
 )
 from app.dao.admin_action_dao import (
+    dao_delete_admin_action_by_id,
     dao_get_admin_action_by_id,
+    dao_get_all_admin_actions_by_user_id,
     dao_get_pending_admin_actions,
 )
 from app.dao.dao_utils import dao_save_object
 from app.dao.services_dao import dao_fetch_service_by_id
 from app.dao.users_dao import get_user_by_id
+from app.errors import InvalidRequest
 from app.models import AdminAction
 from app.schema_validation import validate
+from app.utils import is_public_environment
 
 admin_action_blueprint = Blueprint("admin_action", __name__)
 
@@ -106,6 +110,21 @@ def review_admin_action(action_id):
     dao_save_object(admin_action)
 
     return jsonify(admin_action.serialize()), 200
+
+
+@admin_action_blueprint.route("/purge/<uuid:user_id>", methods=["DELETE"])
+def purge_test_admin_actions_created_by(user_id):
+    if is_public_environment():
+        raise InvalidRequest("Endpoint not found", status_code=404)
+
+    try:
+        actions = dao_get_all_admin_actions_by_user_id(user_id)
+        for action in actions:
+            dao_delete_admin_action_by_id(action.id)
+    except Exception as e:
+        return jsonify(result="error", message=f"Unable to purge admin actions created by user {user_id}: {e}"), 500
+
+    return jsonify({"message": "Successfully purged admin actions"}), 200
 
 
 def _admin_action_is_similar(action_obj1, action_obj2):
