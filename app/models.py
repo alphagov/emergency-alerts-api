@@ -1172,19 +1172,17 @@ class ServiceBroadcastSettings(db.Model):
     updated_at = db.Column(db.DateTime, nullable=True, onupdate=datetime.datetime.utcnow)
 
 
-class ServiceBroadcastProviders(db.Model):
-    """
-    Every broadcast service has one row in this table per MNO to which
-    it sends broadcasts.
-    """
+# class ServiceBroadcastProviders(db.Model):
+#     """
+#     Every broadcast service has one row per MNO to which it sends broadcasts.
+#     """
 
-    __tablename__ = "service_broadcast_providers"
+#     __tablename__ = "service_broadcast_providers"
 
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"), nullable=False)
-    provider = db.Column(db.String, nullable=False)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.now(datetime.datetime.utc))
-    updated_at = db.Column(db.DateTime, nullable=True, onupdate=datetime.datetime.now(datetime.datetime.utc))
+#     id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+#     service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"), nullable=False)
+#     provider = db.Column(db.String, db.ForeignKey("broadcast_provider_types.name"), nullable=False)
+#     created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.now(datetime.datetime.utc))
 
 
 class BroadcastChannelTypes(db.Model):
