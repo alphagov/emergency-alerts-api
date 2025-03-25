@@ -842,8 +842,8 @@ class BroadcastStatusType(db.Model):
     # these are only the transitions we expect to administer via the API code.
     ALLOWED_STATUS_TRANSITIONS = {
         DRAFT: {PENDING_APPROVAL},
-        PENDING_APPROVAL: {REJECTED, DRAFT, BROADCASTING},
-        REJECTED: {DRAFT, PENDING_APPROVAL},
+        PENDING_APPROVAL: {REJECTED, BROADCASTING},
+        REJECTED: {},
         BROADCASTING: {COMPLETED, CANCELLED},
         COMPLETED: {},
         CANCELLED: {},
@@ -899,16 +899,21 @@ class BroadcastMessage(db.Model):
     cancelled_at = db.Column(db.DateTime, nullable=True)
     rejected_at = db.Column(db.DateTime, nullable=True)
     updated_at = db.Column(db.DateTime, nullable=True, onupdate=datetime.datetime.utcnow)
+    submitted_at = db.Column(db.DateTime, nullable=True)
 
     created_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=True)
     approved_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=True)
     cancelled_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=True)
     rejected_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=True)
+    submitted_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=True)
+    updated_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=True)
 
     created_by = db.relationship("User", foreign_keys=[created_by_id])
     approved_by = db.relationship("User", foreign_keys=[approved_by_id])
     cancelled_by = db.relationship("User", foreign_keys=[cancelled_by_id])
     rejected_by = db.relationship("User", foreign_keys=[rejected_by_id])
+    submitted_by = db.relationship("User", foreign_keys=[submitted_by_id])
+    updated_by = db.relationship("User", foreign_keys=[updated_by_id])
 
     created_by_api_key_id = db.Column(UUID(as_uuid=True), db.ForeignKey("api_keys.id"), nullable=True)
     cancelled_by_api_key_id = db.Column(UUID(as_uuid=True), db.ForeignKey("api_keys.id"), nullable=True)
@@ -956,11 +961,39 @@ class BroadcastMessage(db.Model):
             "rejected_at": get_dt_string_or_none(self.rejected_at),
             "updated_at": get_dt_string_or_none(self.updated_at),
             "created_by_id": get_uuid_string_or_none(self.created_by_id),
+            "submitted_by_id": get_uuid_string_or_none(self.submitted_by_id),
+            "updated_by_id": get_uuid_string_or_none(self.updated_by_id),
             "approved_by_id": get_uuid_string_or_none(self.approved_by_id),
             "cancelled_by_id": get_uuid_string_or_none(self.cancelled_by_id),
             "rejected_by_id": get_uuid_string_or_none(self.rejected_by_id),
             "rejection_reason": self.rejection_reason if self.rejection_reason else None,
             "rejected_by_api_key_id": self.rejected_by_api_key_id or None,
+        }
+
+
+class BroadcastMessageHistory(db.Model):
+    __tablename__ = "broadcast_message_history"
+    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    broadcast_message_id = db.Column(UUID(as_uuid=True), db.ForeignKey("broadcast_message.id"))
+    reference = db.Column(db.String(255), nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.datetime.now(datetime.timezone.utc))
+    content = db.Column(db.String, nullable=False)
+    service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"))
+    created_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=True)
+    areas = db.Column(JSONB(none_as_null=True), nullable=False, default=dict)
+    duration = db.Column(db.Interval, nullable=True)
+
+    def serialize(self):
+        return {
+            "id": str(self.id),
+            "broadcast_message_id": str(self.broadcast_message_id),
+            "reference": self.reference,
+            "service_id": str(self.service_id),
+            "content": self.content,
+            "areas": self.areas,
+            "created_at": get_dt_string_or_none(self.created_at),
+            "created_by_id": get_uuid_string_or_none(self.created_by_id),
+            "duration": get_interval_seconds_or_none(self.duration),
         }
 
 

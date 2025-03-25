@@ -16,6 +16,9 @@ from app.dao.broadcast_message_dao import (
     dao_get_broadcast_provider_messages_by_broadcast_message_id,
     dao_purge_old_broadcast_messages,
 )
+from app.dao.broadcast_message_history_dao import (
+    dao_create_broadcast_message_version,
+)
 from app.dao.dao_utils import dao_save_object
 from app.dao.services_dao import dao_fetch_service_by_id
 from app.dao.templates_dao import dao_get_template_by_id_and_service_id
@@ -56,13 +59,14 @@ def get_broadcast_msgs_for_service(service_id):
     broadcast_messages = [
         {
             **message.serialize(),
-            "created_by": creatd_by or None,
-            "rejected_by": rejectd_by or None,
-            "approved_by": approvd_by or None,
-            "cancelled_by": cancelld_by or None,
+            "created_by": created_by or None,
+            "rejected_by": rejected_by or None,
+            "approved_by": approved_by or None,
+            "cancelled_by": cancelled_by or None,
+            "submitted_by": submitted_by or None,
         }
-        for message, creatd_by, rejectd_by, approvd_by, cancelld_by in dao_get_broadcast_messages_for_service_with_user(
-            service_id
+        for message, created_by, rejected_by, approved_by, cancelled_by, submitted_by in (
+            dao_get_broadcast_messages_for_service_with_user(service_id)
         )
     ]
     return jsonify(broadcast_messages=broadcast_messages)
@@ -77,6 +81,8 @@ def get_broadcast_message_by_id_and_service(service_id, broadcast_message_id):
         "rejected_by": result[2] or None,
         "approved_by": result[3] or None,
         "cancelled_by": result[4] or None,
+        "submitted_by": result[5] or None,
+        "updated_by": result[6] or None,
     }
 
 
@@ -110,7 +116,7 @@ def create_broadcast_message(service_id):
     if template_id:
         template = dao_get_template_by_id_and_service_id(template_id, data["service_id"])
         content = str(template._as_utils_template())
-        reference = None
+        reference = str(template.name)
     else:
         temporary_template = BroadcastMessageTemplate.from_content(data["content"])
         if temporary_template.content_too_long:
@@ -138,6 +144,7 @@ def create_broadcast_message(service_id):
     )
 
     dao_save_object(broadcast_message)
+    dao_create_broadcast_message_version(broadcast_message, service_id, user.id)
 
     return jsonify(broadcast_message.serialize()), 201
 
@@ -145,6 +152,7 @@ def create_broadcast_message(service_id):
 @broadcast_message_blueprint.route("/<uuid:broadcast_message_id>", methods=["POST"])
 def update_broadcast_message(service_id, broadcast_message_id):
     data = request.get_json()
+    updating_user = data.get("created_by") or None
     validate(data, update_broadcast_message_schema)
 
     broadcast_message = dao_get_broadcast_message_by_id_and_service_id(broadcast_message_id, service_id)
@@ -178,7 +186,9 @@ def update_broadcast_message(service_id, broadcast_message_id):
     if "ids" in areas and "simple_polygons" in areas:
         broadcast_message.areas = areas
 
+    broadcast_message.updated_by_id = updating_user
     dao_save_object(broadcast_message)
+    dao_create_broadcast_message_version(broadcast_message, service_id, broadcast_message.updated_by_id)
 
     return jsonify(broadcast_message.serialize()), 200
 
@@ -213,6 +223,53 @@ def update_broadcast_message_status(service_id, broadcast_message_id):
 
     broadcast_utils.update_broadcast_message_status(broadcast_message, new_status, updating_user)
     return jsonify(broadcast_message.serialize()), 200
+
+
+@broadcast_message_blueprint.route("/<uuid:broadcast_message_id>/check-status", methods=["POST"])
+def check_user_can_update_broadcast_message_status(service_id, broadcast_message_id):
+    """
+    This function checks whether the broadcast_message's status can be changed to new_status.
+    _validate_broadcast_update will return an InvalidRequest depending on whether transition is in
+    ALLOWED_STATUS_TRANSITIONS and this exception is then handled and message adjusted to be
+    returned, to be displayed in Admin.
+    """
+    data = request.get_json()
+    validate(data, update_broadcast_message_status_schema)
+    broadcast_message = dao_get_broadcast_message_by_id_and_service_id(broadcast_message_id, service_id)
+
+    new_status = data["status"]
+    updating_user = get_user_by_id(data["created_by"])
+
+    try:
+        broadcast_utils._validate_broadcast_update(broadcast_message, new_status, updating_user)
+    except InvalidRequest as e:
+        if new_status in BroadcastStatusType.ALLOWED_STATUS_TRANSITIONS[broadcast_message.status]:
+            raise e  # Raising any other InvalidRequest that has been raised
+
+        if broadcast_message.status == BroadcastStatusType.PENDING_APPROVAL:
+            raise InvalidRequest(
+                "This alert is pending approval, it cannot be edited or submitted again.",
+                400,
+            ) from e
+        elif broadcast_message.status == BroadcastStatusType.REJECTED:
+            raise InvalidRequest(
+                "This alert has been rejected, it cannot be edited or resubmitted for approval.",
+                400,
+            ) from e
+        elif broadcast_message.status == BroadcastStatusType.BROADCASTING:
+            raise InvalidRequest(
+                "This alert is live, it cannot be edited or submitted again.",
+                400,
+            ) from e
+        elif broadcast_message.status in [BroadcastStatusType.CANCELLED, BroadcastStatusType.COMPLETED]:
+            raise InvalidRequest(
+                "This alert has already been broadcast, it cannot be edited or resubmitted for approval.",
+                400,
+            ) from e
+    return (
+        {},
+        200,
+    )
 
 
 @broadcast_message_blueprint.route("/<uuid:broadcast_message_id>/status-with-reason", methods=["POST"])
