@@ -14,6 +14,7 @@ from app.models import (
     Organisation,
     Permission,
     Service,
+    ServiceBroadcastProviders,
     ServiceBroadcastSettings,
     ServicePermission,
 )
@@ -85,3 +86,18 @@ def insert_or_update_service_broadcast_settings(service, channel, provider_restr
         service.service_broadcast_settings.channel = channel
         service.service_broadcast_settings.provider = provider_restriction
         db.session.add(service.service_broadcast_settings)
+
+
+def set_service_broadcast_providers(service, provider_restriction):
+    """ "
+    Remove old providers and apply new provider list
+    """
+    ServiceBroadcastProviders.query.filter(
+        ServiceBroadcastProviders.service_id == service.id,
+    ).delete()
+
+    for provider in provider_restriction:
+        providers = ServiceBroadcastProviders()
+        providers.service_id = service.id
+        providers.provider = provider
+        db.session.add(providers)
