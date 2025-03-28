@@ -1,7 +1,7 @@
 """
 
-Revision ID: 0411_service_providers
-Revises: 0410_add_admin_actions
+Revision ID: 0412_service_providers
+Revises: 0411_broadcast_message_history
 Create Date: 2025-03-24 11:16:00
 
 """
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision = "0411_service_providers"
-down_revision = "0410_add_admin_actions"
+revision = "0412_service_providers"
+down_revision = "0411_broadcast_message_history"
 
 
 def upgrade():
@@ -27,15 +27,8 @@ def upgrade():
             ["broadcast_provider_types.name"],
         ),
     )
-    op.drop_column("service_broadcast_settings", "provider")
-    op.drop_table("service_broadcast_provider_restriction")
-
-    sql = """
-        delete broadcast_provider_types
-        where name = 'all'
-        """
-    conn = op.get_bind()
-    conn.execute(sql)
+    # op.drop_column("service_broadcast_settings", "provider")
+    # op.drop_table("service_broadcast_provider_restriction")
 
 
 def downgrade():

@@ -23,9 +23,8 @@ from app.models import (
 @autocommit
 @version_class(Service)
 def set_broadcast_service_type(service, service_mode, broadcast_channel, provider_restriction):
-    insert_or_update_service_broadcast_settings(
-        service, channel=broadcast_channel, provider_restriction=provider_restriction
-    )
+    insert_or_update_service_broadcast_settings(service, channel=broadcast_channel)
+    set_service_broadcast_providers(service, provider_restriction)
 
     # Remove all permissions and add broadcast permission
     if not service.has_permission(BROADCAST_TYPE):
@@ -75,16 +74,16 @@ def set_broadcast_service_type(service, service_mode, broadcast_channel, provide
     db.session.add(service)
 
 
-def insert_or_update_service_broadcast_settings(service, channel, provider_restriction="all"):
+def insert_or_update_service_broadcast_settings(service, channel):
     if not service.service_broadcast_settings:
         settings = ServiceBroadcastSettings()
         settings.service = service
         settings.channel = channel
-        settings.provider = provider_restriction
+        settings.provider = "deprecated"
         db.session.add(settings)
     else:
         service.service_broadcast_settings.channel = channel
-        service.service_broadcast_settings.provider = provider_restriction
+        service.service_broadcast_settings.provider = "deprecated"
         db.session.add(service.service_broadcast_settings)
 
 
