@@ -7,6 +7,10 @@ from freezegun import freeze_time
 from app.dao.broadcast_message_dao import (
     dao_get_broadcast_message_by_id_and_service_id,
 )
+from app.dao.broadcast_message_history_dao import (
+    dao_get_broadcast_message_version_by_id,
+    dao_get_latest_broadcast_message_version_bybroadcast_message_id_and_service_id,
+)
 from app.models import (
     BROADCAST_TYPE,
     BroadcastEventMessageType,
@@ -66,11 +70,6 @@ def test_get_broadcast_message_with_user(mocker, admin_request, sample_broadcast
         broadcast_message_id=bm.id,
         _expected_status=200,
     )
-    mock_dao_get_messages = mocker.patch(
-        "app.dao.broadcast_message_dao.dao_get_broadcast_message_by_id_and_service_id_with_user"
-    )
-
-    assert mock_dao_get_messages.assert_called_once
 
     assert response["id"] == str(bm.id)
     assert response["template_id"] == str(t.id)
@@ -206,7 +205,7 @@ def test_get_broadcast_messages_for_service_with_user(
     admin_request, sample_broadcast_service, sample_broadcast_service_3, sample_user, sample_user_2
 ):
     """
-    This test invovles the creation of multiple messages across 2 different services
+    This test involves the creation of multiple messages across 2 different services
     and asserting that the responses are as we'd expect.
     """
     t = create_template(sample_broadcast_service, BROADCAST_TYPE)
@@ -254,6 +253,7 @@ def test_create_broadcast_message(admin_request, sample_broadcast_service, train
             "template_id": str(t.id),
             "service_id": str(t.service_id),
             "created_by": str(t.created_by_id),
+            "areas": {"ids": ["manchester"], "simple_polygons": [[[50.12, 1.2], [50.13, 1.2], [50.14, 1.21]]]},
         },
         service_id=t.service_id,
         _expected_status=201,
@@ -264,11 +264,27 @@ def test_create_broadcast_message(admin_request, sample_broadcast_service, train
     assert response["created_at"] is not None
     assert response["created_by_id"] == str(t.created_by_id)
     assert response["personalisation"] == {}
-    assert response["areas"] == {}
+    assert response["areas"] == {
+        "ids": ["manchester"],
+        "simple_polygons": [[[50.12, 1.2], [50.13, 1.2], [50.14, 1.21]]],
+    }
     assert response["content"] == "Some content\n€ŷŵ~\n''\"\"---"
 
     broadcast_message = dao_get_broadcast_message_by_id_and_service_id(response["id"], sample_broadcast_service.id)
     assert broadcast_message.stubbed == training_mode_service
+
+    latest_version = dao_get_latest_broadcast_message_version_bybroadcast_message_id_and_service_id(
+        broadcast_message.id, sample_broadcast_service.id
+    )
+    broadcast_message_version = dao_get_broadcast_message_version_by_id(latest_version.id)
+    assert broadcast_message_version.reference == t.name
+    assert broadcast_message_version.created_by_id == t.created_by_id
+    assert broadcast_message_version.created_at is not None
+    assert broadcast_message_version.areas == {
+        "ids": ["manchester"],
+        "simple_polygons": [[[50.12, 1.2], [50.13, 1.2], [50.14, 1.21]]],
+    }
+    assert broadcast_message_version.content == response["content"]
 
 
 @pytest.mark.parametrize(
@@ -514,7 +530,9 @@ def test_update_broadcast_message_doesnt_allow_edits_after_broadcast_goes_live(
 def test_update_broadcast_message_sets_finishes_at_separately(admin_request, sample_broadcast_service):
     t = create_template(sample_broadcast_service, BROADCAST_TYPE)
     bm = create_broadcast_message(
-        t, areas={"ids": ["london"], "simple_polygons": [[[50.12, 1.2], [50.13, 1.2], [50.14, 1.21]]]}
+        t,
+        areas={"ids": ["london"], "simple_polygons": [[[50.12, 1.2], [50.13, 1.2], [50.14, 1.21]]]},
+        reference="Test Alert",
     )
 
     response = admin_request.post(
@@ -541,7 +559,7 @@ def test_update_broadcast_message_sets_finishes_at_separately(admin_request, sam
 )
 def test_update_broadcast_message_allows_sensible_datetime_formats(admin_request, sample_broadcast_service, input_dt):
     t = create_template(sample_broadcast_service, BROADCAST_TYPE)
-    bm = create_broadcast_message(t)
+    bm = create_broadcast_message(t, reference="Test Alert")
 
     response = admin_request.post(
         "broadcast_message.update_broadcast_message",

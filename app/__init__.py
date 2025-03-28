@@ -126,6 +126,9 @@ def register_blueprint(application):
         requires_no_auth,
     )
     from app.broadcast_message.rest import broadcast_message_blueprint
+    from app.broadcast_message_history.rest import (
+        broadcast_message_history_blueprint,
+    )
     from app.common_passwords.rest import common_passwords_blueprint
     from app.events.rest import events as events_blueprint
     from app.failed_logins.rest import failed_logins_blueprint
@@ -188,6 +191,9 @@ def register_blueprint(application):
 
     broadcast_message_blueprint.before_request(requires_admin_auth)
     application.register_blueprint(broadcast_message_blueprint)
+
+    broadcast_message_history_blueprint.before_request(requires_admin_auth)
+    application.register_blueprint(broadcast_message_history_blueprint)
 
     feature_toggle_blueprint.before_request(requires_admin_auth)
     application.register_blueprint(feature_toggle_blueprint)

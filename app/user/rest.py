@@ -278,12 +278,18 @@ def verify_user_code(user_id):
         increment_failed_login_count(user_to_verify)
         log_auth_activity(user_to_verify, "Failed login")
         raise InvalidRequest("Code not found", status_code=404)
-    if datetime.now() > code.expiry_datetime or code.code_used:
+    if datetime.now() > code.expiry_datetime:
         # sms and email
         add_failed_login_for_requester()
         increment_failed_login_count(user_to_verify)
         log_auth_activity(user_to_verify, "Failed login")
         raise InvalidRequest("Code has expired", status_code=400)
+    if code.code_used:
+        # sms and email
+        add_failed_login_for_requester()
+        increment_failed_login_count(user_to_verify)
+        log_auth_activity(user_to_verify, "Failed login")
+        raise InvalidRequest("Code has been used", status_code=400)
 
     user_to_verify.current_session_id = str(uuid.uuid4())
     user_to_verify.logged_in_at = datetime.now(timezone.utc)
