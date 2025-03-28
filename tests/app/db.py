@@ -22,6 +22,7 @@ from app.models import (
     ApiKey,
     BroadcastEvent,
     BroadcastMessage,
+    BroadcastMessageHistory,
     BroadcastProvider,
     BroadcastProviderMessage,
     BroadcastProviderMessageNumber,
@@ -291,12 +292,15 @@ def create_broadcast_message(
     stubbed=False,
     cap_event=None,
     created_at=None,  # only used for testing
+    reference=None,
+    submitted_by=None,
 ):
     if template:
         service = template.service
         template_id = template.id
         template_version = template.version
         content = template.content
+        reference = template.name
     elif content:
         template_id = None
         template_version = None
@@ -318,6 +322,8 @@ def create_broadcast_message(
         stubbed=stubbed,
         cap_event=cap_event,
         created_at=created_at,
+        reference=reference,
+        submitted_by=submitted_by,
     )
     db.session.add(broadcast_message)
     db.session.commit()
@@ -410,3 +416,32 @@ def create_admin_action(service_id, created_by, action_type, action_data, status
     db.session.add(action)
     db.session.commit()
     return action
+
+
+def create_broadcast_message_version(
+    *,
+    id=None,
+    broadcast_message_id=None,
+    created_by=None,
+    content="Test Broadcast Content",
+    areas=None,
+    created_at=None,
+    reference="Test Broadcast Reference",
+    created_by_id=None,
+    service_id=None,
+    duration=None,
+):
+    broadcast_message_version = BroadcastMessageHistory(
+        id=id,
+        broadcast_message_id=broadcast_message_id,
+        service_id=service_id,
+        created_by_id=created_by_id,
+        areas=areas or {"ids": [], "simple_polygons": []},
+        content=content,
+        created_at=created_at,
+        reference=reference,
+        duration=duration,
+    )
+    db.session.add(broadcast_message_version)
+    db.session.commit()
+    return broadcast_message_version
