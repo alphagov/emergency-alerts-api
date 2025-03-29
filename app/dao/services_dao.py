@@ -9,7 +9,7 @@ from app.dao.dao_utils import VersionOptions, autocommit, version_class
 from app.dao.organisation_dao import dao_get_organisation_by_email_address
 from app.dao.service_user_dao import dao_get_service_user
 from app.dao.template_folder_dao import dao_get_valid_template_folders_by_id
-from app.models import (
+from app.models import (  # ServiceBroadcastProviders,
     BROADCAST_TYPE,
     CROWN_ORGANISATION_TYPES,
     NON_CROWN_ORGANISATION_TYPES,

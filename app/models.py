@@ -307,7 +307,8 @@ class Service(db.Model, Versioned):
 
     notes = db.Column(db.Text, nullable=True)
 
-    allowed_broadcast_provider = association_proxy("service_broadcast_settings", "provider")
+    # allowed_broadcast_provider = association_proxy("service_broadcast_settings", "provider")
+    allowed_broadcast_provider = association_proxy("service_broadcast_providers", "provider")
     broadcast_channel = association_proxy("service_broadcast_settings", "channel")
 
     @classmethod

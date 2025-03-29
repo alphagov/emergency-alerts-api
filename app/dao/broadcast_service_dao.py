@@ -100,3 +100,8 @@ def set_service_broadcast_providers(service, provider_restriction):
         providers.service_id = service.id
         providers.provider = provider
         db.session.add(providers)
+
+
+def get_service_broadcast_providers(service_id):
+    query = ServiceBroadcastProviders.query.filter_by(service_id=service_id)
+    return query.all()
