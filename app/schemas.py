@@ -187,11 +187,11 @@ class ServiceSchema(BaseSchema, UUIDsAsStringsMixin):
     permissions = fields.Method("serialize_service_permissions", "deserialize_service_permissions")
     organisation = field_for(models.Service, "organisation")
     go_live_at = field_for(models.Service, "go_live_at", format=DATETIME_FORMAT_NO_TIMEZONE)
-    # allowed_broadcast_provider = fields.Method(dump_only=True, serialize="_get_allowed_broadcast_provider")
+    allowed_broadcast_provider = fields.List(fields.String, dump_only=True, serialize="_get_allowed_broadcast_provider")
     broadcast_channel = fields.Method(dump_only=True, serialize="_get_broadcast_channel")
 
-    # def _get_allowed_broadcast_provider(self, service):
-    #     return service.allowed_broadcast_provider
+    def _get_allowed_broadcast_provider(self, service):
+        return service.allowed_broadcast_provider
 
     def _get_broadcast_channel(self, service):
         return service.broadcast_channel

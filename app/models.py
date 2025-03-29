@@ -339,10 +339,12 @@ class Service(db.Model, Versioned):
 
     def get_available_broadcast_providers(self):
         # There may be future checks here if we add, for example, platform admin level provider killswitches.
-        if self.allowed_broadcast_provider != ALL_BROADCAST_PROVIDERS:
-            return [x for x in current_app.config["ENABLED_CBCS"] if x == self.allowed_broadcast_provider]
-        else:
-            return current_app.config["ENABLED_CBCS"]
+        # if self.allowed_broadcast_provider != ALL_BROADCAST_PROVIDERS:
+        #     return [x for x in current_app.config["ENABLED_CBCS"] if x == self.allowed_broadcast_provider]
+        # else:
+        #     return current_app.config["ENABLED_CBCS"]
+        providers = set(self.allowed_broadcast_provider) & current_app.config["ENABLED_CBCS"]
+        return list(providers)
 
 
 class ServicePermission(db.Model):
@@ -1129,10 +1131,10 @@ class BroadcastProvider:
     THREE = "three"
     O2 = "o2"
 
-    PROVIDERS = [EE, VODAFONE, THREE, O2]
+    PROVIDERS = [EE, O2, THREE, VODAFONE]
 
 
-ALL_BROADCAST_PROVIDERS = "all"
+ALL_BROADCAST_PROVIDERS = BroadcastProvider.PROVIDERS
 
 
 class BroadcastProviderMessageStatus:
@@ -1215,6 +1217,7 @@ class ServiceBroadcastProviders(db.Model):
 
     id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"), nullable=False)
+    service = db.relationship(Service, backref=db.backref("service_broadcast_providers", uselist=True))
     provider = db.Column(db.String, db.ForeignKey("broadcast_provider_types.name"), nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.now(timezone.utc))
 
