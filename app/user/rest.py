@@ -794,6 +794,39 @@ def elevate_platform_admin_next_login(user_id):
     return jsonify(new_redemption)
 
 
+@user_blueprint.route("/<uuid:user_id>/redeem-elevation", methods=["POST"])
+def redeem_platform_admin_elevation(user_id):
+    """Redeem (become) a platform admin. Sent by admin if there's an active platform_admin_redemption on login"""
+
+    user = get_user_by_id(user_id=user_id)
+
+    if not user.platform_admin_capable:
+        return (
+            jsonify({"errors": ["The user is not platform admin capable"]}),
+            403,
+        )
+
+    if user.platform_admin_redemption is None:
+        return (
+            jsonify({"errors": ["There is no elevation approval"]}),
+            403,
+        )
+
+    # The database returns naive datetime, so we need now (UTC) to also be naive for comparison
+    now_naive = datetime.now(timezone.utc).replace(tzinfo=None)
+    if user.platform_admin_redemption < now_naive:
+        return (
+            jsonify({"errors": [f"The elevation approval has expired: {user.platform_admin_redemption}"]}),
+            403,
+        )
+
+    save_user_attribute(user, {"platform_admin_redemption": None})
+
+    # TODO: Slack
+
+    return jsonify(user_id)
+
+
 @user_blueprint.route("/<uuid:user_id>/organisations-and-services", methods=["GET"])
 def get_organisations_and_services_for_user(user_id):
     user = get_user_and_accounts(user_id)
