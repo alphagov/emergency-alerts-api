@@ -252,10 +252,16 @@ class ServiceSchema(BaseSchema, UUIDsAsStringsMixin):
 
 
 class ProvidersSchema(BaseSchema):
-    id = fields.UUID()
-    service_id = fields.UUID()
-    provider = fields.String()
-    created_at = FlexibleDateTime()
+    class Meta(BaseSchema.Meta):
+        model = models.ServiceBroadcastProviders
+        exclude = (
+            "id",
+            "created_at",
+            "service",
+        )
+
+    service_id = field_for(models.ServiceBroadcastProviders, "service_id")
+    provider = field_for(models.ServiceBroadcastProviders, "provider")
 
 
 class DetailedServiceSchema(BaseSchema):

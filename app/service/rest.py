@@ -109,7 +109,7 @@ def get_service_by_id(service_id):
 def get_broadcast_providers_for_service(service_id):
     fetched = get_service_broadcast_providers(service_id=service_id)
 
-    data = providers_schema.dump(fetched)
+    data = providers_schema.dump(fetched, many=True)
     return jsonify(data=data)
 
 
