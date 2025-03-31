@@ -144,7 +144,7 @@ class User(db.Model):
             "password_changed_at": self.password_changed_at.strftime(DATETIME_FORMAT_NO_TIMEZONE),
             "permissions": self.get_permissions(),
             "platform_admin_capable": self.platform_admin_capable,
-            "platform_admin_redemption": self.platform_admin_redemption.strftime(DATETIME_FORMAT_NO_TIMEZONE),
+            "platform_admin_redemption": get_dt_string_or_none(self.platform_admin_redemption),
             "services": [x.id for x in self.services if x.active],
             "can_use_webauthn": self.can_use_webauthn,
             "state": self.state,
