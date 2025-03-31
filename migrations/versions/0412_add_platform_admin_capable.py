@@ -1,7 +1,7 @@
 """
 
 Revision ID: 0412_add_platform_admin_capable
-Revises: 5206923870d3
+Revises: 0411_broadcast_message_history
 Create Date: 2025-03-05 17:13:13.720166
 
 """
@@ -10,7 +10,7 @@ from alembic import op
 import sqlalchemy as sa
 
 revision = "0412_add_platform_admin_capable"
-down_revision = "5206923870d3"  # TODO: Fix for draft alerts
+down_revision = "0411_broadcast_message_history"
 
 
 def upgrade():
