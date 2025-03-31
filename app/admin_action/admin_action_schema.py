@@ -71,7 +71,7 @@ create_admin_action_schema = {
         {
             "properties": {
                 "action_type": {"const": ADMIN_ELEVATE_USER}
-                # No data - the created_by is the one requesting elevation for themselves
+                # No action_data - the created_by is the one requesting elevation for themselves
             },
         },
     ],
