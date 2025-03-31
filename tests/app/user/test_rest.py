@@ -1370,4 +1370,26 @@ def test_elevating_user_updates_and_sends_slack_notification(admin_request, samp
     # The stored SQL is UTC but naive, so also make our comparison naive
     assert updated_user.platform_admin_redemption > datetime.now(timezone.utc).replace(tzinfo=None)
 
-    # Assert Slack...
+    # TODO: Assert Slack...
+
+
+@pytest.mark.parametrize(
+    "platform_admin_redemption, platform_admin_capable, expect_success",
+    (
+        (None, True, False),
+        (datetime(2025, 1, 1, 10, 59, 0), True, False),
+        (datetime(2025, 1, 1, 11, 59, 0), False, False),
+        (datetime(2025, 1, 1, 11, 59, 0), True, True),
+    ),
+)
+@freeze_time("2025-01-01 11:00")
+def test_redeeming_eleavation_only_possible_if_not_expired(
+    admin_request, sample_user, platform_admin_redemption, platform_admin_capable, expect_success
+):
+    sample_user.platform_admin_redemption = platform_admin_redemption
+    sample_user.platform_admin_capable = platform_admin_capable
+    dao_update_service_user(sample_user)
+
+    admin_request.post(
+        "user.redeem_platform_admin_elevation", user_id=sample_user.id, _expected_status=200 if expect_success else 403
+    )
