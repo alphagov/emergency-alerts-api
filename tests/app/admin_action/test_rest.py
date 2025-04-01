@@ -2,6 +2,7 @@ import uuid
 
 import pytest
 from emergency_alerts_utils.admin_action import (
+    ADMIN_ELEVATE_USER,
     ADMIN_INVITE_USER,
     ADMIN_STATUS_PENDING,
 )
@@ -85,6 +86,35 @@ def test_get_all_pending_admin_actions(admin_request, sample_service, sample_use
     assert services[str(sample_service.id)]["id"] == str(sample_service.id)
     assert services[str(sample_service.id)]["name"] == str(sample_service.name)
     assert services[str(sample_service.id)]["restricted"] == sample_service.restricted
+
+    users = response["users"]
+    assert len(users) == 1
+    assert users[str(sample_user.id)]["id"] == str(sample_user.id)
+    assert users[str(sample_user.id)]["name"] == str(sample_user.name)
+    assert users[str(sample_user.id)]["email_address"] == str(sample_user.email_address)
+
+
+def test_get_pending_admin_elevation_action(admin_request, sample_user):
+    """
+    The elevation admin action is a little unique in that it doesn't have a service_id or populated action_data.
+    This caused some issues during development so there's an extra test to be safe.
+    """
+    create_admin_action(None, sample_user.id, ADMIN_ELEVATE_USER, {}, "pending")
+    response = admin_request.get("admin_action.get_pending_admin_actions", _expected_status=200)
+
+    pending = response["pending"]
+
+    assert len(pending) == 1
+    assert pending[0]["service_id"] is None
+    assert pending[0]["action_type"] == "elevate_platform_admin"
+    assert pending[0]["action_data"] == {}
+    assert pending[0]["created_by"] == str(sample_user.id)
+    assert pending[0]["created_at"] is not None
+    assert pending[0]["reviewed_by"] is None
+    assert pending[0]["reviewed_at"] is None
+
+    services = response["services"]
+    assert len(services) == 0
 
     users = response["users"]
     assert len(users) == 1

@@ -800,13 +800,13 @@ class AdminAction(db.Model):
     def serialize(self):
         return {
             "id": str(self.id),
-            "service_id": str(self.service_id),
+            "service_id": str(self.service_id) if self.service_id else None,
             "action_type": self.action_type,
             "action_data": self.action_data,
             "created_by": str(self.created_by_id),
             "created_at": str(self.created_at.strftime(DATETIME_FORMAT)),
             "status": self.status,
-            "reviewed_by": str(self.reviewed_by_id) if self.reviewed_by else None,
+            "reviewed_by": str(self.reviewed_by_id) if self.reviewed_by_id else None,
             "reviewed_at": str(self.reviewed_at.strftime(DATETIME_FORMAT)) if self.reviewed_at else None,
         }
 
