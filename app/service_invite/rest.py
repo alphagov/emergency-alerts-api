@@ -40,7 +40,7 @@ def create_invited_user(service_id):
             ),
         },
     }
-    print(notification)
+
     notify_send(notification)
 
     return jsonify(data=invited_user_schema.dump(invited_user)), 201

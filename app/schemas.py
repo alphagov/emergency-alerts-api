@@ -218,7 +218,6 @@ class ServiceSchema(BaseSchema, UUIDsAsStringsMixin):
             "api_keys",
             "broadcast_messages",
             "crown",
-            # "service_broadcast_provider_restriction",
             "service_broadcast_settings",
             "templates",
             "updated_at",

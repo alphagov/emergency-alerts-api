@@ -784,7 +784,7 @@ class AdminAction(db.Model):
 
     created_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), index=True, nullable=False)
     created_by = db.relationship("User", foreign_keys=[created_by_id])
-    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.datetime.utcnow)
+    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.datetime.now(datetime.timezone.utc))
 
     status = db.Column(db.Enum(*ADMIN_STATUS_LIST, name="admin_action_status_types"), nullable=False)
 
@@ -974,7 +974,7 @@ class BroadcastMessageHistory(db.Model):
     id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     broadcast_message_id = db.Column(UUID(as_uuid=True), db.ForeignKey("broadcast_message.id"))
     reference = db.Column(db.String(255), nullable=True)
-    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.datetime.utcnow)
+    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.datetime.now(datetime.timezone.utc))
     content = db.Column(db.String, nullable=False)
     service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"))
     created_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=True)
@@ -1314,7 +1314,9 @@ class FailedLogin(db.Model):
 
     id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     ip = db.Column(INET)
-    attempted_at = db.Column(db.DateTime, index=True, unique=False, nullable=False, default=datetime.datetime.utcnow)
+    attempted_at = db.Column(
+        db.DateTime, index=True, unique=False, nullable=False, default=datetime.datetime.now(datetime.timezone.utc)
+    )
 
     def serialize(self):
         return {
@@ -1335,7 +1337,7 @@ class PasswordHistory(db.Model):
     user_id = db.Column(UUID(as_uuid=True), default=uuid.uuid4)
     _password = db.Column(db.String, index=False, unique=False, nullable=False)
     password_changed_at = db.Column(
-        db.DateTime, index=True, unique=False, nullable=False, default=datetime.datetime.utcnow
+        db.DateTime, index=True, unique=False, nullable=False, default=datetime.datetime.now(datetime.timezone.utc)
     )
 
     @property
