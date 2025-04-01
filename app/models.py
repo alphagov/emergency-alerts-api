@@ -782,7 +782,7 @@ class AdminAction(db.Model):
     __tablename__ = "admin_actions"
 
     id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"), index=True, nullable=False)
+    service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"), index=True, nullable=True)
     service = db.relationship("Service")
     action_type = db.Column(db.Enum(*ADMIN_ACTION_LIST, name="admin_action_types"), nullable=False)
     action_data = db.Column(JSON, nullable=False)  # Params for the relevant action

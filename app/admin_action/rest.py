@@ -47,7 +47,7 @@ def create_admin_action():
             return abort(409)  # Conflict
 
     admin_action = AdminAction(
-        service_id=data["service_id"],
+        service_id=data.get("service_id", None),
         action_type=data["action_type"],
         action_data=data["action_data"],
         created_by_id=data["created_by"],
@@ -134,7 +134,8 @@ def _admin_action_is_similar(action_obj1, action_obj2):
     """
     Similar being related to the same subject, e.g. inviting the same user to the same service.
     """
-    if action_obj1["service_id"] != action_obj2["service_id"]:
+    # service_id is optional
+    if action_obj1.get("service_id") != action_obj2.get("service_id"):
         return False
 
     if action_obj1["action_type"] != action_obj2["action_type"]:
