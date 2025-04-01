@@ -27,8 +27,12 @@ def upgrade():
             ["broadcast_provider_types.name"],
         ),
     )
-    # op.drop_column("service_broadcast_settings", "provider")
-    # op.drop_table("service_broadcast_provider_restriction")
+    op.execute(
+        """
+        INSERT INTO broadcast_provider_types
+        SELECT 'deprecated'
+        """
+    )
 
 
 def downgrade():
