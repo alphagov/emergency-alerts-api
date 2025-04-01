@@ -67,6 +67,7 @@ def get_pending_admin_actions():
 
     # Grab related data to show in the UI:
     service_ids = set(x["service_id"] for x in pending)
+    service_ids.discard(None)  # service_id can be optional for some admin actions
     user_ids = set(x["created_by"] for x in pending)
 
     for action in pending:
