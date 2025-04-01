@@ -1,5 +1,5 @@
+import datetime
 import uuid
-from datetime import datetime, timezone
 
 from emergency_alerts_utils.admin_action import (
     ADMIN_ACTION_LIST,
@@ -65,12 +65,12 @@ class User(db.Model):
     id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = db.Column(db.String, nullable=False, index=True, unique=False)
     email_address = db.Column(db.String(255), nullable=False, index=True, unique=True)
-    created_at = db.Column(db.DateTime, index=False, unique=False, nullable=False, default=datetime.now(timezone.utc))
-    updated_at = db.Column(db.DateTime, index=False, unique=False, nullable=True, onupdate=datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, index=False, unique=False, nullable=False, default=datetime.datetime.utcnow)
+    updated_at = db.Column(db.DateTime, index=False, unique=False, nullable=True, onupdate=datetime.datetime.utcnow)
     _password = db.Column(db.String, index=False, unique=False, nullable=False)
     mobile_number = db.Column(db.String, index=False, unique=False, nullable=True)
     password_changed_at = db.Column(
-        db.DateTime, index=False, unique=False, nullable=False, default=datetime.now(timezone.utc)
+        db.DateTime, index=False, unique=False, nullable=False, default=datetime.datetime.utcnow
     )
     logged_in_at = db.Column(db.DateTime, nullable=True)
     failed_login_count = db.Column(db.Integer, nullable=False, default=0)
@@ -79,7 +79,7 @@ class User(db.Model):
     current_session_id = db.Column(UUID(as_uuid=True), nullable=True)
     auth_type = db.Column(db.String, db.ForeignKey("auth_type.name"), index=True, nullable=False, default=SMS_AUTH_TYPE)
     email_access_validated_at = db.Column(
-        db.DateTime, index=False, unique=False, nullable=False, default=datetime.now(timezone.utc)
+        db.DateTime, index=False, unique=False, nullable=False, default=datetime.datetime.utcnow
     )
 
     # either email auth or a mobile number must be provided
@@ -233,8 +233,8 @@ class Organisation(db.Model):
     id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, unique=False)
     name = db.Column(db.String(255), nullable=False, unique=True, index=True)
     active = db.Column(db.Boolean, nullable=False, default=True)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.now(timezone.utc))
-    updated_at = db.Column(db.DateTime, nullable=True, onupdate=datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=True, onupdate=datetime.datetime.utcnow)
     crown = db.Column(db.Boolean, nullable=True)
     organisation_type = db.Column(
         db.String(255),
@@ -285,8 +285,8 @@ class Service(db.Model, Versioned):
 
     id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = db.Column(db.String(255), nullable=False, unique=True)
-    created_at = db.Column(db.DateTime, index=False, unique=False, nullable=False, default=datetime.now(timezone.utc))
-    updated_at = db.Column(db.DateTime, index=False, unique=False, nullable=True, onupdate=datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, index=False, unique=False, nullable=False, default=datetime.datetime.utcnow)
+    updated_at = db.Column(db.DateTime, index=False, unique=False, nullable=True, onupdate=datetime.datetime.utcnow)
     active = db.Column(db.Boolean, index=False, unique=False, nullable=False, default=True)
     restricted = db.Column(db.Boolean, index=False, unique=False, nullable=False)
     created_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), index=True, nullable=False)
@@ -307,7 +307,6 @@ class Service(db.Model, Versioned):
 
     notes = db.Column(db.Text, nullable=True)
 
-    # allowed_broadcast_provider = association_proxy("service_broadcast_settings", "provider")
     allowed_broadcast_provider = association_proxy("service_broadcast_providers", "provider")
     broadcast_channel = association_proxy("service_broadcast_settings", "channel")
 
@@ -339,10 +338,6 @@ class Service(db.Model, Versioned):
 
     def get_available_broadcast_providers(self):
         # There may be future checks here if we add, for example, platform admin level provider killswitches.
-        # if self.allowed_broadcast_provider != ALL_BROADCAST_PROVIDERS:
-        #     return [x for x in current_app.config["ENABLED_CBCS"] if x == self.allowed_broadcast_provider]
-        # else:
-        #     return current_app.config["ENABLED_CBCS"]
         providers = set(self.allowed_broadcast_provider) & current_app.config["ENABLED_CBCS"]
         return list(providers)
 
@@ -356,7 +351,7 @@ class ServicePermission(db.Model):
     permission = db.Column(
         db.String(255), db.ForeignKey("service_permission_types.name"), index=True, primary_key=True, nullable=False
     )
-    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, nullable=False)
 
     service_permission_types = db.relationship(Service, backref=db.backref("permissions", cascade="all, delete-orphan"))
 
@@ -376,7 +371,7 @@ class ServiceInboundApi(db.Model, Versioned):
     service = db.relationship("Service", backref="inbound_api")
     url = db.Column(db.String(), nullable=False)
     _bearer_token = db.Column("bearer_token", db.String(), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, nullable=True)
     updated_by = db.relationship("User")
     updated_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), index=True, nullable=False)
@@ -411,7 +406,7 @@ class ServiceCallbackApi(db.Model, Versioned):
     url = db.Column(db.String(), nullable=False)
     callback_type = db.Column(db.String(), db.ForeignKey("service_callback_type.name"), nullable=True)
     _bearer_token = db.Column("bearer_token", db.String(), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, nullable=True)
     updated_by = db.relationship("User")
     updated_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), index=True, nullable=False)
@@ -456,8 +451,8 @@ class ApiKey(db.Model, Versioned):
     service = db.relationship("Service", backref="api_keys")
     key_type = db.Column(db.String(255), db.ForeignKey("key_types.name"), index=True, nullable=False)
     expiry_date = db.Column(db.DateTime)
-    created_at = db.Column(db.DateTime, index=False, unique=False, nullable=False, default=datetime.now(timezone.utc))
-    updated_at = db.Column(db.DateTime, index=False, unique=False, nullable=True, onupdate=datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, index=False, unique=False, nullable=False, default=datetime.datetime.utcnow)
+    updated_at = db.Column(db.DateTime, index=False, unique=False, nullable=True, onupdate=datetime.datetime.utcnow)
     created_by = db.relationship("User")
     created_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), index=True, nullable=False)
 
@@ -550,8 +545,8 @@ class TemplateBase(db.Model):
     id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = db.Column(db.String(255), nullable=False)
     template_type = db.Column(template_types, nullable=False)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.now(timezone.utc))
-    updated_at = db.Column(db.DateTime, onupdate=datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
+    updated_at = db.Column(db.DateTime, onupdate=datetime.datetime.utcnow)
     content = db.Column(db.Text, nullable=False)
     archived = db.Column(db.Boolean, nullable=False, default=False)
     broadcast_data = db.Column(JSONB(none_as_null=True), nullable=True)
@@ -650,7 +645,7 @@ class VerifyCode(db.Model):
     )
     expiry_datetime = db.Column(db.DateTime, nullable=False)
     code_used = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, index=False, unique=False, nullable=False, default=datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, index=False, unique=False, nullable=False, default=datetime.datetime.utcnow)
 
     @property
     def code(self):
@@ -685,7 +680,7 @@ class InvitedUser(db.Model):
     from_user = db.relationship("User")
     service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"), index=True, unique=False)
     service = db.relationship("Service")
-    created_at = db.Column(db.DateTime, index=False, unique=False, nullable=False, default=datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, index=False, unique=False, nullable=False, default=datetime.datetime.utcnow)
     status = db.Column(
         db.Enum(*INVITED_USER_STATUS_TYPES, name="invited_users_status_types"), nullable=False, default=INVITE_PENDING
     )
@@ -719,7 +714,7 @@ class InvitedOrganisationUser(db.Model):
     invited_by = db.relationship("User")
     organisation_id = db.Column(UUID(as_uuid=True), db.ForeignKey("organisation.id"), nullable=False)
     organisation = db.relationship("Organisation")
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
 
     status = db.Column(db.String, db.ForeignKey("invite_status_type.name"), nullable=False, default=INVITE_PENDING)
 
@@ -773,7 +768,7 @@ class Permission(db.Model):
     permission = db.Column(
         db.Enum(*PERMISSION_LIST, name="permission_types"), index=False, unique=False, nullable=False
     )
-    created_at = db.Column(db.DateTime, index=False, unique=False, nullable=False, default=datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, index=False, unique=False, nullable=False, default=datetime.datetime.utcnow)
 
     __table_args__ = (UniqueConstraint("service_id", "user_id", "permission", name="uix_service_user_permission"),)
 
@@ -789,7 +784,7 @@ class AdminAction(db.Model):
 
     created_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), index=True, nullable=False)
     created_by = db.relationship("User", foreign_keys=[created_by_id])
-    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.datetime.now(datetime.timezone.utc))
+    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.datetime.utcnow)
 
     status = db.Column(db.Enum(*ADMIN_STATUS_LIST, name="admin_action_status_types"), nullable=False)
 
@@ -816,7 +811,7 @@ class Event(db.Model):
 
     id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     event_type = db.Column(db.String(255), nullable=False)
-    created_at = db.Column(db.DateTime, index=False, unique=False, nullable=False, default=datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, index=False, unique=False, nullable=False, default=datetime.datetime.utcnow)
     data = db.Column(JSON, nullable=False)
 
 
@@ -897,11 +892,11 @@ class BroadcastMessage(db.Model):
     finishes_at = db.Column(db.DateTime, nullable=True)  # also isn't updated if user cancels
 
     # these times correspond to when
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
     approved_at = db.Column(db.DateTime, nullable=True)
     cancelled_at = db.Column(db.DateTime, nullable=True)
     rejected_at = db.Column(db.DateTime, nullable=True)
-    updated_at = db.Column(db.DateTime, nullable=True, onupdate=datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, nullable=True, onupdate=datetime.datetime.utcnow)
     submitted_at = db.Column(db.DateTime, nullable=True)
 
     created_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=True)
@@ -979,7 +974,7 @@ class BroadcastMessageHistory(db.Model):
     id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     broadcast_message_id = db.Column(UUID(as_uuid=True), db.ForeignKey("broadcast_message.id"))
     reference = db.Column(db.String(255), nullable=True)
-    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.datetime.now(datetime.timezone.utc))
+    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.datetime.utcnow)
     content = db.Column(db.String, nullable=False)
     service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"))
     created_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=True)
@@ -1033,7 +1028,7 @@ class BroadcastEvent(db.Model):
     broadcast_message = db.relationship("BroadcastMessage", backref="events")
 
     # this is used for <sent> in the cap xml
-    sent_at = db.Column(db.DateTime, nullable=False, default=datetime.now(timezone.utc))
+    sent_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
 
     # msgType. alert, cancel, or update. (other options in the spec are "ack" and "error")
     message_type = db.Column(db.String, nullable=False)
@@ -1163,8 +1158,8 @@ class BroadcastProviderMessage(db.Model):
 
     status = db.Column(db.String)
 
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.now(timezone.utc))
-    updated_at = db.Column(db.DateTime, nullable=True, onupdate=datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=True, onupdate=datetime.datetime.utcnow)
 
     UniqueConstraint(broadcast_event_id, provider)
 
@@ -1204,8 +1199,8 @@ class ServiceBroadcastSettings(db.Model):
     service = db.relationship(Service, backref=db.backref("service_broadcast_settings", uselist=False))
     channel = db.Column(db.String(255), db.ForeignKey("broadcast_channel_types.name"), nullable=False)
     provider = db.Column(db.String, db.ForeignKey("broadcast_provider_types.name"), nullable=False)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.now(timezone.utc))
-    updated_at = db.Column(db.DateTime, nullable=True, onupdate=datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=True, onupdate=datetime.datetime.utcnow)
 
 
 class ServiceBroadcastProviders(db.Model):
@@ -1219,7 +1214,7 @@ class ServiceBroadcastProviders(db.Model):
     service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"), nullable=False)
     service = db.relationship(Service, backref=db.backref("service_broadcast_providers", uselist=True))
     provider = db.Column(db.String, db.ForeignKey("broadcast_provider_types.name"), nullable=False)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
 
 
 class BroadcastChannelTypes(db.Model):
@@ -1253,7 +1248,7 @@ class ServiceBroadcastProviderRestriction(db.Model):
 
     provider = db.Column(db.String, nullable=False)
 
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
 
 
 class WebauthnCredential(db.Model):
@@ -1276,8 +1271,8 @@ class WebauthnCredential(db.Model):
     # base64 encoded CBOR. used for auditing. https://www.w3.org/TR/webauthn-2/#authenticatorattestationresponse
     registration_response = db.Column(db.String, nullable=False)
 
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.now(timezone.utc))
-    updated_at = db.Column(db.DateTime, nullable=True, onupdate=datetime.now(timezone.utc))
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=True, onupdate=datetime.datetime.utcnow)
 
     logged_in_at = db.Column(db.DateTime, nullable=True)
 
@@ -1319,7 +1314,7 @@ class FailedLogin(db.Model):
 
     id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     ip = db.Column(INET)
-    attempted_at = db.Column(db.DateTime, index=True, unique=False, nullable=False, default=datetime.now(timezone.utc))
+    attempted_at = db.Column(db.DateTime, index=True, unique=False, nullable=False, default=datetime.datetime.utcnow)
 
     def serialize(self):
         return {
@@ -1340,7 +1335,7 @@ class PasswordHistory(db.Model):
     user_id = db.Column(UUID(as_uuid=True), default=uuid.uuid4)
     _password = db.Column(db.String, index=False, unique=False, nullable=False)
     password_changed_at = db.Column(
-        db.DateTime, index=True, unique=False, nullable=False, default=datetime.now(timezone.utc)
+        db.DateTime, index=True, unique=False, nullable=False, default=datetime.datetime.utcnow
     )
 
     @property

@@ -52,7 +52,9 @@ def save_model_user(user, update_dict=None, password=None, validated_email_acces
 
 
 def create_user_code(user, code, code_type):
-    verify_code = VerifyCode(code_type=code_type, expiry_datetime=datetime.now() + timedelta(minutes=30), user=user)
+    verify_code = VerifyCode(
+        code_type=code_type, expiry_datetime=datetime.now(timezone.utc) + timedelta(minutes=30), user=user
+    )
     verify_code.code = code
     db.session.add(verify_code)
     db.session.commit()
