@@ -4,7 +4,9 @@ from datetime import datetime, timezone
 from urllib.parse import urlencode
 
 import pwdpy
-from emergency_alerts_utils.admin_action import ADMIN_ELEVATION_ACTION_TIMEOUT
+from emergency_alerts_utils.admin_action import (
+    ADMIN_ELEVATION_REDEMPTION_TIMEOUT,
+)
 from flask import Blueprint, abort, current_app, jsonify, request
 from notifications_python_client.errors import HTTPError
 from sqlalchemy.exc import IntegrityError
@@ -786,7 +788,7 @@ def elevate_platform_admin_next_login(user_id):
             422,
         )
 
-    new_redemption = datetime.now(timezone.utc) + ADMIN_ELEVATION_ACTION_TIMEOUT
+    new_redemption = datetime.now(timezone.utc) + ADMIN_ELEVATION_REDEMPTION_TIMEOUT
     save_user_attribute(user, {"platform_admin_redemption": new_redemption})
 
     # TODO: Slack
