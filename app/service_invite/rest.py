@@ -12,7 +12,7 @@ from app.dao.invited_user_dao import (
 from app.errors import InvalidRequest, register_errors
 from app.models import EMAIL_TYPE
 from app.schemas import invited_user_schema
-from app.utils import log_user
+from app.utils import is_local_host, log_user
 
 service_invite = Blueprint("service_invite", __name__)
 
@@ -40,6 +40,9 @@ def create_invited_user(service_id):
             ),
         },
     }
+
+    if is_local_host():
+        print(notification["personalisation"])
 
     notify_send(notification)
 
