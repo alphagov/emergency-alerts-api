@@ -22,6 +22,8 @@ services:
       USER: $USER
     volumes:
       - ./postgres:/docker-entrypoint-initdb.d:ro
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
     networks:
       - test-network
     ports:
