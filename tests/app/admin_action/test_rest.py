@@ -1,11 +1,14 @@
 import uuid
+from datetime import datetime
 
 import pytest
 from emergency_alerts_utils.admin_action import (
     ADMIN_ELEVATE_USER,
     ADMIN_INVITE_USER,
+    ADMIN_STATUS_INVALIDATED,
     ADMIN_STATUS_PENDING,
 )
+from freezegun import freeze_time
 
 from app.models import AdminAction
 from tests.app.db import create_admin_action
@@ -92,6 +95,41 @@ def test_get_all_pending_admin_actions(admin_request, sample_service, sample_use
     assert users[str(sample_user.id)]["id"] == str(sample_user.id)
     assert users[str(sample_user.id)]["name"] == str(sample_user.name)
     assert users[str(sample_user.id)]["email_address"] == str(sample_user.email_address)
+
+
+@freeze_time("2025-04-01 12:00")
+@pytest.mark.parametrize(
+    "created_time, expect_invalidation",
+    [
+        (datetime(2025, 4, 1, 9, 59), True),
+        (datetime(2025, 4, 1, 10, 0), True),
+        (datetime(2025, 4, 1, 11, 0), False),
+    ],
+)
+def test_older_elevation_admin_actions_are_invalidated(
+    notify_db_session, admin_request, sample_user, created_time, expect_invalidation
+):
+    notify_db_session.add(
+        AdminAction(
+            created_at=created_time,
+            created_by_id=sample_user.id,
+            action_type="elevate_platform_admin",
+            action_data={},
+            status="pending",
+        )
+    )
+    notify_db_session.commit()
+
+    response = admin_request.get("admin_action.get_pending_admin_actions", _expected_status=200)
+
+    assert len(response["pending"]) == 0 if expect_invalidation else 1
+
+    all = AdminAction.query.all()
+    assert len(all) == 1
+    if expect_invalidation:
+        assert all[0].status == ADMIN_STATUS_INVALIDATED
+    else:
+        assert all[0].status == ADMIN_STATUS_PENDING
 
 
 def test_get_pending_admin_elevation_action(admin_request, sample_user):

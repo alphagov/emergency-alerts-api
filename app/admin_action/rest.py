@@ -17,7 +17,7 @@ from app.dao.admin_action_dao import (
     dao_delete_admin_action_by_id,
     dao_get_admin_action_by_id,
     dao_get_all_admin_actions_by_user_id,
-    dao_get_pending_admin_actions,
+    dao_get_pending_valid_admin_actions,
 )
 from app.dao.dao_utils import dao_save_object
 from app.dao.services_dao import dao_fetch_service_by_id
@@ -36,7 +36,7 @@ def create_admin_action():
 
     validate(data, create_admin_action_schema)
 
-    pending = dao_get_pending_admin_actions()
+    pending = dao_get_pending_valid_admin_actions()
     for pending_action in pending:
         if _admin_action_is_similar(pending_action.serialize(), data):
             current_app.logger.error(
@@ -63,7 +63,7 @@ def create_admin_action():
 
 @admin_action_blueprint.route("/pending", methods=["GET"])
 def get_pending_admin_actions():
-    pending = [x.serialize() for x in dao_get_pending_admin_actions()]
+    pending = [x.serialize() for x in dao_get_pending_valid_admin_actions()]
 
     # Grab related data to show in the UI:
     service_ids = set(x["service_id"] for x in pending)
