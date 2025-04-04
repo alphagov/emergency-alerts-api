@@ -1568,7 +1568,45 @@ def test_set_as_broadcast_service_updates_services_history(admin_request, sample
     assert len(new_history_records) == len(old_history_records) + 1
 
 
-def test_set_as_broadcast_service_removes_user_permissions(
+def test_set_training_service_as_broadcast_service_removes_user_permissions(
+    admin_request,
+    broadcast_organisation,
+    sample_training_service,
+    sample_service_full_permissions,
+    sample_invited_user,
+):
+    service_user = sample_training_service.users[0]
+
+    # make the user a member of a second service
+    dao_add_user_to_service(
+        sample_service_full_permissions,
+        service_user,
+        permissions=[
+            Permission(
+                service_id=sample_service_full_permissions.id, user_id=service_user.id, permission="create_broadcasts"
+            )
+        ],
+    )
+    assert len(service_user.get_permissions(service_id=sample_training_service.id)) == 5
+    assert len(sample_invited_user.get_permissions()) == 3
+
+    admin_request.post(
+        "service.set_as_broadcast_service",
+        service_id=sample_training_service.id,
+        _data={"broadcast_channel": "test", "service_mode": "live", "provider_restriction": ["ee"]},
+    )
+
+    # The user permissions for the broadcast service (apart from 'view_activity') get removed
+    assert service_user.get_permissions(service_id=sample_training_service.id) == ["view_activity"]
+
+    # Permissions for users invited to the broadcast service (apart from 'view_activity') get removed
+    assert sample_invited_user.permissions == "view_activity"
+
+    # Permissions for other services remain
+    assert service_user.get_permissions(service_id=sample_service_full_permissions.id) == ["create_broadcasts"]
+
+
+def test_change_service_broadcast_providers_does_not_remove_user_permissions(
     admin_request,
     broadcast_organisation,
     sample_service,
@@ -1593,14 +1631,20 @@ def test_set_as_broadcast_service_removes_user_permissions(
     admin_request.post(
         "service.set_as_broadcast_service",
         service_id=sample_service.id,
-        _data={"broadcast_channel": "test", "service_mode": "live", "provider_restriction": ["ee"]},
+        _data={"broadcast_channel": "test", "service_mode": "live", "provider_restriction": ["three", "vodafone"]},
     )
 
-    # The user permissions for the broadcast service (apart from 'view_activity') get removed
-    assert service_user.get_permissions(service_id=sample_service.id) == ["view_activity"]
+    # The user permissions for the broadcast service are not changed
+    assert service_user.get_permissions(service_id=sample_service.id) == [
+        "manage_users",
+        "manage_templates",
+        "manage_settings",
+        "manage_api_keys",
+        "view_activity",
+    ]
 
-    # Permissions for users invited to the broadcast service (apart from 'view_activity') get removed
-    assert sample_invited_user.permissions == "view_activity"
+    # Permissions for users invited to the broadcast service are not changed
+    assert sample_invited_user.permissions == "create_broadcasts,manage_service,manage_api_keys"
 
     # Permissions for other services remain
     assert service_user.get_permissions(service_id=sample_service_full_permissions.id) == ["create_broadcasts"]

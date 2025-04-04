@@ -107,6 +107,27 @@ def sample_sms_code(notify_db_session):
 
 
 @pytest.fixture(scope="function")
+def sample_training_service(sample_user):
+    service_name = "Sample service"
+
+    data = {
+        "name": service_name,
+        "restricted": True,
+        "created_by": sample_user,
+        "crown": True,
+    }
+    service = Service.query.filter_by(name=service_name).first()
+    if not service:
+        service = Service(**data)
+        dao_create_service(service, sample_user, service_permissions=None)
+    else:
+        if sample_user not in service.users:
+            dao_add_user_to_service(service, sample_user)
+
+    return service
+
+
+@pytest.fixture(scope="function")
 def sample_service(sample_user):
     service_name = "Sample service"
 
