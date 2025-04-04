@@ -34,6 +34,44 @@ def upgrade():
         """
     )
 
+    # Migrate the 'all' specifier in the service_broadcast_settings table
+    # to individual providers in the service_broadcast_providers table
+    op.execute(
+        """
+        DO $$
+            DECLARE
+                provider_itr TEXT;
+                providers TEXT[] := ARRAY['ee', 'o2', 'three', 'vodafone'];
+            BEGIN
+                FOREACH provider_itr IN ARRAY providers LOOP
+                    INSERT INTO service_broadcast_providers
+                        (id, service_id, provider, created_at)
+                    SELECT gen_random_uuid(), service_id, provider_itr, NOW()
+                    FROM service_broadcast_settings
+                    WHERE service_id IN (
+                        SELECT id
+                        FROM services
+                        WHERE active = true
+                    ) AND provider = 'all';
+            END LOOP;
+        END $$;
+        """
+    )
+    op.execute(
+        """
+        INSERT INTO service_broadcast_providers
+            (id, service_id, provider, created_at)
+        SELECT gen_random_uuid(), service_id, provider, NOW()
+        FROM service_broadcast_settings
+        WHERE service_id IN (
+                SELECT id
+            FROM services
+            WHERE active = true
+            )
+            AND provider IN ('ee', 'o2', 'three', 'vodafone')
+        """
+    )
+
 
 def downgrade():
     op.drop_table("service_broadcast_providers")
