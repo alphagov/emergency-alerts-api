@@ -3,8 +3,6 @@ import os
 from celery.schedules import crontab
 from kombu import Exchange, Queue
 
-from app.models import BroadcastProvider
-
 
 class QueueNames(object):
     PERIODIC = "periodic-tasks"
@@ -15,6 +13,15 @@ class QueueNames(object):
 class TaskNames(object):
     PUBLISH_GOVUK_ALERTS = "publish-govuk-alerts"
     TRIGGER_GOVUK_HEALTHCHECK = "trigger-govuk-alerts-healthcheck"
+
+
+class BroadcastProvider:
+    EE = "ee"
+    VODAFONE = "vodafone"
+    THREE = "three"
+    O2 = "o2"
+
+    PROVIDERS = [EE, O2, VODAFONE, THREE]
 
 
 """
