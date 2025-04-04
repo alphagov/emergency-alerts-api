@@ -14,6 +14,7 @@ from app.models import (
     Organisation,
     Permission,
     Service,
+    ServiceBroadcastProviders,
     ServiceBroadcastSettings,
     ServicePermission,
 )
@@ -22,9 +23,8 @@ from app.models import (
 @autocommit
 @version_class(Service)
 def set_broadcast_service_type(service, service_mode, broadcast_channel, provider_restriction):
-    insert_or_update_service_broadcast_settings(
-        service, channel=broadcast_channel, provider_restriction=provider_restriction
-    )
+    insert_or_update_service_broadcast_settings(service, channel=broadcast_channel)
+    set_service_broadcast_providers(service, provider_restriction)
 
     # Remove all permissions and add broadcast permission
     if not service.has_permission(BROADCAST_TYPE):
@@ -50,14 +50,20 @@ def set_broadcast_service_type(service, service_mode, broadcast_channel, provide
             # Only update the go live at timestamp if this if moving from training mode
             # to live mode, not if it's moving from one type of live mode service to another
             service.go_live_at = datetime.now(timezone.utc)
+
+            # Remove all user permissions apart from view_activity for the service users and invited users
+            # only if the service is moving from training mode to live mode
+            Permission.query.filter(
+                Permission.service_id == service.id, Permission.permission != VIEW_ACTIVITY
+            ).delete()
+            InvitedUser.query.filter_by(service_id=service.id, status=INVITE_PENDING).update(
+                {"permissions": VIEW_ACTIVITY}
+            )
+
         service.restricted = False
     else:
         service.restricted = True
         service.go_live_at = None
-
-    # Remove all user permissions apart from view_activity for the service users and invited users
-    Permission.query.filter(Permission.service_id == service.id, Permission.permission != VIEW_ACTIVITY).delete()
-    InvitedUser.query.filter_by(service_id=service.id, status=INVITE_PENDING).update({"permissions": VIEW_ACTIVITY})
 
     # Revoke any API keys to avoid a regular API key being used to send alerts
     ApiKey.query.filter_by(
@@ -74,14 +80,34 @@ def set_broadcast_service_type(service, service_mode, broadcast_channel, provide
     db.session.add(service)
 
 
-def insert_or_update_service_broadcast_settings(service, channel, provider_restriction="all"):
+def insert_or_update_service_broadcast_settings(service, channel):
     if not service.service_broadcast_settings:
         settings = ServiceBroadcastSettings()
         settings.service = service
         settings.channel = channel
-        settings.provider = provider_restriction
+        settings.provider = "deprecated"
         db.session.add(settings)
     else:
         service.service_broadcast_settings.channel = channel
-        service.service_broadcast_settings.provider = provider_restriction
+        service.service_broadcast_settings.provider = "deprecated"
         db.session.add(service.service_broadcast_settings)
+
+
+def set_service_broadcast_providers(service, provider_restriction):
+    """ "
+    Remove old providers and apply new provider list
+    """
+    ServiceBroadcastProviders.query.filter(
+        ServiceBroadcastProviders.service_id == service.id,
+    ).delete()
+
+    for provider in provider_restriction:
+        providers = ServiceBroadcastProviders()
+        providers.service_id = service.id
+        providers.provider = provider
+        db.session.add(providers)
+
+
+def get_service_broadcast_providers(service_id):
+    query = ServiceBroadcastProviders.query.filter_by(service_id=service_id)
+    return query.all()

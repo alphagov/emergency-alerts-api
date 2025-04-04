@@ -55,13 +55,12 @@ def test_trigger_link_tests_calls_for_all_providers(mocker, notify_api):
         "app.celery.scheduled_tasks.trigger_link_test",
     )
 
-    with set_config(notify_api, "ENABLED_CBCS", ["ee", "vodafone"]):
+    with set_config(notify_api, "ENABLED_CBCS", {"ee", "vodafone"}):
         trigger_link_tests()
 
-    assert mock_trigger_link_test.apply_async.call_args_list == [
-        call(kwargs={"provider": "ee"}, queue="broadcast-tasks"),
-        call(kwargs={"provider": "vodafone"}, queue="broadcast-tasks"),
-    ]
+    args = mock_trigger_link_test.apply_async.call_args_list
+    assert call(kwargs={"provider": "ee"}, queue="broadcast-tasks") in args
+    assert call(kwargs={"provider": "vodafone"}, queue="broadcast-tasks") in args
 
 
 def test_trigger_link_does_nothing_if_cbc_proxy_disabled(mocker, notify_api):
@@ -69,7 +68,7 @@ def test_trigger_link_does_nothing_if_cbc_proxy_disabled(mocker, notify_api):
         "app.celery.scheduled_tasks.trigger_link_test",
     )
 
-    with set_config(notify_api, "ENABLED_CBCS", ["ee", "vodafone"]), set_config(notify_api, "CBC_PROXY_ENABLED", False):
+    with set_config(notify_api, "ENABLED_CBCS", {"ee", "vodafone"}), set_config(notify_api, "CBC_PROXY_ENABLED", False):
         trigger_link_tests()
 
     assert mock_trigger_link_test.called is False

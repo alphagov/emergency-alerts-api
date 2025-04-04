@@ -187,7 +187,7 @@ class ServiceSchema(BaseSchema, UUIDsAsStringsMixin):
     permissions = fields.Method("serialize_service_permissions", "deserialize_service_permissions")
     organisation = field_for(models.Service, "organisation")
     go_live_at = field_for(models.Service, "go_live_at", format=DATETIME_FORMAT_NO_TIMEZONE)
-    allowed_broadcast_provider = fields.Method(dump_only=True, serialize="_get_allowed_broadcast_provider")
+    allowed_broadcast_provider = fields.List(fields.String, dump_only=True, serialize="_get_allowed_broadcast_provider")
     broadcast_channel = fields.Method(dump_only=True, serialize="_get_broadcast_channel")
 
     def _get_allowed_broadcast_provider(self, service):
@@ -218,8 +218,8 @@ class ServiceSchema(BaseSchema, UUIDsAsStringsMixin):
             "api_keys",
             "broadcast_messages",
             "crown",
-            "service_broadcast_provider_restriction",
             "service_broadcast_settings",
+            "service_broadcast_provider_restriction",
             "templates",
             "updated_at",
             "users",
@@ -249,6 +249,19 @@ class ServiceSchema(BaseSchema, UUIDsAsStringsMixin):
             in_data["permissions"] = permissions
 
         return in_data
+
+
+class ProvidersSchema(BaseSchema):
+    class Meta(BaseSchema.Meta):
+        model = models.ServiceBroadcastProviders
+        exclude = (
+            "id",
+            "created_at",
+            "service",
+        )
+
+    service_id = field_for(models.ServiceBroadcastProviders, "service_id")
+    provider = field_for(models.ServiceBroadcastProviders, "provider")
 
 
 class DetailedServiceSchema(BaseSchema):
@@ -437,6 +450,7 @@ create_user_schema = UserSchema()
 user_update_schema_load_json = UserUpdateAttributeSchema(load_json=True, partial=True)
 user_update_password_schema_load_json = UserUpdatePasswordSchema(only=("_password",), load_json=True, partial=True)
 service_schema = ServiceSchema()
+providers_schema = ProvidersSchema()
 detailed_service_schema = DetailedServiceSchema()
 template_schema = TemplateSchema()
 template_schema_no_detail = TemplateSchemaNoDetail()

@@ -14,6 +14,7 @@ from app.celery.broadcast_message_tasks import (
 )
 from app.clients.cbc_proxy import CBCProxyRetryableException
 from app.config import QueueNames, TaskNames
+from app.dao.broadcast_service_dao import set_service_broadcast_providers
 from app.models import (
     BROADCAST_TYPE,
     BroadcastEventMessageType,
@@ -40,13 +41,13 @@ def test_send_broadcast_event_queues_up_for_active_providers(mocker, notify_api,
         "app.celery.broadcast_message_tasks.send_broadcast_provider_message",
     )
 
-    with set_config(notify_api, "ENABLED_CBCS", ["ee", "vodafone"]):
+    set_service_broadcast_providers(sample_broadcast_service, ["ee", "vodafone"])
+    with set_config(notify_api, "ENABLED_CBCS", {"ee", "vodafone"}):
         send_broadcast_event(event.id)
 
-    assert mock_send_broadcast_provider_message.apply_async.call_args_list == [
-        call(kwargs={"broadcast_event_id": event.id, "provider": "ee"}, queue="broadcast-tasks"),
-        call(kwargs={"broadcast_event_id": event.id, "provider": "vodafone"}, queue="broadcast-tasks"),
-    ]
+    args = mock_send_broadcast_provider_message.apply_async.call_args_list
+    assert call(kwargs={"broadcast_event_id": event.id, "provider": "ee"}, queue="broadcast-tasks") in args
+    assert call(kwargs={"broadcast_event_id": event.id, "provider": "vodafone"}, queue="broadcast-tasks") in args
 
 
 @pytest.mark.parametrize(
@@ -68,7 +69,7 @@ def test_send_broadcast_event_calls_publish_govuk_alerts_task(
 
     mock = mocker.patch("app.celery.broadcast_message_tasks.notify_celery.send_task")
 
-    with set_config(notify_api, "ENABLED_CBCS", ["ee", "vodafone"]):
+    with set_config(notify_api, "ENABLED_CBCS", {"ee", "vodafone"}):
         send_broadcast_event(event.id)
 
     mock.assert_called_once_with(
@@ -79,7 +80,7 @@ def test_send_broadcast_event_calls_publish_govuk_alerts_task(
 def test_send_broadcast_event_only_sends_to_one_provider_if_set_on_service(
     mocker, notify_api, sample_broadcast_service
 ):
-    sample_broadcast_service.allowed_broadcast_provider = "vodafone"
+    set_service_broadcast_providers(sample_broadcast_service, ["vodafone"])
     template = create_template(sample_broadcast_service, BROADCAST_TYPE)
     broadcast_message = create_broadcast_message(template, status=BroadcastStatusType.BROADCASTING)
     event = create_broadcast_event(broadcast_message)
@@ -89,7 +90,7 @@ def test_send_broadcast_event_only_sends_to_one_provider_if_set_on_service(
     )
     mocker.patch("app.celery.broadcast_message_tasks.notify_celery.send_task")
 
-    with set_config(notify_api, "ENABLED_CBCS", ["ee", "vodafone"]):
+    with set_config(notify_api, "ENABLED_CBCS", {"ee", "vodafone"}):
         send_broadcast_event(event.id)
 
     assert mock_send_broadcast_provider_message.apply_async.call_args_list == [
@@ -100,7 +101,7 @@ def test_send_broadcast_event_only_sends_to_one_provider_if_set_on_service(
 def test_send_broadcast_event_does_nothing_if_provider_set_on_service_isnt_enabled_globally(
     mocker, notify_api, sample_broadcast_service
 ):
-    sample_broadcast_service.allowed_broadcast_provider = "three"
+    set_service_broadcast_providers(sample_broadcast_service, ["three"])
     template = create_template(sample_broadcast_service, BROADCAST_TYPE)
     broadcast_message = create_broadcast_message(template, status=BroadcastStatusType.BROADCASTING)
     event = create_broadcast_event(broadcast_message)
@@ -111,7 +112,7 @@ def test_send_broadcast_event_does_nothing_if_provider_set_on_service_isnt_enabl
         "app.celery.broadcast_message_tasks.send_broadcast_provider_message",
     )
 
-    with set_config(notify_api, "ENABLED_CBCS", ["ee", "vodafone"]):
+    with set_config(notify_api, "ENABLED_CBCS", {"ee", "vodafone"}):
         send_broadcast_event(event.id)
 
     assert mock_send_broadcast_provider_message.apply_async.called is False
@@ -693,7 +694,7 @@ def test_send_broadcast_provider_message_does_nothing_if_cbc_proxy_disabled(mock
 
     broadcast_message = create_broadcast_message(sample_template)
     broadcast_event = create_broadcast_event(broadcast_message, message_type="alert")
-    with set_config(notify_api, "ENABLED_CBCS", ["ee", "vodafone"]), set_config(notify_api, "CBC_PROXY_ENABLED", False):
+    with set_config(notify_api, "ENABLED_CBCS", {"ee", "vodafone"}), set_config(notify_api, "CBC_PROXY_ENABLED", False):
         send_broadcast_provider_message(broadcast_event.id, "ee")
 
     assert mock_client.create_and_send_broadcast.called is False

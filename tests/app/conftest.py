@@ -13,7 +13,7 @@ from flask import current_app, url_for
 
 from app import db
 from app.dao.api_key_dao import save_model_api_key
-from app.dao.broadcast_service_dao import (
+from app.dao.broadcast_service_dao import (  # set_service_broadcast_providers
     insert_or_update_service_broadcast_settings,
 )
 from app.dao.invited_user_dao import save_invited_user
@@ -104,6 +104,27 @@ def sample_sms_code(notify_db_session):
     code, txt_code = create_code(notify_db_session, code_type="sms")
     code.txt_code = txt_code
     return code
+
+
+@pytest.fixture(scope="function")
+def sample_training_service(sample_user):
+    service_name = "Sample service"
+
+    data = {
+        "name": service_name,
+        "restricted": True,
+        "created_by": sample_user,
+        "crown": True,
+    }
+    service = Service.query.filter_by(name=service_name).first()
+    if not service:
+        service = Service(**data)
+        dao_create_service(service, sample_user, service_permissions=None)
+    else:
+        if sample_user not in service.users:
+            dao_add_user_to_service(service, sample_user)
+
+    return service
 
 
 @pytest.fixture(scope="function")
