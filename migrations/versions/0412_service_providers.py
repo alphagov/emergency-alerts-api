@@ -57,6 +57,8 @@ def upgrade():
         END $$;
         """
     )
+
+    # Migrate the original single-provider services
     op.execute(
         """
         INSERT INTO service_broadcast_providers
