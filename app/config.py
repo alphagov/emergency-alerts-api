@@ -21,7 +21,7 @@ class BroadcastProvider:
     THREE = "three"
     O2 = "o2"
 
-    PROVIDERS = [EE, O2, VODAFONE, THREE]
+    PROVIDERS = [EE, O2, THREE, VODAFONE]
 
 
 """
