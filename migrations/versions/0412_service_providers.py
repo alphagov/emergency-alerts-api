@@ -37,3 +37,9 @@ def upgrade():
 
 def downgrade():
     op.drop_table("service_broadcast_providers")
+    op.execute(
+        """
+        DELETE FROM broadcast_provider_types
+        WHERE name = 'deprecated'
+        """
+    )
