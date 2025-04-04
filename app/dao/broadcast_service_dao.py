@@ -50,14 +50,20 @@ def set_broadcast_service_type(service, service_mode, broadcast_channel, provide
             # Only update the go live at timestamp if this if moving from training mode
             # to live mode, not if it's moving from one type of live mode service to another
             service.go_live_at = datetime.now(timezone.utc)
+
+            # Remove all user permissions apart from view_activity for the service users and invited users
+            # only if the service is moving from training mode to live mode
+            Permission.query.filter(
+                Permission.service_id == service.id, Permission.permission != VIEW_ACTIVITY
+            ).delete()
+            InvitedUser.query.filter_by(service_id=service.id, status=INVITE_PENDING).update(
+                {"permissions": VIEW_ACTIVITY}
+            )
+
         service.restricted = False
     else:
         service.restricted = True
         service.go_live_at = None
-
-    # Remove all user permissions apart from view_activity for the service users and invited users
-    Permission.query.filter(Permission.service_id == service.id, Permission.permission != VIEW_ACTIVITY).delete()
-    InvitedUser.query.filter_by(service_id=service.id, status=INVITE_PENDING).update({"permissions": VIEW_ACTIVITY})
 
     # Revoke any API keys to avoid a regular API key being used to send alerts
     ApiKey.query.filter_by(
