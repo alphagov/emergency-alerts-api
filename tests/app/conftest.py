@@ -13,7 +13,7 @@ from flask import current_app, url_for
 
 from app import db
 from app.dao.api_key_dao import save_model_api_key
-from app.dao.broadcast_service_dao import (
+from app.dao.broadcast_service_dao import (  # set_service_broadcast_providers
     insert_or_update_service_broadcast_settings,
 )
 from app.dao.invited_user_dao import save_invited_user
@@ -142,6 +142,7 @@ def sample_broadcast_service(broadcast_organisation, sample_user):
         service = Service(**data)
         dao_create_service(service, sample_user, service_permissions=[BROADCAST_TYPE])
         insert_or_update_service_broadcast_settings(service, channel="severe")
+        # set_service_broadcast_providers(service, ["three"])
         dao_add_service_to_organisation(service, current_app.config["BROADCAST_ORGANISATION_ID"])
     else:
         if sample_user not in service.users:
@@ -165,6 +166,7 @@ def sample_broadcast_service_2(broadcast_organisation, sample_user):
         service = Service(**data)
         dao_create_service(service, sample_user, service_permissions=[BROADCAST_TYPE])
         insert_or_update_service_broadcast_settings(service, channel="severe")
+        # set_service_broadcast_providers(service, ["three"])
         dao_add_service_to_organisation(service, current_app.config["BROADCAST_ORGANISATION_ID"])
     else:
         if sample_user not in service.users:
@@ -188,6 +190,7 @@ def sample_broadcast_service_3(broadcast_organisation, sample_user_2):
         service = Service(**data)
         dao_create_service(service, sample_user_2, service_permissions=[BROADCAST_TYPE])
         insert_or_update_service_broadcast_settings(service, channel="severe")
+        # set_service_broadcast_providers(service, ["three"])
         dao_add_service_to_organisation(service, current_app.config["BROADCAST_ORGANISATION_ID"])
     else:
         if sample_user_2 not in service.users:

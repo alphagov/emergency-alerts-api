@@ -6,6 +6,7 @@ import pytest
 from flask import current_app, url_for
 from freezegun import freeze_time
 
+from app.dao.broadcast_service_dao import set_service_broadcast_providers
 from app.dao.organisation_dao import dao_add_service_to_organisation
 from app.dao.service_user_dao import dao_get_service_user
 from app.dao.services_dao import (
@@ -19,6 +20,7 @@ from app.models import (
     SERVICE_PERMISSION_TYPES,
     Permission,
     Service,
+    ServiceBroadcastProviders,
     ServiceBroadcastSettings,
     ServicePermission,
     User,
@@ -130,7 +132,7 @@ def test_get_service_by_id(admin_request, sample_service):
     json_resp = admin_request.get("service.get_service_by_id", service_id=sample_service.id)
     assert json_resp["data"]["name"] == sample_service.name
     assert json_resp["data"]["id"] == str(sample_service.id)
-    assert json_resp["data"]["allowed_broadcast_provider"] is None
+    assert json_resp["data"]["allowed_broadcast_provider"] == []
     assert json_resp["data"]["broadcast_channel"] is None
 
     assert set(json_resp["data"].keys()) == {
@@ -150,27 +152,28 @@ def test_get_service_by_id(admin_request, sample_service):
         "permissions",
         "restricted",
         "service_callback_api",
+        "service_broadcast_providers",
     }
 
 
 @pytest.mark.parametrize(
     "broadcast_channel,allowed_broadcast_provider",
     (
-        ("operator", "all"),
-        ("test", "all"),
-        ("severe", "all"),
-        ("government", "all"),
-        ("operator", "o2"),
-        ("test", "ee"),
-        ("severe", "three"),
-        ("government", "vodafone"),
+        ("operator", ["all"]),
+        ("test", ["all"]),
+        ("severe", ["all"]),
+        ("government", ["all"]),
+        ("operator", ["o2"]),
+        ("test", ["ee"]),
+        ("severe", ["three"]),
+        ("government", ["vodafone"]),
     ),
 )
 def test_get_service_by_id_for_broadcast_service_returns_broadcast_keys(
     notify_db_session, admin_request, sample_broadcast_service, broadcast_channel, allowed_broadcast_provider
 ):
     sample_broadcast_service.broadcast_channel = broadcast_channel
-    sample_broadcast_service.allowed_broadcast_provider = allowed_broadcast_provider
+    set_service_broadcast_providers(sample_broadcast_service, allowed_broadcast_provider)
 
     json_resp = admin_request.get("service.get_service_by_id", service_id=sample_broadcast_service.id)
     assert json_resp["data"]["id"] == str(sample_broadcast_service.id)
@@ -1187,7 +1190,7 @@ def test_set_as_broadcast_service_sets_broadcast_channel(
     data = {
         "broadcast_channel": channel,
         "service_mode": "live",
-        "provider_restriction": "all",
+        "provider_restriction": ["all"],
     }
 
     result = admin_request.post(
@@ -1210,7 +1213,7 @@ def test_set_as_broadcast_service_updates_channel_for_broadcast_service(admin_re
     data = {
         "broadcast_channel": "test",
         "service_mode": "training",
-        "provider_restriction": "all",
+        "provider_restriction": ["all"],
     }
 
     result = admin_request.post(
@@ -1276,7 +1279,7 @@ def test_set_as_broadcast_service_gives_broadcast_permission_and_removes_other_c
     data = {
         "broadcast_channel": "severe",
         "service_mode": "training",
-        "provider_restriction": "all",
+        "provider_restriction": ["all"],
     }
 
     result = admin_request.post(
@@ -1310,7 +1313,7 @@ def test_set_as_broadcast_service_maintains_broadcast_permission_for_existing_br
     data = {
         "broadcast_channel": "severe",
         "service_mode": "live",
-        "provider_restriction": "all",
+        "provider_restriction": ["all"],
     }
 
     result = admin_request.post(
@@ -1332,7 +1335,7 @@ def test_set_as_broadcast_service_sets_service_org_to_broadcast_org(
     data = {
         "broadcast_channel": "severe",
         "service_mode": "training",
-        "provider_restriction": "all",
+        "provider_restriction": ["all"],
     }
     result = admin_request.post(
         "service.set_as_broadcast_service",
@@ -1351,7 +1354,7 @@ def test_set_as_broadcast_service_does_not_error_if_run_on_a_service_that_is_alr
     data = {
         "broadcast_channel": "severe",
         "service_mode": "live",
-        "provider_restriction": "all",
+        "provider_restriction": ["all"],
     }
     for _ in range(2):
         admin_request.post(
@@ -1373,7 +1376,7 @@ def test_set_as_broadcast_service_sets_service_to_live_mode(
     data = {
         "broadcast_channel": "severe",
         "service_mode": "live",
-        "provider_restriction": "all",
+        "provider_restriction": ["all"],
     }
 
     result = admin_request.post(
@@ -1398,7 +1401,7 @@ def test_set_as_broadcast_service_doesnt_override_existing_go_live_at(
     data = {
         "broadcast_channel": "severe",
         "service_mode": "live",
-        "provider_restriction": "all",
+        "provider_restriction": ["all"],
     }
 
     result = admin_request.post(
@@ -1424,7 +1427,7 @@ def test_set_as_broadcast_service_sets_service_to_training_mode(
     data = {
         "broadcast_channel": "severe",
         "service_mode": "training",
-        "provider_restriction": "all",
+        "provider_restriction": ["all"],
     }
 
     result = admin_request.post(
@@ -1458,7 +1461,7 @@ def test_set_as_broadcast_service_rejects_unknown_service_mode(
 def test_set_as_broadcast_service_rejects_if_no_service_mode(admin_request, sample_service, broadcast_organisation):
     data = {
         "broadcast_channel": "severe",
-        "provider_restriction": "all",
+        "provider_restriction": ["all"],
     }
 
     admin_request.post(
@@ -1469,7 +1472,9 @@ def test_set_as_broadcast_service_rejects_if_no_service_mode(admin_request, samp
     )
 
 
-@pytest.mark.parametrize("provider", ["all", "three", "ee", "vodafone", "o2"])
+@pytest.mark.parametrize(
+    "provider", [["all"], ["ee"], ["vodafone"], ["o2"], ["three", "vodafone"], ["ee", "o2", "three", "vodafone"]]
+)
 def test_set_as_broadcast_service_sets_mobile_provider_restriction(
     admin_request, sample_service, broadcast_organisation, provider
 ):
@@ -1484,20 +1489,19 @@ def test_set_as_broadcast_service_sets_mobile_provider_restriction(
     assert result["data"]["name"] == "Sample service"
     assert result["data"]["allowed_broadcast_provider"] == provider
 
-    records = ServiceBroadcastSettings.query.filter_by(service_id=sample_service.id).all()
-    assert len(records) == 1
-    assert records[0].service_id == sample_service.id
-    assert records[0].provider == provider
+    records = ServiceBroadcastProviders.query.filter_by(service_id=sample_service.id).all()
+    assert len(records) == len(provider)
+    for n in range(len(provider)):
+        assert records[n].service_id == sample_service.id
+        assert records[n].provider == provider[n]
 
 
-@pytest.mark.parametrize("provider", ["all", "vodafone"])
+@pytest.mark.parametrize("provider", [["all"], ["vodafone"]])
 def test_set_as_broadcast_service_updates_mobile_provider_restriction(
     admin_request, notify_db_session, sample_broadcast_service, provider
 ):
-    sample_broadcast_service.service_broadcast_settings.provider = "o2"
     notify_db_session.add(sample_broadcast_service)
     notify_db_session.commit()
-    assert sample_broadcast_service.service_broadcast_settings.provider == "o2"
 
     data = {"broadcast_channel": "severe", "service_mode": "live", "provider_restriction": provider}
 
@@ -1510,10 +1514,10 @@ def test_set_as_broadcast_service_updates_mobile_provider_restriction(
     assert result["data"]["name"] == "Sample broadcast service"
     assert result["data"]["allowed_broadcast_provider"] == provider
 
-    records = ServiceBroadcastSettings.query.filter_by(service_id=sample_broadcast_service.id).all()
+    records = ServiceBroadcastProviders.query.filter_by(service_id=sample_broadcast_service.id).all()
     assert len(records) == 1
     assert records[0].service_id == sample_broadcast_service.id
-    assert records[0].provider == provider
+    assert records[0].provider == provider[0]
 
 
 @pytest.mark.parametrize("provider", ["three, o2", "giffgaff", "", "None"])
@@ -1551,7 +1555,7 @@ def test_set_as_broadcast_service_updates_services_history(admin_request, sample
     data = {
         "broadcast_channel": "test",
         "service_mode": "live",
-        "provider_restriction": "all",
+        "provider_restriction": ["all"],
     }
 
     admin_request.post(
@@ -1589,7 +1593,7 @@ def test_set_as_broadcast_service_removes_user_permissions(
     admin_request.post(
         "service.set_as_broadcast_service",
         service_id=sample_service.id,
-        _data={"broadcast_channel": "test", "service_mode": "live", "provider_restriction": "ee"},
+        _data={"broadcast_channel": "test", "service_mode": "live", "provider_restriction": ["ee"]},
     )
 
     # The user permissions for the broadcast service (apart from 'view_activity') get removed
@@ -1621,7 +1625,7 @@ def test_set_as_broadcast_service_revokes_api_keys(
         _data={
             "broadcast_channel": "government",
             "service_mode": "live",
-            "provider_restriction": "all",
+            "provider_restriction": ["all"],
         },
     )
 
