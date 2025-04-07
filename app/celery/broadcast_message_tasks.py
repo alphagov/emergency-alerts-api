@@ -114,7 +114,18 @@ def send_broadcast_event(broadcast_event_id):
         kwargs={"broadcast_event_id": broadcast_event_id},
     )
 
-    for provider in broadcast_event.service.get_available_broadcast_providers():
+    providers = broadcast_event.service.get_available_broadcast_providers()
+    current_app.logger.info(
+        "Send broadcast event",
+        extra={
+            "broadcast_event_id": broadcast_event_id,
+            "message_type": broadcast_event.message_type,
+            "providers": "|".join(providers),
+            "python_module": __name__,
+        },
+    )
+
+    for provider in providers:
         send_broadcast_provider_message.apply_async(
             kwargs={"broadcast_event_id": broadcast_event_id, "provider": provider}, queue=QueueNames.BROADCASTS
         )
@@ -160,6 +171,7 @@ def send_broadcast_provider_message(self, broadcast_event_id, provider):
         extra={
             "broadcast_provider_message_id": broadcast_provider_message.id,
             "broadcast_event_id": broadcast_event_id,
+            "provider": provider,
             "message_type": broadcast_event.message_type,
             "is_retry": is_retry,
             "python_module": __name__,
