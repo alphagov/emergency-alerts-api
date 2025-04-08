@@ -125,7 +125,14 @@ def calculate_delay_period(failed_login_count):
         delay = 2
     else:
         delay = 2 * calculate_delay_period(failed_login_count - 1)
-    current_app.logger.info(f'{failed_login_count}, {min(delay, current_app.config["MAX_THROTTLE_PERIOD"])}')
+    data = {
+        "count of failed logins": failed_login_count,
+        "throttle period": min(delay, current_app.config["MAX_THROTTLE_PERIOD"]),
+    }
+    current_app.logger.info(
+        "Throttle delay calculated",
+        extra=data,
+    )
     return min(delay, current_app.config["MAX_THROTTLE_PERIOD"])
 
 
