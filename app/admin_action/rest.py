@@ -56,8 +56,6 @@ def create_admin_action():
 
     dao_save_object(admin_action)
 
-    # TODO: Slack
-
     return jsonify(admin_action.serialize()), 201
 
 

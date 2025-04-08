@@ -791,8 +791,6 @@ def elevate_platform_admin_next_login(user_id):
     new_redemption = datetime.now(timezone.utc) + ADMIN_ELEVATION_REDEMPTION_TIMEOUT
     save_user_attribute(user, {"platform_admin_redemption": new_redemption})
 
-    # TODO: Slack
-
     return jsonify(new_redemption)
 
 
@@ -823,8 +821,6 @@ def redeem_platform_admin_elevation(user_id):
         )
 
     save_user_attribute(user, {"platform_admin_redemption": None})
-
-    # TODO: Slack
 
     return jsonify(user_id)
 
