@@ -125,7 +125,7 @@ def calculate_delay_period(failed_login_count):
         delay = 2
     else:
         delay = 2 * calculate_delay_period(failed_login_count - 1)
-    print(failed_login_count, min(delay, current_app.config["MAX_THROTTLE_PERIOD"]))
+    current_app.logger.info(f'{failed_login_count}, {min(delay, current_app.config["MAX_THROTTLE_PERIOD"])}')
     return min(delay, current_app.config["MAX_THROTTLE_PERIOD"])
 
 
