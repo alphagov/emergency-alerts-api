@@ -30,7 +30,8 @@ def upgrade():
 
 def downgrade():
     op.add_column("users", sa.Column("platform_admin", sa.Boolean()))
-    op.execute("UPDATE users SET platform_admin = platform_admin_capable")
+    # Before self-approval we didn't keep admin status around
+    op.execute("UPDATE users SET platform_admin = FALSE")
     op.alter_column("users", "platform_admin", nullable=False)
     op.drop_column("users", "platform_admin_redemption")
     op.drop_column("users", "platform_admin_capable")
