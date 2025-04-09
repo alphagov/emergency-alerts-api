@@ -34,4 +34,5 @@ def downgrade():
     op.alter_column("users", "platform_admin", nullable=False)
     op.drop_column("users", "platform_admin_redemption")
     op.drop_column("users", "platform_admin_capable")
+    op.execute("DELETE FROM admin_actions WHERE service_id IS NULL")
     op.alter_column("admin_actions", "service_id", existing_type=postgresql.UUID(), nullable=False)
