@@ -1,6 +1,5 @@
-version: '3.8'
+version: "3.8"
 services:
-
   api:
     build:
       context: .
@@ -22,6 +21,8 @@ services:
       USER: $USER
     volumes:
       - ./postgres:/docker-entrypoint-initdb.d:ro
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
     networks:
       - test-network
     ports:
@@ -30,7 +31,6 @@ services:
 networks:
   test-network:
     driver: bridge
-
 # Running tests in a container
 # docker compose -f docker-compose-tests.yml up --force-recreate --exit-code-from api
 # docker compose -f docker-compose-tests.yml down

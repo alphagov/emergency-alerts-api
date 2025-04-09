@@ -18,6 +18,7 @@ from app.models import (
     Organisation,
     Permission,
     Service,
+    ServiceBroadcastProviders,
     ServiceBroadcastSettings,
     ServicePermission,
     ServiceUser,
@@ -250,6 +251,7 @@ def delete_service_created_for_functional_testing(service):
     _delete(ServiceUser.query.filter_by(service_id=service.id))
     _delete(ServicePermission.query.filter_by(service_id=service.id))
     _delete(ServiceBroadcastSettings.query.filter_by(service_id=service.id))
+    _delete(ServiceBroadcastProviders.query.filter_by(service_id=service.id))
     db.session.delete(service)
     db.session.commit()
 
