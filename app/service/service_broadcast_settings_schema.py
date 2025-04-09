@@ -6,7 +6,7 @@ service_broadcast_settings_schema = {
     "properties": {
         "broadcast_channel": {"enum": ["operator", "test", "severe", "government"]},
         "service_mode": {"enum": ["training", "live"]},
-        "provider_restriction": {"enum": ["three", "o2", "vodafone", "ee", "all"]},
+        "provider_restriction": {"type": "array", "items": {"type": "string"}},
     },
     "required": ["broadcast_channel", "service_mode", "provider_restriction"],
 }

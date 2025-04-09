@@ -307,7 +307,7 @@ class Service(db.Model, Versioned):
 
     notes = db.Column(db.Text, nullable=True)
 
-    allowed_broadcast_provider = association_proxy("service_broadcast_settings", "provider")
+    allowed_broadcast_provider = association_proxy("service_broadcast_providers", "provider")
     broadcast_channel = association_proxy("service_broadcast_settings", "channel")
 
     @classmethod
@@ -338,10 +338,8 @@ class Service(db.Model, Versioned):
 
     def get_available_broadcast_providers(self):
         # There may be future checks here if we add, for example, platform admin level provider killswitches.
-        if self.allowed_broadcast_provider != ALL_BROADCAST_PROVIDERS:
-            return [x for x in current_app.config["ENABLED_CBCS"] if x == self.allowed_broadcast_provider]
-        else:
-            return current_app.config["ENABLED_CBCS"]
+        providers = set(self.allowed_broadcast_provider) & current_app.config["ENABLED_CBCS"]
+        return list(providers)
 
 
 class ServicePermission(db.Model):
@@ -1128,10 +1126,10 @@ class BroadcastProvider:
     THREE = "three"
     O2 = "o2"
 
-    PROVIDERS = [EE, VODAFONE, THREE, O2]
+    PROVIDERS = [EE, O2, THREE, VODAFONE]
 
 
-ALL_BROADCAST_PROVIDERS = "all"
+ALL_BROADCAST_PROVIDERS = BroadcastProvider.PROVIDERS
 
 
 class BroadcastProviderMessageStatus:
@@ -1203,6 +1201,20 @@ class ServiceBroadcastSettings(db.Model):
     provider = db.Column(db.String, db.ForeignKey("broadcast_provider_types.name"), nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
     updated_at = db.Column(db.DateTime, nullable=True, onupdate=datetime.datetime.utcnow)
+
+
+class ServiceBroadcastProviders(db.Model):
+    """
+    Every broadcast service has one row per MNO to which it sends broadcasts.
+    """
+
+    __tablename__ = "service_broadcast_providers"
+
+    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"), nullable=False)
+    service = db.relationship(Service, backref=db.backref("service_broadcast_providers", uselist=True))
+    provider = db.Column(db.String, db.ForeignKey("broadcast_provider_types.name"), nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
 
 
 class BroadcastChannelTypes(db.Model):
