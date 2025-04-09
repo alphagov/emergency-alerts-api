@@ -1357,7 +1357,7 @@ def test_elevating_user_requires_platform_admin_capable(admin_request, sample_us
     )
 
 
-def test_elevating_user_updates_and_sends_slack_notification(admin_request, sample_user):
+def test_elevating_user_updates_redemption_timestamp(admin_request, sample_user):
     assert sample_user.platform_admin_redemption is None
     sample_user.platform_admin_capable = True
     dao_update_service_user(sample_user)
@@ -1369,8 +1369,6 @@ def test_elevating_user_updates_and_sends_slack_notification(admin_request, samp
     updated_user = get_user_by_id(sample_user.id)
     # The stored SQL is UTC but naive, so also make our comparison naive
     assert updated_user.platform_admin_redemption > datetime.now(timezone.utc).replace(tzinfo=None)
-
-    # TODO: Assert Slack...
 
 
 @pytest.mark.parametrize(
