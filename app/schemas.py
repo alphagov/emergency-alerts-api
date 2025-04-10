@@ -220,7 +220,6 @@ class ServiceSchema(BaseSchema, UUIDsAsStringsMixin):
             "broadcast_messages",
             "crown",
             "service_broadcast_settings",
-            "service_broadcast_provider_restriction",
             "templates",
             "updated_at",
             "users",

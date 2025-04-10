@@ -159,10 +159,12 @@ def test_get_service_by_id(admin_request, sample_service):
 @pytest.mark.parametrize(
     "broadcast_channel,allowed_broadcast_provider",
     (
-        ("operator", ["all"]),
-        ("test", ["all"]),
-        ("severe", ["all"]),
-        ("government", ["all"]),
+        ("operator", ["ee", "o2", "three", "vodafone"]),
+        ("test", ["ee", "o2", "three", "vodafone"]),
+        ("severe", ["ee", "o2", "three", "vodafone"]),
+        ("government", ["ee", "o2", "three", "vodafone"]),
+        ("severe", ["ee", "o2", "three"]),
+        ("government", ["three", "vodafone"]),
         ("operator", ["o2"]),
         ("test", ["ee"]),
         ("severe", ["three"]),
@@ -1190,7 +1192,7 @@ def test_set_as_broadcast_service_sets_broadcast_channel(
     data = {
         "broadcast_channel": channel,
         "service_mode": "live",
-        "provider_restriction": ["all"],
+        "provider_restriction": ["ee", "o2", "three", "vodafone"],
     }
 
     result = admin_request.post(
@@ -1213,7 +1215,7 @@ def test_set_as_broadcast_service_updates_channel_for_broadcast_service(admin_re
     data = {
         "broadcast_channel": "test",
         "service_mode": "training",
-        "provider_restriction": ["all"],
+        "provider_restriction": ["ee", "o2", "three", "vodafone"],
     }
 
     result = admin_request.post(
@@ -1279,7 +1281,7 @@ def test_set_as_broadcast_service_gives_broadcast_permission_and_removes_other_c
     data = {
         "broadcast_channel": "severe",
         "service_mode": "training",
-        "provider_restriction": ["all"],
+        "provider_restriction": ["ee", "o2", "three", "vodafone"],
     }
 
     result = admin_request.post(
@@ -1313,7 +1315,7 @@ def test_set_as_broadcast_service_maintains_broadcast_permission_for_existing_br
     data = {
         "broadcast_channel": "severe",
         "service_mode": "live",
-        "provider_restriction": ["all"],
+        "provider_restriction": ["ee", "o2", "three", "vodafone"],
     }
 
     result = admin_request.post(
@@ -1335,7 +1337,7 @@ def test_set_as_broadcast_service_sets_service_org_to_broadcast_org(
     data = {
         "broadcast_channel": "severe",
         "service_mode": "training",
-        "provider_restriction": ["all"],
+        "provider_restriction": ["ee", "o2", "three", "vodafone"],
     }
     result = admin_request.post(
         "service.set_as_broadcast_service",
@@ -1354,7 +1356,7 @@ def test_set_as_broadcast_service_does_not_error_if_run_on_a_service_that_is_alr
     data = {
         "broadcast_channel": "severe",
         "service_mode": "live",
-        "provider_restriction": ["all"],
+        "provider_restriction": ["ee", "o2", "three", "vodafone"],
     }
     for _ in range(2):
         admin_request.post(
@@ -1376,7 +1378,7 @@ def test_set_as_broadcast_service_sets_service_to_live_mode(
     data = {
         "broadcast_channel": "severe",
         "service_mode": "live",
-        "provider_restriction": ["all"],
+        "provider_restriction": ["ee", "o2", "three", "vodafone"],
     }
 
     result = admin_request.post(
@@ -1401,7 +1403,7 @@ def test_set_as_broadcast_service_doesnt_override_existing_go_live_at(
     data = {
         "broadcast_channel": "severe",
         "service_mode": "live",
-        "provider_restriction": ["all"],
+        "provider_restriction": ["ee", "o2", "three", "vodafone"],
     }
 
     result = admin_request.post(
@@ -1427,7 +1429,7 @@ def test_set_as_broadcast_service_sets_service_to_training_mode(
     data = {
         "broadcast_channel": "severe",
         "service_mode": "training",
-        "provider_restriction": ["all"],
+        "provider_restriction": ["ee", "o2", "three", "vodafone"],
     }
 
     result = admin_request.post(
@@ -1461,7 +1463,7 @@ def test_set_as_broadcast_service_rejects_unknown_service_mode(
 def test_set_as_broadcast_service_rejects_if_no_service_mode(admin_request, sample_service, broadcast_organisation):
     data = {
         "broadcast_channel": "severe",
-        "provider_restriction": ["all"],
+        "provider_restriction": ["ee", "o2", "three", "vodafone"],
     }
 
     admin_request.post(
@@ -1473,7 +1475,7 @@ def test_set_as_broadcast_service_rejects_if_no_service_mode(admin_request, samp
 
 
 @pytest.mark.parametrize(
-    "provider", [["all"], ["ee"], ["vodafone"], ["o2"], ["three", "vodafone"], ["ee", "o2", "three", "vodafone"]]
+    "provider", [["ee"], ["vodafone"], ["o2"], ["three", "vodafone"], ["ee", "o2", "three", "vodafone"]]
 )
 def test_set_as_broadcast_service_sets_mobile_provider_restriction(
     admin_request, sample_service, broadcast_organisation, provider
@@ -1496,7 +1498,7 @@ def test_set_as_broadcast_service_sets_mobile_provider_restriction(
         assert records[n].provider == provider[n]
 
 
-@pytest.mark.parametrize("provider", [["all"], ["vodafone"]])
+@pytest.mark.parametrize("provider", [["ee", "o2", "three", "vodafone"], ["vodafone"]])
 def test_set_as_broadcast_service_updates_mobile_provider_restriction(
     admin_request, notify_db_session, sample_broadcast_service, provider
 ):
@@ -1515,7 +1517,7 @@ def test_set_as_broadcast_service_updates_mobile_provider_restriction(
     assert result["data"]["allowed_broadcast_provider"] == provider
 
     records = ServiceBroadcastProviders.query.filter_by(service_id=sample_broadcast_service.id).all()
-    assert len(records) == 1
+    assert len(records) == len(provider)
     assert records[0].service_id == sample_broadcast_service.id
     assert records[0].provider == provider[0]
 
@@ -1555,7 +1557,7 @@ def test_set_as_broadcast_service_updates_services_history(admin_request, sample
     data = {
         "broadcast_channel": "test",
         "service_mode": "live",
-        "provider_restriction": ["all"],
+        "provider_restriction": ["ee", "o2", "three", "vodafone"],
     }
 
     admin_request.post(
@@ -1669,7 +1671,7 @@ def test_set_as_broadcast_service_revokes_api_keys(
         _data={
             "broadcast_channel": "government",
             "service_mode": "live",
-            "provider_restriction": ["all"],
+            "provider_restriction": ["ee", "o2", "three", "vodafone"],
         },
     )
 

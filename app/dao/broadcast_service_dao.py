@@ -85,11 +85,9 @@ def insert_or_update_service_broadcast_settings(service, channel):
         settings = ServiceBroadcastSettings()
         settings.service = service
         settings.channel = channel
-        settings.provider = "deprecated"
         db.session.add(settings)
     else:
         service.service_broadcast_settings.channel = channel
-        service.service_broadcast_settings.provider = "deprecated"
         db.session.add(service.service_broadcast_settings)
 
 

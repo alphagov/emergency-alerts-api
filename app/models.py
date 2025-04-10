@@ -1203,7 +1203,6 @@ class ServiceBroadcastSettings(db.Model):
     service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"), primary_key=True, nullable=False)
     service = db.relationship(Service, backref=db.backref("service_broadcast_settings", uselist=False))
     channel = db.Column(db.String(255), db.ForeignKey("broadcast_channel_types.name"), nullable=False)
-    provider = db.Column(db.String, db.ForeignKey("broadcast_provider_types.name"), nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
     updated_at = db.Column(db.DateTime, nullable=True, onupdate=datetime.datetime.utcnow)
 
@@ -1232,28 +1231,6 @@ class BroadcastProviderTypes(db.Model):
     __tablename__ = "broadcast_provider_types"
 
     name = db.Column(db.String(255), primary_key=True)
-
-
-class ServiceBroadcastProviderRestriction(db.Model):
-    """
-    TODO: Drop this table as no longer used
-
-    Most services don't send broadcasts. Of those that do, most send to all broadcast providers.
-    However, some services don't send to all providers. These services are test services that we or the providers
-    themselves use.
-
-    This table links those services. There should only be one row per service in this table, and this is enforced by
-    the service_id being a primary key.
-    """
-
-    __tablename__ = "service_broadcast_provider_restriction"
-
-    service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"), primary_key=True, nullable=False)
-    service = db.relationship(Service, backref=db.backref("service_broadcast_provider_restriction", uselist=False))
-
-    provider = db.Column(db.String, nullable=False)
-
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
 
 
 class WebauthnCredential(db.Model):
