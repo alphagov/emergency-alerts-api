@@ -1,7 +1,7 @@
 """
 
-Revision ID: 0413_add_platform_admin_capable
-Revises: 0412_service_providers
+Revision ID: 0414_add_platform_admin_capable
+Revises: 0413_remove_old_service_code
 Create Date: 2025-03-05 17:13:13.720166
 
 """
@@ -10,8 +10,8 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
-revision = "0413_add_platform_admin_capable"
-down_revision = "0412_service_providers"
+revision = "0414_add_platform_admin_capable"
+down_revision = "0413_remove_old_service_code"
 
 
 def upgrade():
