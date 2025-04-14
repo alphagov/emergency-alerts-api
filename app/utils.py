@@ -117,7 +117,15 @@ def get_ip_address():
 
 
 def calculate_delay_period(failed_login_count):
-    delay = 10 * (2 ** (failed_login_count - 1))
+    # Period in which user cannot make login requests, in seconds
+    if failed_login_count == 1:
+        delay = 0
+    elif failed_login_count == 2:
+        delay = 1
+    elif failed_login_count == 3:
+        delay = 2
+    else:
+        delay = 2 * calculate_delay_period(failed_login_count - 1)
     return min(delay, current_app.config["MAX_THROTTLE_PERIOD"])
 
 

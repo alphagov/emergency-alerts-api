@@ -123,6 +123,10 @@ def get_user_by_email(email):
     return User.query.filter(func.lower(User.email_address) == func.lower(email)).one()
 
 
+def get_user_by_email_or_none(email):
+    return User.query.filter(func.lower(User.email_address) == func.lower(email)).one_or_none()
+
+
 def is_email_in_db(email):
     return User.query.filter(func.lower(User.email_address) == func.lower(email)).first() is not None
 
