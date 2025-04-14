@@ -75,7 +75,9 @@ class User(db.Model):
     logged_in_at = db.Column(db.DateTime, nullable=True)
     failed_login_count = db.Column(db.Integer, nullable=False, default=0)
     state = db.Column(db.String, nullable=False, default="pending")
-    platform_admin = db.Column(db.Boolean, nullable=False, default=False)
+    platform_admin_capable = db.Column(db.Boolean, nullable=False, default=False)
+    # To become a platform admin on next login if not in the past: (will be NULL-ed on redemption)
+    platform_admin_redemption = db.Column(db.DateTime, nullable=True, default=None)
     current_session_id = db.Column(UUID(as_uuid=True), nullable=True)
     auth_type = db.Column(db.String, db.ForeignKey("auth_type.name"), index=True, nullable=False, default=SMS_AUTH_TYPE)
     email_access_validated_at = db.Column(
@@ -94,7 +96,7 @@ class User(db.Model):
 
     @property
     def can_use_webauthn(self):
-        if self.platform_admin:
+        if self.platform_admin_capable:
             return True
 
         if self.auth_type == "webauthn_auth":
@@ -141,7 +143,10 @@ class User(db.Model):
             "organisations": [x.id for x in self.organisations if x.active],
             "password_changed_at": self.password_changed_at.strftime(DATETIME_FORMAT_NO_TIMEZONE),
             "permissions": self.get_permissions(),
-            "platform_admin": self.platform_admin,
+            # TODO: Remove this one after admin is fully deployed and uses _capable and _redemption:
+            "platform_admin": self.platform_admin_capable,
+            "platform_admin_capable": self.platform_admin_capable,
+            "platform_admin_redemption": get_dt_string_or_none(self.platform_admin_redemption),
             "services": [x.id for x in self.services if x.active],
             "can_use_webauthn": self.can_use_webauthn,
             "state": self.state,
@@ -777,7 +782,7 @@ class AdminAction(db.Model):
     __tablename__ = "admin_actions"
 
     id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"), index=True, nullable=False)
+    service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"), index=True, nullable=True)
     service = db.relationship("Service")
     action_type = db.Column(db.Enum(*ADMIN_ACTION_LIST, name="admin_action_types"), nullable=False)
     action_data = db.Column(JSON, nullable=False)  # Params for the relevant action
@@ -795,13 +800,13 @@ class AdminAction(db.Model):
     def serialize(self):
         return {
             "id": str(self.id),
-            "service_id": str(self.service_id),
+            "service_id": str(self.service_id) if self.service_id else None,
             "action_type": self.action_type,
             "action_data": self.action_data,
             "created_by": str(self.created_by_id),
             "created_at": str(self.created_at.strftime(DATETIME_FORMAT)),
             "status": self.status,
-            "reviewed_by": str(self.reviewed_by_id) if self.reviewed_by else None,
+            "reviewed_by": str(self.reviewed_by_id) if self.reviewed_by_id else None,
             "reviewed_at": str(self.reviewed_at.strftime(DATETIME_FORMAT)) if self.reviewed_at else None,
         }
 

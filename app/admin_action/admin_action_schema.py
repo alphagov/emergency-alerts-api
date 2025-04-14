@@ -2,6 +2,7 @@ from emergency_alerts_utils.admin_action import (
     ADMIN_ACTION_LIST,
     ADMIN_CREATE_API_KEY,
     ADMIN_EDIT_PERMISSIONS,
+    ADMIN_ELEVATE_USER,
     ADMIN_INVITE_USER,
     ADMIN_STATUS_LIST,
 )
@@ -21,8 +22,8 @@ create_admin_action_schema = {
         "action_type": {"type": "string", "enum": ADMIN_ACTION_LIST},
         "action_data": {"type": "object"},
     },
-    "required": ["service_id", "created_by", "action_type", "action_data"],
-    # Use the action_type to narrow down what is allowed in action_data:
+    "required": ["created_by", "action_type", "action_data"],
+    # Use the action_type to narrow down what is allowed in action_data and whether service_id is needed:
     "oneOf": [
         {
             "properties": {
@@ -38,6 +39,7 @@ create_admin_action_schema = {
                     "required": ["email_address", "permissions", "login_authentication", "folder_permissions"],
                 },
             },
+            "required": ["service_id"],
         },
         {
             "properties": {
@@ -53,6 +55,7 @@ create_admin_action_schema = {
                     "required": ["user_id", "permissions", "existing_permissions", "folder_permissions"],
                 },
             },
+            "required": ["service_id"],
         },
         {
             "properties": {
@@ -62,6 +65,13 @@ create_admin_action_schema = {
                     "properties": {"key_type": {"type": "string", "enum": KEY_TYPES}, "key_name": {"type": "string"}},
                     "required": ["key_type", "key_name"],
                 },
+            },
+            "required": ["service_id"],
+        },
+        {
+            "properties": {
+                "action_type": {"const": ADMIN_ELEVATE_USER}
+                # No action_data - the created_by is the one requesting elevation for themselves
             },
         },
     ],

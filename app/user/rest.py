@@ -4,6 +4,9 @@ from datetime import datetime, timezone
 from urllib.parse import urlencode
 
 import pwdpy
+from emergency_alerts_utils.admin_action import (
+    ADMIN_ELEVATION_REDEMPTION_TIMEOUT,
+)
 from flask import Blueprint, abort, current_app, jsonify, request
 from notifications_python_client.errors import HTTPError
 from sqlalchemy.exc import IntegrityError
@@ -62,6 +65,7 @@ from app.schemas import (
     user_update_schema_load_json,
 )
 from app.user.users_schema import (
+    post_elevate_platform_admin_schema,
     post_send_user_email_code_schema,
     post_send_user_sms_code_schema,
     post_set_permissions_schema,
@@ -778,6 +782,56 @@ def check_password_is_valid(user_id):
     if password and has_user_already_used_password(user_id, password):
         return jsonify({"errors": ["You've used this password before. Please choose a new one."]}), 400
     return jsonify(data=user.serialize()), 200
+
+
+@user_blueprint.route("/<uuid:user_id>/elevate", methods=["POST"])
+def elevate_platform_admin_next_login(user_id):
+    req_json = request.get_json()
+    validate(req_json, post_elevate_platform_admin_schema)
+
+    user = get_user_by_id(user_id=user_id)
+
+    if not user.platform_admin_capable:
+        return (
+            jsonify({"errors": ["The user is not platform admin capable"]}),
+            422,
+        )
+
+    new_redemption = datetime.now(timezone.utc) + ADMIN_ELEVATION_REDEMPTION_TIMEOUT
+    save_user_attribute(user, {"platform_admin_redemption": new_redemption})
+
+    return jsonify(new_redemption)
+
+
+@user_blueprint.route("/<uuid:user_id>/redeem-elevation", methods=["POST"])
+def redeem_platform_admin_elevation(user_id):
+    """Redeem (become) a platform admin. Sent by admin if there's an active platform_admin_redemption on login"""
+
+    user = get_user_by_id(user_id=user_id)
+
+    if not user.platform_admin_capable:
+        return (
+            jsonify({"errors": ["The user is not platform admin capable"]}),
+            403,
+        )
+
+    if user.platform_admin_redemption is None:
+        return (
+            jsonify({"errors": ["There is no elevation approval"]}),
+            403,
+        )
+
+    # The database returns naive datetime, so we need now (UTC) to also be naive for comparison
+    now_naive = datetime.now(timezone.utc).replace(tzinfo=None)
+    if user.platform_admin_redemption < now_naive:
+        return (
+            jsonify({"errors": [f"The elevation approval has expired: {user.platform_admin_redemption}"]}),
+            403,
+        )
+
+    save_user_attribute(user, {"platform_admin_redemption": None})
+
+    return jsonify(user_id)
 
 
 @user_blueprint.route("/<uuid:user_id>/organisations-and-services", methods=["GET"])

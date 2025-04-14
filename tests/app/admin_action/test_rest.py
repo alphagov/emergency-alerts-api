@@ -1,10 +1,14 @@
 import uuid
+from datetime import datetime
 
 import pytest
 from emergency_alerts_utils.admin_action import (
+    ADMIN_ELEVATE_USER,
     ADMIN_INVITE_USER,
+    ADMIN_STATUS_INVALIDATED,
     ADMIN_STATUS_PENDING,
 )
+from freezegun import freeze_time
 
 from app.models import AdminAction
 from tests.app.db import create_admin_action
@@ -85,6 +89,70 @@ def test_get_all_pending_admin_actions(admin_request, sample_service, sample_use
     assert services[str(sample_service.id)]["id"] == str(sample_service.id)
     assert services[str(sample_service.id)]["name"] == str(sample_service.name)
     assert services[str(sample_service.id)]["restricted"] == sample_service.restricted
+
+    users = response["users"]
+    assert len(users) == 1
+    assert users[str(sample_user.id)]["id"] == str(sample_user.id)
+    assert users[str(sample_user.id)]["name"] == str(sample_user.name)
+    assert users[str(sample_user.id)]["email_address"] == str(sample_user.email_address)
+
+
+@freeze_time("2025-04-01 12:00")
+@pytest.mark.parametrize(
+    "created_time, expect_invalidation",
+    [
+        (datetime(2025, 4, 1, 9, 59), True),
+        (datetime(2025, 4, 1, 10, 0), True),
+        (datetime(2025, 4, 1, 11, 0), False),
+    ],
+)
+def test_older_elevation_admin_actions_are_invalidated(
+    notify_db_session, admin_request, sample_user, created_time, expect_invalidation
+):
+    notify_db_session.add(
+        AdminAction(
+            created_at=created_time,
+            created_by_id=sample_user.id,
+            action_type="elevate_platform_admin",
+            action_data={},
+            status="pending",
+        )
+    )
+    notify_db_session.commit()
+
+    response = admin_request.get("admin_action.get_pending_admin_actions", _expected_status=200)
+
+    assert len(response["pending"]) == 0 if expect_invalidation else 1
+
+    all = AdminAction.query.all()
+    assert len(all) == 1
+    if expect_invalidation:
+        assert all[0].status == ADMIN_STATUS_INVALIDATED
+    else:
+        assert all[0].status == ADMIN_STATUS_PENDING
+
+
+def test_get_pending_admin_elevation_action(admin_request, sample_user):
+    """
+    The elevation admin action is a little unique in that it doesn't have a service_id or populated action_data.
+    This caused some issues during development so there's an extra test to be safe.
+    """
+    create_admin_action(None, sample_user.id, ADMIN_ELEVATE_USER, {}, "pending")
+    response = admin_request.get("admin_action.get_pending_admin_actions", _expected_status=200)
+
+    pending = response["pending"]
+
+    assert len(pending) == 1
+    assert pending[0]["service_id"] is None
+    assert pending[0]["action_type"] == "elevate_platform_admin"
+    assert pending[0]["action_data"] == {}
+    assert pending[0]["created_by"] == str(sample_user.id)
+    assert pending[0]["created_at"] is not None
+    assert pending[0]["reviewed_by"] is None
+    assert pending[0]["reviewed_at"] is None
+
+    services = response["services"]
+    assert len(services) == 0
 
     users = response["users"]
     assert len(users) == 1
@@ -256,6 +324,13 @@ def test_only_pending_can_be_reviewed(status, expected_response_code, sample_ser
             },
             True,
         ),
+        # Admin elevation
+        (
+            [{"action_type": "elevate_platform_admin", "action_data": {}}],
+            {"action_type": "elevate_platform_admin", "action_data": {}},
+            # created_by is set in the test and remains static, so expect a conflict
+            True,
+        ),
     ],
 )
 def test_similar_admin_actions_are_rejected(
@@ -274,7 +349,7 @@ def test_similar_admin_actions_are_rejected(
 
     # Create an existing action (if present)
     for action in existing_action_objs:
-        action_data = action["action_data"]
+        action_data = action.get("action_data")
         if action["action_type"] == "edit_permissions":
             action_data["user_id"] = str(sample_user.id)
         create_admin_action(sample_service.id, sample_user.id, action["action_type"], action_data, "pending")

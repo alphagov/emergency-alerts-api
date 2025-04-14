@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from emergency_alerts_utils.admin_action import (
     ADMIN_CREATE_API_KEY,
     ADMIN_EDIT_PERMISSIONS,
+    ADMIN_ELEVATE_USER,
     ADMIN_INVITE_USER,
     ADMIN_STATUS_PENDING,
 )
@@ -16,7 +17,7 @@ from app.dao.admin_action_dao import (
     dao_delete_admin_action_by_id,
     dao_get_admin_action_by_id,
     dao_get_all_admin_actions_by_user_id,
-    dao_get_pending_admin_actions,
+    dao_get_pending_valid_admin_actions,
 )
 from app.dao.dao_utils import dao_save_object
 from app.dao.services_dao import dao_fetch_service_by_id
@@ -35,7 +36,7 @@ def create_admin_action():
 
     validate(data, create_admin_action_schema)
 
-    pending = dao_get_pending_admin_actions()
+    pending = dao_get_pending_valid_admin_actions()
     for pending_action in pending:
         if _admin_action_is_similar(pending_action.serialize(), data):
             current_app.logger.error(
@@ -46,7 +47,7 @@ def create_admin_action():
             return abort(409)  # Conflict
 
     admin_action = AdminAction(
-        service_id=data["service_id"],
+        service_id=data.get("service_id", None),
         action_type=data["action_type"],
         action_data=data["action_data"],
         created_by_id=data["created_by"],
@@ -60,10 +61,11 @@ def create_admin_action():
 
 @admin_action_blueprint.route("/pending", methods=["GET"])
 def get_pending_admin_actions():
-    pending = [x.serialize() for x in dao_get_pending_admin_actions()]
+    pending = [x.serialize() for x in dao_get_pending_valid_admin_actions()]
 
     # Grab related data to show in the UI:
     service_ids = set(x["service_id"] for x in pending)
+    service_ids.discard(None)  # service_id can be optional for some admin actions
     user_ids = set(x["created_by"] for x in pending)
 
     for action in pending:
@@ -131,7 +133,8 @@ def _admin_action_is_similar(action_obj1, action_obj2):
     """
     Similar being related to the same subject, e.g. inviting the same user to the same service.
     """
-    if action_obj1["service_id"] != action_obj2["service_id"]:
+    # service_id is optional
+    if action_obj1.get("service_id") != action_obj2.get("service_id"):
         return False
 
     if action_obj1["action_type"] != action_obj2["action_type"]:
@@ -143,5 +146,7 @@ def _admin_action_is_similar(action_obj1, action_obj2):
         return action_obj1["action_data"]["user_id"] == action_obj2["action_data"]["user_id"]
     elif action_obj1["action_type"] == ADMIN_CREATE_API_KEY:
         return action_obj1["action_data"]["key_name"] == action_obj2["action_data"]["key_name"]
+    elif action_obj1["action_type"] == ADMIN_ELEVATE_USER:
+        return action_obj1["created_by"] == action_obj2["created_by"]
     else:
         raise Exception("The action_type {} is unknown".format(action_obj1["action_type"]))

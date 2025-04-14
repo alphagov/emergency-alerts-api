@@ -706,7 +706,7 @@ def test_update_broadcast_message_allows_service_user_and_platform_admin_to_canc
     bm = create_broadcast_message(t, status=BroadcastStatusType.BROADCASTING)
     canceller = create_user(email="canceller@gov.uk")
     if user_is_platform_admin:
-        canceller.platform_admin = True
+        canceller.platform_admin_capable = True
     else:
         sample_broadcast_service.users.append(canceller)
     mock_task = mocker.patch("app.celery.broadcast_message_tasks.send_broadcast_event.apply_async")

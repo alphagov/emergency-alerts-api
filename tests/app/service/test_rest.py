@@ -244,7 +244,7 @@ def test_get_service_by_id_returns_go_live_user_and_go_live_at(admin_request, sa
 
 
 @pytest.mark.parametrize(
-    "platform_admin",
+    "platform_admin_capable",
     (
         True,
         False,
@@ -253,9 +253,9 @@ def test_get_service_by_id_returns_go_live_user_and_go_live_at(admin_request, sa
 def test_create_service(
     admin_request,
     sample_user,
-    platform_admin,
+    platform_admin_capable,
 ):
-    sample_user.platform_admin = platform_admin
+    sample_user.platform_admin_capable = platform_admin_capable
     data = {
         "name": "created service",
         "user_id": str(sample_user.id),

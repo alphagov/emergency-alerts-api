@@ -1,6 +1,6 @@
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest import mock
 
 import pytest
@@ -12,6 +12,7 @@ from app.dao.service_user_dao import (
     dao_get_service_user,
     dao_update_service_user,
 )
+from app.dao.users_dao import get_user_by_id
 from app.models import (
     EMAIL_AUTH_TYPE,
     MANAGE_SETTINGS,
@@ -1344,6 +1345,52 @@ def test_update_user_attribute_with_validation_rejects_current_number(admin_requ
         "user.update_user_attribute_with_validation", user_id=sample_user.id, _data=new_number, _expected_status=400
     )
     assert json_resp["errors"] == ["Mobile number must be different to current mobile number"]
+
+
+def test_elevating_user_requires_platform_admin_capable(admin_request, sample_user):
+    assert not sample_user.platform_admin_capable
+    admin_request.post(
+        "user.elevate_platform_admin_next_login",
+        user_id=sample_user.id,
+        _data={"approved_by": str(sample_user.id)},
+        _expected_status=422,
+    )
+
+
+def test_elevating_user_updates_redemption_timestamp(admin_request, sample_user):
+    assert sample_user.platform_admin_redemption is None
+    sample_user.platform_admin_capable = True
+    dao_update_service_user(sample_user)
+
+    admin_request.post(
+        "user.elevate_platform_admin_next_login", user_id=sample_user.id, _data={"approved_by": str(sample_user.id)}
+    )
+
+    updated_user = get_user_by_id(sample_user.id)
+    # The stored SQL is UTC but naive, so also make our comparison naive
+    assert updated_user.platform_admin_redemption > datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+@pytest.mark.parametrize(
+    "platform_admin_redemption, platform_admin_capable, expect_success",
+    (
+        (None, True, False),
+        (datetime(2025, 1, 1, 10, 59, 0), True, False),
+        (datetime(2025, 1, 1, 11, 59, 0), False, False),
+        (datetime(2025, 1, 1, 11, 59, 0), True, True),
+    ),
+)
+@freeze_time("2025-01-01 11:00")
+def test_redeeming_eleavation_only_possible_if_not_expired(
+    admin_request, sample_user, platform_admin_redemption, platform_admin_capable, expect_success
+):
+    sample_user.platform_admin_redemption = platform_admin_redemption
+    sample_user.platform_admin_capable = platform_admin_capable
+    dao_update_service_user(sample_user)
+
+    admin_request.post(
+        "user.redeem_platform_admin_elevation", user_id=sample_user.id, _expected_status=200 if expect_success else 403
+    )
 
 
 def test_fetch_user_by_email_or_none_returns_User_if_user_has_email(
