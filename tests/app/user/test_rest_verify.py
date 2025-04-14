@@ -351,7 +351,12 @@ def test_user_verify_user_code_returns_404_when_code_is_right_but_user_account_i
 def test_user_verify_user_code_returns_429_when_user_is_throttled(client, sample_sms_code):
     incorrect_code = json.dumps({"code_type": sample_sms_code.code_type, "code": "12345"})
     correct_code = json.dumps({"code_type": sample_sms_code.code_type, "code": sample_sms_code.txt_code})
-    resp = client.post(
+    client.post(
+        url_for("user.verify_user_code", user_id=sample_sms_code.user.id),
+        data=incorrect_code,
+        headers=[("Content-Type", "application/json"), create_admin_authorization_header()],
+    )
+    client.post(
         url_for("user.verify_user_code", user_id=sample_sms_code.user.id),
         data=incorrect_code,
         headers=[("Content-Type", "application/json"), create_admin_authorization_header()],
@@ -369,6 +374,11 @@ def test_user_verify_user_code_returns_204_after_throttle_period(client, sample_
     incorrect_code = json.dumps({"code_type": sample_sms_code.code_type, "code": "12345"})
     correct_code = json.dumps({"code_type": sample_sms_code.code_type, "code": sample_sms_code.txt_code})
     with freeze_time("2015-01-01T00:00:00") as the_time:
+        client.post(
+            url_for("user.verify_user_code", user_id=sample_sms_code.user.id),
+            data=incorrect_code,
+            headers=[("Content-Type", "application/json"), create_admin_authorization_header()],
+        )
         client.post(
             url_for("user.verify_user_code", user_id=sample_sms_code.user.id),
             data=incorrect_code,

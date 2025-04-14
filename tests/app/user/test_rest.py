@@ -1391,3 +1391,27 @@ def test_redeeming_eleavation_only_possible_if_not_expired(
     admin_request.post(
         "user.redeem_platform_admin_elevation", user_id=sample_user.id, _expected_status=200 if expect_success else 403
     )
+
+
+def test_fetch_user_by_email_or_none_returns_User_if_user_has_email(
+    admin_request, sample_user, sample_service, sample_organisation
+):
+    json_resp = admin_request.post("user.fetch_user_by_email_or_none", _data={"email": sample_user.email_address})
+
+    fetched_user = json_resp["data"]
+    assert fetched_user["id"] == str(sample_user.id)
+    assert fetched_user["name"] == sample_user.name
+    assert fetched_user["mobile_number"] == sample_user.mobile_number
+    assert fetched_user["email_address"] == sample_user.email_address
+    assert fetched_user["state"] == sample_user.state
+    assert fetched_user["auth_type"] == SMS_AUTH_TYPE
+    assert fetched_user["permissions"].keys() == {str(sample_service.id)}
+    assert fetched_user["services"] == [str(sample_service.id)]
+    assert fetched_user["can_use_webauthn"] is False
+
+
+def test_fetch_user_by_email_or_none_returns_None_if_email_not_in_users(admin_request):
+    json_resp = admin_request.post(
+        "user.fetch_user_by_email_or_none", _data={"email": "test@digital.cabinet-office.gov.uk"}
+    )
+    assert json_resp["data"] is None
