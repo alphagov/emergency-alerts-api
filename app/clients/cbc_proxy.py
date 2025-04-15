@@ -133,12 +133,12 @@ class CBCProxyClientBase(ABC):
 
     def _invoke_lambdas_with_routing(self, payload):
         payload["cbc_target"] = self.CBC_A
-        result = self._invoke_lambda(self.primary_lambda, payload)
+        result = self._invoke_lambda(self.primary_lambda, payload, self.CBC_A)
         if result:
             return True
 
         payload["cbc_target"] = self.CBC_B
-        result = self._invoke_lambda(self.primary_lambda, payload)
+        result = self._invoke_lambda(self.primary_lambda, payload, self.CBC_B)
         if result:
             return True
 
@@ -148,12 +148,12 @@ class CBCProxyClientBase(ABC):
             raise CBCProxyRetryableException(error_message)
 
         payload["cbc_target"] = self.CBC_A
-        result = self._invoke_lambda(self.secondary_lambda, payload)
+        result = self._invoke_lambda(self.secondary_lambda, payload, self.CBC_A)
         if result:
             return True
 
         payload["cbc_target"] = self.CBC_B
-        result = self._invoke_lambda(self.secondary_lambda, payload)
+        result = self._invoke_lambda(self.secondary_lambda, payload, self.CBC_B)
         if result:
             return True
 
@@ -161,13 +161,14 @@ class CBCProxyClientBase(ABC):
         current_app.logger.info(error_message, extra={"python_module": __name__})
         raise CBCProxyRetryableException(error_message)
 
-    def _invoke_lambda(self, lambda_name, payload):
+    def _invoke_lambda(self, lambda_name, payload, cbc_target):
         payload_bytes = bytes(json.dumps(payload), encoding="utf8")
         try:
             current_app.logger.info(
                 f"Calling lambda {lambda_name}",
                 extra={
-                    "lambda_payload": str(payload)[:1000],
+                    "cbc_target": cbc_target,
+                    "lambda_payload": str(payload),
                     "lambda_invocation_type": "RequestResponse",
                     "lambda_arn": f"{self._arn_prefix}{lambda_name}",
                 },
@@ -249,7 +250,7 @@ class CBCProxyOne2ManyClient(CBCProxyClientBase):
             "cbc_target": cbc_target,
         }
 
-        self._invoke_lambda(lambda_name=lambda_name, payload=payload)
+        self._invoke_lambda(lambda_name=lambda_name, payload=payload, cbc_target=cbc_target)
 
     def create_and_send_broadcast(
         self, identifier, headline, description, areas, sent, expires, channel, message_number=None
@@ -327,7 +328,7 @@ class CBCProxyVodafone(CBCProxyClientBase):
             "cbc_target": cbc_target,
         }
 
-        self._invoke_lambda(lambda_name=lambda_name, payload=payload)
+        self._invoke_lambda(lambda_name=lambda_name, payload=payload, cbc_target=cbc_target)
 
     def create_and_send_broadcast(
         self, identifier, message_number, headline, description, areas, sent, expires, channel
