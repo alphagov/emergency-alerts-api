@@ -168,7 +168,7 @@ class CBCProxyClientBase(ABC):
                 f"Calling lambda {lambda_name}",
                 extra={
                     "cbc_target": cbc_target,
-                    "lambda_payload": str(payload)[:1000],
+                    "lambda_payload": str(payload),
                     "lambda_invocation_type": "RequestResponse",
                     "lambda_arn": f"{self._arn_prefix}{lambda_name}",
                 },
