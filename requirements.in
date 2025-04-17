@@ -2,7 +2,7 @@
 # with package version changes made in requirements.in
 
 cffi==1.15.1
-celery[sqs]==5.2.7
+celery[sqs]==5.5.1
 cryptography==42.0.4
 Flask-Bcrypt==1.0.1
 flask-marshmallow==0.14.0
