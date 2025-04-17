@@ -6,7 +6,7 @@ import uuid
 from time import monotonic
 
 import boto3
-from celery import current_task
+from celery.signals import task_postrun, task_prerun
 from emergency_alerts_utils import logging, request_helper
 from emergency_alerts_utils.celery import NotifyCelery
 from emergency_alerts_utils.clients.encryption.encryption_client import (
@@ -66,6 +66,8 @@ CONCURRENT_REQUESTS = Gauge(
     "concurrent_web_request_count",
     "How many concurrent requests are currently being served",
 )
+
+_celery_task_context = {}
 
 
 def create_app(application):
@@ -336,11 +338,11 @@ def setup_sqlalchemy_events(app):
                         "url_rule": request.url_rule.rule if request.url_rule else "No endpoint",
                     }
                 # celery apps
-                elif current_task:
+                elif _celery_task_context:
                     connection_record.info["request_data"] = {
                         "method": "celery",
                         "host": current_app.config["EAS_APP_NAME"],  # worker name
-                        "url_rule": current_task.name,  # task name
+                        "url_rule": _celery_task_context.name,  # task name
                     }
                 # anything else. migrations possibly, or flask cli commands.
                 else:
@@ -369,3 +371,17 @@ def setup_sqlalchemy_events(app):
                 ).observe(duration)
             except Exception:
                 current_app.logger.exception("Exception caught for checkin event.")
+
+
+@task_prerun.connect
+def store_task_context(sender=None, task_id=None, task=None, **kwargs):
+    _celery_task_context[task_id] = {
+        "name": sender.name,
+        "args": task.request.args,
+        "kwargs": task.request.kwargs,
+    }
+
+
+@task_postrun.connect
+def clear_task_context(task_id=None, **kwargs):
+    _celery_task_context.pop(task_id, None)
