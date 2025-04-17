@@ -162,9 +162,9 @@ pytests: ## Run python tests only
 	pytest -n auto --maxfail=5
 
 .PHONY: freeze-requirements
-freeze-requirements: ## Pin all requirements including sub dependencies into requirements.txt
-	pip install --upgrade pip-tools
-	pip-compile requirements.in
+freeze-requirements: ## create static requirements.txt
+	${PYTHON_EXECUTABLE_PREFIX}pip3 install --upgrade setuptools pip-tools
+	${PYTHON_EXECUTABLE_PREFIX}pip-compile requirements.in
 
 .PHONY: bump-utils
 bump-utils:  # Bump emergency-alerts-utils package to latest version
