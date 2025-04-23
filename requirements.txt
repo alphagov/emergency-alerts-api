@@ -180,7 +180,7 @@ prometheus-client==0.14.1
     #   gds-metrics
 prompt-toolkit==3.0.51
     # via click-repl
-psycopg2-binary==2.9.3
+psycopg2-binary==2.9.10
     # via -r requirements.in
 pwdpy==1.0.1
     # via -r requirements.in
