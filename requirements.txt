@@ -27,12 +27,12 @@ blinker==1.9.0
     # via
     #   flask
     #   gds-metrics
-boto3==1.38.9
+boto3==1.38.10
     # via
     #   celery
     #   kombu
     #   moto
-botocore==1.38.9
+botocore==1.38.10
     # via
     #   boto3
     #   moto
@@ -68,7 +68,7 @@ click-repl==0.3.0
     # via celery
 coverage==7.8.0
     # via pytest-cov
-cryptography==42.0.4
+cryptography==44.0.3
     # via
     #   -r requirements.in
     #   moto
@@ -138,7 +138,7 @@ jsonschema==4.16.0
     # via -r requirements.in
 kombu==5.5.3
     # via celery
-lxml==5.3.2
+lxml==5.4.0
     # via -r requirements.in
 mako==1.3.10
     # via alembic

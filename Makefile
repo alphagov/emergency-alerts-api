@@ -177,3 +177,9 @@ bump-utils:  # Bump emergency-alerts-utils package to latest version
 .PHONY: clean
 clean:
 	rm -rf node_modules cache target venv .coverage build tests/.cache ${CF_MANIFEST_PATH}
+
+.PHONY: uninstall-packages
+uninstall-packages:
+	python -m pip uninstall emergency-alerts-utils -y
+	python -m pip uninstall gds-metrics -y
+	python -m pip freeze | xargs python -m pip uninstall -y
