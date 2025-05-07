@@ -20,7 +20,7 @@ PyJWT==2.5.0
 SQLAlchemy==1.4.41
 cachetools==5.2.0
 beautifulsoup4==4.11.1
-lxml==5.4.0
+lxml==5.2.2
 pwdpy==1.0.1
 
 notifications-python-client==8.0.0
