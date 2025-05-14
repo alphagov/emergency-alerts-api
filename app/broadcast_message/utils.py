@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from emergency_alerts_utils.clients.zendesk.zendesk_client import (
     EASSupportTicket,
 )
+from emergency_alerts_utils.xml.common import SENDER
 from flask import current_app
 
 from app import zendesk_client
@@ -133,9 +134,7 @@ def _create_broadcast_event(broadcast_message):
             message_type=msg_types[broadcast_message.status],
             transmitted_content={"body": broadcast_message.content},
             transmitted_areas=broadcast_message.areas,
-            # TODO: Probably move this somewhere more standalone too and imply that it shouldn't change. Should it
-            # include a service based identifier too? eg "flood-warnings@notifications.service.gov.uk" or similar
-            transmitted_sender="notifications.service.gov.uk",
+            transmitted_sender=SENDER,
             # TODO: Should this be set to now? Or the original starts_at?
             transmitted_starts_at=broadcast_message.starts_at,
             transmitted_finishes_at=broadcast_message.finishes_at,
