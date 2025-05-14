@@ -5,6 +5,7 @@ from flask import Blueprint, current_app, jsonify, request
 from app.broadcast_message import utils as broadcast_utils
 from app.broadcast_message.broadcast_message_schema import (
     create_broadcast_message_schema,
+    return_broadcast_message_for_edit_schema,
     update_broadcast_message_schema,
     update_broadcast_message_status_schema,
 )
@@ -15,6 +16,9 @@ from app.dao.broadcast_message_dao import (
     dao_get_broadcast_messages_for_service_with_user,
     dao_get_broadcast_provider_messages_by_broadcast_message_id,
     dao_purge_old_broadcast_messages,
+)
+from app.dao.broadcast_message_edit_reasons import (
+    dao_create_broadcast_message_edit_reason,
 )
 from app.dao.broadcast_message_history_dao import (
     dao_create_broadcast_message_version,
@@ -64,8 +68,9 @@ def get_broadcast_msgs_for_service(service_id):
             "approved_by": approved_by or None,
             "cancelled_by": cancelled_by or None,
             "submitted_by": submitted_by or None,
+            "edit_reason": edit_reason or None,
         }
-        for message, created_by, rejected_by, approved_by, cancelled_by, submitted_by in (
+        for message, created_by, rejected_by, approved_by, cancelled_by, submitted_by, edit_reason in (
             dao_get_broadcast_messages_for_service_with_user(service_id)
         )
     ]
@@ -83,6 +88,7 @@ def get_broadcast_message_by_id_and_service(service_id, broadcast_message_id):
         "cancelled_by": result[4] or None,
         "submitted_by": result[5] or None,
         "updated_by": result[6] or None,
+        "edit_reason": result[7] or None,
     }
 
 
@@ -248,7 +254,7 @@ def check_user_can_update_broadcast_message_status(service_id, broadcast_message
 
         if broadcast_message.status == BroadcastStatusType.PENDING_APPROVAL:
             raise InvalidRequest(
-                "This alert is pending approval, it cannot be edited or submitted again.",
+                "This alert is pending approval, it cannot be submitted again.",
                 400,
             ) from e
         elif broadcast_message.status == BroadcastStatusType.REJECTED:
@@ -313,6 +319,31 @@ def update_broadcast_message_status_with_reason(service_id, broadcast_message_id
         broadcast_message, new_status, updating_user, rejection_reason=rejection_reason or None
     )
 
+    return jsonify(broadcast_message.serialize()), 200
+
+
+@broadcast_message_blueprint.route("/<uuid:broadcast_message_id>/return-for-edit", methods=["POST"])
+def return_broadcast_message_for_edit(service_id, broadcast_message_id):
+    data = request.get_json()
+    validate(data, return_broadcast_message_for_edit_schema)
+    broadcast_message = dao_get_broadcast_message_by_id_and_service_id(broadcast_message_id, service_id)
+
+    current_app.logger.info(
+        "update_broadcast_message_status",
+        extra={
+            "python_module": __name__,
+            "service_id": service_id,
+            "broadcast_message_id": broadcast_message_id,
+            "status": "draft",
+        },
+    )
+    if not broadcast_message.service.active:
+        raise InvalidRequest("Updating broadcast message is not allowed: service is inactive ", 403)
+
+    updating_user = get_user_by_id(data["created_by"])
+
+    broadcast_utils.update_broadcast_message_status(broadcast_message, BroadcastStatusType.DRAFT, updating_user)
+    dao_create_broadcast_message_edit_reason(broadcast_message, service_id, updating_user.id, str(data["edit_reason"]))
     return jsonify(broadcast_message.serialize()), 200
 
 
