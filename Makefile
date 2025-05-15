@@ -140,6 +140,7 @@ run-celery: ## Run celery
 run-celery-beat: ## Run celery beat
 	. environment.sh && celery \
 		-A run_celery.notify_celery beat \
+		-E \
 		--loglevel=WARNING
 
 .PHONY: help
