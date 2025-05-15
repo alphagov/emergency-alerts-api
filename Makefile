@@ -132,7 +132,7 @@ run-celery: ## Run celery
 		--uid=$(shell id -u easuser) \
 		--pidfile=/tmp/celery.pid \
 		--prefetch-multiplier=1 \
-		--loglevel=WARNING \
+		--loglevel=INFO \
 		--autoscale=8,1 \
 		--hostname=0.0.0.0
 
@@ -140,8 +140,7 @@ run-celery: ## Run celery
 run-celery-beat: ## Run celery beat
 	. environment.sh && celery \
 		-A run_celery.notify_celery beat \
-		-E \
-		--loglevel=WARNING
+		--loglevel=INFO
 
 .PHONY: help
 help:
