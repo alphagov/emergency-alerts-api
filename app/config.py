@@ -159,7 +159,7 @@ class Config(object):
             # "queue_name_prefix": NOTIFICATION_QUEUE_PREFIX,
             "predefined_queues": {
                 QUEUE_NAME: {
-                    "url": f"https://sqs.{AWS_REGION}.amazonaws.com/{NOTIFICATION_QUEUE_PREFIX}-{QUEUE_NAME}",
+                    "url": f"https://sqs.{AWS_REGION}.amazonaws.com/{NOTIFICATION_QUEUE_PREFIX}{QUEUE_NAME}",
                 }
             },
             "is_secure": True,
