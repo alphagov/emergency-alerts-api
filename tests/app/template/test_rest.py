@@ -4,7 +4,6 @@ import string
 import uuid
 
 import pytest
-import requests_mock
 from emergency_alerts_utils import MAX_BROADCAST_CHAR_COUNT
 
 from app.dao.templates_dao import dao_get_template_by_id
@@ -591,19 +590,16 @@ def test_create_template_validates_against_json_schema(
 
 
 def test_purge_templates_and_folders_for_service_removes_db_objects(mocker, sample_service, admin_request):
-    with requests_mock.Mocker():
-        template_purge_mock = mocker.patch("app.dao.templates_dao.dao_purge_templates_for_service")
-        folder_purge_mock = mocker.patch("app.dao.template_folder_dao.dao_purge_template_folders_for_service")
+    template_purge_mock = mocker.patch("app.template.rest.dao_purge_templates_for_service")
+    folder_purge_mock = mocker.patch("app.template.rest.dao_purge_template_folders_for_service")
 
-        response = admin_request.delete(
-            "template.purge_templates_and_folders_for_service",
-            service_id=sample_service.id,
-            _expected_status=200,
-        )
+    response = admin_request.delete(
+        "template.purge_templates_and_folders_for_service",
+        service_id=sample_service.id,
+        _expected_status=200,
+    )
 
-        assert (
-            response["message"] == f"Purged templates, archived templates and folders from service {sample_service.id}."
-        )
+    assert response["message"] == f"Purged templates, archived templates and folders from service {sample_service.id}."
 
-        assert template_purge_mock.called_once_with(sample_service.id)
-        assert folder_purge_mock.called_once_with(sample_service.id)
+    template_purge_mock.assert_called_once_with(service_id=sample_service.id)
+    folder_purge_mock.assert_called_once_with(service_id=sample_service.id)
