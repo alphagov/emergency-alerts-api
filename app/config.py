@@ -151,13 +151,17 @@ class Config(object):
     TASK_IMPORTS = "broadcast_message_tasks" if SERVICE == "api" else "scheduled_tasks"
 
     CELERY = {
-        "broker":"sqs://",
-        "broker_url": f"https://sqs.{AWS_REGION}.amazonaws.com",
+        # "broker":"sqs://",
+        # "broker_url": f"https://sqs.{AWS_REGION}.amazonaws.com",
         "broker_transport": "sqs",
         "broker_transport_options": {
-            "region": AWS_REGION,
-            # "visibility_timeout": 310,    # Configured in Terraform
-            "queue_name_prefix": NOTIFICATION_QUEUE_PREFIX,
+            # "region": AWS_REGION,
+            # "queue_name_prefix": NOTIFICATION_QUEUE_PREFIX,
+            "predefined_queues": {
+                QUEUE_NAME: {
+                    "url": f"https://sqs.{AWS_REGION}.amazonaws.com/{NOTIFICATION_QUEUE_PREFIX}-{QUEUE_NAME}",
+                }
+            },
             "is_secure": True,
             "task_acks_late": True,
         },
@@ -167,7 +171,7 @@ class Config(object):
         ],
         "worker_max_tasks_per_child": 10,
         "worker_hijack_root_logger": False,
-        "task_queues": [Queue(QUEUE_NAME, Exchange("default"), routing_key=QUEUE_NAME)],
+        # "task_queues": [Queue(QUEUE_NAME, Exchange("default"), routing_key=QUEUE_NAME)],
         "beat_schedule": {
             "run-health-check": {
                 "task": "run-health-check",
