@@ -100,6 +100,7 @@ class Config(object):
         if os.getenv("NOTIFICATION_QUEUE_PREFIX")
         else f"{os.getenv('ENVIRONMENT')}-"
     )
+    SQS_QUEUE_BASE_URL = os.getenv("SQS_QUEUE_BASE_URL")
 
     ZENDESK_API_KEY = os.environ.get("ZENDESK_API_KEY")
     REPORTS_SLACK_WEBHOOK_URL = os.environ.get("REPORTS_SLACK_WEBHOOK_URL")
@@ -158,9 +159,9 @@ class Config(object):
             "region": AWS_REGION,
             # "queue_name_prefix": QUEUE_PREFIX,
             "predefined_queues": {
-                "broadcast-tasks": {"url": f"https://sqs.{AWS_REGION}.amazonaws.com/{QUEUE_PREFIX}broadcast-tasks"},
-                "periodic-tasks": {"url": f"https://sqs.{AWS_REGION}.amazonaws.com/{QUEUE_PREFIX}periodic-tasks"},
-                "govuk-alerts": {"url": f"https://sqs.{AWS_REGION}.amazonaws.com/{QUEUE_PREFIX}govuk-alerts"},
+                "broadcast-tasks": {"url": f"{SQS_QUEUE_BASE_URL}/{QUEUE_PREFIX}broadcast-tasks"},
+                "periodic-tasks": {"url": f"{SQS_QUEUE_BASE_URL}/{QUEUE_PREFIX}periodic-tasks"},
+                "govuk-alerts": {"url": f"{SQS_QUEUE_BASE_URL}/{QUEUE_PREFIX}govuk-alerts"},
             },
             "is_secure": True,
             "task_acks_late": True,
