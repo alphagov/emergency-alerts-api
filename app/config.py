@@ -95,7 +95,7 @@ class Config(object):
         SQLALCHEMY_DATABASE_URI = os.environ.get("SQLALCHEMY_LOCAL_OVERRIDE")
 
     # Prefix to identify queues in SQS
-    NOTIFICATION_QUEUE_PREFIX = (
+    QUEUE_PREFIX = (
         f"{os.getenv('NOTIFICATION_QUEUE_PREFIX')}-"
         if os.getenv("NOTIFICATION_QUEUE_PREFIX")
         else f"{os.getenv('ENVIRONMENT')}-"
@@ -156,11 +156,11 @@ class Config(object):
         "broker_transport": "sqs",
         "broker_transport_options": {
             "region": AWS_REGION,
-            # "queue_name_prefix": NOTIFICATION_QUEUE_PREFIX,
+            # "queue_name_prefix": QUEUE_PREFIX,
             "predefined_queues": {
-                QUEUE_NAME: {
-                    "url": f"https://sqs.{AWS_REGION}.amazonaws.com/{NOTIFICATION_QUEUE_PREFIX}{QUEUE_NAME}",
-                }
+                "broadcast-tasks": {"url": f"https://sqs.{AWS_REGION}.amazonaws.com/{QUEUE_PREFIX}broadcast-tasks"},
+                "periodic-tasks": {"url": f"https://sqs.{AWS_REGION}.amazonaws.com/{QUEUE_PREFIX}periodic-tasks"},
+                "govuk-alerts": {"url": f"https://sqs.{AWS_REGION}.amazonaws.com/{QUEUE_PREFIX}govuk-alerts"},
             },
             "is_secure": True,
             "task_acks_late": True,
@@ -171,7 +171,11 @@ class Config(object):
         ],
         "worker_max_tasks_per_child": 10,
         "worker_hijack_root_logger": False,
-        "task_queues": [Queue(QUEUE_NAME, Exchange("default"), routing_key=QUEUE_NAME)],
+        "task_queues": [
+            Queue("broadcast-tasks", Exchange("default"), routing_key="broadcast-tasks"),
+            Queue("periodic-tasks", Exchange("default"), routing_key="periodic-tasks"),
+            Queue("govuk-alerts", Exchange("default"), routing_key="govuk-alerts"),
+        ],
         "beat_schedule": {
             "run-health-check": {
                 "task": "run-health-check",
