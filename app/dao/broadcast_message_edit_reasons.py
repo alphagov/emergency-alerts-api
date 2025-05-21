@@ -57,3 +57,4 @@ def dao_create_broadcast_message_edit_reason(broadcast_message, service_id, user
         }
     )
     db.session.add(history)
+    return history
