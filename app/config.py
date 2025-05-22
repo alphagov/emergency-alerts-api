@@ -167,53 +167,6 @@ class Config(object):
         "worker_max_tasks_per_child": 10,
         "worker_hijack_root_logger": False,
         "task_queues": [Queue(QUEUE_NAME, Exchange("default"), routing_key=QUEUE_NAME)],
-        "beat_schedule": {
-            "run-health-check": {
-                "task": "run-health-check",
-                "schedule": crontab(minute="*/1"),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
-            TaskNames.TRIGGER_GOVUK_HEALTHCHECK: {
-                "task": TaskNames.TRIGGER_GOVUK_HEALTHCHECK,
-                "schedule": crontab(minute="*/1"),
-                "options": {"queue": QueueNames.GOVUK_ALERTS},
-            },
-            "trigger-link-tests": {
-                "task": "trigger-link-tests",
-                "schedule": crontab(minute="*/15"),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
-            "delete-verify-codes": {
-                "task": "delete-verify-codes",
-                "schedule": crontab(minute=10),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
-            "delete-invitations": {
-                "task": "delete-invitations",
-                "schedule": crontab(minute=20),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
-            "auto-expire-broadcast-messages": {
-                "task": "auto-expire-broadcast-messages",
-                "schedule": crontab(minute=40),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
-            "remove-yesterdays-planned-tests-on-govuk-alerts": {
-                "task": "remove-yesterdays-planned-tests-on-govuk-alerts",
-                "schedule": crontab(hour=00, minute=00),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
-            "delete-old-records-from-events-table": {
-                "task": "delete-old-records-from-events-table",
-                "schedule": crontab(hour=3, minute=00),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
-            "validate-functional-test-account-emails": {
-                "task": "validate-functional-test-account-emails",
-                "schedule": crontab(day_of_month="1"),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
-        },
     }
 
     FROM_NUMBER = "development"
@@ -285,6 +238,93 @@ class Hosted(Config):
         )
     CBC_PROXY_ENABLED = True
     DEBUG = False
+
+    TENANT = f"{os.environ.get('TENANT')}." if os.environ.get("TENANT") is not None else ""
+    TENANT_PREFIX = f"{os.environ.get('TENANT')}-" if os.environ.get("TENANT") is not None else ""
+    ENVIRONMENT = os.getenv('ENVIRONMENT')
+    ENVIRONMENT_PREFIX = ENVIRONMENT if ENVIRONMENT != 'development' else 'dev'
+    AWS_REGION = os.environ.get("AWS_REGION", "eu-west-2")
+    QUEUE_PREFIX = f"{ENVIRONMENT_PREFIX}-{TENANT_PREFIX}"
+    SQS_QUEUE_BASE_URL = os.getenv("SQS_QUEUE_BASE_URL")
+    SERVICE = os.environ.get("SERVICE")
+    QUEUE_NAME = QueueNames.BROADCASTS if SERVICE == "api" else QueueNames.PERIODIC
+    TASK_IMPORTS = "broadcast_message_tasks" if SERVICE == "api" else "scheduled_tasks"
+    SQS_QUEUE_BACKOFF_POLICY = {1: 1, 2: 2, 3: 4, 4: 8, 5: 16, 6: 32, 7: 64, 8: 128}
+
+    CELERY = {
+        # "broker_url": f"https://sqs.{AWS_REGION}.amazonaws.com",
+        # "broker_transport": "sqs",
+        # "broker_transport_options": {
+        #     "region": AWS_REGION,
+        #     "queue_name_prefix": QUEUE_PREFIX,
+        #     "is_secure": True,
+        #     "task_acks_late": True,
+        # },
+        "broker_url": "sqs://",
+        "broker_transport": "sqs",
+        "broker_transport_options": {
+            "region": AWS_REGION,
+            "predefined_queues": {
+                QUEUE_NAME: {
+                    "url": f"{SQS_QUEUE_BASE_URL}/{QUEUE_PREFIX}{QUEUE_NAME}",
+                    "backoff_policy": SQS_QUEUE_BACKOFF_POLICY
+                }
+            }
+        },
+        "timezone": "UTC",
+        "imports": [f"app.celery.{TASK_IMPORTS}"],
+        "task_queues": [Queue(QUEUE_NAME, Exchange("default"), routing_key=QUEUE_NAME)],
+        "worker_log_format": "[%(levelname)s/%(processName)s] %(message)s",
+        "worker_max_tasks_per_child": 10,
+        "worker_hijack_root_logger": False,
+        "beat_schedule": {
+            "run-health-check": {
+                "task": "run-health-check",
+                "schedule": crontab(minute="*/1"),
+                "options": {"queue": QueueNames.PERIODIC},
+            },
+            TaskNames.TRIGGER_GOVUK_HEALTHCHECK: {
+                "task": TaskNames.TRIGGER_GOVUK_HEALTHCHECK,
+                "schedule": crontab(minute="*/1"),
+                "options": {"queue": QueueNames.GOVUK_ALERTS},
+            },
+            "trigger-link-tests": {
+                "task": "trigger-link-tests",
+                "schedule": crontab(minute="*/15"),
+                "options": {"queue": QueueNames.PERIODIC},
+            },
+            "delete-verify-codes": {
+                "task": "delete-verify-codes",
+                "schedule": crontab(minute=10),
+                "options": {"queue": QueueNames.PERIODIC},
+            },
+            "delete-invitations": {
+                "task": "delete-invitations",
+                "schedule": crontab(minute=20),
+                "options": {"queue": QueueNames.PERIODIC},
+            },
+            "auto-expire-broadcast-messages": {
+                "task": "auto-expire-broadcast-messages",
+                "schedule": crontab(minute=40),
+                "options": {"queue": QueueNames.PERIODIC},
+            },
+            "remove-yesterdays-planned-tests-on-govuk-alerts": {
+                "task": "remove-yesterdays-planned-tests-on-govuk-alerts",
+                "schedule": crontab(hour=00, minute=00),
+                "options": {"queue": QueueNames.PERIODIC},
+            },
+            "delete-old-records-from-events-table": {
+                "task": "delete-old-records-from-events-table",
+                "schedule": crontab(hour=3, minute=00),
+                "options": {"queue": QueueNames.PERIODIC},
+            },
+            "validate-functional-test-account-emails": {
+                "task": "validate-functional-test-account-emails",
+                "schedule": crontab(day_of_month="1"),
+                "options": {"queue": QueueNames.PERIODIC},
+            },
+        },
+    }
 
 
 class Test(Config):
