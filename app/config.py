@@ -251,28 +251,27 @@ class Hosted(Config):
     SQS_QUEUE_BACKOFF_POLICY = {1: 1, 2: 2, 3: 4, 4: 8, 5: 16, 6: 32, 7: 64, 8: 128}
 
     CELERY = {
-        # "broker_url": f"https://sqs.{AWS_REGION}.amazonaws.com",
-        # "broker_transport": "sqs",
-        # "broker_transport_options": {
-        #     "region": AWS_REGION,
-        #     "queue_name_prefix": QUEUE_PREFIX,
-        #     "is_secure": True,
-        #     "task_acks_late": True,
-        # },
-        "broker_url": "sqs://",
+        "broker_url": f"https://sqs.{AWS_REGION}.amazonaws.com",
         "broker_transport": "sqs",
         "broker_transport_options": {
             "region": AWS_REGION,
-            "predefined_queues": {
-                QUEUE_NAME: {
-                    "url": f"{SQS_QUEUE_BASE_URL}/{QUEUE_PREFIX}{QUEUE_NAME}",
-                    "backoff_policy": SQS_QUEUE_BACKOFF_POLICY
-                }
-            },
             "queue_name_prefix": QUEUE_PREFIX,
             "is_secure": True,
             "task_acks_late": True,
         },
+        # "broker_url": "sqs://",
+        # "broker_transport": "sqs",
+        # "broker_transport_options": {
+        #     "region": AWS_REGION,
+        #     "predefined_queues": {
+        #         QUEUE_NAME: {
+        #             "url": f"{SQS_QUEUE_BASE_URL}/{QUEUE_PREFIX}{QUEUE_NAME}",
+        #             "backoff_policy": SQS_QUEUE_BACKOFF_POLICY
+        #         }
+        #     },
+        #     "is_secure": True,
+        #     "task_acks_late": True,
+        # },
         "timezone": "UTC",
         "imports": [f"app.celery.{TASK_IMPORTS}"],
         "task_queues": [Queue(QUEUE_NAME, Exchange("default"), routing_key=QUEUE_NAME)],
