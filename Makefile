@@ -134,7 +134,7 @@ run-celery: ## Run celery
 		--prefetch-multiplier=1 \
 		--loglevel=DEBUG \
 		--autoscale=8,1 \
-		--hostname='eas@%h'
+		--hostname='celery@%h'
 
 .PHONY: run-celery-beat
 run-celery-beat: ## Run celery beat
