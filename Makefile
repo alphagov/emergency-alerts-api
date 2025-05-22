@@ -134,15 +134,14 @@ run-celery: ## Run celery
 		--prefetch-multiplier=1 \
 		--loglevel=INFO \
 		--autoscale=8,1 \
-		--hostname='api@%%h'
+		--hostname='eas-api@%%h'
 
 .PHONY: run-celery-beat
 run-celery-beat: ## Run celery beat
 	. environment.sh && celery \
 		-A run_celery.notify_celery beat \
 		--pidfile=/tmp/celery_beat.pid \
-		--loglevel=INFO \
-		--hostname='beat@%%h'
+		--loglevel=INFO
 
 .PHONY: help
 help:
