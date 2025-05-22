@@ -248,7 +248,7 @@ class Hosted(Config):
     SERVICE = os.environ.get("SERVICE")
     QUEUE_NAME = QueueNames.BROADCASTS if SERVICE == "api" else QueueNames.PERIODIC
     TASK_IMPORTS = "broadcast_message_tasks" if SERVICE == "api" else "scheduled_tasks"
-    SQS_QUEUE_BACKOFF_POLICY = {1: 1, 2: 2, 3: 4, 4: 8, 5: 16, 6: 32, 7: 64, 8: 128}
+    # SQS_QUEUE_BACKOFF_POLICY = {1: 1, 2: 2, 3: 4, 4: 8, 5: 16, 6: 32, 7: 64, 8: 128}
 
     CELERY = {
         # "broker_url": f"https://sqs.{AWS_REGION}.amazonaws.com", # 1. seemed to work (to 2)
@@ -264,10 +264,15 @@ class Hosted(Config):
         "broker_transport_options": {
             "region": AWS_REGION,
             "predefined_queues": {
-                QUEUE_NAME: {
-                    "url": f"{SQS_QUEUE_BASE_URL}/{QUEUE_PREFIX}{QUEUE_NAME}",
-                    "backoff_policy": SQS_QUEUE_BACKOFF_POLICY
-                }
+                "broadcast-tasks": {
+                    "url": f"{SQS_QUEUE_BASE_URL}/{QUEUE_PREFIX}broadcast-tasks",
+                },
+                "periodic-tasks": {
+                    "url": f"{SQS_QUEUE_BASE_URL}/{QUEUE_PREFIX}periodic-tasks"
+                },
+                "govuk-alerts": {
+                    "url": f"{SQS_QUEUE_BASE_URL}/{QUEUE_PREFIX}govuk-alerts"
+                },
             },
             "is_secure": True,
             "task_acks_late": True,
