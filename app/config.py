@@ -1,6 +1,7 @@
 import os
 
 from celery.schedules import crontab
+from flask import current_app
 from kombu import Exchange, Queue
 
 
@@ -309,8 +310,24 @@ class Hosted(Config):
         },
     }
 
+    BROADCASTS_AWS_ACCESS_KEY_ID = os.getenv("BROADCASTS_AWS_ACCESS_KEY_ID")
+    BROADCASTS_AWS_SECRET_ACCESS_KEY = os.getenv("BROADCASTS_AWS_SECRET_ACCESS_KEY")
+
+    from kombu.utils.url import safequote
+    aws_access_key = safequote(BROADCASTS_AWS_ACCESS_KEY_ID)
+    aws_secret_key = safequote(BROADCASTS_AWS_SECRET_ACCESS_KEY)
+
+    BROKER_URL = "sqs://{aws_access_key}:{aws_secret_key}@".format(
+        aws_access_key=aws_access_key, aws_secret_key=aws_secret_key,
+    )
+    current_app.logger.info(
+        "Celery config",
+        extra={"broker_url": BROKER_URL},
+    )
+
     CELERY = {
-        "broker_url": f"sqs://sqs.{AWS_REGION}.amazonaws.com",
+        # "broker_url": f"sqs://sqs.{AWS_REGION}.amazonaws.com", # try this
+        "broker_url": BROKER_URL,
         "broker_transport": "sqs",
         "broker_transport_options": {
             "region": AWS_REGION,
