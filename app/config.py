@@ -152,17 +152,11 @@ class Config(object):
     TASK_IMPORTS = "broadcast_message_tasks" if SERVICE == "api" else "scheduled_tasks"
 
     CELERY = {
-        # "broker":"sqs://",
         "broker_url": f"https://sqs.{AWS_REGION}.amazonaws.com",
         "broker_transport": "sqs",
         "broker_transport_options": {
             "region": AWS_REGION,
             "queue_name_prefix": QUEUE_PREFIX,
-            # "predefined_queues": {
-            #     "broadcast-tasks": {"url": f"{SQS_QUEUE_BASE_URL}/{QUEUE_PREFIX}broadcast-tasks"},
-            #     "periodic-tasks": {"url": f"{SQS_QUEUE_BASE_URL}/{QUEUE_PREFIX}periodic-tasks"},
-            #     "govuk-alerts": {"url": f"{SQS_QUEUE_BASE_URL}/{QUEUE_PREFIX}govuk-alerts"},
-            # },
             "is_secure": True,
             "task_acks_late": True,
         },
