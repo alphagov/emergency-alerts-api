@@ -130,18 +130,19 @@ run-celery: ## Run celery
 	. environment.sh && celery \
 		-A run_celery.notify_celery worker \
 		--uid=$(shell id -u easuser) \
-		--pidfile=/tmp/celery_worker.pid \
+		--worker_pidfile=/tmp/celery_worker.pid \
 		--prefetch-multiplier=1 \
 		--loglevel=INFO \
 		--autoscale=8,1 \
-		--hostname=0.0.0.0
+		--hostname='api@%%h'
 
 .PHONY: run-celery-beat
 run-celery-beat: ## Run celery beat
 	. environment.sh && celery \
 		-A run_celery.notify_celery beat \
-		--pidfile=/tmp/celery_beat.pid \
-		--loglevel=INFO
+		--beat_pidfile=/tmp/celery_beat.pid \
+		--loglevel=INFO \
+		--hostname='beat@%%h'
 
 .PHONY: help
 help:
