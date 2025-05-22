@@ -656,7 +656,7 @@ def test_update_broadcast_message_status_rejects_with_reason(admin_request, samp
     assert response["rejection_reason"] == "TEST"
 
 
-def test_update_broadcast_message_status_errors_as_missing_reason(admin_request, sample_broadcast_service):
+def test_update_broadcast_message_status_errors_as_missing_rejection_reason(admin_request, sample_broadcast_service):
     t = create_template(sample_broadcast_service, BROADCAST_TYPE)
     bm = create_broadcast_message(t, status=BroadcastStatusType.PENDING_APPROVAL)
 
@@ -668,7 +668,7 @@ def test_update_broadcast_message_status_errors_as_missing_reason(admin_request,
         _expected_status=400,
     )
 
-    assert response["errors"] == ["Enter the reason for rejecting the alert."]
+    assert response["message"] == "Enter the reason for rejecting the alert."
 
 
 def test_update_broadcast_message_status_doesnt_let_you_update_other_things(admin_request, sample_broadcast_service):
@@ -770,6 +770,52 @@ def test_update_broadcast_message_status_rejects_approval_from_user_not_on_that_
 
     assert mock_task.called is False
     assert "cannot update broadcast" in response["message"]
+
+
+def test_return_broadcast_message_updates_broadcast_status_with_reason(admin_request, sample_broadcast_service, mocker):
+    t = create_template(sample_broadcast_service, BROADCAST_TYPE)
+    bm = create_broadcast_message(t, status=BroadcastStatusType.PENDING_APPROVAL)
+
+    response = admin_request.post(
+        "broadcast_message.return_broadcast_message_for_edit",
+        _data={"edit_reason": "TEST", "created_by": str(t.created_by_id)},
+        service_id=t.service_id,
+        broadcast_message_id=bm.id,
+        _expected_status=200,
+    )
+
+    assert response["status"] == BroadcastStatusType.DRAFT
+    assert response["updated_at"] is not None
+
+
+def test_return_broadcast_message_for_edit_errors_with_no_reason(admin_request, sample_broadcast_service, mocker):
+    t = create_template(sample_broadcast_service, BROADCAST_TYPE)
+    bm = create_broadcast_message(t, status=BroadcastStatusType.PENDING_APPROVAL)
+
+    response = admin_request.post(
+        "broadcast_message.return_broadcast_message_for_edit",
+        _data={"created_by": str(t.created_by_id)},
+        service_id=t.service_id,
+        broadcast_message_id=bm.id,
+        _expected_status=400,
+    )
+    # Response is ValidationError because edit_reason is a required parameter
+    assert response["errors"] == [{"error": "ValidationError", "message": "edit_reason is a required property"}]
+
+
+def test_return_broadcast_message_for_edit_errors_with_empty_reason(admin_request, sample_broadcast_service, mocker):
+    t = create_template(sample_broadcast_service, BROADCAST_TYPE)
+    bm = create_broadcast_message(t, status=BroadcastStatusType.PENDING_APPROVAL)
+
+    response = admin_request.post(
+        "broadcast_message.return_broadcast_message_for_edit",
+        _data={"edit_reason": "", "created_by": str(t.created_by_id)},
+        service_id=t.service_id,
+        broadcast_message_id=bm.id,
+        _expected_status=400,
+    )
+    # Response is InvalidRequest, raised when edit_reason is empty string
+    assert response["message"] == "Enter the reason for returning the alert for edit"
 
 
 def test_purge_broadcast_messages(admin_request, sample_broadcast_service, mocker):

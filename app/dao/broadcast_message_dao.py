@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timedelta
 
 from flask import current_app
-from sqlalchemy import asc, case, desc
+from sqlalchemy import asc, case, desc, func
 from sqlalchemy.orm import aliased
 
 from app import db
@@ -10,6 +10,7 @@ from app.dao.dao_utils import autocommit
 from app.models import (
     BroadcastEvent,
     BroadcastMessage,
+    BroadcastMessageEditReasons,
     BroadcastProvider,
     BroadcastProviderMessage,
     BroadcastProviderMessageNumber,
@@ -41,6 +42,24 @@ def dao_get_broadcast_message_by_id_and_service_id_with_user(broadcast_message_i
     UserSubmitted = aliased(User)
     UserUpdated = aliased(User)
 
+    edit_reasons = db.session.query(
+        BroadcastMessageEditReasons.broadcast_message_id,
+        BroadcastMessageEditReasons.edit_reason,
+        BroadcastMessageEditReasons.created_at,
+        func.row_number()
+        .over(
+            partition_by=BroadcastMessageEditReasons.broadcast_message_id,
+            order_by=desc(BroadcastMessageEditReasons.created_at),
+        )
+        .label("row_number"),
+    ).subquery()
+
+    latest_edit_reasons = (
+        db.session.query(edit_reasons.c.broadcast_message_id, edit_reasons.c.edit_reason)
+        .filter(edit_reasons.c.row_number == 1)
+        .subquery()
+    )
+
     return (
         db.session.query(
             BroadcastMessage,
@@ -50,6 +69,7 @@ def dao_get_broadcast_message_by_id_and_service_id_with_user(broadcast_message_i
             UserCancelled.name.label("cancelled_by"),
             UserSubmitted.name.label("submitted_by"),
             UserUpdated.name.label("updated_by"),
+            latest_edit_reasons.c.edit_reason,
         )
         .outerjoin(UserCreated, BroadcastMessage.created_by_id == UserCreated.id)
         .outerjoin(UserRejected, BroadcastMessage.rejected_by_id == UserRejected.id)
@@ -57,6 +77,7 @@ def dao_get_broadcast_message_by_id_and_service_id_with_user(broadcast_message_i
         .outerjoin(UserCancelled, BroadcastMessage.cancelled_by_id == UserCancelled.id)
         .outerjoin(UserSubmitted, BroadcastMessage.submitted_by_id == UserSubmitted.id)
         .outerjoin(UserUpdated, BroadcastMessage.updated_by_id == UserUpdated.id)
+        .outerjoin(latest_edit_reasons, BroadcastMessage.id == latest_edit_reasons.c.broadcast_message_id)
         .filter(BroadcastMessage.id == broadcast_message_id, BroadcastMessage.service_id == service_id)
         .one()
     )
@@ -103,6 +124,24 @@ def dao_get_broadcast_messages_for_service_with_user(service_id):
         (BroadcastMessage.status == BroadcastStatusType.DRAFT, 3),
     )
 
+    edit_reasons = db.session.query(
+        BroadcastMessageEditReasons.broadcast_message_id,
+        BroadcastMessageEditReasons.edit_reason,
+        BroadcastMessageEditReasons.created_at,
+        func.row_number()
+        .over(
+            partition_by=BroadcastMessageEditReasons.broadcast_message_id,
+            order_by=desc(BroadcastMessageEditReasons.created_at),
+        )
+        .label("row_number"),
+    ).subquery()
+
+    latest_edit_reasons = (
+        db.session.query(edit_reasons.c.broadcast_message_id, edit_reasons.c.edit_reason)
+        .filter(edit_reasons.c.row_number == 1)
+        .subquery()
+    )
+
     return (
         db.session.query(
             BroadcastMessage,
@@ -111,12 +150,14 @@ def dao_get_broadcast_messages_for_service_with_user(service_id):
             UserApproved.name.label("approved_by"),
             UserCancelled.name.label("cancelled_by"),
             UserCancelled.name.label("submitted_by"),
+            latest_edit_reasons.c.edit_reason,
         )
         .outerjoin(UserCreated, BroadcastMessage.created_by_id == UserCreated.id)
         .outerjoin(UserRejected, BroadcastMessage.rejected_by_id == UserRejected.id)
         .outerjoin(UserApproved, BroadcastMessage.approved_by_id == UserApproved.id)
         .outerjoin(UserCancelled, BroadcastMessage.cancelled_by_id == UserCancelled.id)
         .outerjoin(UserSubmitted, BroadcastMessage.submitted_by_id == UserSubmitted.id)
+        .outerjoin(latest_edit_reasons, BroadcastMessage.id == latest_edit_reasons.c.broadcast_message_id)
         .filter(BroadcastMessage.service_id == service_id)
         .order_by(status_order, asc(BroadcastMessage.reference))
         .all()
