@@ -326,7 +326,6 @@ def create_broadcast_message(
         reference=reference,
         submitted_by=submitted_by,
         submitted_at=datetime.now(),
-        submitted_by_id=submitted_by.id,
     )
     db.session.add(broadcast_message)
     db.session.commit()
