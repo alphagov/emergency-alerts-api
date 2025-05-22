@@ -239,7 +239,6 @@ class Hosted(Config):
     CBC_PROXY_ENABLED = True
     DEBUG = False
 
-    TENANT = f"{os.environ.get('TENANT')}." if os.environ.get("TENANT") is not None else ""
     TENANT_PREFIX = f"{os.environ.get('TENANT')}-" if os.environ.get("TENANT") is not None else ""
     ENVIRONMENT = os.getenv('ENVIRONMENT')
     ENVIRONMENT_PREFIX = ENVIRONMENT if ENVIRONMENT != 'development' else 'dev'
@@ -269,12 +268,14 @@ class Hosted(Config):
                     "url": f"{SQS_QUEUE_BASE_URL}/{QUEUE_PREFIX}{QUEUE_NAME}",
                     "backoff_policy": SQS_QUEUE_BACKOFF_POLICY
                 }
-            }
+            },
+            "queue_name_prefix": QUEUE_PREFIX,
+            "is_secure": True,
+            "task_acks_late": True,
         },
         "timezone": "UTC",
         "imports": [f"app.celery.{TASK_IMPORTS}"],
         "task_queues": [Queue(QUEUE_NAME, Exchange("default"), routing_key=QUEUE_NAME)],
-        "worker_log_format": "[%(levelname)s/%(processName)s] %(message)s",
         "worker_max_tasks_per_child": 10,
         "worker_hijack_root_logger": False,
         "beat_schedule": {
