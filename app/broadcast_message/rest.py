@@ -301,10 +301,7 @@ def update_broadcast_message_status_with_reason(service_id, broadcast_message_id
     new_status = data["status"]
     rejection_reason = data.get("rejection_reason", "")
     if new_status == "rejected" and rejection_reason == "":
-        return (
-            jsonify({"errors": ["Enter the reason for rejecting the alert."]}),
-            400,
-        )
+        raise InvalidRequest("Enter the reason for rejecting the alert.", 400)
     updating_user = get_user_by_id(data["created_by"])
 
     if updating_user not in broadcast_message.service.users:
@@ -328,10 +325,7 @@ def return_broadcast_message_for_edit(service_id, broadcast_message_id):
     validate(data, return_broadcast_message_for_edit_schema)
     edit_reason = data.get("edit_reason")
     if not edit_reason:
-        return (
-            jsonify({"errors": ["Enter the reason for returning the alert for edit"]}),
-            400,
-        )
+        raise InvalidRequest("Enter the reason for returning the alert for edit", 400)
     broadcast_message = dao_get_broadcast_message_by_id_and_service_id(broadcast_message_id, service_id)
 
     current_app.logger.info(
