@@ -138,7 +138,7 @@ function configure_container_role(){
 
 function run_celery(){
     cd $DIR_API;
-    . $VENV_API/bin/activate && make run-celery-api &
+    . $VENV_API/bin/activate && make run-celery &
 }
 
 function run_api(){

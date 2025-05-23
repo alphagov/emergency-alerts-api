@@ -112,13 +112,25 @@ def send_broadcast_event(broadcast_event_id):
 
     broadcast_event = dao_get_broadcast_event_by_id(broadcast_event_id)
 
-    notify_celery.send_task(
-        name=TaskNames.PUBLISH_GOVUK_ALERTS,
-        queue=QueueNames.GOVUK_ALERTS,
-        kwargs={"broadcast_event_id": broadcast_event_id},
+    current_app.logger.debug(
+        "BroadcastEvent retrieved",
+        extra={
+            "id": broadcast_event.id,
+            "service_id": broadcast_event.service.id,
+            "broadcast_message_id": broadcast_event.broadcast_message.id,
+            "message_type": broadcast_event.message_type,
+            "transmitted_content": broadcast_event.transmitted_content,
+        }
     )
 
+    # notify_celery.send_task(
+    #     name=TaskNames.PUBLISH_GOVUK_ALERTS,
+    #     queue=QueueNames.GOVUK_ALERTS,
+    #     kwargs={"broadcast_event_id": broadcast_event_id},
+    # )
+
     providers = broadcast_event.service.get_available_broadcast_providers()
+
     current_app.logger.info(
         "Send broadcast event",
         extra={
