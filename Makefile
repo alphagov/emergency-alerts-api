@@ -126,7 +126,7 @@ run-flask: ## Run flask
 	. environment.sh && flask run -p 6011
 
 .PHONY: run-celery-api
-run-celery: ## Run celery
+run-celery-api: ## Run celery
 	. environment.sh && celery \
 		-A run_celery.notify_celery worker \
 		--uid=$(shell id -u easuser) \
