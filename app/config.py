@@ -314,6 +314,7 @@ class Hosted(Config):
         "broker_transport_options": {
             "region": AWS_REGION,
             "predefined_queues": PREDEFINED_SQS_QUEUES,
+            "queue_name_prefix": QUEUE_PREFIX,
             "is_secure": True,
             "task_acks_late": True,
         },
