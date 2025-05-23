@@ -125,12 +125,25 @@ bootstrap-for-tests: generate-version-file install-node ## Set up everything to 
 run-flask: ## Run flask
 	. environment.sh && flask run -p 6011
 
+.PHONY: run-celery-api
+run-celery: ## Run celery
+	. environment.sh && celery \
+		-A run_celery.notify_celery worker \
+		--uid=$(shell id -u easuser) \
+		--pidfile=/tmp/celery_worker.pid \
+		--queues=broadcast-tasks \
+		--prefetch-multiplier=1 \
+		--loglevel=DEBUG \
+		--autoscale=8,1 \
+		--hostname='celery@%h'
+
 .PHONY: run-celery
 run-celery: ## Run celery
 	. environment.sh && celery \
 		-A run_celery.notify_celery worker \
 		--uid=$(shell id -u easuser) \
 		--pidfile=/tmp/celery_worker.pid \
+		--queues=periodic-tasks \
 		--prefetch-multiplier=1 \
 		--loglevel=DEBUG \
 		--autoscale=8,1 \
