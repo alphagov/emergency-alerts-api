@@ -1,7 +1,7 @@
 import os
 
 from celery.schedules import crontab
-from flask import current_app
+# from flask import current_app
 from kombu import Exchange, Queue
 
 
@@ -328,7 +328,7 @@ class Hosted(Config):
     CELERY = {
         # "broker_url": f"sqs://sqs.{AWS_REGION}.amazonaws.com", # try this
         # "broker_url": BROKER_URL,
-        "broker_url": "sql://",
+        # "broker_url": "sql://",
         "broker_transport": "sqs",
         "broker_transport_options": {
             "region": AWS_REGION,
