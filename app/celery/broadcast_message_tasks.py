@@ -123,11 +123,11 @@ def send_broadcast_event(broadcast_event_id):
         }
     )
 
-    # notify_celery.send_task(
-    #     name=TaskNames.PUBLISH_GOVUK_ALERTS,
-    #     queue=QueueNames.GOVUK_ALERTS,
-    #     kwargs={"broadcast_event_id": broadcast_event_id},
-    # )
+    notify_celery.send_task(
+        name=TaskNames.PUBLISH_GOVUK_ALERTS,
+        queue=QueueNames.GOVUK_ALERTS,
+        kwargs={"broadcast_event_id": broadcast_event_id},
+    )
 
     providers = broadcast_event.service.get_available_broadcast_providers()
 
