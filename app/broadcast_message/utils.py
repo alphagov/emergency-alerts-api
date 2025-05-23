@@ -147,13 +147,7 @@ def _create_broadcast_event(broadcast_message):
             f"Invoking celery task 'send-broadcast-event' for event id {event.id} on queue {QueueNames.BROADCASTS}"
         )
 
-        # send_broadcast_event.apply_async(
-        #     kwargs={"broadcast_event_id": str(event.id)},
-        #     queue=QueueNames.BROADCASTS
-        # )
-
-        notify_celery.send_task(
-            name="send-broadcast-event",
+        send_broadcast_event.apply_async(
             queue=QueueNames.BROADCASTS,
             kwargs={"broadcast_event_id": str(event.id)},
         )

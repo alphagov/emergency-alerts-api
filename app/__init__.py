@@ -375,6 +375,7 @@ def setup_sqlalchemy_events(app):
 
 @task_prerun.connect
 def store_task_context(sender=None, task_id=None, task=None, **kwargs):
+    current_app.logger.info(f"Storing celery task context for {sender.name} {task_id}")
     _celery_task_context[task_id] = {
         "name": sender.name,
         "args": task.request.args,
@@ -384,4 +385,5 @@ def store_task_context(sender=None, task_id=None, task=None, **kwargs):
 
 @task_postrun.connect
 def clear_task_context(task_id=None, **kwargs):
+    current_app.logger.info(f"Clearing celery task context for {task_id}")
     _celery_task_context.pop(task_id, None)
