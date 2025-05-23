@@ -148,7 +148,6 @@ def _create_broadcast_event(broadcast_message):
         )
 
         send_broadcast_event.apply_async(
-            name="send-broadcast-event",
             kwargs={"broadcast_event_id": str(event.id)},
             queue=QueueNames.BROADCASTS
         )
