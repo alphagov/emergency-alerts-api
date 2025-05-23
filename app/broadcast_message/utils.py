@@ -143,7 +143,16 @@ def _create_broadcast_event(broadcast_message):
 
         dao_save_object(event)
 
-        send_broadcast_event.apply_async(kwargs={"broadcast_event_id": str(event.id)}, queue=QueueNames.BROADCASTS)
+        current_app.logger.info(
+            f"Invoking celery task 'send-broadcast-event' for event id {event.id} on queue {QueueNames.BROADCASTS}"
+        )
+
+        send_broadcast_event.apply_async(
+            name="send-broadcast-event",
+            kwargs={"broadcast_event_id": str(event.id)},
+            queue=QueueNames.BROADCASTS
+        )
+    
     elif broadcast_message.stubbed != service.restricted:
         # It's possible for a service to create a broadcast in trial mode, and then approve it after the
         # service is live (or vice versa). We don't think it's safe to send such broadcasts, as the service
