@@ -6,7 +6,7 @@ from emergency_alerts_utils.clients.zendesk.zendesk_client import (
 )
 from flask import current_app
 
-from app import zendesk_client
+from app import zendesk_client, notify_celery
 from app.celery.broadcast_message_tasks import send_broadcast_event
 from app.config import QueueNames
 from app.dao.dao_utils import dao_save_object
@@ -147,9 +147,15 @@ def _create_broadcast_event(broadcast_message):
             f"Invoking celery task 'send-broadcast-event' for event id {event.id} on queue {QueueNames.BROADCASTS}"
         )
 
-        send_broadcast_event.apply_async(
+        # send_broadcast_event.apply_async(
+        #     kwargs={"broadcast_event_id": str(event.id)},
+        #     queue=QueueNames.BROADCASTS
+        # )
+
+        notify_celery.send_task(
+            name="send-broadcast-event",
+            queue=QueueNames.BROADCASTS,
             kwargs={"broadcast_event_id": str(event.id)},
-            queue=QueueNames.BROADCASTS
         )
     
     elif broadcast_message.stubbed != service.restricted:
