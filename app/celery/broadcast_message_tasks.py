@@ -107,7 +107,22 @@ def check_event_makes_sense_in_sequence(broadcast_event, provider):
 
 @notify_celery.task(name="send-broadcast-event")
 def send_broadcast_event(broadcast_event_id):
+    current_app.logger.info(
+        f"Task 'send-broadcast-event' started for event id {broadcast_event_id}"
+    )
+
     broadcast_event = dao_get_broadcast_event_by_id(broadcast_event_id)
+
+    current_app.logger.debug(
+        "BroadcastEvent retrieved",
+        extra={
+            "id": broadcast_event.id,
+            "service_id": broadcast_event.service.id,
+            "broadcast_message_id": broadcast_event.broadcast_message.id,
+            "message_type": broadcast_event.message_type,
+            "transmitted_content": broadcast_event.transmitted_content,
+        }
+    )
 
     notify_celery.send_task(
         name=TaskNames.PUBLISH_GOVUK_ALERTS,
@@ -116,6 +131,7 @@ def send_broadcast_event(broadcast_event_id):
     )
 
     providers = broadcast_event.service.get_available_broadcast_providers()
+
     current_app.logger.info(
         "Send broadcast event",
         extra={
@@ -141,6 +157,10 @@ def send_broadcast_event(broadcast_event_id):
     max_retries=5,
 )
 def send_broadcast_provider_message(self, broadcast_event_id, provider):
+    current_app.logger.info(
+        f"Task 'send-broadcast-provider-message' started for event id {broadcast_event_id} and provider {provider}",
+    )
+
     if not current_app.config["CBC_PROXY_ENABLED"]:
         current_app.logger.info(
             "CBC Proxy disabled, unable to send broadcast_provider_message",
