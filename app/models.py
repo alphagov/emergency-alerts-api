@@ -6,6 +6,9 @@ from emergency_alerts_utils.admin_action import (
     ADMIN_STATUS_LIST,
 )
 from emergency_alerts_utils.template import BroadcastMessageTemplate
+from emergency_alerts_utils.xml.cap import (
+    convert_utc_datetime_to_cap_standard_string,
+)
 from flask import current_app, url_for
 from sqlalchemy import CheckConstraint, Index, UniqueConstraint
 from sqlalchemy.dialects.postgresql import INET, JSON, JSONB, UUID
@@ -1064,17 +1067,7 @@ class BroadcastEvent(db.Model):
         return self.formatted_datetime_for("transmitted_finishes_at")
 
     def formatted_datetime_for(self, property_name):
-        return self.convert_naive_utc_datetime_to_cap_standard_string(getattr(self, property_name))
-
-    @staticmethod
-    def convert_naive_utc_datetime_to_cap_standard_string(dt):
-        """
-        As defined in section 3.3.2 of
-        http://docs.oasis-open.org/emergency/cap/v1.2/CAP-v1.2-os.html
-        They define the standard "YYYY-MM-DDThh:mm:ssXzh:zm", where X is
-        `+` if the timezone is > UTC, otherwise `-`
-        """
-        return f"{dt.strftime('%Y-%m-%dT%H:%M:%S')}-00:00"
+        return convert_utc_datetime_to_cap_standard_string(getattr(self, property_name))
 
     def get_provider_message(self, provider):
         return next(
