@@ -6,6 +6,7 @@ import uuid
 from time import monotonic
 
 import boto3
+
 # from celery.signals import task_postrun, task_prerun
 from emergency_alerts_utils import logging, request_helper
 from emergency_alerts_utils.celery import NotifyCelery
