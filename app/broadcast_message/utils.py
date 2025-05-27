@@ -6,7 +6,7 @@ from emergency_alerts_utils.clients.zendesk.zendesk_client import (
 )
 from flask import current_app
 
-from app import zendesk_client, notify_celery
+from app import zendesk_client
 from app.celery.broadcast_message_tasks import send_broadcast_event
 from app.config import QueueNames
 from app.dao.dao_utils import dao_save_object
@@ -151,7 +151,6 @@ def _create_broadcast_event(broadcast_message):
             queue=QueueNames.BROADCASTS,
             kwargs={"broadcast_event_id": str(event.id)},
         )
-    
     elif broadcast_message.stubbed != service.restricted:
         # It's possible for a service to create a broadcast in trial mode, and then approve it after the
         # service is live (or vice versa). We don't think it's safe to send such broadcasts, as the service

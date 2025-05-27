@@ -240,8 +240,8 @@ class Hosted(Config):
     DEBUG = False
 
     TENANT_PREFIX = f"{os.environ.get('TENANT')}-" if os.environ.get("TENANT") is not None else ""
-    ENVIRONMENT = os.getenv('ENVIRONMENT')
-    ENVIRONMENT_PREFIX = ENVIRONMENT if ENVIRONMENT != 'development' else 'dev'
+    ENVIRONMENT = os.getenv("ENVIRONMENT")
+    ENVIRONMENT_PREFIX = ENVIRONMENT if ENVIRONMENT != "development" else "dev"
     AWS_REGION = os.environ.get("AWS_REGION", "eu-west-2")
     QUEUE_PREFIX = f"{ENVIRONMENT_PREFIX}-{TENANT_PREFIX}"
     SQS_QUEUE_BASE_URL = os.getenv("SQS_QUEUE_BASE_URL")
@@ -301,12 +301,8 @@ class Hosted(Config):
         "broadcast-tasks": {
             "url": f"{SQS_QUEUE_BASE_URL}/{QUEUE_PREFIX}broadcast-tasks",
         },
-        "periodic-tasks": {
-            "url": f"{SQS_QUEUE_BASE_URL}/{QUEUE_PREFIX}periodic-tasks"
-        },
-        "govuk-alerts": {
-            "url": f"{SQS_QUEUE_BASE_URL}/{QUEUE_PREFIX}govuk-alerts"
-        },
+        "periodic-tasks": {"url": f"{SQS_QUEUE_BASE_URL}/{QUEUE_PREFIX}periodic-tasks"},
+        "govuk-alerts": {"url": f"{SQS_QUEUE_BASE_URL}/{QUEUE_PREFIX}govuk-alerts"},
     }
 
     CELERY = {
