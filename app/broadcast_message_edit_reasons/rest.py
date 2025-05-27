@@ -32,12 +32,12 @@ def get_latest_broadcast_message_edit_reason(service_id, broadcast_message_id):
 
 @broadcast_message_edit_reasons_blueprint.route("/<uuid:broadcast_message_id>/edit-reasons")
 def get_broadcast_message_edit_reasons(service_id, broadcast_message_id):
-    broadcast_messages = []
-    for message, created_by, submitted_by in dao_get_broadcast_message_edit_reasons(
+    edit_reasons = []
+    for edit_reason, created_by, submitted_by in dao_get_broadcast_message_edit_reasons(
         service_id=service_id, broadcast_message_id=broadcast_message_id
     ):
-        broadcast_messages.append(
-            {**message.serialize(), "created_by": created_by or None, "submitted_by": submitted_by or None}
+        edit_reasons.append(
+            {**edit_reason.serialize(), "created_by": created_by or None, "submitted_by": submitted_by or None}
         )
 
-    return jsonify(broadcast_messages)
+    return jsonify(edit_reasons)
