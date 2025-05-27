@@ -6,7 +6,7 @@ import uuid
 from time import monotonic
 
 import boto3
-from celery.signals import task_postrun, task_prerun
+# from celery.signals import task_postrun, task_prerun
 from emergency_alerts_utils import logging, request_helper
 from emergency_alerts_utils.celery import NotifyCelery
 from emergency_alerts_utils.clients.encryption.encryption_client import (
@@ -67,7 +67,7 @@ CONCURRENT_REQUESTS = Gauge(
     "How many concurrent requests are currently being served",
 )
 
-_celery_task_context = {}
+# _celery_task_context = {}
 
 
 def create_app(application):
@@ -339,16 +339,16 @@ def setup_sqlalchemy_events(app):
                         "url_rule": request.url_rule.rule if request.url_rule else "No endpoint",
                     }
                 # celery apps
-                elif _celery_task_context:
-                    current_app.logger.info("Checked out sqlalchemy connection inside celery task")
-                    connection_record.info["request_data"] = {
-                        "method": "celery",
-                        "host": current_app.config["EAS_APP_NAME"],  # worker name
-                        "url_rule": _celery_task_context.name,  # task name
-                    }
+                # elif _celery_task_context:
+                #     current_app.logger.info("Checked out sqlalchemy connection inside celery task")
+                #     connection_record.info["request_data"] = {
+                #         "method": "celery",
+                #         "host": current_app.config["EAS_APP_NAME"],  # worker name
+                #         "url_rule": _celery_task_context.name,  # task name
+                #     }
                 # anything else. migrations possibly, or flask cli commands.
                 else:
-                    current_app.logger.info("Checked out sqlalchemy connection from outside of request/task")
+                    current_app.logger.info("Checked out sqlalchemy connection from outside of request")
                     connection_record.info["request_data"] = {
                         "method": "unknown",
                         "host": "unknown",
@@ -378,17 +378,17 @@ def setup_sqlalchemy_events(app):
                 current_app.logger.exception("Exception caught for checkin event.")
 
 
-@task_prerun.connect
-def store_task_context(sender=None, task_id=None, task=None, **kwargs):
-    current_app.logger.debug(f"Storing celery task context for {sender.name} {task_id}")
-    _celery_task_context[task_id] = {
-        "name": sender.name,
-        "args": task.request.args,
-        "kwargs": task.request.kwargs,
-    }
+# @task_prerun.connect
+# def store_task_context(sender=None, task_id=None, task=None, **kwargs):
+#     current_app.logger.debug(f"Storing celery task context for {sender.name} {task_id}")
+#     _celery_task_context[task_id] = {
+#         "name": sender.name,
+#         "args": task.request.args,
+#         "kwargs": task.request.kwargs,
+#     }
 
 
-@task_postrun.connect
-def clear_task_context(task_id=None, **kwargs):
-    current_app.logger.debug(f"Clearing celery task context for {task_id}")
-    _celery_task_context.pop(task_id, None)
+# @task_postrun.connect
+# def clear_task_context(task_id=None, **kwargs):
+#     current_app.logger.debug(f"Clearing celery task context for {task_id}")
+#     _celery_task_context.pop(task_id, None)
