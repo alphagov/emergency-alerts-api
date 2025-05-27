@@ -321,6 +321,11 @@ def update_broadcast_message_status_with_reason(service_id, broadcast_message_id
 
 @broadcast_message_blueprint.route("/<uuid:broadcast_message_id>/return-for-edit", methods=["POST"])
 def return_broadcast_message_for_edit(service_id, broadcast_message_id):
+    """
+    This function receives edit_reason text and created_by parameter and following validation,
+    changes the broadcast message's status to 'draft' and an edit_reason record is created in
+    broadcast_message_edit_reasons table.
+    """
     data = request.get_json()
     validate(data, return_broadcast_message_for_edit_schema)
     edit_reason = data.get("edit_reason")

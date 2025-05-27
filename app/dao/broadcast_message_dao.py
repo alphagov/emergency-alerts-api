@@ -109,8 +109,13 @@ def dao_get_broadcast_messages_for_service(service_id):
 def dao_get_broadcast_messages_for_service_with_user(service_id):
     """
     This function returns a list of BroadcastMessages for the service, with additional values
-    for created_by, rejected_by, approved_by & cancelled_by.
-    These values are the names of the users sourced using joins with User table.
+    for created_by, rejected_by, approved_by, cancelled_by & submitted_by, as well as latest
+    edit_reason if the broadcast message has ever been returned to draft state.
+
+    The User-related values are the names of the users sourced using joins with User table.
+
+    The latest edit_reason per alert is found using a subquery (see latest_edit_reasons) and this is
+    returned, per broadcast_message, in this query using a join.
     """
     UserCreated = aliased(User)
     UserRejected = aliased(User)
@@ -135,6 +140,14 @@ def dao_get_broadcast_messages_for_service_with_user(service_id):
         .filter(edit_reasons.c.row_number == 1)
         .subquery()
     )
+
+    """This is the order in which alerts should be displayed on 'Current alerts' page
+    and thus the order in which they are sent to Admin application:
+    1. Alerts that are live (Broadcasting)
+    2. Alerts that have been returned for edit (Draft alerts for which there is also an edit_reason)
+    3. Alerts that are awaiting approval (Pending-approval)
+    4. Alerts that are in draft state (no edit_reason so have never been submitted & returned)
+    """
 
     status_order = case(
         (BroadcastMessage.status == BroadcastStatusType.BROADCASTING, 1),

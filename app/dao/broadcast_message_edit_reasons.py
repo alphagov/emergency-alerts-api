@@ -10,6 +10,11 @@ from app.models import BroadcastMessageEditReasons, User
 
 
 def dao_get_broadcast_message_edit_reasons(service_id, broadcast_message_id):
+    """
+    This function retrieves all of the edit_reasons for a specific broadcast message i.e.
+    the reasons that the broadcast message has been returned to 'draft' status because something
+    is incorrect.
+    """
     UserCreated = aliased(User)
     UserSubmitted = aliased(User)
     return (
@@ -25,12 +30,19 @@ def dao_get_broadcast_message_edit_reasons(service_id, broadcast_message_id):
 
 
 def dao_get_broadcast_message_edit_reason_by_id(id):
+    """
+    This function retrieves a specific edit_reason from broadcast_message_edit_reasons table.
+    """
     return BroadcastMessageEditReasons.query.filter_by(id=id).one()
 
 
 def dao_get_latest_broadcast_message_edit_reason_by_broadcast_message_id_and_service_id(
     broadcast_message_id, service_id
 ):
+    """
+    This function retrieves the latest edit_reason from broadcast_message_edit_reasons table
+    for a specified broadcast message.
+    """
     return (
         BroadcastMessageEditReasons.query.filter_by(broadcast_message_id=broadcast_message_id, service_id=service_id)
         .order_by(desc(BroadcastMessageEditReasons.created_at))
@@ -40,10 +52,7 @@ def dao_get_latest_broadcast_message_edit_reason_by_broadcast_message_id_and_ser
 
 @autocommit
 def dao_create_broadcast_message_edit_reason(broadcast_message, service_id, user_id, edit_reason):
-    """
-    This function gets latest edit_reason of broadcast message from broadcast_message_edit_reasons,.....
-    """
-
+    """This function creates an edit_reason records for broadcast_message_edit_reasons table."""
     history = BroadcastMessageEditReasons(
         **{
             "id": uuid.uuid4(),
