@@ -69,9 +69,8 @@ def get_broadcast_msgs_for_service(service_id):
             "approved_by": approved_by or None,
             "cancelled_by": cancelled_by or None,
             "submitted_by": submitted_by or None,
-            "edit_reason": edit_reason or None,
         }
-        for message, created_by, rejected_by, approved_by, cancelled_by, submitted_by, edit_reason in (
+        for message, created_by, rejected_by, approved_by, cancelled_by, submitted_by in (
             dao_get_broadcast_messages_for_service_with_user(service_id)
         )
     ]
@@ -333,7 +332,7 @@ def update_broadcast_message_status_with_reason(service_id, broadcast_message_id
 def return_broadcast_message_for_edit(service_id, broadcast_message_id):
     """
     This function receives edit_reason text and created_by parameter and following validation,
-    changes the broadcast message's status to 'draft' and an edit_reason record is created in
+    changes the broadcast message's status to 'returned' and an edit_reason record is created in
     broadcast_message_edit_reasons table.
     """
     data = request.get_json()
@@ -349,7 +348,7 @@ def return_broadcast_message_for_edit(service_id, broadcast_message_id):
             "python_module": __name__,
             "service_id": service_id,
             "broadcast_message_id": broadcast_message_id,
-            "status": "draft",
+            "status": "returned",
         },
     )
     if not broadcast_message.service.active:
