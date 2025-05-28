@@ -111,7 +111,7 @@ def send_broadcast_event(broadcast_event_id):
 
     broadcast_event = dao_get_broadcast_event_by_id(broadcast_event_id)
 
-    current_app.logger.debug(
+    current_app.logger.info(
         "BroadcastEvent retrieved",
         extra={
             "id": broadcast_event.id,
