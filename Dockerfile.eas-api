@@ -23,7 +23,6 @@ RUN apt-get install lsb-release -y && \
 
 RUN apt -y install postgresql-client-14 && \
     echo "POSTGRESQL/PG_DUMP VERSION:" && pg_dump --version
-RUN apt -y install python3-psycopg2
 
 # Build emergency-alerts-api
 RUN cd $DIR_API && \
