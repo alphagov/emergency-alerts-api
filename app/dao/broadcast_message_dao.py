@@ -108,7 +108,7 @@ def dao_get_broadcast_messages_for_service_with_user(service_id):
 
     status_order = case(
         (BroadcastMessage.status == BroadcastStatusType.BROADCASTING, 1),
-        (BroadcastMessage.status == BroadcastStatusType.RETURNED, 1),
+        (BroadcastMessage.status == BroadcastStatusType.RETURNED, 2),
         (BroadcastMessage.status == BroadcastStatusType.PENDING_APPROVAL, 3),
         (BroadcastMessage.status == BroadcastStatusType.DRAFT, 4),
     )
