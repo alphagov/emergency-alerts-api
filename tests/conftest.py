@@ -88,19 +88,6 @@ def _notify_db(notify_api, worker_id):
     config = Config(ALEMBIC_CONFIG + "/alembic.ini")
     config.set_main_option("script_location", ALEMBIC_CONFIG)
 
-    # Run this in a subprocess - alembic loads a lot of logging config that will otherwise splatter over our desired
-    # app logging config and breaks pytest.caplog.
-    # # result = subprocess.run(
-    # #     ["flask", "db", "upgrade"],
-    # #     env={
-    # #         **os.environ,
-    # #         "SQLALCHEMY_DATABASE_URI": current_app.config["SQLALCHEMY_DATABASE_URI"],
-    # #         "FLASK_APP": "application:application",
-    # #     },
-    # #     capture_output=True,
-    # # )
-    # # assert result.returncode == 0, result.stderr.decode()
-
     # now db is initialised, run cleanup on it to remove any artifacts from
     # migrations. Otherwise the first test executed by a worker will be running
     # on a different db setup to other tests that run later.
@@ -124,22 +111,6 @@ def notify_db_session(_notify_db):
     `notify_db_session.commit()`
     """
     yield _notify_db.session
-
-    # _notify_db.session.remove()
-    # for tbl in reversed(_notify_db.metadata.sorted_tables):
-    #     if tbl.name not in [
-    #         "key_types",
-    #         "organisation_types",
-    #         "service_permission_types",
-    #         "auth_type",
-    #         "broadcast_status_type",
-    #         "invite_status_type",
-    #         "service_callback_type",
-    #         "broadcast_channel_types",
-    #         "broadcast_provider_types",
-    #     ]:
-    #         _notify_db.engine.execute(tbl.delete())
-    # _notify_db.session.commit()
 
     _clean_database(_notify_db)
 

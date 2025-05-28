@@ -334,8 +334,8 @@ def setup_sqlalchemy_events(app):
                 # web requests
                 if has_request_context():
                     current_app.logger.info(
-                        f"SqlAlchemy connection checkout event inside request {request.method}"
-                        f"{request.host}/{request.url_rule}"
+                        f"SqlAlchemy connection checkout event inside request {request.method} "
+                        f"{request.host}{request.url_rule}"
                     )
                     connection_record.info["request_data"] = {
                         "method": request.method,
@@ -365,7 +365,7 @@ def setup_sqlalchemy_events(app):
         def checkin(dbapi_connection, connection_record):
             try:
                 current_app.logger.info(
-                    f"SqlAlchemy connection checkout event from {connection_record.info['request_data']['url_rule']}"
+                    f"SqlAlchemy connection checkin event from {connection_record.info['request_data']['url_rule']}"
                 )
 
                 # connection returned by a web worker
