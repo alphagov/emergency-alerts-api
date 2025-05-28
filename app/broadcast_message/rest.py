@@ -19,6 +19,7 @@ from app.dao.broadcast_message_dao import (
 )
 from app.dao.broadcast_message_edit_reasons import (
     dao_create_broadcast_message_edit_reason,
+    dao_get_latest_broadcast_message_edit_reason_by_broadcast_message_id_and_service_id,
 )
 from app.dao.broadcast_message_history_dao import (
     dao_create_broadcast_message_version,
@@ -80,6 +81,15 @@ def get_broadcast_msgs_for_service(service_id):
 @broadcast_message_blueprint.route("/message=<uuid:broadcast_message_id>", methods=["GET"])
 def get_broadcast_message_by_id_and_service(service_id, broadcast_message_id):
     result = dao_get_broadcast_message_by_id_and_service_id_with_user(broadcast_message_id, service_id)
+
+    # Returning the latest edit_reason for specified BroadcastMessage if it has any, otherwise None
+    if latest_edit_reason := dao_get_latest_broadcast_message_edit_reason_by_broadcast_message_id_and_service_id(
+        broadcast_message_id, service_id
+    ):
+        edit_reason = latest_edit_reason.edit_reason
+    else:
+        edit_reason = None
+
     return {
         **result[0].serialize(),
         "created_by": result[1] or None,
@@ -88,7 +98,7 @@ def get_broadcast_message_by_id_and_service(service_id, broadcast_message_id):
         "cancelled_by": result[4] or None,
         "submitted_by": result[5] or None,
         "updated_by": result[6] or None,
-        "edit_reason": result[7] or None,
+        "edit_reason": edit_reason,
     }
 
 
