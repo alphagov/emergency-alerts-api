@@ -333,8 +333,9 @@ def setup_sqlalchemy_events(app):
 
                 # web requests
                 if has_request_context():
-                    current_app.logger.info(
-                        f"SqlAlchemy connection checkout event inside request {request.method} {request.host}/{request.url_rule}"
+                    current_app.logger.debug(
+                        f"SqlAlchemy connection checkout event inside request {request.method}"
+                        f"{request.host}/{request.url_rule}"
                     )
                     connection_record.info["request_data"] = {
                         "method": request.method,
@@ -351,7 +352,7 @@ def setup_sqlalchemy_events(app):
                 #     }
                 # anything else. migrations possibly, or flask cli commands.
                 else:
-                    current_app.logger.info("SqlAlchemy connection checkout event outside request")
+                    current_app.logger.debug("SqlAlchemy connection checkout event outside request")
                     connection_record.info["request_data"] = {
                         "method": "unknown",
                         "host": "unknown",
@@ -363,8 +364,8 @@ def setup_sqlalchemy_events(app):
         @event.listens_for(db.engine, "checkin")
         def checkin(dbapi_connection, connection_record):
             try:
-                current_app.logger.info(
-                    f"SqlAlchemy connection checkout event from {connection_record.info["request_data"]["url_rule"]}"
+                current_app.logger.debug(
+                    f"SqlAlchemy connection checkout event from {connection_record.info['request_data']['url_rule']}"
                 )
 
                 # connection returned by a web worker

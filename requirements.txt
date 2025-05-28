@@ -27,12 +27,12 @@ blinker==1.9.0
     # via
     #   flask
     #   gds-metrics
-boto3==1.38.23
+boto3==1.38.24
     # via
     #   celery
     #   kombu
     #   moto
-botocore==1.38.23
+botocore==1.38.24
     # via
     #   boto3
     #   moto
@@ -98,7 +98,7 @@ flask-marshmallow==0.14.0
     # via -r requirements.in
 flask-migrate==3.1.0
     # via -r requirements.in
-flask-sqlalchemy==3.0.2
+flask-sqlalchemy==3.0.5
     # via
     #   -r requirements.in
     #   flask-migrate

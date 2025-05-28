@@ -142,7 +142,7 @@ def _create_broadcast_event(broadcast_message):
 
         dao_save_object(event)
 
-        current_app.logger.info(
+        current_app.logger.debug(
             f"Invoking celery task 'send-broadcast-event' for event id {event.id} on queue {QueueNames.BROADCASTS}"
         )
 

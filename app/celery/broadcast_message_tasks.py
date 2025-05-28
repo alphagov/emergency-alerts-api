@@ -107,11 +107,11 @@ def check_event_makes_sense_in_sequence(broadcast_event, provider):
 
 @notify_celery.task(name="send-broadcast-event")
 def send_broadcast_event(broadcast_event_id):
-    current_app.logger.info(f"Task 'send-broadcast-event' started for event id {broadcast_event_id}")
+    current_app.logger.debug(f"Task 'send-broadcast-event' started for event id {broadcast_event_id}")
 
     broadcast_event = dao_get_broadcast_event_by_id(broadcast_event_id)
 
-    current_app.logger.info(
+    current_app.logger.debug(
         "BroadcastEvent retrieved",
         extra={
             "id": broadcast_event.id,
