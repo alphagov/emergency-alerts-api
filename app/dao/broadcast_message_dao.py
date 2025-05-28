@@ -88,13 +88,9 @@ def dao_get_broadcast_messages_for_service(service_id):
 def dao_get_broadcast_messages_for_service_with_user(service_id):
     """
     This function returns a list of BroadcastMessages for the service, with additional values
-    for created_by, rejected_by, approved_by, cancelled_by & submitted_by, as well as latest
-    edit_reason if the broadcast message has ever been returned to draft state.
+    for created_by, rejected_by, approved_by, cancelled_by & submitted_by.
 
     The User-related values are the names of the users sourced using joins with User table.
-
-    The latest edit_reason per alert is found using a subquery (see latest_edit_reasons) and this is
-    returned, per broadcast_message, in this query using a join.
     """
     UserCreated = aliased(User)
     UserRejected = aliased(User)

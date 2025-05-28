@@ -12,7 +12,7 @@ from app.models import BroadcastMessageEditReasons, User
 def dao_get_broadcast_message_edit_reasons(service_id, broadcast_message_id):
     """
     This function retrieves all of the edit_reasons for a specific broadcast message i.e.
-    the reasons that the broadcast message has been returned to 'draft' status because something
+    the reasons that the broadcast message has been returned to 'returned' status because something
     is incorrect.
     """
     UserCreated = aliased(User)
