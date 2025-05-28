@@ -357,7 +357,7 @@ def return_broadcast_message_for_edit(service_id, broadcast_message_id):
 
     updating_user = get_user_by_id(data["created_by"])
 
-    broadcast_utils.update_broadcast_message_status(broadcast_message, BroadcastStatusType.DRAFT, updating_user)
+    broadcast_utils.update_broadcast_message_status(broadcast_message, BroadcastStatusType.RETURNED, updating_user)
     dao_create_broadcast_message_edit_reason(broadcast_message, service_id, updating_user.id, edit_reason)
     return jsonify(broadcast_message.serialize()), 200
 
