@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timedelta
 
 from flask import current_app
-from sqlalchemy import asc, case, desc, func
+from sqlalchemy import asc, case, desc
 from sqlalchemy.orm import aliased
 
 from app import db
@@ -10,7 +10,6 @@ from app.dao.dao_utils import autocommit
 from app.models import (
     BroadcastEvent,
     BroadcastMessage,
-    BroadcastMessageEditReasons,
     BroadcastProvider,
     BroadcastProviderMessage,
     BroadcastProviderMessageNumber,
@@ -103,38 +102,17 @@ def dao_get_broadcast_messages_for_service_with_user(service_id):
     UserCancelled = aliased(User)
     UserSubmitted = aliased(User)
 
-    edit_reasons = db.session.query(
-        BroadcastMessageEditReasons.broadcast_message_id,
-        BroadcastMessageEditReasons.edit_reason,
-        BroadcastMessageEditReasons.created_at,
-        func.row_number()
-        .over(
-            partition_by=BroadcastMessageEditReasons.broadcast_message_id,
-            order_by=desc(BroadcastMessageEditReasons.created_at),
-        )
-        .label("row_number"),
-    ).subquery()
-
-    latest_edit_reasons = (
-        db.session.query(edit_reasons.c.broadcast_message_id, edit_reasons.c.edit_reason)
-        .filter(edit_reasons.c.row_number == 1)
-        .subquery()
-    )
-
     """This is the order in which alerts should be displayed on 'Current alerts' page
     and thus the order in which they are sent to Admin application:
     1. Alerts that are live (Broadcasting)
-    2. Alerts that have been returned for edit (Draft alerts for which there is also an edit_reason)
+    2. Alerts that have been returned for edit (Returned)
     3. Alerts that are awaiting approval (Pending-approval)
-    4. Alerts that are in draft state (no edit_reason so have never been submitted & returned)
+    4. Alerts that are in draft state (Draft)
     """
 
     status_order = case(
         (BroadcastMessage.status == BroadcastStatusType.BROADCASTING, 1),
-        (
-            (BroadcastMessage.status == BroadcastStatusType.DRAFT) & (latest_edit_reasons.c.edit_reason != ""),
-            2,
-        ),
+        (BroadcastMessage.status == BroadcastStatusType.RETURNED, 1),
         (BroadcastMessage.status == BroadcastStatusType.PENDING_APPROVAL, 3),
         (BroadcastMessage.status == BroadcastStatusType.DRAFT, 4),
     )
@@ -147,14 +125,12 @@ def dao_get_broadcast_messages_for_service_with_user(service_id):
             UserApproved.name.label("approved_by"),
             UserCancelled.name.label("cancelled_by"),
             UserCancelled.name.label("submitted_by"),
-            latest_edit_reasons.c.edit_reason,
         )
         .outerjoin(UserCreated, BroadcastMessage.created_by_id == UserCreated.id)
         .outerjoin(UserRejected, BroadcastMessage.rejected_by_id == UserRejected.id)
         .outerjoin(UserApproved, BroadcastMessage.approved_by_id == UserApproved.id)
         .outerjoin(UserCancelled, BroadcastMessage.cancelled_by_id == UserCancelled.id)
         .outerjoin(UserSubmitted, BroadcastMessage.submitted_by_id == UserSubmitted.id)
-        .outerjoin(latest_edit_reasons, BroadcastMessage.id == latest_edit_reasons.c.broadcast_message_id)
         .filter(BroadcastMessage.service_id == service_id)
         .order_by(
             status_order,
