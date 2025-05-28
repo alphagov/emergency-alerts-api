@@ -59,6 +59,13 @@ def upgrade():
         unique=False,
     )
 
+    op.execute(
+        """
+        INSERT INTO broadcast_status_type(name)
+        VALUES ('returned');
+    """
+    )
+
 
 def downgrade():
     op.drop_index(op.f("ix_broadcast_message_edit_reasons_service_id"), table_name="broadcast_message_edit_reasons")
@@ -67,3 +74,9 @@ def downgrade():
         op.f("ix_broadcast_message_edit_reasons_submitted_by_id"), table_name="broadcast_message_edit_reasons"
     )
     op.drop_table("broadcast_message_edit_reasons")
+    op.execute(
+        """
+        DELETE FROM broadcast_status_type
+        WHERE name = 'returned';
+        """
+    )
