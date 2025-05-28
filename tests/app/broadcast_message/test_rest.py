@@ -784,7 +784,7 @@ def test_return_broadcast_message_updates_broadcast_status_with_reason(admin_req
         _expected_status=200,
     )
 
-    assert response["status"] == BroadcastStatusType.DRAFT
+    assert response["status"] == BroadcastStatusType.RETURNED
     assert response["updated_at"] is not None
 
 
