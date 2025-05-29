@@ -68,16 +68,3 @@ update_broadcast_message_status_schema = {
     "required": ["status", "created_by"],
     "additionalProperties": False,
 }
-
-return_broadcast_message_for_edit_schema = {
-    "$schema": "http://json-schema.org/draft-07/schema#",
-    "description": "POST return broadcast message for edit schema",
-    "type": "object",
-    "title": "Return broadcast_message for edit",
-    "properties": {
-        "edit_reason": {"type": "string"},
-        "created_by": uuid,
-    },
-    "required": ["created_by", "edit_reason"],
-    "additionalProperties": False,
-}
