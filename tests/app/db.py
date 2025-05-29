@@ -22,7 +22,6 @@ from app.models import (
     ApiKey,
     BroadcastEvent,
     BroadcastMessage,
-    BroadcastMessageEditReasons,
     BroadcastMessageHistory,
     BroadcastProvider,
     BroadcastProviderMessage,
@@ -325,7 +324,6 @@ def create_broadcast_message(
         created_at=created_at,
         reference=reference,
         submitted_by=submitted_by,
-        submitted_at=datetime.now(),
     )
     db.session.add(broadcast_message)
     db.session.commit()
@@ -447,19 +445,3 @@ def create_broadcast_message_version(
     db.session.add(broadcast_message_version)
     db.session.commit()
     return broadcast_message_version
-
-
-def create_broadcast_message_edit_reason(broadcast_message_id, service_id, edit_reason, user_id_1, user_id_2):
-    broadcast_message_edit_reason = BroadcastMessageEditReasons(
-        id=uuid.uuid4(),
-        broadcast_message_id=broadcast_message_id,
-        created_at=datetime.now(),
-        service_id=service_id,
-        created_by_id=user_id_1,
-        edit_reason=edit_reason,
-        submitted_by_id=user_id_2,
-        submitted_at=datetime.now(),
-    )
-    db.session.add(broadcast_message_edit_reason)
-    db.session.commit()
-    return broadcast_message_edit_reason
