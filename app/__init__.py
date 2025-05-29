@@ -126,6 +126,9 @@ def register_blueprint(application):
         requires_no_auth,
     )
     from app.broadcast_message.rest import broadcast_message_blueprint
+    from app.broadcast_message_edit_reasons.rest import (
+        broadcast_message_edit_reasons_blueprint,
+    )
     from app.broadcast_message_history.rest import (
         broadcast_message_history_blueprint,
     )
@@ -194,6 +197,9 @@ def register_blueprint(application):
 
     broadcast_message_history_blueprint.before_request(requires_admin_auth)
     application.register_blueprint(broadcast_message_history_blueprint)
+
+    broadcast_message_edit_reasons_blueprint.before_request(requires_admin_auth)
+    application.register_blueprint(broadcast_message_edit_reasons_blueprint)
 
     feature_toggle_blueprint.before_request(requires_admin_auth)
     application.register_blueprint(feature_toggle_blueprint)
