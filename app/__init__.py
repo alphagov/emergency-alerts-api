@@ -299,6 +299,19 @@ def setup_sqlalchemy_events(app):
             # connection first opened with db
             TOTAL_DB_CONNECTIONS.inc()
 
+            cursor = dbapi_connection.cursor()
+
+            # set these here instead of in connect_args/options to avoid the early-binding
+            # issues cross-referencing config vars in the config object raises
+            cursor.execute(
+                "SET statement_timeout = %s",
+                (current_app.config["DATABASE_STATEMENT_TIMEOUT_MS"],),
+            )
+            cursor.execute(
+                "SET application_name = %s",
+                (current_app.config["EAS_APP_NAME"],),
+            )
+
         @event.listens_for(db.engine, "close")
         def close(dbapi_connection, connection_record):
             # connection closed (probably only happens with overflow connections)

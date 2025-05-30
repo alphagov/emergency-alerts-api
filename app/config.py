@@ -122,7 +122,7 @@ class Config(object):
             "options": "-c statement_timeout=1200000",
         },
     }
-    SQLALCHEMY_STATEMENT_TIMEOUT = 1200
+    DATABASE_STATEMENT_TIMEOUT_MS = 1200000
     PAGE_SIZE = 50
     API_PAGE_SIZE = 250
     TEST_MESSAGE_FILENAME = "Test message"
@@ -208,6 +208,7 @@ class Config(object):
 
 class Hosted(Config):
     HOST = "hosted"
+    EAS_APP_NAME = "api"
     TENANT = f"{os.environ.get('TENANT')}." if os.environ.get("TENANT") is not None else ""
     SUBDOMAIN = (
         "dev."
