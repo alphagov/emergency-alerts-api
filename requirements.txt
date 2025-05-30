@@ -94,7 +94,7 @@ flask==3.0.2
     #   gds-metrics
 flask-bcrypt==1.0.1
     # via -r requirements.in
-flask-marshmallow==0.14.0
+flask-marshmallow==1.3.0
     # via -r requirements.in
 flask-migrate==3.1.0
     # via -r requirements.in
@@ -245,7 +245,6 @@ s3transfer==0.13.0
     # via boto3
 six==1.17.0
     # via
-    #   flask-marshmallow
     #   python-dateutil
     #   requests-mock
     #   rfc3339-validator
