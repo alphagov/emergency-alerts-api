@@ -2,7 +2,6 @@ from datetime import datetime
 
 from emergency_alerts_utils.xml.common import HEADLINE
 from flask import current_app
-from sqlalchemy.exc import SQLAlchemyError
 
 from app import cbc_proxy_client, notify_celery
 from app.clients.cbc_proxy import CBCProxyRetryableException

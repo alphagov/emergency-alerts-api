@@ -6,7 +6,6 @@ import uuid
 from time import monotonic
 
 import boto3
-
 from celery.signals import task_postrun, task_prerun
 from emergency_alerts_utils import logging, request_helper
 from emergency_alerts_utils.celery import NotifyCelery
@@ -25,7 +24,7 @@ from flask import (
 )
 from flask_marshmallow import Marshmallow
 from flask_migrate import Migrate
-from flask_sqlalchemy import SQLAlchemy as _SQLAlchemy
+from flask_sqlalchemy import SQLAlchemy
 from gds_metrics import GDSMetrics
 from gds_metrics.metrics import Gauge, Histogram
 from sqlalchemy import event
@@ -34,19 +33,6 @@ from werkzeug.local import LocalProxy
 
 from app.clients import NotificationProviderClients
 from app.clients.cbc_proxy import CBCProxyClient
-
-
-class SQLAlchemy(_SQLAlchemy):
-    """We need to subclass SQLAlchemy in order to override create_engine options"""
-
-    def apply_driver_hacks(self, app, info, options):
-        super().apply_driver_hacks(app, info, options)
-        if "connect_args" not in options:
-            options["connect_args"] = {}
-        options["connect_args"]["options"] = "-c statement_timeout={}".format(
-            int(app.config["SQLALCHEMY_STATEMENT_TIMEOUT"]) * 1000
-        )
-
 
 db = SQLAlchemy()
 migrate = Migrate()
