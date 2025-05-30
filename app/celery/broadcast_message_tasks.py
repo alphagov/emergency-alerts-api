@@ -109,41 +109,43 @@ def check_event_makes_sense_in_sequence(broadcast_event, provider):
 def send_broadcast_event(broadcast_event_id):
     current_app.logger.info(f"Task 'send-broadcast-event' started for event id {broadcast_event_id}")
 
-    try:
-        broadcast_event = dao_get_broadcast_event_by_id(broadcast_event_id)
+    with current_app.app_context():
 
-        current_app.logger.info(
-            "BroadcastEvent retrieved",
-            extra={
-                "id": broadcast_event.id,
-                "service_id": broadcast_event.service.id,
-                "broadcast_message_id": broadcast_event.broadcast_message.id,
-                "message_type": broadcast_event.message_type,
-                "transmitted_content": broadcast_event.transmitted_content,
-            },
-        )
+        try:
+            broadcast_event = dao_get_broadcast_event_by_id(broadcast_event_id)
 
-        notify_celery.send_task(
-            name=TaskNames.PUBLISH_GOVUK_ALERTS,
-            queue=QueueNames.GOVUK_ALERTS,
-            kwargs={"broadcast_event_id": broadcast_event_id},
-        )
-
-        providers = broadcast_event.service.get_available_broadcast_providers()
-
-        for provider in providers:
-            send_broadcast_provider_message.apply_async(
-                kwargs={"broadcast_event_id": broadcast_event_id, "provider": provider}, queue=QueueNames.BROADCASTS
+            current_app.logger.info(
+                "BroadcastEvent retrieved",
+                extra={
+                    "id": broadcast_event.id,
+                    "service_id": broadcast_event.service.id,
+                    "broadcast_message_id": broadcast_event.broadcast_message.id,
+                    "message_type": broadcast_event.message_type,
+                    "transmitted_content": broadcast_event.transmitted_content,
+                },
             )
-    except Exception as e:
-        current_app.logger.exception(
-            f"Failed to send broadcast (event id {broadcast_event_id})",
-            extra={
-                "python_module": __name__,
-                "exception": str(e),
-            },
-        )
-        raise
+
+            notify_celery.send_task(
+                name=TaskNames.PUBLISH_GOVUK_ALERTS,
+                queue=QueueNames.GOVUK_ALERTS,
+                kwargs={"broadcast_event_id": broadcast_event_id},
+            )
+
+            providers = broadcast_event.service.get_available_broadcast_providers()
+
+            for provider in providers:
+                send_broadcast_provider_message.apply_async(
+                    kwargs={"broadcast_event_id": broadcast_event_id, "provider": provider}, queue=QueueNames.BROADCASTS
+                )
+        except Exception as e:
+            current_app.logger.exception(
+                f"Failed to send broadcast (event id {broadcast_event_id})",
+                extra={
+                    "python_module": __name__,
+                    "exception": str(e),
+                },
+            )
+            raise
 
 
 @notify_celery.task(
