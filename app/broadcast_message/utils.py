@@ -9,6 +9,7 @@ from flask import current_app
 
 from app import zendesk_client
 from app.celery.broadcast_message_tasks import send_broadcast_event
+from app.dao.broadcast_message_dao import dao_get_broadcast_event_by_id
 from app.config import QueueNames
 from app.dao.dao_utils import dao_save_object
 from app.errors import InvalidRequest
@@ -144,6 +145,12 @@ def _create_broadcast_event(broadcast_message):
 
         current_app.logger.info(
             f"Invoking celery task 'send-broadcast-event' for event id {event.id} on queue {QueueNames.BROADCASTS}"
+        )
+
+        broadcast_event = dao_get_broadcast_event_by_id(str(event.id))
+
+        current_app.logger.info(
+            f"Broadcast event retrieved outside of celery task {broadcast_event}"
         )
 
         send_broadcast_event.apply_async(
