@@ -364,7 +364,7 @@ def setup_sqlalchemy_events(app):
         @event.listens_for(db.engine, "checkin")
         def checkin(dbapi_connection, connection_record):
             try:
-                current_app.logger.info(
+                current_app.logger.debug(
                     f"SqlAlchemy connection checkin event from {connection_record.info['request_data']['url_rule']}"
                 )
 
