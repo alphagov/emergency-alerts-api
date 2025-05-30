@@ -6,7 +6,7 @@ import uuid
 from time import monotonic
 
 import boto3
-from celery import current_task
+from celery.signals import task_postrun, task_prerun
 from emergency_alerts_utils import logging, request_helper
 from emergency_alerts_utils.celery import NotifyCelery
 from emergency_alerts_utils.clients.encryption.encryption_client import (
@@ -24,7 +24,7 @@ from flask import (
 )
 from flask_marshmallow import Marshmallow
 from flask_migrate import Migrate
-from flask_sqlalchemy import SQLAlchemy as _SQLAlchemy
+from flask_sqlalchemy import SQLAlchemy
 from gds_metrics import GDSMetrics
 from gds_metrics.metrics import Gauge, Histogram
 from sqlalchemy import event
@@ -33,19 +33,6 @@ from werkzeug.local import LocalProxy
 
 from app.clients import NotificationProviderClients
 from app.clients.cbc_proxy import CBCProxyClient
-
-
-class SQLAlchemy(_SQLAlchemy):
-    """We need to subclass SQLAlchemy in order to override create_engine options"""
-
-    def apply_driver_hacks(self, app, info, options):
-        super().apply_driver_hacks(app, info, options)
-        if "connect_args" not in options:
-            options["connect_args"] = {}
-        options["connect_args"]["options"] = "-c statement_timeout={}".format(
-            int(app.config["SQLALCHEMY_STATEMENT_TIMEOUT"]) * 1000
-        )
-
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -66,6 +53,8 @@ CONCURRENT_REQUESTS = Gauge(
     "concurrent_web_request_count",
     "How many concurrent requests are currently being served",
 )
+
+_celery_task_context = {}
 
 
 def create_app(application):
@@ -100,6 +89,8 @@ def create_app(application):
     logging.init_app(application)
 
     notify_celery.init_app(application)
+    application.extensions["celery"] = notify_celery  # EXP-1
+
     encryption.init_app(application)
 
     cbc_proxy_client.init_app(application)
@@ -310,6 +301,19 @@ def setup_sqlalchemy_events(app):
             # connection first opened with db
             TOTAL_DB_CONNECTIONS.inc()
 
+            cursor = dbapi_connection.cursor()
+
+            # set these here instead of in connect_args/options to avoid the early-binding
+            # issues cross-referencing config vars in the config object raises
+            cursor.execute(
+                "SET statement_timeout = %s",
+                (current_app.config["DATABASE_STATEMENT_TIMEOUT_MS"],),
+            )
+            cursor.execute(
+                "SET application_name = %s",
+                (current_app.config["EAS_APP_NAME"],),
+            )
+
         @event.listens_for(db.engine, "close")
         def close(dbapi_connection, connection_record):
             # connection closed (probably only happens with overflow connections)
@@ -330,21 +334,26 @@ def setup_sqlalchemy_events(app):
 
                 # web requests
                 if has_request_context():
+                    current_app.logger.debug(
+                        f"SqlAlchemy connection checkout event inside request {request.method} "
+                        f"{request.host}{request.url_rule}"
+                    )
                     connection_record.info["request_data"] = {
                         "method": request.method,
                         "host": request.host,
                         "url_rule": request.url_rule.rule if request.url_rule else "No endpoint",
                     }
                 # celery apps
-                elif current_task:
+                elif _celery_task_context:
+                    current_app.logger.debug("Checked out sqlalchemy connection inside celery task")
                     connection_record.info["request_data"] = {
                         "method": "celery",
                         "host": current_app.config["EAS_APP_NAME"],  # worker name
-                        "url_rule": current_task.name,  # task name
+                        "url_rule": _celery_task_context.name,  # task name
                     }
                 # anything else. migrations possibly, or flask cli commands.
                 else:
-                    current_app.logger.warning("Checked out sqlalchemy connection from outside of request/task")
+                    current_app.logger.debug("SqlAlchemy connection checkout event outside request/task")
                     connection_record.info["request_data"] = {
                         "method": "unknown",
                         "host": "unknown",
@@ -356,6 +365,10 @@ def setup_sqlalchemy_events(app):
         @event.listens_for(db.engine, "checkin")
         def checkin(dbapi_connection, connection_record):
             try:
+                current_app.logger.debug(
+                    f"SqlAlchemy connection checkin event from {connection_record.info['request_data']['url_rule']}"
+                )
+
                 # connection returned by a web worker
                 TOTAL_CHECKED_OUT_DB_CONNECTIONS.dec()
 
@@ -369,3 +382,19 @@ def setup_sqlalchemy_events(app):
                 ).observe(duration)
             except Exception:
                 current_app.logger.exception("Exception caught for checkin event.")
+
+
+@task_prerun.connect
+def store_task_context(sender=None, task_id=None, task=None, **kwargs):
+    current_app.logger.debug(f"Storing celery task context for {sender.name} {task_id}")
+    _celery_task_context[task_id] = {
+        "name": sender.name,
+        "args": task.request.args,
+        "kwargs": task.request.kwargs,
+    }
+
+
+@task_postrun.connect
+def clear_task_context(task_id=None, **kwargs):
+    current_app.logger.debug(f"Clearing celery task context for {task_id}")
+    _celery_task_context.pop(task_id, None)

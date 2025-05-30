@@ -27,6 +27,7 @@ def run_health_check():
         time_stamp = int(time.time())
         with open("/eas/emergency-alerts-api/celery-beat-healthcheck", mode="w") as file:
             file.write(str(time_stamp))
+        current_app.logger.info(f"file.write successful - celery health check timestamp: {time_stamp}")
     except Exception:
         current_app.logger.exception("Unable to generate health-check timestamp", extra={"python_module": __name__})
         raise
