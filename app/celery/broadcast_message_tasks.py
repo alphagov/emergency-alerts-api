@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 
 from emergency_alerts_utils.xml.common import HEADLINE
@@ -5,7 +6,7 @@ from flask import current_app
 
 from app import cbc_proxy_client, notify_celery
 from app.clients.cbc_proxy import CBCProxyRetryableException
-from app.config import QueueNames, TaskNames
+from app.config import QueueNames, TaskNames, configs
 from app.dao.broadcast_message_dao import (
     create_broadcast_provider_message,
     dao_get_broadcast_event_by_id,
@@ -16,7 +17,10 @@ from app.models import (
     BroadcastProvider,
     BroadcastProviderMessageStatus,
 )
+from app.notify_api_flask_app import NotifyApiFlaskApp
 from app.utils import format_sequential_number
+from flask_sqlalchemy import SQLAlchemy
+    
 
 
 class BroadcastIntegrityError(Exception):
@@ -109,8 +113,12 @@ def check_event_makes_sense_in_sequence(broadcast_event, provider):
 def send_broadcast_event(broadcast_event_id):
     current_app.logger.info(f"Task 'send-broadcast-event' started for event id {broadcast_event_id}")
 
-    # with notify_celery.this_app.app_context():
-    with current_app.app_context():
+    db = SQLAlchemy()
+    app = NotifyApiFlaskApp(__name__)
+    app.config.from_object(configs[os.environ["HOST"]])
+    db.init_app(app)
+    
+    with app.app_context():
         try:
             broadcast_event = dao_get_broadcast_event_by_id(broadcast_event_id)
 

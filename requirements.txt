@@ -27,12 +27,12 @@ blinker==1.9.0
     # via
     #   flask
     #   gds-metrics
-boto3==1.38.26
+boto3==1.38.27
     # via
     #   celery
     #   kombu
     #   moto
-botocore==1.38.26
+botocore==1.38.27
     # via
     #   boto3
     #   moto
@@ -136,7 +136,7 @@ jsonpointer==3.0.0
     # via jsonschema
 jsonschema==4.16.0
     # via -r requirements.in
-kombu==5.5.3
+kombu==5.5.4
     # via celery
 lxml==5.4.0
     # via -r requirements.in
@@ -165,6 +165,7 @@ notifications-python-client==8.0.0
 packaging==25.0
     # via
     #   black
+    #   kombu
     #   marshmallow
     #   marshmallow-sqlalchemy
     #   pytest
