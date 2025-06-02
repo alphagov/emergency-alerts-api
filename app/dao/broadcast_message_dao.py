@@ -88,8 +88,9 @@ def dao_get_broadcast_messages_for_service(service_id):
 def dao_get_broadcast_messages_for_service_with_user(service_id):
     """
     This function returns a list of BroadcastMessages for the service, with additional values
-    for created_by, rejected_by, approved_by & cancelled_by.
-    These values are the names of the users sourced using joins with User table.
+    for created_by, rejected_by, approved_by, cancelled_by & submitted_by.
+
+    The User-related values are the names of the users sourced using joins with User table.
     """
     UserCreated = aliased(User)
     UserRejected = aliased(User)
@@ -97,10 +98,19 @@ def dao_get_broadcast_messages_for_service_with_user(service_id):
     UserCancelled = aliased(User)
     UserSubmitted = aliased(User)
 
+    """This is the order in which alerts should be displayed on 'Current alerts' page
+    and thus the order in which they are sent to Admin application:
+    1. Alerts that are live (Broadcasting)
+    2. Alerts that have been returned for edit (Returned)
+    3. Alerts that are awaiting approval (Pending-approval)
+    4. Alerts that are in draft state (Draft)
+    """
+
     status_order = case(
         (BroadcastMessage.status == BroadcastStatusType.BROADCASTING, 1),
-        (BroadcastMessage.status == BroadcastStatusType.PENDING_APPROVAL, 2),
-        (BroadcastMessage.status == BroadcastStatusType.DRAFT, 3),
+        (BroadcastMessage.status == BroadcastStatusType.RETURNED, 2),
+        (BroadcastMessage.status == BroadcastStatusType.PENDING_APPROVAL, 3),
+        (BroadcastMessage.status == BroadcastStatusType.DRAFT, 4),
     )
 
     return (
@@ -118,7 +128,10 @@ def dao_get_broadcast_messages_for_service_with_user(service_id):
         .outerjoin(UserCancelled, BroadcastMessage.cancelled_by_id == UserCancelled.id)
         .outerjoin(UserSubmitted, BroadcastMessage.submitted_by_id == UserSubmitted.id)
         .filter(BroadcastMessage.service_id == service_id)
-        .order_by(status_order, asc(BroadcastMessage.reference))
+        .order_by(
+            status_order,
+            asc(BroadcastMessage.reference),
+        )
         .all()
     )
 
