@@ -4,9 +4,9 @@ from datetime import datetime
 from emergency_alerts_utils.xml.common import HEADLINE
 from flask import current_app
 
-from app import cbc_proxy_client, notify_celery
+from app import cbc_proxy_client, db, notify_celery
 from app.clients.cbc_proxy import CBCProxyRetryableException
-from app.config import QueueNames, TaskNames, configs
+from app.config import QueueNames, TaskNames
 from app.dao.broadcast_message_dao import (
     create_broadcast_provider_message,
     dao_get_broadcast_event_by_id,
@@ -17,11 +17,8 @@ from app.models import (
     BroadcastProvider,
     BroadcastProviderMessageStatus,
 )
-from app.notify_api_flask_app import NotifyApiFlaskApp
 from app.utils import format_sequential_number
-from flask_sqlalchemy import SQLAlchemy
     
-
 
 class BroadcastIntegrityError(Exception):
     pass
@@ -113,47 +110,42 @@ def check_event_makes_sense_in_sequence(broadcast_event, provider):
 def send_broadcast_event(broadcast_event_id):
     current_app.logger.info(f"Task 'send-broadcast-event' started for event id {broadcast_event_id}")
 
-    db = SQLAlchemy()
-    app = NotifyApiFlaskApp(__name__)
-    app.config.from_object(configs[os.environ["HOST"]])
-    db.init_app(app)
-    
-    with app.app_context():
-        try:
-            broadcast_event = dao_get_broadcast_event_by_id(broadcast_event_id)
+    try:
+        broadcast_event = dao_get_broadcast_event_by_id(broadcast_event_id)
+        
 
-            current_app.logger.info(
-                "BroadcastEvent retrieved",
-                extra={
-                    "id": broadcast_event.id,
-                    "service_id": broadcast_event.service.id,
-                    "broadcast_message_id": broadcast_event.broadcast_message.id,
-                    "message_type": broadcast_event.message_type,
-                    "transmitted_content": broadcast_event.transmitted_content,
-                },
+        current_app.logger.info(
+            "BroadcastEvent retrieved",
+            extra={
+                "id": broadcast_event.id,
+                "service_id": broadcast_event.service.id,
+                "broadcast_message_id": broadcast_event.broadcast_message.id,
+                "message_type": broadcast_event.message_type,
+                "transmitted_content": broadcast_event.transmitted_content,
+            },
+        )
+
+        notify_celery.send_task(
+            name=TaskNames.PUBLISH_GOVUK_ALERTS,
+            queue=QueueNames.GOVUK_ALERTS,
+            kwargs={"broadcast_event_id": broadcast_event_id},
+        )
+
+        providers = broadcast_event.service.get_available_broadcast_providers()
+
+        for provider in providers:
+            send_broadcast_provider_message.apply_async(
+                kwargs={"broadcast_event_id": broadcast_event_id, "provider": provider}, queue=QueueNames.BROADCASTS
             )
-
-            notify_celery.send_task(
-                name=TaskNames.PUBLISH_GOVUK_ALERTS,
-                queue=QueueNames.GOVUK_ALERTS,
-                kwargs={"broadcast_event_id": broadcast_event_id},
-            )
-
-            providers = broadcast_event.service.get_available_broadcast_providers()
-
-            for provider in providers:
-                send_broadcast_provider_message.apply_async(
-                    kwargs={"broadcast_event_id": broadcast_event_id, "provider": provider}, queue=QueueNames.BROADCASTS
-                )
-        except Exception as e:
-            current_app.logger.exception(
-                f"Failed to send broadcast (event id {broadcast_event_id})",
-                extra={
-                    "python_module": __name__,
-                    "exception": str(e),
-                },
-            )
-            raise
+    except Exception as e:
+        current_app.logger.exception(
+            f"Failed to send broadcast (event id {broadcast_event_id})",
+            extra={
+                "python_module": __name__,
+                "exception": str(e),
+            },
+        )
+        raise
 
 
 @notify_celery.task(
