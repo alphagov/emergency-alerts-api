@@ -3,7 +3,7 @@ from datetime import datetime
 from emergency_alerts_utils.xml.common import HEADLINE
 from flask import current_app
 
-from app import cbc_proxy_client, create_app, notify_celery
+from app import cbc_proxy_client, notify_celery
 from app.clients.cbc_proxy import CBCProxyRetryableException
 from app.config import QueueNames, TaskNames
 from app.dao.broadcast_message_dao import (
@@ -16,7 +16,6 @@ from app.models import (
     BroadcastProvider,
     BroadcastProviderMessageStatus,
 )
-from app.notify_api_flask_app import NotifyApiFlaskApp as App
 from app.utils import format_sequential_number
 
 
@@ -111,11 +110,7 @@ def send_broadcast_event(broadcast_event_id):
     current_app.logger.info(f"Task 'send-broadcast-event' started for event id {broadcast_event_id}")
 
     # with notify_celery.this_app.app_context():
-
-    app = App("celery_task")
-    create_app(app)
-
-    with app.app_context():
+    with current_app.app_context():
         try:
             broadcast_event = dao_get_broadcast_event_by_id(broadcast_event_id)
 
