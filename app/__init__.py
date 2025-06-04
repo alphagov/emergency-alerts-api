@@ -335,7 +335,7 @@ def setup_sqlalchemy_events(app):
                 # web requests
                 if has_request_context():
                     current_app.logger.debug(
-                        f"SqlAlchemy connection checkout event inside request {request.method} "
+                        f"DB connection checkout inside request {request.method} "
                         f"{request.host}{request.url_rule}"
                     )
                     connection_record.info["request_data"] = {
@@ -345,15 +345,17 @@ def setup_sqlalchemy_events(app):
                     }
                 # celery apps
                 elif _celery_task_context:
-                    current_app.logger.debug("Checked out sqlalchemy connection inside celery task")
+                    current_app.logger.debug("DB connection checkout inside celery task")
+                    # task_id = next(iter(_celery_task_context))
+                    # task = next(iter(_celery_task_context.values()), None)  # get first task context
                     connection_record.info["request_data"] = {
                         "method": "celery",
                         "host": current_app.config["EAS_APP_NAME"],  # worker name
-                        "url_rule": _celery_task_context.name,  # task name
+                        "url_rule": "unknown"  # f"{task_id} {task["name"]}",     # task name
                     }
                 # anything else. migrations possibly, or flask cli commands.
                 else:
-                    current_app.logger.debug("SqlAlchemy connection checkout event outside request/task")
+                    current_app.logger.debug("DB connection checkout outside request/task")
                     connection_record.info["request_data"] = {
                         "method": "unknown",
                         "host": "unknown",
@@ -366,7 +368,7 @@ def setup_sqlalchemy_events(app):
         def checkin(dbapi_connection, connection_record):
             try:
                 current_app.logger.debug(
-                    f"SqlAlchemy connection checkin event from {connection_record.info['request_data']['url_rule']}"
+                    f"SqlAlchemy connection checkin event from {connection_record}"
                 )
 
                 # connection returned by a web worker
