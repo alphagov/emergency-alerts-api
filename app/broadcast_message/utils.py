@@ -7,7 +7,7 @@ from emergency_alerts_utils.clients.zendesk.zendesk_client import (
 from emergency_alerts_utils.xml.common import SENDER
 from flask import current_app
 
-from app import zendesk_client
+from app import db, zendesk_client
 from app.celery.broadcast_message_tasks import send_broadcast_event
 from app.dao.broadcast_message_dao import dao_get_broadcast_event_by_id
 from app.config import QueueNames
@@ -150,7 +150,10 @@ def _create_broadcast_event(broadcast_message):
         broadcast_event = dao_get_broadcast_event_by_id(str(event.id))
 
         current_app.logger.info(
-            f"Broadcast event retrieved outside of celery task {broadcast_event}"
+            f"Broadcast event retrieved outside of celery task {broadcast_event}",
+            extra={
+                "database_url": db.engine.url,
+            }
         )
 
         send_broadcast_event.apply_async(
