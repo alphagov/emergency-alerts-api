@@ -653,7 +653,7 @@ class VerifyCode(db.Model):
     )
     expiry_datetime = db.Column(db.DateTime, nullable=False)
     code_used = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, index=False, unique=False, nullable=False, default=datetime.datetime.utcnow)
+    created_at = db.Column(db.DateTime, index=False, unique=False, nullable=False, default=datetime.datetime.now(datetime.timezone.utc))
 
     @property
     def code(self):
