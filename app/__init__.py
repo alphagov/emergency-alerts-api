@@ -313,11 +313,13 @@ def setup_sqlalchemy_events(app):
                 "SET application_name = %s",
                 (current_app.config["EAS_APP_NAME"],),
             )
+            current_app.logger.info(f"DB CONNECT event - {TOTAL_DB_CONNECTIONS.get()} connections open")
 
         @event.listens_for(db.engine, "close")
         def close(dbapi_connection, connection_record):
             # connection closed (probably only happens with overflow connections)
             TOTAL_DB_CONNECTIONS.dec()
+            current_app.logger.info(f"DB CLOSE event - {TOTAL_DB_CONNECTIONS.get()} connections open")
 
         @event.listens_for(db.engine, "checkout")
         def checkout(dbapi_connection, connection_record, connection_proxy):
@@ -334,7 +336,7 @@ def setup_sqlalchemy_events(app):
 
                 # web requests
                 if has_request_context():
-                    current_app.logger.debug(
+                    current_app.logger.info(
                         f"DB connection checkout inside request {request.method} "
                         f"{request.host}{request.url_rule}"
                     )
@@ -345,10 +347,11 @@ def setup_sqlalchemy_events(app):
                     }
                 # celery apps
                 elif _celery_task_context:
+                    current_app.logger.info("DB CHECKOUT inside celery task")
                     task_id = next(iter(_celery_task_context))
                     task = next(iter(_celery_task_context.values()), None)  # get first task context
                     current_app.logger.info(
-                        f"DB CHECKOUT inside CELERY task:{task['name']}, id:{task_id}, data:{task['kwargs']}")
+                        f"task:{task['name']}, id:{task_id}, data:{task['kwargs']}")
                     connection_record.info["request_data"] = {
                         "method": "celery",
                         "host": current_app.config["EAS_APP_NAME"],  # worker name
@@ -356,7 +359,7 @@ def setup_sqlalchemy_events(app):
                     }
                 # anything else. migrations possibly, or flask cli commands.
                 else:
-                    current_app.logger.debug("DB connection checkout outside request/task")
+                    current_app.logger.info("DB CHECKOUT outside request/task")
                     connection_record.info["request_data"] = {
                         "method": "unknown",
                         "host": "unknown",
@@ -368,8 +371,8 @@ def setup_sqlalchemy_events(app):
         @event.listens_for(db.engine, "checkin")
         def checkin(dbapi_connection, connection_record):
             try:
-                current_app.logger.debug(
-                    f"SqlAlchemy connection checkin event from {connection_record}"
+                current_app.logger.info(
+                    f"DB CHECKIN event from {connection_record}"
                 )
 
                 # connection returned by a web worker
@@ -389,7 +392,7 @@ def setup_sqlalchemy_events(app):
 
 @task_prerun.connect
 def store_task_context(sender=None, task_id=None, task=None, **kwargs):
-    current_app.logger.debug(f"Storing celery task context for {sender.name} {task_id}")
+    current_app.logger.info(f"Storing celery task context for {sender.name} {task_id}")
     _celery_task_context[task_id] = {
         "name": sender.name,
         "args": task.request.args,
@@ -399,5 +402,5 @@ def store_task_context(sender=None, task_id=None, task=None, **kwargs):
 
 @task_postrun.connect
 def clear_task_context(task_id=None, **kwargs):
-    current_app.logger.debug(f"Clearing celery task context for {task_id}")
+    current_app.logger.info(f"Clearing celery task context for {task_id}")
     _celery_task_context.pop(task_id, None)
