@@ -1,12 +1,13 @@
 import os
 import random
 import string
+import threading
 import time
 import uuid
 from time import monotonic
 
 import boto3
-from celery.signals import task_postrun, task_prerun
+from celery import signals
 from emergency_alerts_utils import logging, request_helper
 from emergency_alerts_utils.celery import NotifyCelery
 from emergency_alerts_utils.clients.encryption.encryption_client import (
@@ -54,7 +55,11 @@ CONCURRENT_REQUESTS = Gauge(
     "How many concurrent requests are currently being served",
 )
 
-_celery_task_context = {}
+_in_celery_task = threading.local()
+
+
+def is_in_celery_task():
+    return getattr(_in_celery_task, "active", False)
 
 
 def create_app(application):
@@ -337,7 +342,7 @@ def setup_sqlalchemy_events(app):
                 # web requests
                 if has_request_context():
                     current_app.logger.info(
-                        f"DB connection checkout inside request {request.method} "
+                        f"DB CHECKOUT inside REQUEST {request.method} "
                         f"{request.host}{request.url_rule}"
                     )
                     connection_record.info["request_data"] = {
@@ -346,16 +351,12 @@ def setup_sqlalchemy_events(app):
                         "url_rule": request.url_rule.rule if request.url_rule else "No endpoint",
                     }
                 # celery apps
-                elif _celery_task_context:
-                    current_app.logger.info("DB CHECKOUT inside celery task")
-                    task_id = next(iter(_celery_task_context))
-                    task = next(iter(_celery_task_context.values()), None)  # get first task context
-                    current_app.logger.info(
-                        f"task:{task['name']}, id:{task_id}, data:{task['kwargs']}")
+                elif is_in_celery_task():
+                    current_app.logger.info("DB CHECKOUT inside CELERY TASK")
                     connection_record.info["request_data"] = {
                         "method": "celery",
-                        "host": current_app.config["EAS_APP_NAME"],  # worker name
-                        "url_rule": f"{task_id} {task["name"]}",     # task name
+                        "host": current_app.config["EAS_APP_NAME"],
+                        "url_rule": "task",     
                     }
                 # anything else. migrations possibly, or flask cli commands.
                 else:
@@ -390,17 +391,29 @@ def setup_sqlalchemy_events(app):
                 current_app.logger.exception("Exception caught for checkin event.")
 
 
-@task_prerun.connect
-def store_task_context(sender=None, task_id=None, task=None, **kwargs):
-    current_app.logger.info(f"Storing celery task context for {sender.name} {task_id}")
-    _celery_task_context[task_id] = {
-        "name": sender.name,
-        "args": task.request.args,
-        "kwargs": task.request.kwargs,
-    }
+@signals.task_prerun.connect
+def mark_task_active(*args, **kwargs):
+    current_app.logger.info(f"Setting celery task active flag {args} {kwargs}")
+    _in_celery_task.active = True
 
 
-@task_postrun.connect
-def clear_task_context(task_id=None, **kwargs):
-    current_app.logger.info(f"Clearing celery task context for {task_id}")
-    _celery_task_context.pop(task_id, None)
+@signals.task_postrun.connect
+def clear_task_context(*args, **kwargs):
+    current_app.logger.info(f"Clearing celery task active flag {args} {kwargs}")
+    _in_celery_task.active = False
+
+
+# @signals.task_prerun.connect
+# def store_task_context(sender=None, task_id=None, task=None, **kwargs):
+#     current_app.logger.info(f"Storing celery task context for {sender.name} {task_id}")
+#     _celery_task_context[task_id] = {
+#         "name": sender.name,
+#         "args": task.request.args,
+#         "kwargs": task.request.kwargs,
+#     }
+
+
+# @signals.task_postrun.connect
+# def clear_task_context(task_id=None, **kwargs):
+#     current_app.logger.info(f"Clearing celery task context for {task_id}")
+#     _celery_task_context.pop(task_id, None)
