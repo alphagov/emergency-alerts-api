@@ -313,13 +313,13 @@ def setup_sqlalchemy_events(app):
                 "SET application_name = %s",
                 (current_app.config["EAS_APP_NAME"],),
             )
-            current_app.logger.info(f"DB CONNECT event - {TOTAL_DB_CONNECTIONS.get()} connections open")
+            current_app.logger.info(f"DB CONNECT event")
 
         @event.listens_for(db.engine, "close")
         def close(dbapi_connection, connection_record):
             # connection closed (probably only happens with overflow connections)
             TOTAL_DB_CONNECTIONS.dec()
-            current_app.logger.info(f"DB CLOSE event - {TOTAL_DB_CONNECTIONS.get()} connections open")
+            current_app.logger.info(f"DB CLOSE event")
 
         @event.listens_for(db.engine, "checkout")
         def checkout(dbapi_connection, connection_record, connection_proxy):
