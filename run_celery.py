@@ -16,7 +16,7 @@ create_app(application)
 
 service_name = os.environ.get("SERVICE", "unknown")
 application.logger.info(
-    f"{service_name.upper()} Database configuration",
+    f"{service_name.upper()} DELIVERY Database configuration",
     extra={
         "python_module": __name__,
         "sqlalchemy_engine_options": application.config["SQLALCHEMY_ENGINE_OPTIONS"],
