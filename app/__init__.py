@@ -345,13 +345,14 @@ def setup_sqlalchemy_events(app):
                     }
                 # celery apps
                 elif _celery_task_context:
-                    current_app.logger.debug("DB connection checkout inside celery task")
-                    # task_id = next(iter(_celery_task_context))
-                    # task = next(iter(_celery_task_context.values()), None)  # get first task context
+                    task_id = next(iter(_celery_task_context))
+                    task = next(iter(_celery_task_context.values()), None)  # get first task context
+                    current_app.logger.info(
+                        f"DB CHECKOUT inside CELERY task:{task['name']}, id:{task_id}, data:{task['kwargs']}")
                     connection_record.info["request_data"] = {
                         "method": "celery",
                         "host": current_app.config["EAS_APP_NAME"],  # worker name
-                        "url_rule": "unknown"  # f"{task_id} {task["name"]}",     # task name
+                        "url_rule": f"{task_id} {task["name"]}",     # task name
                     }
                 # anything else. migrations possibly, or flask cli commands.
                 else:

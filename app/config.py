@@ -72,6 +72,16 @@ class Config(object):
     CBC_PROXY_ENABLED = True
     ENABLED_CBCS = {BroadcastProvider.EE, BroadcastProvider.THREE, BroadcastProvider.O2, BroadcastProvider.VODAFONE}
 
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "pool_size": int(os.environ.get("SQLALCHEMY_POOL_SIZE", 5)),
+        "pool_timeout": 30,
+        "pool_recycle": 300,
+        "connect_args": {
+            "options": "-c statement_timeout=1200000",
+        },
+    }
+    DATABASE_STATEMENT_TIMEOUT_MS = 1200000
+
     if os.environ.get("MASTER_USERNAME"):
         print("Using master credentials for db connection")
         SQLALCHEMY_DATABASE_URI = "postgresql://{user}:{password}@{host}:{port}/{database}".format(
@@ -94,14 +104,6 @@ class Config(object):
         print("Overriding db connection string for local running")
         SQLALCHEMY_DATABASE_URI = os.environ.get("SQLALCHEMY_LOCAL_OVERRIDE")
 
-    # Prefix to identify queues in SQS
-    # QUEUE_PREFIX = (
-    #     f"{os.getenv('NOTIFICATION_QUEUE_PREFIX')}-"
-    #     if os.getenv("NOTIFICATION_QUEUE_PREFIX")
-    #     else f"{os.getenv('ENVIRONMENT')}-"
-    # )
-    # SQS_QUEUE_BASE_URL = os.getenv("SQS_QUEUE_BASE_URL")
-
     ZENDESK_API_KEY = os.environ.get("ZENDESK_API_KEY")
     REPORTS_SLACK_WEBHOOK_URL = os.environ.get("REPORTS_SLACK_WEBHOOK_URL")
 
@@ -114,15 +116,7 @@ class Config(object):
     INVITATION_EXPIRATION_DAYS = 2
     EAS_APP_NAME = "api"
     NOTIFY_EMAIL_DOMAIN = "notify.tools"
-    SQLALCHEMY_ENGINE_OPTIONS = {
-        "pool_size": int(os.environ.get("SQLALCHEMY_POOL_SIZE", 5)),
-        "pool_timeout": 30,
-        "pool_recycle": 300,
-        "connect_args": {
-            "options": "-c statement_timeout=1200000",
-        },
-    }
-    DATABASE_STATEMENT_TIMEOUT_MS = 1200000
+    
     PAGE_SIZE = 50
     API_PAGE_SIZE = 250
     TEST_MESSAGE_FILENAME = "Test message"
@@ -156,23 +150,6 @@ class Config(object):
     QUEUE_NAME = QueueNames.BROADCASTS if SERVICE == "api" else QueueNames.PERIODIC
     TASK_IMPORTS = "broadcast_message_tasks" if SERVICE == "api" else "scheduled_tasks"
 
-    # CELERY = {
-    #     "broker_url": f"https://sqs.{AWS_REGION}.amazonaws.com",
-    #     "broker_transport": "sqs",
-    #     "broker_transport_options": {
-    #         "region": AWS_REGION,
-    #         "queue_name_prefix": QUEUE_PREFIX,
-    #         "is_secure": True,
-    #         "task_acks_late": True,
-    #     },
-    #     "timezone": "UTC",
-    #     "imports": [
-    #         f"app.celery.{TASK_IMPORTS}",
-    #     ],
-    #     "worker_max_tasks_per_child": 10,
-    #     "task_queues": [Queue(QUEUE_NAME, Exchange("default"), routing_key=QUEUE_NAME)],
-    # }
-
     CELERY = {
         "broker_url": "filesystem://",
         "broker_transport_options": {
@@ -182,6 +159,7 @@ class Config(object):
         "timezone": "UTC",
         "imports": [f"app.celery.{TASK_IMPORTS}"],
         "task_queues": [Queue(QUEUE_NAME, Exchange("default"), routing_key=QUEUE_NAME)],
+        "worker_max_tasks_per_child": 2,
     }
 
     FROM_NUMBER = "development"
@@ -232,6 +210,17 @@ class Hosted(Config):
     REDIS_URL = f"redis://api.{TENANT}ecs.local:6379/0"
     API_HOST_NAME = f"http://api.{TENANT}ecs.local:6011"
     TEMPLATE_PREVIEW_API_HOST = f"http://api.{TENANT}ecs.local:6013"
+
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "pool_size": int(os.environ.get("SQLALCHEMY_POOL_SIZE", 5)),
+        "pool_timeout": 30,
+        "pool_recycle": 300,
+        "connect_args": {
+            "options": "-c statement_timeout=1200000",
+        },
+    }
+    DATABASE_STATEMENT_TIMEOUT_MS = 1200000
+
     if os.getenv("MASTER_USERNAME"):
         print("Using master credentials for db connection")
         filtered_password = os.environ.get("MASTER_PASSWORD").replace("%", "%%")
@@ -266,150 +255,80 @@ class Hosted(Config):
     QUEUE_NAME = QueueNames.BROADCASTS if SERVICE == "api" else QueueNames.PERIODIC
     TASK_IMPORTS = "broadcast_message_tasks" if SERVICE == "api" else "scheduled_tasks"
 
-    # TESTING STARTS HERE -------------------------------------
-    NOTIFICATION_QUEUE_PREFIX = (
-        f"{os.getenv('NOTIFICATION_QUEUE_PREFIX')}-"
-        if os.getenv("NOTIFICATION_QUEUE_PREFIX")
-        else f"{os.getenv('ENVIRONMENT')}-"
-    )
+    BEAT_SCHEDULE = {
+        "run-health-check": {
+            "task": "run-health-check",
+            "schedule": crontab(minute="*/1"),
+            "options": {"queue": QueueNames.PERIODIC},
+        },
+        TaskNames.TRIGGER_GOVUK_HEALTHCHECK: {
+            "task": TaskNames.TRIGGER_GOVUK_HEALTHCHECK,
+            "schedule": crontab(minute="*/1"),
+            "options": {"queue": QueueNames.GOVUK_ALERTS},
+        },
+        "trigger-link-tests": {
+            "task": "trigger-link-tests",
+            "schedule": crontab(minute="*/15"),
+            "options": {"queue": QueueNames.PERIODIC},
+        },
+        "delete-verify-codes": {
+            "task": "delete-verify-codes",
+            "schedule": crontab(minute=10),
+            "options": {"queue": QueueNames.PERIODIC},
+        },
+        "delete-invitations": {
+            "task": "delete-invitations",
+            "schedule": crontab(minute=20),
+            "options": {"queue": QueueNames.PERIODIC},
+        },
+        "auto-expire-broadcast-messages": {
+            "task": "auto-expire-broadcast-messages",
+            "schedule": crontab(minute=40),
+            "options": {"queue": QueueNames.PERIODIC},
+        },
+        "remove-yesterdays-planned-tests-on-govuk-alerts": {
+            "task": "remove-yesterdays-planned-tests-on-govuk-alerts",
+            "schedule": crontab(hour=00, minute=00),
+            "options": {"queue": QueueNames.PERIODIC},
+        },
+        "delete-old-records-from-events-table": {
+            "task": "delete-old-records-from-events-table",
+            "schedule": crontab(hour=3, minute=00),
+            "options": {"queue": QueueNames.PERIODIC},
+        },
+        "validate-functional-test-account-emails": {
+            "task": "validate-functional-test-account-emails",
+            "schedule": crontab(day_of_month="1"),
+            "options": {"queue": QueueNames.PERIODIC},
+        },
+    }
+
+    PREDEFINED_SQS_QUEUES = {
+        "broadcast-tasks": {
+            "url": f"{SQS_QUEUE_BASE_URL}/{QUEUE_PREFIX}broadcast-tasks",
+        },
+        "periodic-tasks": {
+            "url": f"{SQS_QUEUE_BASE_URL}/{QUEUE_PREFIX}periodic-tasks"
+        },
+        "govuk-alerts": {
+            "url": f"{SQS_QUEUE_BASE_URL}/{QUEUE_PREFIX}govuk-alerts"
+        },
+    }
 
     CELERY = {
-        "broker_url": f"https://sqs.{AWS_REGION}.amazonaws.com",
         "broker_transport": "sqs",
         "broker_transport_options": {
             "region": AWS_REGION,
-            # "visibility_timeout": 310,    # Configured in Terraform
-            "queue_name_prefix": NOTIFICATION_QUEUE_PREFIX,
+            "predefined_queues": PREDEFINED_SQS_QUEUES,
             "is_secure": True,
             "task_acks_late": True,
         },
         "timezone": "UTC",
-        "imports": [
-            f"app.celery.{TASK_IMPORTS}",
-        ],
-        "worker_max_tasks_per_child": 10,
-        "worker_hijack_root_logger": False,
+        "imports": [f"app.celery.{TASK_IMPORTS}"],
         "task_queues": [Queue(QUEUE_NAME, Exchange("default"), routing_key=QUEUE_NAME)],
-        "beat_schedule": {
-            "run-health-check": {
-                "task": "run-health-check",
-                "schedule": crontab(minute="*/1"),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
-            TaskNames.TRIGGER_GOVUK_HEALTHCHECK: {
-                "task": TaskNames.TRIGGER_GOVUK_HEALTHCHECK,
-                "schedule": crontab(minute="*/1"),
-                "options": {"queue": QueueNames.GOVUK_ALERTS},
-            },
-            "trigger-link-tests": {
-                "task": "trigger-link-tests",
-                "schedule": crontab(minute="*/15"),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
-            "delete-verify-codes": {
-                "task": "delete-verify-codes",
-                "schedule": crontab(minute=10),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
-            "delete-invitations": {
-                "task": "delete-invitations",
-                "schedule": crontab(minute=20),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
-            "auto-expire-broadcast-messages": {
-                "task": "auto-expire-broadcast-messages",
-                "schedule": crontab(minute=40),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
-            "remove-yesterdays-planned-tests-on-govuk-alerts": {
-                "task": "remove-yesterdays-planned-tests-on-govuk-alerts",
-                "schedule": crontab(hour=00, minute=00),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
-            "delete-old-records-from-events-table": {
-                "task": "delete-old-records-from-events-table",
-                "schedule": crontab(hour=3, minute=00),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
-            "validate-functional-test-account-emails": {
-                "task": "validate-functional-test-account-emails",
-                "schedule": crontab(day_of_month="1"),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
-        },
+        "worker_max_tasks_per_child": 10,
+        "beat_schedule": BEAT_SCHEDULE,
     }
-    # TESTING ENDS HERE -------------------------------------
-
-    # BEAT_SCHEDULE = {
-    #     "run-health-check": {
-    #         "task": "run-health-check",
-    #         "schedule": crontab(minute="*/1"),
-    #         "options": {"queue": QueueNames.PERIODIC},
-    #     },
-    #     TaskNames.TRIGGER_GOVUK_HEALTHCHECK: {
-    #         "task": TaskNames.TRIGGER_GOVUK_HEALTHCHECK,
-    #         "schedule": crontab(minute="*/1"),
-    #         "options": {"queue": QueueNames.GOVUK_ALERTS},
-    #     },
-    #     "trigger-link-tests": {
-    #         "task": "trigger-link-tests",
-    #         "schedule": crontab(minute="*/15"),
-    #         "options": {"queue": QueueNames.PERIODIC},
-    #     },
-    #     "delete-verify-codes": {
-    #         "task": "delete-verify-codes",
-    #         "schedule": crontab(minute=10),
-    #         "options": {"queue": QueueNames.PERIODIC},
-    #     },
-    #     "delete-invitations": {
-    #         "task": "delete-invitations",
-    #         "schedule": crontab(minute=20),
-    #         "options": {"queue": QueueNames.PERIODIC},
-    #     },
-    #     "auto-expire-broadcast-messages": {
-    #         "task": "auto-expire-broadcast-messages",
-    #         "schedule": crontab(minute=40),
-    #         "options": {"queue": QueueNames.PERIODIC},
-    #     },
-    #     "remove-yesterdays-planned-tests-on-govuk-alerts": {
-    #         "task": "remove-yesterdays-planned-tests-on-govuk-alerts",
-    #         "schedule": crontab(hour=00, minute=00),
-    #         "options": {"queue": QueueNames.PERIODIC},
-    #     },
-    #     "delete-old-records-from-events-table": {
-    #         "task": "delete-old-records-from-events-table",
-    #         "schedule": crontab(hour=3, minute=00),
-    #         "options": {"queue": QueueNames.PERIODIC},
-    #     },
-    #     "validate-functional-test-account-emails": {
-    #         "task": "validate-functional-test-account-emails",
-    #         "schedule": crontab(day_of_month="1"),
-    #         "options": {"queue": QueueNames.PERIODIC},
-    #     },
-    # }
-
-    # PREDEFINED_SQS_QUEUES = {
-    #     "broadcast-tasks": {
-    #         "url": f"{SQS_QUEUE_BASE_URL}/{QUEUE_PREFIX}broadcast-tasks",
-    #     },
-    #     "periodic-tasks": {"url": f"{SQS_QUEUE_BASE_URL}/{QUEUE_PREFIX}periodic-tasks"},
-    #     "govuk-alerts": {"url": f"{SQS_QUEUE_BASE_URL}/{QUEUE_PREFIX}govuk-alerts"},
-    # }
-
-    # CELERY = {
-    #     "broker_transport": "sqs",
-    #     "broker_transport_options": {
-    #         "region": AWS_REGION,
-    #         "predefined_queues": PREDEFINED_SQS_QUEUES,
-    #         "is_secure": True,
-    #         "task_acks_late": True,
-    #     },
-    #     "timezone": "UTC",
-    #     "imports": [f"app.celery.{TASK_IMPORTS}"],
-    #     "task_queues": [Queue(QUEUE_NAME, Exchange("default"), routing_key=QUEUE_NAME)],
-    #     "worker_max_tasks_per_child": 10,
-    #     "beat_schedule": BEAT_SCHEDULE,
-    # }
 
 
 class Test(Config):
