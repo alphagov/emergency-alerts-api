@@ -7,8 +7,8 @@
 
 import os
 
-# notify_celery is referenced from manifest_delivery_base.yml, and cannot be removed
-from app import create_app  # , notify_celery  # noqa
+# notify_celery must be imported here
+from app import create_app, notify_celery  # noqa
 from app.notify_api_flask_app import NotifyApiFlaskApp
 
 application = NotifyApiFlaskApp("delivery")
