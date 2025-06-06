@@ -1,6 +1,4 @@
 ##!/usr/bin/env python
-from __future__ import print_function
-
 import os
 from app import create_app
 from app.notify_api_flask_app import NotifyApiFlaskApp
