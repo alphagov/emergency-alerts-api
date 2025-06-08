@@ -139,6 +139,8 @@ function configure_container_role(){
 function run_celery(){
     cd $DIR_API;
     . $VENV_API/bin/activate && make run-celery &
+    echo "Launching broadcast-tasks celery worker"
+    wait
 }
 
 function run_api(){
