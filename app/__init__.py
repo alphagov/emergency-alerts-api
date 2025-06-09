@@ -29,13 +29,19 @@ from flask_sqlalchemy import SQLAlchemy
 from gds_metrics import GDSMetrics
 from gds_metrics.metrics import Gauge, Histogram
 from sqlalchemy import event
+from sqlalchemy.orm import DeclarativeBase
 from werkzeug.exceptions import HTTPException as WerkzeugHTTPException
 from werkzeug.local import LocalProxy
 
 from app.clients import NotificationProviderClients
 from app.clients.cbc_proxy import CBCProxyClient
 
-db = SQLAlchemy()
+
+class Base(DeclarativeBase):
+  pass
+
+
+db = SQLAlchemy(Base)
 migrate = Migrate()
 ma = Marshmallow()
 notify_celery = NotifyCelery()
