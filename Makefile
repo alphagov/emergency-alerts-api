@@ -165,7 +165,7 @@ pytests: ## Run python tests only
 .PHONY: freeze-requirements
 freeze-requirements: ## create static requirements.txt
 	${PYTHON_EXECUTABLE_PREFIX}pip3 install --upgrade setuptools pip-tools
-	${PYTHON_EXECUTABLE_PREFIX}pip-compile --strip-extras requirements.in
+	${PYTHON_EXECUTABLE_PREFIX}pip-compile requirements.in
 
 .PHONY: fix-imports
 fix-imports:
