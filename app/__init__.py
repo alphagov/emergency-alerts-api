@@ -41,7 +41,7 @@ class Base(DeclarativeBase):
   pass
 
 
-db = SQLAlchemy(Base)
+db = SQLAlchemy(model_class=Base)
 migrate = Migrate()
 ma = Marshmallow()
 notify_celery = NotifyCelery()
