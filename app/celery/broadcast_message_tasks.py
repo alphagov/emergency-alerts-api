@@ -115,8 +115,6 @@ def send_broadcast_event(broadcast_event_id):
         }
     )
 
-    db
-
     try:
         broadcast_event = dao_get_broadcast_event_by_id(broadcast_event_id)
 
@@ -147,6 +145,7 @@ def send_broadcast_event(broadcast_event_id):
         current_app.logger.exception(
             f"Failed to send broadcast (event id {broadcast_event_id})",
             extra={
+                "exception_type": type(e).__name__
                 "python_module": __name__,
                 "exception": str(e),
             },
