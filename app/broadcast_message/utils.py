@@ -153,7 +153,6 @@ def _create_broadcast_event(broadcast_message):
             f"Broadcast event retrieved outside of celery task {broadcast_event}",
             extra={
                 "database_url": db.engine.url,
-                "event_id": str(event.id),
             }
         )
 

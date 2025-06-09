@@ -138,12 +138,12 @@ function configure_container_role(){
 
 function run_celery(){
     cd $DIR_API;
-    . $VENV_API/bin/activate && make run-celery
+    . $VENV_API/bin/activate && make run-celery &
 }
 
 function run_api(){
     cd $DIR_API;
-    . $VENV_API/bin/activate && flask run -p 6011 --host=0.0.0.0 &
+    . $VENV_API/bin/activate && flask run -p 6011 --host=0.0.0.0
 }
 
 if [[ ! -z $DEBUG ]]; then
@@ -153,13 +153,13 @@ else
     configure_container_role
 
     if [[ $SERVICE_ACTION == "run_api" ]]; then
-        # run_celery
-        # run_api
-        run_api
-        until curl -sSf 0.0.0.0:6011/_api_status; do
-            sleep 1
-        done
         run_celery
+        run_api
+        # run_api
+        # until curl -sSf 0.0.0.0:6011/_api_status; do
+        #     sleep 1
+        # done
+        # run_celery
 
     elif [[ $SERVICE_ACTION == "run_migrations" ]]; then
 
