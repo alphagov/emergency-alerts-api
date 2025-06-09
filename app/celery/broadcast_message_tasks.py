@@ -3,7 +3,6 @@ from datetime import datetime, timezone
 
 from emergency_alerts_utils.xml.common import HEADLINE
 from flask import current_app
-from psycopg2 import OperationalError
 
 from app import cbc_proxy_client, db, notify_celery
 from app.clients.cbc_proxy import CBCProxyRetryableException
@@ -108,12 +107,8 @@ def check_event_makes_sense_in_sequence(broadcast_event, provider):
 
 
 @notify_celery.task(
-    name="send-broadcast-event",
     bind=True,
-    autoretry_for=(OperationalError,),
-    retry_backoff=3,
-    retry_jitter=False,
-    max_retries=5,
+    name="send-broadcast-event",
 )
 def send_broadcast_event(broadcast_event_id):
     current_app.logger.info(
