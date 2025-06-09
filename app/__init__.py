@@ -1,7 +1,6 @@
 import os
 import random
 import string
-# import threading
 import time
 import uuid
 from time import monotonic
@@ -333,17 +332,11 @@ def setup_sqlalchemy_events(app):
                 checkout_at = connection_record.info.get("checkout_at", None)
 
                 if checkout_at:
-                    # duration that connection was held by a single web request
                     duration = time.monotonic() - checkout_at
                     current_app.logger.info(f"[CHECKIN]. Connection id {id(dbapi_connection)} used for {duration:.4f} seconds")
                 else:
                     current_app.logger.info(f"[CHECKIN]. Connection id {id(dbapi_connection)} (no recorded checkout time)")
 
-                # DB_CONNECTION_OPEN_DURATION_SECONDS.labels(
-                #     connection_record.info["request_data"]["method"],
-                #     connection_record.info["request_data"]["host"],
-                #     connection_record.info["request_data"]["url_rule"],
-                # ).observe(duration)
             except Exception:
                 current_app.logger.exception("Exception caught for checkin event.")
 
