@@ -318,13 +318,13 @@ def setup_sqlalchemy_events(app):
                 "SET application_name = %s",
                 (current_app.config["EAS_APP_NAME"],),
             )
-            current_app.logger.info(f"DB CONNECT event")
+            # current_app.logger.info(f"DB CONNECT event")
 
         @event.listens_for(db.engine, "close")
         def close(dbapi_connection, connection_record):
             # connection closed (probably only happens with overflow connections)
             TOTAL_DB_CONNECTIONS.dec()
-            current_app.logger.info(f"DB CLOSE event")
+            # current_app.logger.info(f"DB CLOSE event")
 
         @event.listens_for(db.engine, "checkout")
         def checkout(dbapi_connection, connection_record, connection_proxy):
@@ -341,10 +341,10 @@ def setup_sqlalchemy_events(app):
 
                 # web requests
                 if has_request_context():
-                    current_app.logger.info(
-                        f"DB CHECKOUT inside REQUEST {request.method} "
-                        f"{request.host}{request.url_rule}"
-                    )
+                    # current_app.logger.info(
+                    #     f"DB CHECKOUT inside REQUEST {request.method} "
+                    #     f"{request.host}{request.url_rule}"
+                    # )
                     connection_record.info["request_data"] = {
                         "method": request.method,
                         "host": request.host,
@@ -360,7 +360,7 @@ def setup_sqlalchemy_events(app):
                 #     }
                 # anything else. migrations possibly, or flask cli commands.
                 else:
-                    current_app.logger.info("DB CHECKOUT outside request")
+                    # current_app.logger.info("DB CHECKOUT outside request")
                     connection_record.info["request_data"] = {
                         "method": "unknown",
                         "host": "unknown",
@@ -372,9 +372,9 @@ def setup_sqlalchemy_events(app):
         @event.listens_for(db.engine, "checkin")
         def checkin(dbapi_connection, connection_record):
             try:
-                current_app.logger.info(
-                    f"DB CHECKIN event from {connection_record}"
-                )
+                # current_app.logger.info(
+                #     f"DB CHECKIN event from {connection_record}"
+                # )
 
                 # connection returned by a web worker
                 TOTAL_CHECKED_OUT_DB_CONNECTIONS.dec()
