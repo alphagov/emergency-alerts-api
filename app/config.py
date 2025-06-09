@@ -164,10 +164,6 @@ class Config(object):
 
     FROM_NUMBER = "development"
 
-    STATSD_HOST = os.getenv("STATSD_HOST")
-    STATSD_PORT = 8125
-    STATSD_ENABLED = bool(STATSD_HOST)
-
     SENDING_NOTIFICATIONS_TIMEOUT_PERIOD = 259200  # 3 days
     ADMIN_EXTERNAL_URL = "http://127.0.0.1:6012/"
 
@@ -207,7 +203,6 @@ class Hosted(Config):
     )
     ADMIN_BASE_URL = f"http://admin.{TENANT}ecs.local:6012"
     ADMIN_EXTERNAL_URL = f"https://{TENANT}admin.{SUBDOMAIN}emergency-alerts.service.gov.uk"
-    REDIS_URL = f"redis://api.{TENANT}ecs.local:6379/0"
     API_HOST_NAME = f"http://api.{TENANT}ecs.local:6011"
     TEMPLATE_PREVIEW_API_HOST = f"http://api.{TENANT}ecs.local:6013"
 

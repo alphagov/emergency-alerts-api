@@ -26,8 +26,6 @@ from flask import (
 from flask_marshmallow import Marshmallow
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
-from gds_metrics import GDSMetrics
-from gds_metrics.metrics import Gauge, Histogram
 from sqlalchemy import event
 from werkzeug.exceptions import HTTPException as WerkzeugHTTPException
 from werkzeug.local import LocalProxy
@@ -43,23 +41,11 @@ encryption = Encryption()
 zendesk_client = ZendeskClient()
 slack_client = SlackClient()
 cbc_proxy_client = CBCProxyClient()
-metrics = GDSMetrics()
 
 notification_provider_clients = NotificationProviderClients()
 
 api_user = LocalProxy(lambda: g.api_user)
 authenticated_service = LocalProxy(lambda: g.authenticated_service)
-
-CONCURRENT_REQUESTS = Gauge(
-    "concurrent_web_request_count",
-    "How many concurrent requests are currently being served",
-)
-
-# _in_celery_task = threading.local()
-
-
-# def is_in_celery_task():
-#     return getattr(_in_celery_task, "active", False)
 
 
 def create_app(application):
@@ -72,17 +58,13 @@ def create_app(application):
     application.config["EAS_APP_NAME"] = application.name
     init_app(application)
 
-    # Metrics intentionally high up to give the most accurate timing and reliability that the metric is recorded
-    metrics.init_app(application)
     request_helper.init_app(application)
     db.init_app(application)
 
     if host != "local":
         boto_session = boto3.Session(region_name=os.environ.get("AWS_REGION", "eu-west-2"))
         rds_client = boto_session.client("rds")
-
         with application.app_context():
-
             @event.listens_for(db.engine, "do_connect")
             def receive_do_connect(dialect, conn_rec, cargs, cparams):
                 token = get_authentication_token(rds_client)
@@ -239,15 +221,11 @@ def get_authentication_token(rds_client):
 def init_app(app):
     @app.before_request
     def record_request_details():
-        CONCURRENT_REQUESTS.inc()
-
         g.start = monotonic()
         g.endpoint = request.endpoint
 
     @app.after_request
     def after_request(response):
-        CONCURRENT_REQUESTS.dec()
-
         response.headers.add("Access-Control-Allow-Origin", "*")
         response.headers.add("Access-Control-Allow-Headers", "Content-Type,Authorization")
         response.headers.add("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE")
@@ -282,30 +260,13 @@ def create_random_identifier():
 
 
 def setup_sqlalchemy_events(app):
-    TOTAL_DB_CONNECTIONS = Gauge(
-        "db_connection_total_connected",
-        "How many db connections are currently held (potentially idle) by the server",
-    )
-
-    TOTAL_CHECKED_OUT_DB_CONNECTIONS = Gauge(
-        "db_connection_total_checked_out",
-        "How many db connections are currently checked out by web requests",
-    )
-
-    DB_CONNECTION_OPEN_DURATION_SECONDS = Histogram(
-        "db_connection_open_duration_seconds",
-        "How long db connections are held open for in seconds",
-        ["method", "host", "path"],
-    )
-
     # need this or db.engine isn't accessible
     with app.app_context():
 
         @event.listens_for(db.engine, "connect")
         def connect(dbapi_connection, connection_record):
+            current_app.logger.info(f"[CONNECT] Connection id {id(dbapi_connection)}")
             # connection first opened with db
-            TOTAL_DB_CONNECTIONS.inc()
-
             cursor = dbapi_connection.cursor()
 
             # set these here instead of in connect_args/options to avoid the early-binding
@@ -318,20 +279,16 @@ def setup_sqlalchemy_events(app):
                 "SET application_name = %s",
                 (current_app.config["EAS_APP_NAME"],),
             )
-            # current_app.logger.info(f"DB CONNECT event")
+            current_app.logger.info(f"[CONNECT] sqlalchemy options set")
 
         @event.listens_for(db.engine, "close")
         def close(dbapi_connection, connection_record):
             # connection closed (probably only happens with overflow connections)
-            TOTAL_DB_CONNECTIONS.dec()
-            # current_app.logger.info(f"DB CLOSE event")
+            current_app.logger.info(f"[CLOSE] Connection id {id(dbapi_connection)}")
 
         @event.listens_for(db.engine, "checkout")
         def checkout(dbapi_connection, connection_record, connection_proxy):
             try:
-                # connection given to a web worker
-                TOTAL_CHECKED_OUT_DB_CONNECTIONS.inc()
-
                 # this will overwrite any previous checkout_at timestamp
                 connection_record.info["checkout_at"] = time.monotonic()
 
@@ -341,10 +298,11 @@ def setup_sqlalchemy_events(app):
 
                 # web requests
                 if has_request_context():
-                    # current_app.logger.info(
-                    #     f"DB CHECKOUT inside REQUEST {request.method} "
-                    #     f"{request.host}{request.url_rule}"
-                    # )
+                    current_app.logger.info(
+                        f"[CHECKOUT] in request {request.method} "
+                        f"{request.host}{request.url_rule} "
+                        f"Connection id {id(dbapi_connection)}"}"
+                    )
                     connection_record.info["request_data"] = {
                         "method": request.method,
                         "host": request.host,
@@ -360,7 +318,7 @@ def setup_sqlalchemy_events(app):
                 #     }
                 # anything else. migrations possibly, or flask cli commands.
                 else:
-                    # current_app.logger.info("DB CHECKOUT outside request")
+                    current_app.logger.info(f"[CHECKOUT] outside request. Connection id {id(dbapi_connection)}")
                     connection_record.info["request_data"] = {
                         "method": "unknown",
                         "host": "unknown",
@@ -372,21 +330,20 @@ def setup_sqlalchemy_events(app):
         @event.listens_for(db.engine, "checkin")
         def checkin(dbapi_connection, connection_record):
             try:
-                # current_app.logger.info(
-                #     f"DB CHECKIN event from {connection_record}"
-                # )
+                checkout_at = connection_record.info.get("checkout_at", None)
 
-                # connection returned by a web worker
-                TOTAL_CHECKED_OUT_DB_CONNECTIONS.dec()
+                if checkout_at:
+                    # duration that connection was held by a single web request
+                    duration = time.monotonic() - checkout_at
+                    current_app.logger.info(f"[CHECKIN]. Connection id {id(dbapi_connection)} used for {duration:.4f} seconds")
+                else:
+                    current_app.logger.info(f"[CHECKIN]. Connection id {id(dbapi_connection)} (no recorded checkout time)")
 
-                # duration that connection was held by a single web request
-                duration = time.monotonic() - connection_record.info["checkout_at"]
-
-                DB_CONNECTION_OPEN_DURATION_SECONDS.labels(
-                    connection_record.info["request_data"]["method"],
-                    connection_record.info["request_data"]["host"],
-                    connection_record.info["request_data"]["url_rule"],
-                ).observe(duration)
+                # DB_CONNECTION_OPEN_DURATION_SECONDS.labels(
+                #     connection_record.info["request_data"]["method"],
+                #     connection_record.info["request_data"]["host"],
+                #     connection_record.info["request_data"]["url_rule"],
+                # ).observe(duration)
             except Exception:
                 current_app.logger.exception("Exception caught for checkin event.")
 
