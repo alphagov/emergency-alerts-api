@@ -301,7 +301,7 @@ def setup_sqlalchemy_events(app):
                     current_app.logger.info(
                         f"[CHECKOUT] in request {request.method} "
                         f"{request.host}{request.url_rule} "
-                        f"Connection id {id(dbapi_connection)}"}"
+                        f"Connection id {id(dbapi_connection)}"
                     )
                     connection_record.info["request_data"] = {
                         "method": request.method,
