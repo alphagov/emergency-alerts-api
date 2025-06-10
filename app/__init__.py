@@ -80,12 +80,8 @@ def create_app(application):
     ma.init_app(application)
     zendesk_client.init_app(application)
     logging.init_app(application)
-
     notify_celery.init_app(application)
-    application.extensions["celery"] = notify_celery  # EXP-1
-
     encryption.init_app(application)
-
     cbc_proxy_client.init_app(application)
 
     register_blueprint(application)
