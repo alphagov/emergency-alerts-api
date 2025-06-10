@@ -229,7 +229,7 @@ class Hosted(Config):
     else:
         SQLALCHEMY_DATABASE_URI = (
             "postgresql://{user}@{host}:{port}/{database}"
-            "?sslmode=verify-full&sslroocert={cert}".format(
+            "?sslmode=verify-full&sslroocert={cert}&sslcertmode=disable".format(
                 user=os.environ.get("RDS_USER"),
                 host=os.environ.get("RDS_HOST"),
                 port=os.environ.get("RDS_PORT"),
