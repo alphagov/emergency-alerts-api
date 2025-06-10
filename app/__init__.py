@@ -297,11 +297,11 @@ def setup_sqlalchemy_events(app):
 
                 # web requests
                 if has_request_context():
-                    current_app.logger.info(
-                        f"[CHECKOUT] in request {request.method} "
-                        f"{request.host}{request.url_rule} "
-                        f"Connection id {id(dbapi_connection)}"
-                    )
+                    # current_app.logger.info(
+                    #     f"[CHECKOUT] in request {request.method} "
+                    #     f"{request.host}{request.url_rule} "
+                    #     f"Connection id {id(dbapi_connection)}"
+                    # )
                     connection_record.info["request_data"] = {
                         "method": request.method,
                         "host": request.host,
@@ -331,11 +331,11 @@ def setup_sqlalchemy_events(app):
             try:
                 checkout_at = connection_record.info.get("checkout_at", None)
 
-                if checkout_at:
-                    duration = time.monotonic() - checkout_at
-                    current_app.logger.info(f"[CHECKIN]. Connection id {id(dbapi_connection)} used for {duration:.4f} seconds")
-                else:
-                    current_app.logger.info(f"[CHECKIN]. Connection id {id(dbapi_connection)} (no recorded checkout time)")
+                # if checkout_at:
+                #     duration = time.monotonic() - checkout_at
+                #     current_app.logger.info(f"[CHECKIN]. Connection id {id(dbapi_connection)} used for {duration:.4f} seconds")
+                # else:
+                #     current_app.logger.info(f"[CHECKIN]. Connection id {id(dbapi_connection)} (no recorded checkout time)")
 
             except Exception:
                 current_app.logger.exception("Exception caught for checkin event.")
