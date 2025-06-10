@@ -7,9 +7,8 @@ from emergency_alerts_utils.clients.zendesk.zendesk_client import (
 from emergency_alerts_utils.xml.common import SENDER
 from flask import current_app
 
-from app import db, zendesk_client
+from app import zendesk_client
 from app.celery.broadcast_message_tasks import send_broadcast_event
-from app.dao.broadcast_message_dao import dao_get_broadcast_event_by_id
 from app.config import QueueNames
 from app.dao.dao_utils import dao_save_object
 from app.errors import InvalidRequest
