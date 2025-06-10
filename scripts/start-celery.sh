@@ -11,8 +11,6 @@ function run_celery(){
   chown easuser:easuser "/eas/emergency-alerts-api/celery-beat-healthcheck"
   cd $DIR_API;
   . $VENV_API/bin/activate && make run-celery &
-  echo "Launching periodic-tasks celery worker"
-  wait
 }
 
 function run_celery_beat(){

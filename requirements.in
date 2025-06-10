@@ -22,12 +22,7 @@ cachetools==5.2.0
 beautifulsoup4==4.11.1
 lxml==5.4.0
 pwdpy==1.0.1
-
 notifications-python-client==8.0.0
-
-# gds-metrics requires prometheseus 0.2.0, override that requirement as 0.7.1 brings significant performance gains
-prometheus-client==0.14.1
-git+https://github.com/alphagov/gds_metrics_python.git@6f1840a57b6fb1ee40b7e84f2f18ec229de8aa72
 
 # Package for testing
 black==23.3.0

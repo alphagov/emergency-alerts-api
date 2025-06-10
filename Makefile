@@ -182,5 +182,4 @@ clean:
 .PHONY: uninstall-packages
 uninstall-packages:
 	python -m pip uninstall emergency-alerts-utils -y
-	python -m pip uninstall gds-metrics -y
 	python -m pip freeze | xargs python -m pip uninstall -y
