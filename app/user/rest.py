@@ -408,7 +408,7 @@ def send_user_2fa_code_new_auth(user_id, code_type):
 def send_user_sms_code(user_to_send_to, data):
     recipient = data.get("to") or user_to_send_to.mobile_number
 
-    secret_code = "1234567" if is_local_host() else create_secret_code()
+    secret_code = create_secret_code()
     personalisation = {"verify_code": secret_code}
 
     create_2fa_code(
