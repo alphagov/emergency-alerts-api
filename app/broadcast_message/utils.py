@@ -128,7 +128,6 @@ def _create_broadcast_event(broadcast_message):
             BroadcastStatusType.BROADCASTING: BroadcastEventMessageType.ALERT,
             BroadcastStatusType.CANCELLED: BroadcastEventMessageType.CANCEL,
         }
-
         event = BroadcastEvent(
             service=service,
             broadcast_message=broadcast_message,
@@ -140,22 +139,7 @@ def _create_broadcast_event(broadcast_message):
             transmitted_starts_at=broadcast_message.starts_at,
             transmitted_finishes_at=broadcast_message.finishes_at,
         )
-
         dao_save_object(event)
-
-        current_app.logger.info(
-            f"Invoking celery task 'send-broadcast-event' for event id {event.id} on queue {QueueNames.BROADCASTS}"
-        )
-
-        broadcast_event = dao_get_broadcast_event_by_id(str(event.id))
-
-        current_app.logger.info(
-            f"Broadcast event retrieved outside of celery task {broadcast_event}",
-            extra={
-                "database_url": db.engine.url,
-            }
-        )
-
         send_broadcast_event.apply_async(
             queue=QueueNames.BROADCASTS,
             kwargs={"broadcast_event_id": str(event.id)},

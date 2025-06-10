@@ -1,12 +1,13 @@
 import os
 import random
 import string
+import threading
 import time
 import uuid
 from time import monotonic
 
 import boto3
-# from celery import signals
+from celery import signals
 from emergency_alerts_utils import logging, request_helper
 from emergency_alerts_utils.celery import NotifyCelery
 from emergency_alerts_utils.clients.encryption.encryption_client import (
@@ -45,6 +46,12 @@ notification_provider_clients = NotificationProviderClients()
 
 api_user = LocalProxy(lambda: g.api_user)
 authenticated_service = LocalProxy(lambda: g.authenticated_service)
+
+_in_celery_task = threading.local()
+
+
+def is_in_celery_task():
+    return getattr(_in_celery_task, "active", False)
 
 
 def create_app(application):
@@ -297,24 +304,24 @@ def setup_sqlalchemy_events(app):
 
                 # web requests
                 if has_request_context():
-                    # current_app.logger.info(
-                    #     f"[CHECKOUT] in request {request.method} "
-                    #     f"{request.host}{request.url_rule} "
-                    #     f"Connection id {id(dbapi_connection)}"
-                    # )
+                    current_app.logger.info(
+                        f"[CHECKOUT] in request {request.method} "
+                        f"{request.host}{request.url_rule} "
+                        f"Connection id {id(dbapi_connection)}"
+                    )
                     connection_record.info["request_data"] = {
                         "method": request.method,
                         "host": request.host,
                         "url_rule": request.url_rule.rule if request.url_rule else "No endpoint",
                     }
                 # celery apps
-                # elif is_in_celery_task():
-                #     current_app.logger.info("DB CHECKOUT inside CELERY TASK")
-                #     connection_record.info["request_data"] = {
-                #         "method": "celery",
-                #         "host": current_app.config["EAS_APP_NAME"],
-                #         "url_rule": "task",     
-                #     }
+                elif is_in_celery_task():
+                    current_app.logger.info(f"[CHECKOUT] in celery task. Connection id {id(dbapi_connection)}")
+                    connection_record.info["request_data"] = {
+                        "method": "celery",
+                        "host": current_app.config["EAS_APP_NAME"],
+                        "url_rule": "task",     
+                    }
                 # anything else. migrations possibly, or flask cli commands.
                 else:
                     current_app.logger.info(f"[CHECKOUT] outside request. Connection id {id(dbapi_connection)}")
@@ -331,26 +338,26 @@ def setup_sqlalchemy_events(app):
             try:
                 checkout_at = connection_record.info.get("checkout_at", None)
 
-                # if checkout_at:
-                #     duration = time.monotonic() - checkout_at
-                #     current_app.logger.info(f"[CHECKIN]. Connection id {id(dbapi_connection)} used for {duration:.4f} seconds")
-                # else:
-                #     current_app.logger.info(f"[CHECKIN]. Connection id {id(dbapi_connection)} (no recorded checkout time)")
+                if checkout_at:
+                    duration = time.monotonic() - checkout_at
+                    current_app.logger.info(f"[CHECKIN]. Connection id {id(dbapi_connection)} used for {duration:.4f} seconds")
+                else:
+                    current_app.logger.info(f"[CHECKIN]. Connection id {id(dbapi_connection)} (no recorded checkout time)")
 
             except Exception:
                 current_app.logger.exception("Exception caught for checkin event.")
 
 
-# @signals.task_prerun.connect
-# def mark_task_active(*args, **kwargs):
-#     current_app.logger.info(f"Setting celery task active flag {args} {kwargs}")
-#     _in_celery_task.active = True
+@signals.task_prerun.connect
+def mark_task_active(*args, **kwargs):
+    current_app.logger.info(f"Setting celery task active flag {args} {kwargs}")
+    _in_celery_task.active = True
 
 
-# @signals.task_postrun.connect
-# def clear_task_context(*args, **kwargs):
-#     current_app.logger.info(f"Clearing celery task active flag {args} {kwargs}")
-#     _in_celery_task.active = False
+@signals.task_postrun.connect
+def clear_task_context(*args, **kwargs):
+    current_app.logger.info(f"Clearing celery task active flag {args} {kwargs}")
+    _in_celery_task.active = False
 
 
 # @signals.task_prerun.connect

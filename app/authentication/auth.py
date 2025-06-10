@@ -86,7 +86,6 @@ def requires_auth():
         raise AuthError("Invalid token: service id is not the right data type", 403)
 
     try:
-        # with AUTH_DB_CONNECTION_DURATION_SECONDS.time():
         service = SerialisedService.from_id(service_id)
     except NoResultFound:
         raise AuthError("Invalid token: service not found", 403)
