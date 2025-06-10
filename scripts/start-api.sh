@@ -155,11 +155,6 @@ else
     if [[ $SERVICE_ACTION == "run_api" ]]; then
         run_celery
         run_api
-        # run_api
-        # until curl -sSf 0.0.0.0:6011/_api_status; do
-        #     sleep 1
-        # done
-        # run_celery
 
     elif [[ $SERVICE_ACTION == "run_migrations" ]]; then
 
