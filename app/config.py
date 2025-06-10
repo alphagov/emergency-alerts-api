@@ -76,9 +76,6 @@ class Config(object):
         "pool_size": int(os.environ.get("SQLALCHEMY_POOL_SIZE", 5)),
         "pool_timeout": 30,
         "pool_recycle": 300,
-        "connect_args": {
-            "options": "-c statement_timeout=1200000",
-        },
     }
     DATABASE_STATEMENT_TIMEOUT_MS = 1200000
 
