@@ -304,7 +304,7 @@ def setup_sqlalchemy_events(app):
 
                 # web requests
                 if has_request_context():
-                    current_app.logger.info(
+                    current_app.logger.debug(
                         f"[CHECKOUT] in request {request.method} "
                         f"{request.host}{request.url_rule} "
                         f"Connection id {id(dbapi_connection)}"
@@ -316,7 +316,7 @@ def setup_sqlalchemy_events(app):
                     }
                 # celery apps
                 elif is_in_celery_task():
-                    current_app.logger.info(f"[CHECKOUT] in celery task. Connection id {id(dbapi_connection)}")
+                    current_app.logger.debug(f"[CHECKOUT] in celery task. Connection id {id(dbapi_connection)}")
                     connection_record.info["request_data"] = {
                         "method": "celery",
                         "host": current_app.config["EAS_APP_NAME"],
@@ -324,7 +324,7 @@ def setup_sqlalchemy_events(app):
                     }
                 # anything else. migrations possibly, or flask cli commands.
                 else:
-                    current_app.logger.info(f"[CHECKOUT] outside request. Connection id {id(dbapi_connection)}")
+                    current_app.logger.debug(f"[CHECKOUT] outside request. Connection id {id(dbapi_connection)}")
                     connection_record.info["request_data"] = {
                         "method": "unknown",
                         "host": "unknown",
@@ -340,9 +340,9 @@ def setup_sqlalchemy_events(app):
 
                 if checkout_at:
                     duration = time.monotonic() - checkout_at
-                    current_app.logger.info(f"[CHECKIN]. Connection id {id(dbapi_connection)} used for {duration:.4f} seconds")
+                    current_app.logger.debug(f"[CHECKIN]. Connection id {id(dbapi_connection)} used for {duration:.4f} seconds")
                 else:
-                    current_app.logger.info(f"[CHECKIN]. Connection id {id(dbapi_connection)} (no recorded checkout time)")
+                    current_app.logger.debug(f"[CHECKIN]. Connection id {id(dbapi_connection)} (no recorded checkout time)")
 
             except Exception:
                 current_app.logger.exception("Exception caught for checkin event.")
@@ -350,27 +350,9 @@ def setup_sqlalchemy_events(app):
 
 @signals.task_prerun.connect
 def mark_task_active(*args, **kwargs):
-    current_app.logger.info(f"Setting celery task active flag {args} {kwargs}")
     _in_celery_task.active = True
 
 
 @signals.task_postrun.connect
 def clear_task_context(*args, **kwargs):
-    current_app.logger.info(f"Clearing celery task active flag {args} {kwargs}")
     _in_celery_task.active = False
-
-
-# @signals.task_prerun.connect
-# def store_task_context(sender=None, task_id=None, task=None, **kwargs):
-#     current_app.logger.info(f"Storing celery task context for {sender.name} {task_id}")
-#     _celery_task_context[task_id] = {
-#         "name": sender.name,
-#         "args": task.request.args,
-#         "kwargs": task.request.kwargs,
-#     }
-
-
-# @signals.task_postrun.connect
-# def clear_task_context(task_id=None, **kwargs):
-#     current_app.logger.info(f"Clearing celery task context for {task_id}")
-#     _celery_task_context.pop(task_id, None)
