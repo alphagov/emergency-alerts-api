@@ -316,7 +316,7 @@ def setup_sqlalchemy_events(app):
                     connection_record.info["request_data"] = {
                         "method": "celery",
                         "host": current_app.config["EAS_APP_NAME"],
-                        "url_rule": "task",     
+                        "url_rule": "task",
                     }
                 # anything else. migrations possibly, or flask cli commands.
                 else:
