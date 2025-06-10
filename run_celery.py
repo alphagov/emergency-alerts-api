@@ -25,4 +25,4 @@ application.logger.info(
     },
 )
 
-# application.app_context().push()
+application.app_context().push()
