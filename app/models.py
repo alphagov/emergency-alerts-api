@@ -838,22 +838,24 @@ class BroadcastStatusType(db.Model):
     COMPLETED = "completed"
     CANCELLED = "cancelled"
     TECHNICAL_FAILURE = "technical-failure"
+    RETURNED = "returned"
 
-    STATUSES = [DRAFT, PENDING_APPROVAL, REJECTED, BROADCASTING, COMPLETED, CANCELLED, TECHNICAL_FAILURE]
+    STATUSES = [DRAFT, PENDING_APPROVAL, REJECTED, BROADCASTING, COMPLETED, CANCELLED, TECHNICAL_FAILURE, RETURNED]
 
     # a broadcast message can be edited while in one of these states
-    PRE_BROADCAST_STATUSES = [DRAFT, PENDING_APPROVAL, REJECTED]
+    PRE_BROADCAST_STATUSES = [DRAFT, PENDING_APPROVAL, REJECTED, RETURNED]
     LIVE_STATUSES = [BROADCASTING, COMPLETED, CANCELLED]
 
     # these are only the transitions we expect to administer via the API code.
     ALLOWED_STATUS_TRANSITIONS = {
         DRAFT: {PENDING_APPROVAL},
-        PENDING_APPROVAL: {REJECTED, BROADCASTING},
+        PENDING_APPROVAL: {REJECTED, BROADCASTING, RETURNED},
         REJECTED: {},
         BROADCASTING: {COMPLETED, CANCELLED},
         COMPLETED: {},
         CANCELLED: {},
         TECHNICAL_FAILURE: {},
+        RETURNED: {PENDING_APPROVAL},
     }
 
     name = db.Column(db.String, primary_key=True)
@@ -966,6 +968,7 @@ class BroadcastMessage(db.Model):
             "cancelled_at": get_dt_string_or_none(self.cancelled_at),
             "rejected_at": get_dt_string_or_none(self.rejected_at),
             "updated_at": get_dt_string_or_none(self.updated_at),
+            "submitted_at": get_dt_string_or_none(self.submitted_at),
             "created_by_id": get_uuid_string_or_none(self.created_by_id),
             "submitted_by_id": get_uuid_string_or_none(self.submitted_by_id),
             "updated_by_id": get_uuid_string_or_none(self.updated_by_id),
@@ -1000,6 +1003,30 @@ class BroadcastMessageHistory(db.Model):
             "created_at": get_dt_string_or_none(self.created_at),
             "created_by_id": get_uuid_string_or_none(self.created_by_id),
             "duration": get_interval_seconds_or_none(self.duration),
+        }
+
+
+class BroadcastMessageEditReasons(db.Model):
+    __tablename__ = "broadcast_message_edit_reasons"
+    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    broadcast_message_id = db.Column(UUID(as_uuid=True), db.ForeignKey("broadcast_message.id"))
+    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.datetime.now(datetime.timezone.utc))
+    submitted_at = db.Column(db.DateTime, nullable=False)
+    service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"))
+    created_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=True)
+    submitted_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=True)
+    edit_reason = db.Column(db.String, nullable=False)
+
+    def serialize(self):
+        return {
+            "id": str(self.id),
+            "broadcast_message_id": str(self.broadcast_message_id),
+            "service_id": str(self.service_id),
+            "created_at": get_dt_string_or_none(self.created_at),
+            "submitted_at": get_dt_string_or_none(self.submitted_at),
+            "created_by_id": get_uuid_string_or_none(self.created_by_id),
+            "edit_reason": str(self.edit_reason),
+            "submitted_by_id": get_uuid_string_or_none(self.submitted_by_id),
         }
 
 
