@@ -113,7 +113,7 @@ class Config(object):
     INVITATION_EXPIRATION_DAYS = 2
     EAS_APP_NAME = "api"
     NOTIFY_EMAIL_DOMAIN = "notify.tools"
-    
+
     PAGE_SIZE = 50
     API_PAGE_SIZE = 250
     TEST_MESSAGE_FILENAME = "Test message"
@@ -296,12 +296,8 @@ class Hosted(Config):
         "broadcast-tasks": {
             "url": f"{SQS_QUEUE_BASE_URL}/{QUEUE_PREFIX}broadcast-tasks",
         },
-        "periodic-tasks": {
-            "url": f"{SQS_QUEUE_BASE_URL}/{QUEUE_PREFIX}periodic-tasks"
-        },
-        "govuk-alerts": {
-            "url": f"{SQS_QUEUE_BASE_URL}/{QUEUE_PREFIX}govuk-alerts"
-        },
+        "periodic-tasks": {"url": f"{SQS_QUEUE_BASE_URL}/{QUEUE_PREFIX}periodic-tasks"},
+        "govuk-alerts": {"url": f"{SQS_QUEUE_BASE_URL}/{QUEUE_PREFIX}govuk-alerts"},
     }
 
     CELERY = {
@@ -334,6 +330,7 @@ class Test(Config):
         database=os.environ.get("TEST_DATABASE", "test_emergency_alerts"),
     )
     SQLALCHEMY_RECORD_QUERIES = False
+    DATABASE_STATEMENT_TIMEOUT_MS = 1200000
 
     CELERY = {**Config.CELERY, "broker_url": "you-forgot-to-mock-celery-in-your-tests://"}
 

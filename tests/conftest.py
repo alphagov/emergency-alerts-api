@@ -96,6 +96,13 @@ def _notify_db(notify_api, worker_id):
     with notify_api.app_context():
         upgrade(config, "head")
 
+        db.session.execute(
+            f"SET statement_timeout = {current_app.config['DATABASE_STATEMENT_TIMEOUT_MS']}",
+        )
+        db.session.execute(
+            f"SET application_name = {current_app.config['EAS_APP_NAME']}",
+        )
+
         yield db
 
         db.session.remove()

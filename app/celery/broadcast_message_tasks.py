@@ -1,10 +1,9 @@
-import os
 from datetime import datetime, timezone
 
 from emergency_alerts_utils.xml.common import HEADLINE
 from flask import current_app
 
-from app import cbc_proxy_client, db, notify_celery
+from app import cbc_proxy_client, notify_celery
 from app.clients.cbc_proxy import CBCProxyRetryableException
 from app.config import QueueNames, TaskNames
 from app.dao.broadcast_message_dao import (
@@ -18,7 +17,7 @@ from app.models import (
     BroadcastProviderMessageStatus,
 )
 from app.utils import format_sequential_number, is_local_host
-    
+
 
 class BroadcastIntegrityError(Exception):
     pass

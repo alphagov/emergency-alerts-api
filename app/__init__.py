@@ -71,6 +71,7 @@ def create_app(application):
         boto_session = boto3.Session(region_name=os.environ.get("AWS_REGION", "eu-west-2"))
         rds_client = boto_session.client("rds")
         with application.app_context():
+
             @event.listens_for(db.engine, "do_connect")
             def receive_do_connect(dialect, conn_rec, cargs, cparams):
                 token = get_authentication_token(rds_client)
@@ -287,7 +288,7 @@ def setup_sqlalchemy_events(app):
                 "SET application_name = %s",
                 (current_app.config["EAS_APP_NAME"],),
             )
-            current_app.logger.info(f"[CONNECT] sqlalchemy options set")
+            current_app.logger.info("[CONNECT] sqlalchemy options set")
 
         @event.listens_for(db.engine, "close")
         def close(dbapi_connection, connection_record):
@@ -342,9 +343,13 @@ def setup_sqlalchemy_events(app):
 
                 if checkout_at:
                     duration = time.monotonic() - checkout_at
-                    current_app.logger.debug(f"[CHECKIN]. Connection id {id(dbapi_connection)} used for {duration:.4f} seconds")
+                    current_app.logger.debug(
+                        f"[CHECKIN]. Connection id {id(dbapi_connection)} " f"used for {duration:.4f} seconds"
+                    )
                 else:
-                    current_app.logger.debug(f"[CHECKIN]. Connection id {id(dbapi_connection)} (no recorded checkout time)")
+                    current_app.logger.debug(
+                        f"[CHECKIN]. Connection id {id(dbapi_connection)} " "(no recorded checkout time)"
+                    )
 
             except Exception:
                 current_app.logger.exception("Exception caught for checkin event.")
