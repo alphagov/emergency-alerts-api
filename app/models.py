@@ -657,9 +657,7 @@ class VerifyCode(db.Model):
     )
     expiry_datetime = db.Column(db.DateTime, nullable=False)
     code_used = db.Column(db.Boolean, default=False)
-    created_at = db.Column(
-        db.DateTime, index=False, unique=False, nullable=False, default=utc_now
-    )
+    created_at = db.Column(db.DateTime, index=False, unique=False, nullable=False, default=utc_now)
 
     @property
     def code(self):
@@ -1322,9 +1320,7 @@ class FailedLogin(db.Model):
 
     id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     ip = db.Column(INET)
-    attempted_at = db.Column(
-        db.DateTime, index=True, unique=False, nullable=False, default=utc_now
-    )
+    attempted_at = db.Column(db.DateTime, index=True, unique=False, nullable=False, default=utc_now)
 
     def serialize(self):
         return {
@@ -1344,9 +1340,7 @@ class PasswordHistory(db.Model):
     id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = db.Column(UUID(as_uuid=True), default=uuid.uuid4)
     _password = db.Column(db.String, index=False, unique=False, nullable=False)
-    password_changed_at = db.Column(
-        db.DateTime, index=True, unique=False, nullable=False, default=utc_now
-    )
+    password_changed_at = db.Column(db.DateTime, index=True, unique=False, nullable=False, default=utc_now)
 
     @property
     def password(self):
