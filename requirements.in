@@ -2,12 +2,12 @@
 # with package version changes made in requirements.in
 
 cffi==1.15.1
-celery[sqs]==5.2.7
-cryptography==42.0.4
+celery[sqs]==5.5.2
+cryptography==44.0.3
 Flask-Bcrypt==1.0.1
-flask-marshmallow==0.14.0
+flask-marshmallow==1.3.0
 Flask-Migrate==3.1.0
-flask-sqlalchemy==3.0.2
+flask-sqlalchemy==3.0.5
 Flask==3.0.2
 click-datetime==0.2
 iso8601==1.1.0
@@ -15,19 +15,14 @@ itsdangerous==2.1.2
 jsonschema[format]==4.16.0
 marshmallow-sqlalchemy==0.28.1
 marshmallow==3.18.0
-psycopg2-binary==2.9.3
+psycopg2-binary==2.9.10
 PyJWT==2.5.0
 SQLAlchemy==1.4.41
 cachetools==5.2.0
 beautifulsoup4==4.11.1
-lxml==5.2.2
+lxml==5.4.0
 pwdpy==1.0.1
-
 notifications-python-client==8.0.0
-
-# gds-metrics requires prometheseus 0.2.0, override that requirement as 0.7.1 brings significant performance gains
-prometheus-client==0.14.1
-git+https://github.com/alphagov/gds_metrics_python.git@6f1840a57b6fb1ee40b7e84f2f18ec229de8aa72
 
 # Package for testing
 black==23.3.0
@@ -35,7 +30,7 @@ flake8==7.1.1
 flake8-bugbear==22.9.23
 flaky==3.7.0
 isort==5.12.0
-moto==5.0.5
+moto==5.1.3
 pytest==7.1.3
 pytest-env==0.6.2
 pytest-mock==3.9.0

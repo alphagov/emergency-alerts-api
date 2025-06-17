@@ -281,7 +281,7 @@ def verify_user_code(user_id):
         increment_failed_login_count(user_to_verify)
         log_auth_activity(user_to_verify, "Failed login")
         raise InvalidRequest("Code not found", status_code=404)
-    if datetime.now() > code.expiry_datetime:
+    if datetime.now(timezone.utc) > code.expiry_datetime.replace(tzinfo=timezone.utc):
         # sms and email
         add_failed_login_for_requester()
         increment_failed_login_count(user_to_verify)

@@ -508,7 +508,7 @@ def test_trigger_link_tests_invokes_cbc_proxy_client(
     )
 
     trigger_link_test(provider)
-    assert mock_send_link_test.called_once()
+    mock_send_link_test.assert_called_once()
 
 
 @freeze_time("2021-01-01 12:00")

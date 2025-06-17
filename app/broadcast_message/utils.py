@@ -127,7 +127,6 @@ def _create_broadcast_event(broadcast_message):
             BroadcastStatusType.BROADCASTING: BroadcastEventMessageType.ALERT,
             BroadcastStatusType.CANCELLED: BroadcastEventMessageType.CANCEL,
         }
-
         event = BroadcastEvent(
             service=service,
             broadcast_message=broadcast_message,
@@ -139,10 +138,11 @@ def _create_broadcast_event(broadcast_message):
             transmitted_starts_at=broadcast_message.starts_at,
             transmitted_finishes_at=broadcast_message.finishes_at,
         )
-
         dao_save_object(event)
-
-        send_broadcast_event.apply_async(kwargs={"broadcast_event_id": str(event.id)}, queue=QueueNames.BROADCASTS)
+        send_broadcast_event.apply_async(
+            queue=QueueNames.BROADCASTS,
+            kwargs={"broadcast_event_id": str(event.id)},
+        )
     elif broadcast_message.stubbed != service.restricted:
         # It's possible for a service to create a broadcast in trial mode, and then approve it after the
         # service is live (or vice versa). We don't think it's safe to send such broadcasts, as the service
