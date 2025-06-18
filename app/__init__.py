@@ -363,6 +363,10 @@ def mark_task_active(*args, **kwargs):
         extra={
             "task_prerun_args": [*args],
             "task_prerun_kwargs": {**kwargs},
+            "sender": kwargs["sender"],
+            "task_id": kwargs["task_id"],
+            "provider": kwargs["kwargs"]["provider"],
+            "task": kwargs["task"],
         }
     )
 
@@ -371,9 +375,15 @@ def mark_task_active(*args, **kwargs):
 def clear_task_context(*args, **kwargs):
     _in_celery_task.active = False
     current_app.logger.info(
-        "[task_prerun]",
+        "[task_postrun]",
         extra={
             "task_prerun_args": [*args],
             "task_prerun_kwargs": {**kwargs},
+            "sender": kwargs["sender"],
+            "task_id": kwargs["task_id"],
+            "provider": kwargs["kwargs"]["provider"],
+            "task": kwargs["task"],
+            "retval": kwargs["retval"],
+            "state": kwargs["state"],
         }
     )
