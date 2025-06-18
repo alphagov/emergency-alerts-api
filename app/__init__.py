@@ -360,43 +360,57 @@ def setup_sqlalchemy_events(app):
 
 @signals.task_prerun.connect
 def mark_task_active(*args, **kwargs):
-    task = kwargs.get("task", None)
-    if task is None:
-        return
-    
-    with _celery_tasks_lock:
-        _celery_tasks[task.request.id] = task
-
     current_app.logger.info(
-        f"[task_prerun] {task.name}",
+        "[task_prerun]",
         extra={
-            "task_id": task.request.id,
-            "task": task,
-            "provider": kwargs["kwargs"]["provider"],
-            "retries": task.request.retries,
-            "worker_hostname": task.request.hostname,
-            "delivery_info": task.request.delivery_info,
+            "args": args,
+            "kwargs": kwargs,
         }
     )
+    # task = kwargs.get("task", None)
+    # if task is None:
+    #     return
+    
+    # with _celery_tasks_lock:
+    #     _celery_tasks[task.request.id] = task
+
+    # current_app.logger.info(
+    #     f"[task_prerun] {task.name}",
+    #     extra={
+    #         "task_id": task.request.id,
+    #         "task": task,
+    #         "provider": kwargs["kwargs"]["provider"],
+    #         "retries": task.request.retries,
+    #         "worker_hostname": task.request.hostname,
+    #         "delivery_info": task.request.delivery_info,
+    #     }
+    # )
 
 
 @signals.task_postrun.connect
 def clear_task_context(*args, **kwargs):
-    with _celery_tasks_lock:
-        task = _celery_tasks.pop(kwargs["task_id"], None)
+    current_app.logger.info(
+        "[task_postrun]",
+        extra={
+            "args": args,
+            "kwargs": kwargs,
+        }
+    )
+    # with _celery_tasks_lock:
+    #     task = _celery_tasks.pop(kwargs["task_id"], None)
 
-    if task:
-        current_app.logger.info(
-            f"[task_postrun] {task.name}",
-            extra={
-                "task_id": task.request.id,
-                "task": task,
-                "retval": kwargs["retval"],
-                "state": kwargs["state"],
-            }
-        )
-    else:
-        current_app.logger.warning(
-            f"[task_postrun] Task {kwargs["task_id"]} not found in current tasks"
-        )
+    # if task:
+    #     current_app.logger.info(
+    #         f"[task_postrun] {task.name}",
+    #         extra={
+    #             "task_id": task.request.id,
+    #             "task": task,
+    #             "retval": kwargs["retval"],
+    #             "state": kwargs["state"],
+    #         }
+    #     )
+    # else:
+    #     current_app.logger.warning(
+    #         f"[task_postrun] Task {kwargs["task_id"]} not found in current tasks"
+    #     )
 
