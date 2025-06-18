@@ -358,8 +358,22 @@ def setup_sqlalchemy_events(app):
 @signals.task_prerun.connect
 def mark_task_active(*args, **kwargs):
     _in_celery_task.active = True
+    current_app.logger.info(
+        "[task_prerun]",
+        extra={
+            "task_prerun_args": [*args],
+            "task_prerun_kwargs": {**kwargs},
+        }
+    )
 
 
 @signals.task_postrun.connect
 def clear_task_context(*args, **kwargs):
     _in_celery_task.active = False
+    current_app.logger.info(
+        "[task_prerun]",
+        extra={
+            "task_prerun_args": [*args],
+            "task_prerun_kwargs": {**kwargs},
+        }
+    )
