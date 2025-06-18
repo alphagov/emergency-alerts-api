@@ -47,11 +47,8 @@ notification_provider_clients = NotificationProviderClients()
 api_user = LocalProxy(lambda: g.api_user)
 authenticated_service = LocalProxy(lambda: g.authenticated_service)
 
-_in_celery_task = threading.local()
-
-
-def is_in_celery_task():
-    return getattr(_in_celery_task, "active", False)
+_celery_tasks_lock = threading.Lock
+_celery_tasks = {}
 
 
 def create_app(application):
@@ -318,8 +315,14 @@ def setup_sqlalchemy_events(app):
                         "url_rule": request.url_rule.rule if request.url_rule else "No endpoint",
                     }
                 # celery apps
-                elif is_in_celery_task():
-                    current_app.logger.debug(f"[CHECKOUT] in celery task. Connection id {id(dbapi_connection)}")
+                elif _celery_tasks:
+                    current_app.logger.debug(
+                        f"[CHECKOUT] in celery task. Connection id {id(dbapi_connection)}",
+                        extra={
+                            "celery_tasks": _celery_tasks,
+                            "request": request,
+                        },
+                    )
                     connection_record.info["request_data"] = {
                         "method": "celery",
                         "host": current_app.config["EAS_APP_NAME"],
@@ -357,33 +360,43 @@ def setup_sqlalchemy_events(app):
 
 @signals.task_prerun.connect
 def mark_task_active(*args, **kwargs):
-    _in_celery_task.active = True
+    task = kwargs.get("task", None)
+    if task is None:
+        return
+    
+    with _celery_tasks_lock:
+        _celery_tasks[task.request.id] = task
+
     current_app.logger.info(
-        "[task_prerun]",
+        f"[task_prerun] {task.name}",
         extra={
-            "task_prerun_args": [*args],
-            "task_prerun_kwargs": {**kwargs},
-            "sender": kwargs["sender"],
-            "task_id": kwargs["task_id"],
+            "task_id": task.request.id,
+            "task": task,
             "provider": kwargs["kwargs"]["provider"],
-            "task": kwargs["task"],
+            "retries": task.request.retries,
+            "worker_hostname": task.request.hostname,
+            "delivery_info": task.request.delivery_info,
         }
     )
 
 
 @signals.task_postrun.connect
 def clear_task_context(*args, **kwargs):
-    _in_celery_task.active = False
-    current_app.logger.info(
-        "[task_postrun]",
-        extra={
-            "task_prerun_args": [*args],
-            "task_prerun_kwargs": {**kwargs},
-            "sender": kwargs["sender"],
-            "task_id": kwargs["task_id"],
-            "provider": kwargs["kwargs"]["provider"],
-            "task": kwargs["task"],
-            "retval": kwargs["retval"],
-            "state": kwargs["state"],
-        }
-    )
+    with _celery_tasks_lock:
+        task = _celery_tasks.pop(kwargs["task_id"], None)
+
+    if task:
+        current_app.logger.info(
+            f"[task_postrun] {task.name}",
+            extra={
+                "task_id": task.request.id,
+                "task": task,
+                "retval": kwargs["retval"],
+                "state": kwargs["state"],
+            }
+        )
+    else:
+        current_app.logger.warning(
+            f"[task_postrun] Task {kwargs["task_id"]} not found in current tasks"
+        )
+
