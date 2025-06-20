@@ -79,3 +79,6 @@ celerybeat-schedule
 
 # Migrations
 migrations/.current-alembic-head
+
+# Local celery control files
+control/
