@@ -36,7 +36,7 @@ def create_broadcast():
 
     cap_xml = request.get_data()
 
-    current_app.logger.info("Provided with CAP XML: %s", cap_xml)
+    current_app.logger.debug("Provided with CAP XML: %s", cap_xml)
 
     xml_validation_error = validate_xml(cap_xml, "CAP-v1.2.xsd")
     if xml_validation_error is not None:
@@ -57,6 +57,7 @@ def create_broadcast():
         broadcast_message = _cancel_or_reject_broadcast(
             broadcast_json["references"].split(","), authenticated_service.id
         )
+        current_app.logger.info("Cancelled/rejected BroadcastMessage %s", broadcast_message.id)
         return jsonify(broadcast_message.serialize()), 201
 
     else:
@@ -71,6 +72,9 @@ def create_broadcast():
         )
 
         if len(polygons) > 12 or polygons.point_count > 250:
+            current_app.logger.debug(
+                "Polygons were high (%d polygons / point count %d), simplifying", len(polygons), polygons.point_count
+            )
             simple_polygons = polygons.smooth.simplify
         else:
             simple_polygons = polygons
