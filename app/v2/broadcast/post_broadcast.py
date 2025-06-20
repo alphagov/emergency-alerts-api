@@ -22,6 +22,7 @@ from app.xml_schemas import validate_xml
 
 @v2_broadcast_blueprint.route("", methods=["POST"])
 def create_broadcast():
+    current_app.logger.info("Received POST broadcast")
     _check_service_has_permission(
         BROADCAST_TYPE,
         authenticated_service.permissions,
@@ -34,6 +35,8 @@ def create_broadcast():
         )
 
     cap_xml = request.get_data()
+
+    current_app.logger.info("Provided with CAP XML: %s", cap_xml)
 
     if not validate_xml(cap_xml, "CAP-v1.2.xsd"):
         raise BadRequestError(
@@ -82,7 +85,7 @@ def create_broadcast():
             },
             status=BroadcastStatusType.PENDING_APPROVAL,
             created_by_api_key_id=api_user.id,
-            stubbed=authenticated_service.restricted
+            stubbed=authenticated_service.restricted,
             # The client may pass in broadcast_json['expires'] but it’s
             # simpler for now to ignore it and have the rules around expiry
             # for broadcasts created with the API match those created from
