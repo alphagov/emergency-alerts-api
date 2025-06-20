@@ -1,7 +1,6 @@
 import os
 import random
 import string
-import threading
 import time
 import uuid
 from time import monotonic
@@ -47,11 +46,7 @@ notification_provider_clients = NotificationProviderClients()
 api_user = LocalProxy(lambda: g.api_user)
 authenticated_service = LocalProxy(lambda: g.authenticated_service)
 
-_in_celery_task = threading.local()
-
-
-def is_in_celery_task():
-    return getattr(_in_celery_task, "active", False)
+_celery_tasks = {}
 
 
 def create_app(application):
@@ -307,7 +302,7 @@ def setup_sqlalchemy_events(app):
 
                 # web requests
                 if has_request_context():
-                    current_app.logger.debug(
+                    current_app.logger.info(
                         f"[CHECKOUT] in request {request.method} "
                         f"{request.host}{request.url_rule} "
                         f"Connection id {id(dbapi_connection)}"
@@ -318,16 +313,26 @@ def setup_sqlalchemy_events(app):
                         "url_rule": request.url_rule.rule if request.url_rule else "No endpoint",
                     }
                 # celery apps
-                elif is_in_celery_task():
-                    current_app.logger.debug(f"[CHECKOUT] in celery task. Connection id {id(dbapi_connection)}")
+                elif _celery_tasks:
+                    task = _celery_tasks[next(iter(_celery_tasks))]
+                    current_app.logger.info(
+                        f"[CHECKOUT] in celery task. Connection id {id(dbapi_connection)}",
+                        extra={
+                            "celery_task": task.name,
+                            "celery_task_id": task.request.id,
+                            "retries": task.request.retries,
+                            "worker_hostname": task.request.hostname,
+                            "delivery_info": task.request.delivery_info,
+                        },
+                    )
                     connection_record.info["request_data"] = {
-                        "method": "celery",
+                        "method": f"celery task {task.name}",
                         "host": current_app.config["EAS_APP_NAME"],
-                        "url_rule": "task",
+                        "url_rule": task.request.id,
                     }
                 # anything else. migrations possibly, or flask cli commands.
                 else:
-                    current_app.logger.debug(f"[CHECKOUT] outside request. Connection id {id(dbapi_connection)}")
+                    current_app.logger.info(f"[CHECKOUT] outside request. Connection id {id(dbapi_connection)}")
                     connection_record.info["request_data"] = {
                         "method": "unknown",
                         "host": "unknown",
@@ -343,11 +348,11 @@ def setup_sqlalchemy_events(app):
 
                 if checkout_at:
                     duration = time.monotonic() - checkout_at
-                    current_app.logger.debug(
+                    current_app.logger.info(
                         f"[CHECKIN]. Connection id {id(dbapi_connection)} " f"used for {duration:.4f} seconds"
                     )
                 else:
-                    current_app.logger.debug(
+                    current_app.logger.info(
                         f"[CHECKIN]. Connection id {id(dbapi_connection)} " "(no recorded checkout time)"
                     )
 
@@ -357,9 +362,42 @@ def setup_sqlalchemy_events(app):
 
 @signals.task_prerun.connect
 def mark_task_active(*args, **kwargs):
-    _in_celery_task.active = True
+    task = kwargs.get("task", None)
+    if task is None:
+        return
+
+    _celery_tasks[task.request.id] = task    
+
+    try:
+        current_app.logger.info(
+            f"[celery task_prerun] {task.name}",
+            extra={
+                "task_id": kwargs["task_id"],
+                "broadcast_event_id": kwargs["kwargs"].get("broadcast_event_id", None),
+                "provider": kwargs["kwargs"].get("provider", None),
+            }
+        )
+    except Exception as e:
+        current_app.logger.error(f"Error logging task_prerun: {e}")
 
 
 @signals.task_postrun.connect
 def clear_task_context(*args, **kwargs):
-    _in_celery_task.active = False
+    task = _celery_tasks.pop(kwargs["task_id"], None)
+    if task is None:
+        current_app.logger.warning(f"Task {kwargs['task_id']} not found.")
+        return 
+
+    try:
+        current_app.logger.info(
+            f"[celery task_postrun] {task.name}",
+            extra={
+                "task_id": kwargs["task_id"],
+                "retval": kwargs["retval"],
+                "state": kwargs["state"],
+                "broadcast_event_id": kwargs["kwargs"].get("broadcast_event_id", None),
+                "provider": kwargs["kwargs"].get("provider", None),
+            }
+        )
+    except Exception as e:
+        current_app.logger.error(f"Error logging task_postrun: {e}")
