@@ -38,13 +38,14 @@ def create_broadcast():
 
     current_app.logger.info("Provided with CAP XML: %s", cap_xml)
 
-    if not validate_xml(cap_xml, "CAP-v1.2.xsd"):
+    xml_validation_error = validate_xml(cap_xml, "CAP-v1.2.xsd")
+    if xml_validation_error is not None:
         raise BadRequestError(
-            message="Request data is not valid CAP XML",
+            message="Request data is not valid CAP XML: " + xml_validation_error,
             status_code=400,
         )
-    broadcast_json = cap_xml_to_dict(cap_xml)
 
+    broadcast_json = cap_xml_to_dict(cap_xml)
     validate(broadcast_json, post_broadcast_schema)
 
     if broadcast_json["msgType"] == "Cancel":
