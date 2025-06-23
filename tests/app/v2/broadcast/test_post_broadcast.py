@@ -366,17 +366,19 @@ def test_valid_post_cap_xml_broadcast_sets_stubbed_to_true_for_training_mode_ser
 
 
 @pytest.mark.parametrize(
-    "xml_document",
+    ("xml_document", "error_suffix"),
     (
-        "<alert>Oh no</alert>",
-        '<?xml version="1.0" encoding="utf-8" ?><foo><bar/></foo>',
+        (
+            "<alert>Oh no</alert>",
+            "Element 'alert': No matching global declaration available for the validation root., line 1",
+        ),
+        (
+            '<?xml version="1.0" encoding="utf-8" ?><foo><bar/></foo>',
+            "Element 'foo': No matching global declaration available for the validation root., line 1",
+        ),
     ),
 )
-def test_invalid_post_cap_xml_broadcast_returns_400(
-    client,
-    sample_broadcast_service,
-    xml_document,
-):
+def test_invalid_post_cap_xml_broadcast_returns_400(client, sample_broadcast_service, xml_document, error_suffix):
     auth_header = create_service_authorization_header(service_id=sample_broadcast_service.id)
 
     response = client.post(
@@ -387,7 +389,12 @@ def test_invalid_post_cap_xml_broadcast_returns_400(
 
     assert response.status_code == 400
     assert json.loads(response.get_data(as_text=True)) == {
-        "errors": [{"error": "BadRequestError", "message": "Request data is not valid CAP XML"}],
+        "errors": [
+            {
+                "error": "BadRequestError",
+                "message": "Request data is not valid CAP XML: " + error_suffix,
+            }
+        ],
         "status_code": 400,
     }
 
