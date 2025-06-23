@@ -341,9 +341,6 @@ def test_large_polygon_is_simplified(
     assert len(response_json["areas"]["simple_polygons"]) == 1
     assert len(response_json["areas"]["simple_polygons"][0]) == 109
 
-    print(response_json["areas"]["simple_polygons"][0][0])
-    print(response_json["areas"]["simple_polygons"][0][-1])
-
     assert response_json["areas"]["simple_polygons"][0][0] == [54.418464, -2.987825]
     assert response_json["areas"]["simple_polygons"][0][-1] == [54.418464, -2.987825]
 
