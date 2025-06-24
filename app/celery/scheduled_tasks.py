@@ -21,7 +21,7 @@ from app.dao.users_dao import (
 from app.models import BroadcastMessage, BroadcastStatusType, Event
 
 
-@notify_celery.task(name="run-health-check")
+@notify_celery.task(name=TaskNames.RUN_HEALTH_CHECK)
 def run_health_check():
     try:
         time_stamp = int(time.time())
@@ -32,7 +32,7 @@ def run_health_check():
         raise
 
 
-@notify_celery.task(name="delete-verify-codes")
+@notify_celery.task(name=TaskNames.DELETE_VERIFY_CODES)
 def delete_verify_codes():
     try:
         start = datetime.now(timezone.utc)
@@ -46,7 +46,7 @@ def delete_verify_codes():
         raise
 
 
-@notify_celery.task(name="delete-invitations")
+@notify_celery.task(name=TaskNames.DELETE_INVITATIONS)
 def delete_invitations():
     try:
         start = datetime.now(timezone.utc)
@@ -61,7 +61,7 @@ def delete_invitations():
         raise
 
 
-@notify_celery.task(name="trigger-link-tests")
+@notify_celery.task(name=TaskNames.TRIGGER_LINK_TESTS)
 def trigger_link_tests():
     if current_app.config["CBC_PROXY_ENABLED"]:
         current_app.logger.info(
@@ -71,7 +71,7 @@ def trigger_link_tests():
             trigger_link_test.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
 
 
-@notify_celery.task(name="auto-expire-broadcast-messages")
+@notify_celery.task(name=TaskNames.AUTO_EXPIRE_BROADCAST_MESSAGES)
 def auto_expire_broadcast_messages():
     expired_broadcasts = BroadcastMessage.query.filter(
         BroadcastMessage.finishes_at <= datetime.now(),
@@ -95,7 +95,7 @@ def auto_expire_broadcast_messages():
         notify_celery.send_task(name=TaskNames.PUBLISH_GOVUK_ALERTS, queue=QueueNames.GOVUK_ALERTS)
 
 
-@notify_celery.task(name="remove-yesterdays-planned-tests-on-govuk-alerts")
+@notify_celery.task(name=TaskNames.REMOVE_YESTERDAYS_PLANNED_TESTS_ON_GOVUK_ALERTS)
 def remove_yesterdays_planned_tests_on_govuk_alerts():
     current_app.logger.info(
         "remove_yesterdays_planned_tests_on_govuk_alerts",
@@ -108,7 +108,7 @@ def remove_yesterdays_planned_tests_on_govuk_alerts():
     notify_celery.send_task(name=TaskNames.PUBLISH_GOVUK_ALERTS, queue=QueueNames.GOVUK_ALERTS)
 
 
-@notify_celery.task(name="delete-old-records-from-events-table")
+@notify_celery.task(name=TaskNames.DELETE_OLD_RECORDS_FROM_EVENTS_TABLE)
 def delete_old_records_from_events_table():
     delete_events_before = datetime.now(timezone.utc) - timedelta(weeks=52)
     event_query = Event.query.filter(Event.created_at < delete_events_before)
@@ -127,7 +127,7 @@ def delete_old_records_from_events_table():
     db.session.commit()
 
 
-@notify_celery.task(name="validate-functional-test-account-emails")
+@notify_celery.task(name=TaskNames.VALIDATE_FUNCTIONAL_TEST_ACCOUNT_EMAILS)
 def validate_functional_test_account_emails():
     try:
         user1 = get_user_by_email("emergency-alerts-tests+user1@digital.cabinet-office.gov.uk")
