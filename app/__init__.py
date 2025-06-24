@@ -366,7 +366,7 @@ def mark_task_active(*args, **kwargs):
     if task is None:
         return
 
-    _celery_tasks[task.request.id] = task    
+    _celery_tasks[task.request.id] = task
 
     try:
         current_app.logger.info(
@@ -375,7 +375,7 @@ def mark_task_active(*args, **kwargs):
                 "task_id": kwargs["task_id"],
                 "broadcast_event_id": kwargs["kwargs"].get("broadcast_event_id", None),
                 "provider": kwargs["kwargs"].get("provider", None),
-            }
+            },
         )
     except Exception as e:
         current_app.logger.error(f"Error logging task_prerun: {e}")
@@ -386,7 +386,7 @@ def clear_task_context(*args, **kwargs):
     task = _celery_tasks.pop(kwargs["task_id"], None)
     if task is None:
         current_app.logger.warning(f"Task {kwargs['task_id']} not found.")
-        return 
+        return
 
     try:
         current_app.logger.info(
@@ -397,7 +397,7 @@ def clear_task_context(*args, **kwargs):
                 "state": kwargs["state"],
                 "broadcast_event_id": kwargs["kwargs"].get("broadcast_event_id", None),
                 "provider": kwargs["kwargs"].get("provider", None),
-            }
+            },
         )
     except Exception as e:
         current_app.logger.error(f"Error logging task_postrun: {e}")
