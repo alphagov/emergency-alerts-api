@@ -1,18 +1,8 @@
 import os
 
 from celery.schedules import crontab
+from emergency_alerts_utils.celery import QueueNames, TaskNames
 from kombu import Exchange, Queue
-
-
-class QueueNames(object):
-    PERIODIC = "periodic-tasks"
-    BROADCASTS = "broadcast-tasks"
-    GOVUK_ALERTS = "govuk-alerts"
-
-
-class TaskNames(object):
-    PUBLISH_GOVUK_ALERTS = "publish-govuk-alerts"
-    TRIGGER_GOVUK_HEALTHCHECK = "trigger-govuk-alerts-healthcheck"
 
 
 class BroadcastProvider:

@@ -1,12 +1,12 @@
 import time
 from datetime import datetime, timedelta, timezone
 
+from emergency_alerts_utils.celery import QueueNames, TaskNames
 from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
 
 from app import db, notify_celery
 from app.celery.broadcast_message_tasks import trigger_link_test
-from app.config import QueueNames, TaskNames
 from app.dao.invited_org_user_dao import (
     delete_org_invitations_created_more_than_two_days_ago,
 )

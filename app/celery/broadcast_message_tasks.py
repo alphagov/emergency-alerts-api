@@ -1,11 +1,11 @@
 from datetime import datetime
 
+from emergency_alerts_utils.celery import QueueNames, TaskNames
 from emergency_alerts_utils.xml.common import HEADLINE
 from flask import current_app
 
 from app import cbc_proxy_client, notify_celery
 from app.clients.cbc_proxy import CBCProxyRetryableException
-from app.config import QueueNames, TaskNames
 from app.dao.broadcast_message_dao import (
     create_broadcast_provider_message,
     dao_get_broadcast_event_by_id,
