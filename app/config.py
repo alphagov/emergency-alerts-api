@@ -159,8 +159,8 @@ class Config(object):
         "worker_hijack_root_logger": False,
         "task_queues": [Queue(QUEUE_NAME, Exchange("default"), routing_key=QUEUE_NAME)],
         "beat_schedule": {
-            "run-health-check": {
-                "task": "run-health-check",
+            TaskNames.RUN_HEALTH_CHECK: {
+                "task": TaskNames.RUN_HEALTH_CHECK,
                 "schedule": crontab(minute="*/1"),
                 "options": {"queue": QueueNames.PERIODIC},
             },
@@ -169,38 +169,38 @@ class Config(object):
                 "schedule": crontab(minute="*/1"),
                 "options": {"queue": QueueNames.GOVUK_ALERTS},
             },
-            "trigger-link-tests": {
-                "task": "trigger-link-tests",
+            TaskNames.TRIGGER_LINK_TESTS: {
+                "task": TaskNames.TRIGGER_LINK_TESTS,
                 "schedule": crontab(minute="*/15"),
                 "options": {"queue": QueueNames.PERIODIC},
             },
-            "delete-verify-codes": {
-                "task": "delete-verify-codes",
+            TaskNames.DELETE_VERIFY_CODES: {
+                "task": TaskNames.DELETE_VERIFY_CODES,
                 "schedule": crontab(minute=10),
                 "options": {"queue": QueueNames.PERIODIC},
             },
-            "delete-invitations": {
-                "task": "delete-invitations",
+            TaskNames.DELETE_INVITATIONS: {
+                "task": TaskNames.DELETE_INVITATIONS,
                 "schedule": crontab(minute=20),
                 "options": {"queue": QueueNames.PERIODIC},
             },
-            "auto-expire-broadcast-messages": {
-                "task": "auto-expire-broadcast-messages",
+            TaskNames.AUTO_EXPIRE_BROADCAST_MESSAGES: {
+                "task": TaskNames.AUTO_EXPIRE_BROADCAST_MESSAGES,
                 "schedule": crontab(minute=40),
                 "options": {"queue": QueueNames.PERIODIC},
             },
-            "remove-yesterdays-planned-tests-on-govuk-alerts": {
-                "task": "remove-yesterdays-planned-tests-on-govuk-alerts",
+            TaskNames.REMOVE_YESTERDAYS_PLANNED_TESTS_ON_GOVUK_ALERTS: {
+                "task": TaskNames.REMOVE_YESTERDAYS_PLANNED_TESTS_ON_GOVUK_ALERTS,
                 "schedule": crontab(hour=00, minute=00),
                 "options": {"queue": QueueNames.PERIODIC},
             },
-            "delete-old-records-from-events-table": {
-                "task": "delete-old-records-from-events-table",
+            TaskNames.DELETE_OLD_RECORDS_FROM_EVENTS_TABLE: {
+                "task": TaskNames.DELETE_OLD_RECORDS_FROM_EVENTS_TABLE,
                 "schedule": crontab(hour=3, minute=00),
                 "options": {"queue": QueueNames.PERIODIC},
             },
-            "validate-functional-test-account-emails": {
-                "task": "validate-functional-test-account-emails",
+            TaskNames.VALIDATE_FUNCTIONAL_TEST_ACCOUNT_EMAILS: {
+                "task": TaskNames.VALIDATE_FUNCTIONAL_TEST_ACCOUNT_EMAILS,
                 "schedule": crontab(day_of_month="1"),
                 "options": {"queue": QueueNames.PERIODIC},
             },
