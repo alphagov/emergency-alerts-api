@@ -113,7 +113,6 @@ class Config(object):
     INVITATION_EXPIRATION_DAYS = 2
     EAS_APP_NAME = "api"
     NOTIFY_EMAIL_DOMAIN = "notify.tools"
-
     PAGE_SIZE = 50
     API_PAGE_SIZE = 250
     TEST_MESSAGE_FILENAME = "Test message"

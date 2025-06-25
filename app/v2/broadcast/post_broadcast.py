@@ -22,6 +22,7 @@ from app.xml_schemas import validate_xml
 
 @v2_broadcast_blueprint.route("", methods=["POST"])
 def create_broadcast():
+    current_app.logger.info("Received POST broadcast")
     _check_service_has_permission(
         BROADCAST_TYPE,
         authenticated_service.permissions,
@@ -35,13 +36,16 @@ def create_broadcast():
 
     cap_xml = request.get_data()
 
-    if not validate_xml(cap_xml, "CAP-v1.2.xsd"):
+    current_app.logger.debug("Provided with CAP XML: %s", cap_xml)
+
+    xml_validation_error = validate_xml(cap_xml, "CAP-v1.2.xsd")
+    if xml_validation_error is not None:
         raise BadRequestError(
-            message="Request data is not valid CAP XML",
+            message="Request data is not valid CAP XML: " + xml_validation_error,
             status_code=400,
         )
-    broadcast_json = cap_xml_to_dict(cap_xml)
 
+    broadcast_json = cap_xml_to_dict(cap_xml)
     validate(broadcast_json, post_broadcast_schema)
 
     if broadcast_json["msgType"] == "Cancel":
@@ -53,6 +57,7 @@ def create_broadcast():
         broadcast_message = _cancel_or_reject_broadcast(
             broadcast_json["references"].split(","), authenticated_service.id
         )
+        current_app.logger.info("Cancelled/rejected BroadcastMessage %s", broadcast_message.id)
         return jsonify(broadcast_message.serialize()), 201
 
     else:
@@ -67,6 +72,9 @@ def create_broadcast():
         )
 
         if len(polygons) > 12 or polygons.point_count > 250:
+            current_app.logger.debug(
+                "Polygons were high (%d polygons / point count %d), simplifying", len(polygons), polygons.point_count
+            )
             simple_polygons = polygons.smooth.simplify
         else:
             simple_polygons = polygons
@@ -82,7 +90,7 @@ def create_broadcast():
             },
             status=BroadcastStatusType.PENDING_APPROVAL,
             created_by_api_key_id=api_user.id,
-            stubbed=authenticated_service.restricted
+            stubbed=authenticated_service.restricted,
             # The client may pass in broadcast_json['expires'] but it’s
             # simpler for now to ignore it and have the rules around expiry
             # for broadcasts created with the API match those created from
