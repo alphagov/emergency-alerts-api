@@ -91,7 +91,7 @@ def _notify_db(notify_api, worker_id):
     # now db is initialised, run cleanup on it to remove any artifacts from
     # migrations. Otherwise the first test executed by a worker will be running
     # on a different db setup to other tests that run later.
-    _clean_database(db)
+    # _clean_database(db)
 
     with notify_api.app_context():
         upgrade(config, "head")
