@@ -156,7 +156,7 @@ test: ## Run tests
 	flake8 .
 	isort --check-only ./app ./tests
 	black --check .
-	. environment.sh && pytest -n auto --maxfail=10
+	pytest -n auto --maxfail=10
 
 .PHONY: pytests
 pytests: ## Run python tests only
