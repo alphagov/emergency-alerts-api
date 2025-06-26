@@ -41,6 +41,10 @@ DELIVERY_STATUS_CALLBACK_TYPE = "delivery_status"
 SERVICE_CALLBACK_TYPES = [DELIVERY_STATUS_CALLBACK_TYPE]
 
 
+def utc_now():
+    return datetime.datetime.now(datetime.timezone.utc)
+
+
 def filter_null_value_fields(obj):
     return dict(filter(lambda x: x[1] is not None, obj.items()))
 
@@ -653,7 +657,7 @@ class VerifyCode(db.Model):
     )
     expiry_datetime = db.Column(db.DateTime, nullable=False)
     code_used = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, index=False, unique=False, nullable=False, default=datetime.datetime.utcnow)
+    created_at = db.Column(db.DateTime, index=False, unique=False, nullable=False, default=utc_now)
 
     @property
     def code(self):
@@ -792,7 +796,7 @@ class AdminAction(db.Model):
 
     created_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), index=True, nullable=False)
     created_by = db.relationship("User", foreign_keys=[created_by_id])
-    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.datetime.now(datetime.timezone.utc))
+    created_at = db.Column(db.DateTime, nullable=False, default=utc_now)
 
     status = db.Column(db.Enum(*ADMIN_STATUS_LIST, name="admin_action_status_types"), nullable=False)
 
@@ -985,7 +989,7 @@ class BroadcastMessageHistory(db.Model):
     id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     broadcast_message_id = db.Column(UUID(as_uuid=True), db.ForeignKey("broadcast_message.id"))
     reference = db.Column(db.String(255), nullable=True)
-    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.datetime.now(datetime.timezone.utc))
+    created_at = db.Column(db.DateTime, nullable=False, default=utc_now)
     content = db.Column(db.String, nullable=False)
     service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"))
     created_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=True)
@@ -1010,7 +1014,7 @@ class BroadcastMessageEditReasons(db.Model):
     __tablename__ = "broadcast_message_edit_reasons"
     id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     broadcast_message_id = db.Column(UUID(as_uuid=True), db.ForeignKey("broadcast_message.id"))
-    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.datetime.now(datetime.timezone.utc))
+    created_at = db.Column(db.DateTime, nullable=False, default=utc_now)
     submitted_at = db.Column(db.DateTime, nullable=False)
     service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"))
     created_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=True)
@@ -1316,9 +1320,7 @@ class FailedLogin(db.Model):
 
     id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     ip = db.Column(INET)
-    attempted_at = db.Column(
-        db.DateTime, index=True, unique=False, nullable=False, default=datetime.datetime.now(datetime.timezone.utc)
-    )
+    attempted_at = db.Column(db.DateTime, index=True, unique=False, nullable=False, default=utc_now)
 
     def serialize(self):
         return {
@@ -1338,9 +1340,7 @@ class PasswordHistory(db.Model):
     id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = db.Column(UUID(as_uuid=True), default=uuid.uuid4)
     _password = db.Column(db.String, index=False, unique=False, nullable=False)
-    password_changed_at = db.Column(
-        db.DateTime, index=True, unique=False, nullable=False, default=datetime.datetime.now(datetime.timezone.utc)
-    )
+    password_changed_at = db.Column(db.DateTime, index=True, unique=False, nullable=False, default=utc_now)
 
     @property
     def password(self):

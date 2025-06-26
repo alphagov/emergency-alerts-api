@@ -13,8 +13,7 @@ from app.notify_api_flask_app import NotifyApiFlaskApp
 @pytest.fixture(scope="session")
 def notify_api():
     app = NotifyApiFlaskApp("test")
-    with app.app_context():
-        create_app(app)
+    create_app(app)
 
     # deattach server-error error handlers - error_handler_spec looks like:
     #   {'blueprint_name': {
@@ -70,12 +69,16 @@ def _notify_db(notify_api, worker_id):
     Manages the connection to the database. Generally this shouldn't be used, instead you should use the
     `notify_db_session` fixture which also cleans up any data you've got left over after your test run.
     """
+    from flask import current_app
+
     assert "test_emergency_alerts" in db.engine.url.database, "dont run tests against main db"
 
     # create a database for this worker thread -
-    from flask import current_app
-
     current_app.config["SQLALCHEMY_DATABASE_URI"] += "_{}".format(worker_id)
+
+    # get rid of the old SQLAlchemy instance because we can’t have multiple on the same app
+    notify_api.extensions.pop("sqlalchemy")
+
     # reinitalise the db so it picks up on the new test database name
     db.init_app(notify_api)
     create_test_db(current_app.config["SQLALCHEMY_DATABASE_URI"])
@@ -87,6 +90,13 @@ def _notify_db(notify_api, worker_id):
 
     with notify_api.app_context():
         upgrade(config, "head")
+
+        db.session.execute(
+            f"SET statement_timeout = {current_app.config['DATABASE_STATEMENT_TIMEOUT_MS']}",
+        )
+        db.session.execute(
+            f"SET application_name = {current_app.config['EAS_APP_NAME']}",
+        )
 
         yield db
 
@@ -104,8 +114,12 @@ def notify_db_session(_notify_db):
     """
     yield _notify_db.session
 
-    _notify_db.session.remove()
-    for tbl in reversed(_notify_db.metadata.sorted_tables):
+    _clean_database(_notify_db)
+
+
+def _clean_database(_db):
+    _db.session.remove()
+    for tbl in reversed(_db.metadata.sorted_tables):
         if tbl.name not in [
             "key_types",
             "organisation_types",
@@ -117,8 +131,8 @@ def notify_db_session(_notify_db):
             "broadcast_channel_types",
             "broadcast_provider_types",
         ]:
-            _notify_db.engine.execute(tbl.delete())
-    _notify_db.session.commit()
+            _db.engine.execute(tbl.delete())
+    _db.session.commit()
 
 
 @pytest.fixture

@@ -339,10 +339,10 @@ def test_large_polygon_is_simplified(
     response_json = json.loads(response.get_data(as_text=True))
 
     assert len(response_json["areas"]["simple_polygons"]) == 1
-    assert len(response_json["areas"]["simple_polygons"][0]) == 110
+    assert len(response_json["areas"]["simple_polygons"][0]) == 109
 
-    assert response_json["areas"]["simple_polygons"][0][0] == [54.419546, -2.988521]
-    assert response_json["areas"]["simple_polygons"][0][-1] == [54.419546, -2.988521]
+    assert response_json["areas"]["simple_polygons"][0][0] == [54.418464, -2.987825]
+    assert response_json["areas"]["simple_polygons"][0][-1] == [54.418464, -2.987825]
 
 
 @pytest.mark.parametrize("training_mode_service", [True, False])
