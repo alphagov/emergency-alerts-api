@@ -94,10 +94,10 @@ class CBCProxyClientBase(ABC):
         self._arn_prefix = arn_prefix
 
     def send_link_test(self):
-        self._send_link_test(self.primary_lambda, self.CBC_A)
-        self._send_link_test(self.primary_lambda, self.CBC_B)
         self._send_link_test(self.secondary_lambda, self.CBC_A)
         self._send_link_test(self.secondary_lambda, self.CBC_B)
+        self._send_link_test(self.primary_lambda, self.CBC_A)
+        self._send_link_test(self.primary_lambda, self.CBC_B)
 
     def _send_link_test(
         self,
