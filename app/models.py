@@ -906,7 +906,7 @@ class BroadcastMessage(db.Model):
     finishes_at = db.Column(db.DateTime, nullable=True)  # also isn't updated if user cancels
 
     # Set to true after GovUK has (re)published after being requested to
-    finished_govuk_acknowledged: bool = db.Column(db.Boolean, nullable=False)
+    finished_govuk_acknowledged: bool = db.Column(db.Boolean, nullable=False, default=False)
 
     # these times correspond to when
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
@@ -984,6 +984,7 @@ class BroadcastMessage(db.Model):
             "rejected_by_id": get_uuid_string_or_none(self.rejected_by_id),
             "rejection_reason": self.rejection_reason if self.rejection_reason else None,
             "rejected_by_api_key_id": self.rejected_by_api_key_id or None,
+            "finished_govuk_acknowledged": self.finished_govuk_acknowledged,
         }
 
 
