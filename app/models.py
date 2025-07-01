@@ -901,6 +901,9 @@ class BroadcastMessage(db.Model):
     starts_at = db.Column(db.DateTime, nullable=True)
     finishes_at = db.Column(db.DateTime, nullable=True)  # also isn't updated if user cancels
 
+    # Set to true after GovUK has (re)published after being requested to
+    finished_govuk_acknowledged: bool = db.Column(db.Boolean, nullable=False)
+
     # these times correspond to when
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
     approved_at = db.Column(db.DateTime, nullable=True)
