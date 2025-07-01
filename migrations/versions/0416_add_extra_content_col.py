@@ -19,4 +19,3 @@ def upgrade():
 
 def downgrade():
     op.drop_column("broadcast_message", "extra_content")
-
