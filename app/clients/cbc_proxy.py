@@ -185,7 +185,7 @@ class CBCProxyClientBase(ABC):
                     "cbc_target": cbc_target,
                     "python_module": __name__,
                     "error": str(e),
-                }
+                },
             )
             return False
         except Exception as e:
