@@ -7,6 +7,9 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app import db, notify_celery
 from app.celery.broadcast_message_tasks import trigger_link_test
+from app.dao.broadcast_message_dao import (
+    dao_get_all_finished_broadcast_messages_with_outstanding_actions,
+)
 from app.dao.invited_org_user_dao import (
     delete_org_invitations_created_more_than_two_days_ago,
 )
@@ -84,17 +87,6 @@ def auto_expire_broadcast_messages():
 
     db.session.commit()
 
-    if expired_broadcasts:
-        current_app.logger.info(
-            "auto_expire_broadcast_messages",
-            extra={
-                "python_module": __name__,
-                "send_task": TaskNames.PUBLISH_GOVUK_ALERTS,
-                "target_queue": QueueNames.GOVUK_ALERTS,
-            },
-        )
-        notify_celery.send_task(name=TaskNames.PUBLISH_GOVUK_ALERTS, queue=QueueNames.GOVUK_ALERTS)
-
 
 @notify_celery.task(name=TaskNames.REMOVE_YESTERDAYS_PLANNED_TESTS_ON_GOVUK_ALERTS)
 def remove_yesterdays_planned_tests_on_govuk_alerts():
@@ -158,3 +150,26 @@ def validate_functional_test_account_emails():
                 "target_queue": QueueNames.PERIODIC,
             },
         )
+
+
+@notify_celery.task(name=TaskNames.QUEUE_AFTER_ALERT_ACTIVITIES)
+def queue_after_alert_activities():
+    """Check for any recently expired alerts and process any activities that are due on them"""
+
+    current_app.logger.info("Queuing any post-alert activities")
+
+    # Find recently expired which have one or more actions due
+    expired_and_pending_alerts = dao_get_all_finished_broadcast_messages_with_outstanding_actions()
+
+    if len(expired_and_pending_alerts) > 0:
+        current_app.logger.info(
+            "There are %d recently expired/cancelled alerts with pending activities", len(expired_and_pending_alerts)
+        )
+
+        if any(not x.finished_govuk_acknowledged for x in expired_and_pending_alerts):
+            # This need not be idempotent as any regeneration is 'free', and we rely upon
+            # GovUK calling us back to mark the action as 'done' instead of just assuming.
+            current_app.logger.info("Requesting GovUK publish")
+            notify_celery.send_task(name=TaskNames.PUBLISH_GOVUK_ALERTS, queue=QueueNames.GOVUK_ALERTS)
+
+        # Down the line we will look to request logs from MNOs

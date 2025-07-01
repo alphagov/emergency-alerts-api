@@ -13,11 +13,12 @@ from app.celery.scheduled_tasks import (
     delete_invitations,
     delete_old_records_from_events_table,
     delete_verify_codes,
+    queue_after_alert_activities,
     remove_yesterdays_planned_tests_on_govuk_alerts,
     trigger_link_tests,
     validate_functional_test_account_emails,
 )
-from app.models import BroadcastStatusType, Event, User
+from app.models import BroadcastMessage, BroadcastStatusType, Event, User
 from tests.app.db import create_broadcast_message
 from tests.conftest import set_config
 
@@ -162,3 +163,25 @@ def test_validate_functional_test_account_emails(notify_db_session):
 
     assert users[0].email_access_validated_at > now
     assert users[1].email_access_validated_at > now
+
+
+@pytest.mark.parametrize(
+    "finished_govuk_acknowledged",
+    (True, False),
+)
+def test_queue_after_alert_activities_does_govuk_refresh(notify_api, mocker, finished_govuk_acknowledged):
+    celery_mock = mocker.patch(
+        "app.notify_celery.send_task",
+    )
+    mocker.patch(
+        "app.celery.scheduled_tasks.dao_get_all_finished_broadcast_messages_with_outstanding_actions",
+        return_value=[BroadcastMessage(finished_govuk_acknowledged=finished_govuk_acknowledged)],
+    )
+
+    queue_after_alert_activities()
+
+    # We expect a publish event if anything returned looked to be pending (i.e. not acknowledged)
+    if not finished_govuk_acknowledged:
+        celery_mock.assert_called_once_with(name=TaskNames.PUBLISH_GOVUK_ALERTS, queue=QueueNames.GOVUK_ALERTS)
+    else:
+        celery_mock.assert_not_called()
