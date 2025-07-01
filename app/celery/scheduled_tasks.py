@@ -27,6 +27,7 @@ def run_health_check():
         time_stamp = int(time.time())
         with open("/eas/emergency-alerts-api/celery-beat-healthcheck", mode="w") as file:
             file.write(str(time_stamp))
+        current_app.logger.info(f"file.write successful - celery health check timestamp: {time_stamp}")
     except Exception:
         current_app.logger.exception("Unable to generate health-check timestamp", extra={"python_module": __name__})
         raise
@@ -144,6 +145,8 @@ def validate_functional_test_account_emails():
         save_model_user(user6, validated_email_access=True)
         admin = get_user_by_email("emergency-alerts-tests-admin@digital.cabinet-office.gov.uk")
         save_model_user(admin, validated_email_access=True)
+        admin2 = get_user_by_email("emergency-alerts-tests-admin+2@digital.cabinet-office.gov.uk")
+        save_model_user(admin2, validated_email_access=True)
     except SQLAlchemyError as e:
         current_app.logger.exception(e)
     else:

@@ -130,17 +130,18 @@ run-celery: ## Run celery
 	. environment.sh && celery \
 		-A run_celery.notify_celery worker \
 		--uid=$(shell id -u easuser) \
-		--pidfile=/tmp/celery.pid \
+		--pidfile=/tmp/api_celery_worker.pid \
 		--prefetch-multiplier=1 \
-		--loglevel=WARNING \
+		--loglevel=INFO \
 		--autoscale=8,1 \
-		--hostname=0.0.0.0
+		--hostname='$(SERVICE)@%h'
 
 .PHONY: run-celery-beat
 run-celery-beat: ## Run celery beat
 	. environment.sh && celery \
 		-A run_celery.notify_celery beat \
-		--loglevel=WARNING
+		--pidfile=/tmp/celery_beat.pid \
+		--loglevel=INFO
 
 .PHONY: help
 help:
@@ -162,9 +163,13 @@ pytests: ## Run python tests only
 	pytest -n auto --maxfail=5
 
 .PHONY: freeze-requirements
-freeze-requirements: ## Pin all requirements including sub dependencies into requirements.txt
-	pip install --upgrade pip-tools
-	pip-compile requirements.in
+freeze-requirements: ## create static requirements.txt
+	${PYTHON_EXECUTABLE_PREFIX}pip3 install --upgrade setuptools pip-tools
+	${PYTHON_EXECUTABLE_PREFIX}pip-compile requirements.in
+
+.PHONY: fix-imports
+fix-imports:
+	isort ./app ./tests
 
 .PHONY: bump-utils
 bump-utils:  # Bump emergency-alerts-utils package to latest version
@@ -173,3 +178,8 @@ bump-utils:  # Bump emergency-alerts-utils package to latest version
 .PHONY: clean
 clean:
 	rm -rf node_modules cache target venv .coverage build tests/.cache ${CF_MANIFEST_PATH}
+
+.PHONY: uninstall-packages
+uninstall-packages:
+	python -m pip uninstall emergency-alerts-utils -y
+	python -m pip freeze | xargs python -m pip uninstall -y
