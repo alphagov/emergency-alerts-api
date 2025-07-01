@@ -200,6 +200,8 @@ def update_broadcast_message(service_id, broadcast_message_id):
         broadcast_message.finishes_at = _parse_nullable_datetime(data["finishes_at"])
     if "ids" in areas and "simple_polygons" in areas:
         broadcast_message.areas = areas
+    if "extra_content" in data:
+        broadcast_message.extra_content = data["extra_content"]
 
     broadcast_message.updated_by_id = updating_user
     dao_save_object(broadcast_message)
