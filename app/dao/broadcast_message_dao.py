@@ -1,8 +1,8 @@
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from flask import current_app
-from sqlalchemy import asc, case, desc
+from sqlalchemy import and_, asc, case, desc, or_
 from sqlalchemy.orm import aliased
 
 from app import db
@@ -198,6 +198,32 @@ def dao_get_all_pre_broadcast_messages():
         .order_by(desc(BroadcastMessage.starts_at))
         .all()
     )
+
+
+def dao_get_all_finished_broadcast_messages_with_outstanding_actions() -> list[BroadcastMessage]:
+    """
+    Find all BroadcastMessages that have finished (either expired or been cancelled)
+    and have one or more flags indicating actions due.
+    """
+
+    now = datetime.now(timezone.utc)
+    return BroadcastMessage.query.filter(
+        and_(
+            or_(
+                # Get those recently cancelled
+                BroadcastMessage.status == BroadcastStatusType.CANCELLED,
+                # Or have COMPLETED or are BROADCASTING and have naturally finished
+                # (Transitioning to COMPLETED occurs as a background activity)
+                BroadcastMessage.status == BroadcastStatusType.COMPLETED,
+                and_(
+                    BroadcastMessage.finishes_at < now,
+                    BroadcastMessage.status == BroadcastStatusType.BROADCASTING,
+                ),
+            ),
+            # And has an action due
+            BroadcastMessage.finished_govuk_acknowledged == False,  # noqa: E712
+        ),
+    ).all()
 
 
 def dao_purge_old_broadcast_messages(service, days_older_than=30, dry_run=False):
