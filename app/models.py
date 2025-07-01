@@ -934,6 +934,8 @@ class BroadcastMessage(db.Model):
     rejected_by_api_key_id = db.Column(UUID(as_uuid=True), db.ForeignKey("api_keys.id"), nullable=True)
     rejected_by_api_key = db.relationship("ApiKey", foreign_keys=[rejected_by_api_key_id])
 
+    extra_content = db.Column(db.String, nullable=True)
+
     reference = db.Column(db.String(255), nullable=True)
     cap_event = db.Column(db.String(255), nullable=True)
 
@@ -962,6 +964,7 @@ class BroadcastMessage(db.Model):
             "template_name": self.template.name if self.template else None,
             "personalisation": self.personalisation if self.template else None,
             "content": self.content,
+            "extra_content": self.extra_content or None,
             "areas": self.areas,
             "status": self.status,
             "duration": get_interval_seconds_or_none(self.duration),
