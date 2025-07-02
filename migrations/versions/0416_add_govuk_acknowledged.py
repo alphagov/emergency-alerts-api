@@ -14,7 +14,7 @@ down_revision = "0415_add_edit_reasons"
 
 
 def upgrade():
-    op.add_column("broadcast_message", sa.Column("finished_govuk_acknowledged", sa.Boolean()))
+    op.add_column("broadcast_message", sa.Column("finished_govuk_acknowledged", sa.Boolean(), default=False))
     op.execute("UPDATE broadcast_message SET finished_govuk_acknowledged = true")
     op.alter_column("broadcast_message", "finished_govuk_acknowledged", nullable=False)
 
