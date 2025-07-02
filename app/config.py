@@ -256,7 +256,7 @@ class Hosted(Config):
         },
         "trigger-link-tests": {
             "task": "trigger-link-tests",
-            "schedule": crontab(minute="*/15"),
+            "schedule": crontab(minute="*/3"),
             "options": {"queue": QueueNames.PERIODIC},
         },
         "delete-verify-codes": {
