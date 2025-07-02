@@ -178,15 +178,32 @@ class CBCProxyClientBase(ABC):
                 InvocationType="RequestResponse",
                 Payload=payload_bytes,
             )
-        except botocore.exceptions.ClientError:
-            current_app.logger.error(f"Boto3 ClientError on lambda {lambda_name}", extra={"python_module": __name__})
-            success = False
-            return success
+        except botocore.exceptions.ClientError as e:
+            current_app.logger.error(
+                f"Boto3 ClientError on lambda {lambda_name}",
+                extra={
+                    "cbc_target": cbc_target,
+                    "python_module": __name__,
+                    "error": str(e),
+                },
+            )
+            return False
+        except Exception as e:
+            current_app.logger.error(
+                f"Unexpected error calling lambda {lambda_name}",
+                extra={
+                    "cbc_target": cbc_target,
+                    "python_module": __name__,
+                    "error": str(e),
+                },
+            )
+            return False
 
         if response["StatusCode"] > 299:
             current_app.logger.info(
                 f"Error calling lambda {lambda_name}",
                 extra={
+                    "cbc_target": cbc_target,
                     "python_module": __name__,
                     "status_code": response["StatusCode"],
                     "result_payload": _convert_lambda_payload_to_json(response.get("Payload").read()),
@@ -198,6 +215,7 @@ class CBCProxyClientBase(ABC):
             current_app.logger.info(
                 f"FunctionError calling lambda {lambda_name}",
                 extra={
+                    "cbc_target": cbc_target,
                     "python_module": __name__,
                     "status_code": response["StatusCode"],
                     "result_payload": _convert_lambda_payload_to_json(response.get("Payload").read()),
@@ -206,10 +224,10 @@ class CBCProxyClientBase(ABC):
             success = False
 
         else:
-            target = payload["cbc_target"]
             current_app.logger.info(
-                f"Success calling lambda {lambda_name} with CBC target {target}",
+                f"Success calling lambda {lambda_name}",
                 extra={
+                    "cbc_target": cbc_target,
                     "python_module": __name__,
                     "status_code": response["StatusCode"],
                 },
