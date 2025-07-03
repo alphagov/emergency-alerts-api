@@ -4,7 +4,8 @@ from emergency_alerts_utils.xml.common import HEADLINE
 from flask import current_app
 
 from app import cbc_proxy_client, notify_celery
-from app.clients.cbc_proxy import CBCProxyRetryableException
+
+# from app.clients.cbc_proxy import CBCProxyRetryableException
 from app.config import QueueNames, TaskNames
 from app.dao.broadcast_message_dao import (
     create_broadcast_provider_message,
@@ -146,7 +147,7 @@ def send_broadcast_event(broadcast_event_id):
 @notify_celery.task(
     bind=True,
     name="send-broadcast-provider-message",
-    autoretry_for=(CBCProxyRetryableException,),
+    # autoretry_for=(CBCProxyRetryableException,),
     retry_backoff=3,
     retry_jitter=False,
     max_retries=5,
