@@ -230,7 +230,7 @@ def init_app(app):
 
     @app.after_request
     def after_request(response):
-        response.headers.add("Access-Control-Allow-Origin", "*")
+        response.headers.add("Access-Control-Allow-Origin", app.config["ADMIN_EXTERNAL_URL"])
         response.headers.add("Access-Control-Allow-Headers", "Content-Type,Authorization")
         response.headers.add("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE")
         response.headers.add("Strict-Transport-Security", "max-age=63072000; includeSubdomains; preload")
