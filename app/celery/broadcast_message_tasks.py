@@ -251,7 +251,7 @@ def trigger_link_test(provider):
     cbc_proxy_client.get_proxy(provider).send_link_test()
 
 
-@notify_celery.task(name="trigger-link-test-1")
+@notify_celery.task(name="trigger-link-test-primary-to-A")
 def trigger_link_test_primary_to_A(provider):
     current_app.logger.info(
         "trigger_link_test_primary_to_A", extra={"python_module": __name__, "target_provider": provider}
@@ -259,7 +259,7 @@ def trigger_link_test_primary_to_A(provider):
     cbc_proxy_client.get_proxy(provider).send_link_test_primary_to_A()
 
 
-@notify_celery.task(name="trigger-link-test-2")
+@notify_celery.task(name="trigger-link-test-primary-to-B")
 def trigger_link_test_primary_to_B(provider):
     current_app.logger.info(
         "trigger_link_test_primary_to_B", extra={"python_module": __name__, "target_provider": provider}
@@ -267,7 +267,7 @@ def trigger_link_test_primary_to_B(provider):
     cbc_proxy_client.get_proxy(provider).send_link_test_primary_to_B()
 
 
-@notify_celery.task(name="trigger-link-test-3")
+@notify_celery.task(name="trigger-link-test-secondary-to-A")
 def trigger_link_test_secondary_to_A(provider):
     current_app.logger.info(
         "trigger_link_test_secondary_to_A", extra={"python_module": __name__, "target_provider": provider}
@@ -275,7 +275,7 @@ def trigger_link_test_secondary_to_A(provider):
     cbc_proxy_client.get_proxy(provider).send_link_test_secondary_to_A()
 
 
-@notify_celery.task(name="trigger-link-test-4")
+@notify_celery.task(name="trigger-link-test-secondary-to-B")
 def trigger_link_test_secondary_to_B(provider):
     current_app.logger.info(
         "trigger_link_test_secondary_to_B", extra={"python_module": __name__, "target_provider": provider}
