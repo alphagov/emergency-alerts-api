@@ -417,3 +417,34 @@ def failure_handler(*args, **kwargs):
         )
     except Exception as e:
         current_app.logger.error(f"Error logging task_failure: {e}")
+
+
+@signals.task_retry.connect
+def retry_handler(*args, **kwargs):
+    try:
+        current_app.logger.warning(
+            f"[celery task_retry] {kwargs['task_id']}",
+            extra={
+                "request": kwargs["request"],
+                "reason": str(kwargs["reason"]),
+                "exception_info": kwargs["einfo"],
+            },
+        )
+    except Exception as e:
+        current_app.logger.error(f"Error logging task_retry: {e}")
+
+
+@signals.task_internal_error.connect
+def internal_error_handler(*args, **kwargs):
+    try:
+        current_app.logger.error(
+            f"[celery task_internal_error] {kwargs['task_id']}",
+            extra={
+                "task_id": kwargs["task_id"],
+                "exception": kwargs["exception"],
+                "traceback": kwargs["traceback"],
+                "exception_info": kwargs["einfo"],
+            },
+        )
+    except Exception as e:
+        current_app.logger.error(f"Error logging task_internal_error: {e}")
