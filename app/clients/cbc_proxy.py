@@ -99,6 +99,18 @@ class CBCProxyClientBase(ABC):
         self._send_link_test(self.secondary_lambda, self.CBC_A)
         self._send_link_test(self.secondary_lambda, self.CBC_B)
 
+    def send_link_test_primary_to_A(self):
+        self._send_link_test(self.primary_lambda, self.CBC_A)
+
+    def send_link_test_primary_to_B(self):
+        self._send_link_test(self.primary_lambda, self.CBC_B)
+
+    def send_link_test_secondary_to_A(self):
+        self._send_link_test(self.secondary_lambda, self.CBC_A)
+
+    def send_link_test_secondary_to_B(self):
+        self._send_link_test(self.secondary_lambda, self.CBC_B)
+
     def _send_link_test(
         self,
         lambda_name,

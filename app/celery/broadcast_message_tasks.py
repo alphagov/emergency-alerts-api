@@ -249,3 +249,27 @@ def send_broadcast_provider_message(self, broadcast_event_id, provider):
 def trigger_link_test(provider):
     current_app.logger.info("trigger_link_test", extra={"python_module": __name__, "target_provider": provider})
     cbc_proxy_client.get_proxy(provider).send_link_test()
+
+
+@notify_celery.task(name="trigger-link-test-1")
+def trigger_link_test_1(provider):
+    current_app.logger.info("trigger_link_test", extra={"python_module": __name__, "target_provider": provider})
+    cbc_proxy_client.get_proxy(provider).send_link_test_primary_to_A()
+
+
+@notify_celery.task(name="trigger-link-test-2")
+def trigger_link_test_2(provider):
+    current_app.logger.info("trigger_link_test", extra={"python_module": __name__, "target_provider": provider})
+    cbc_proxy_client.get_proxy(provider).send_link_test_primary_to_B()
+
+
+@notify_celery.task(name="trigger-link-test-3")
+def trigger_link_test_3(provider):
+    current_app.logger.info("trigger_link_test", extra={"python_module": __name__, "target_provider": provider})
+    cbc_proxy_client.get_proxy(provider).send_link_test_secondary_to_A()
+
+
+@notify_celery.task(name="trigger-link-test-4")
+def trigger_link_test_4(provider):
+    current_app.logger.info("trigger_link_test", extra={"python_module": __name__, "target_provider": provider})
+    cbc_proxy_client.get_proxy(provider).send_link_test_secondary_to_B()
