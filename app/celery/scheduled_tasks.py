@@ -8,10 +8,10 @@ from app import db, notify_celery
 
 # from app.celery.broadcast_message_tasks import trigger_link_test
 from app.celery.broadcast_message_tasks import (
-    trigger_link_test_1,
-    trigger_link_test_2,
-    trigger_link_test_3,
-    trigger_link_test_4,
+    trigger_link_test_primary_to_A,
+    trigger_link_test_primary_to_B,
+    trigger_link_test_secondary_to_A,
+    trigger_link_test_secondary_to_B,
 )
 from app.config import QueueNames, TaskNames
 from app.dao.invited_org_user_dao import (
@@ -77,10 +77,10 @@ def trigger_link_tests():
         )
         for cbc_name in current_app.config["ENABLED_CBCS"]:
             # trigger_link_test.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
-            trigger_link_test_1.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
-            trigger_link_test_2.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
-            trigger_link_test_3.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
-            trigger_link_test_4.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
+            trigger_link_test_primary_to_A.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
+            trigger_link_test_primary_to_B.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
+            trigger_link_test_secondary_to_A.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
+            trigger_link_test_secondary_to_B.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
 
 
 @notify_celery.task(name="auto-expire-broadcast-messages")
