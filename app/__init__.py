@@ -423,7 +423,7 @@ def failure_handler(*args, **kwargs):
 def retry_handler(*args, **kwargs):
     try:
         current_app.logger.warning(
-            f"[celery task_retry] {kwargs['task_id']}",
+            "[celery task_retry]",
             extra={
                 "request": kwargs["request"],
                 "reason": str(kwargs["reason"]),
@@ -448,3 +448,45 @@ def internal_error_handler(*args, **kwargs):
         )
     except Exception as e:
         current_app.logger.error(f"Error logging task_internal_error: {e}")
+
+
+@signals.task_success.connect
+def success_handler(*args, **kwargs):
+    try:
+        current_app.logger.info(
+            "[celery task_success]",
+            extra={
+                "result": kwargs["result"],
+            },
+        )
+    except Exception as e:
+        current_app.logger.error(f"Error logging task_success: {e}")
+
+
+@signals.task_unknown.connect
+def unknown_handler(*args, **kwargs):
+    try:
+        current_app.logger.warning(
+            f"[celery task_unknown] {kwargs['name']}",
+            extra={
+                "task_id": kwargs["id"],
+                "raw_message": kwargs["message"],
+                "unknown_exc": kwargs["exc"],
+            },
+        )
+    except Exception as e:
+        current_app.logger.error(f"Error logging task_unknown: {e}")
+
+
+@signals.task_rejected.connect
+def rejected_handler(*args, **kwargs):
+    try:
+        current_app.logger.warning(
+            "[celery task_rejected]",
+            extra={
+                "raw_message": kwargs["message"],
+                "unknown_exc": kwargs["exc"],
+            },
+        )
+    except Exception as e:
+        current_app.logger.error(f"Error logging task_rejected: {e}")
