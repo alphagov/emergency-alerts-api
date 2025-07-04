@@ -306,12 +306,12 @@ class Hosted(Config):
             "predefined_queues": PREDEFINED_SQS_QUEUES,
             "is_secure": True,
             "task_acks_late": True,
-            "task_reject_on_worker_lost": True,
         },
         "timezone": "UTC",
         "imports": [f"app.celery.{TASK_IMPORTS}"],
         "task_queues": [Queue(QUEUE_NAME, Exchange("default"), routing_key=QUEUE_NAME)],
         "worker_max_tasks_per_child": 10,
+        "worker_soft_shutdown_timeout": 30,  # Lambda invocation window
         "beat_schedule": BEAT_SCHEDULE,
     }
 
