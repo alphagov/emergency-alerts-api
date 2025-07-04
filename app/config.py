@@ -306,6 +306,7 @@ class Hosted(Config):
             "predefined_queues": PREDEFINED_SQS_QUEUES,
             "is_secure": True,
             "task_acks_late": True,
+            "task_reject_on_worker_lost": True,
         },
         "timezone": "UTC",
         "imports": [f"app.celery.{TASK_IMPORTS}"],
