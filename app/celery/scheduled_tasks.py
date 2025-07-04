@@ -8,6 +8,7 @@ from app import db, notify_celery
 
 # from app.celery.broadcast_message_tasks import trigger_link_test
 from app.celery.broadcast_message_tasks import (
+    trigger_link_test,
     trigger_link_test_primary_to_A,
     trigger_link_test_primary_to_B,
     trigger_link_test_secondary_to_A,
@@ -81,6 +82,16 @@ def trigger_link_tests():
             trigger_link_test_primary_to_B.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
             trigger_link_test_secondary_to_A.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
             trigger_link_test_secondary_to_B.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
+
+
+@notify_celery.task(name="trigger-all-link-tests")
+def trigger_all_link_tests():
+    if current_app.config["CBC_PROXY_ENABLED"]:
+        current_app.logger.info(
+            "trigger_link_tests", extra={"python_module": __name__, "target_queue": QueueNames.BROADCASTS}
+        )
+        for cbc_name in current_app.config["ENABLED_CBCS"]:
+            trigger_link_test.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
 
 
 @notify_celery.task(name="auto-expire-broadcast-messages")
