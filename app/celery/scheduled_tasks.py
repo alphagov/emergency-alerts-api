@@ -70,10 +70,6 @@ def trigger_link_tests():
         )
         for cbc_name in current_app.config["ENABLED_CBCS"]:
             trigger_link_test.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
-            # trigger_link_test_primary_to_A.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
-            # trigger_link_test_primary_to_B.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
-            # trigger_link_test_secondary_to_A.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
-            # trigger_link_test_secondary_to_B.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
 
 
 @notify_celery.task(name="auto-expire-broadcast-messages")

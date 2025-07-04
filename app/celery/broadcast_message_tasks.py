@@ -246,14 +246,16 @@ def send_broadcast_provider_message(self, broadcast_event_id, provider):
 
 
 @notify_celery.task(name="trigger-decoupled-link-tests")
-def trigger_decoupled_link_tests(provider):
-    current_app.logger.info(
-        "trigger_decoupled_link_tests", extra={"python_module": __name__, "target_provider": provider}
-    )
-    cbc_proxy_client.get_proxy(provider).send_link_test_primary_to_A()
-    cbc_proxy_client.get_proxy(provider).send_link_test_primary_to_B()
-    cbc_proxy_client.get_proxy(provider).send_link_test_secondary_to_A()
-    cbc_proxy_client.get_proxy(provider).send_link_test_secondary_to_B()
+def trigger_decoupled_link_tests():
+    if current_app.config["CBC_PROXY_ENABLED"]:
+        current_app.logger.info(
+            "trigger_decoupled_link_tests", extra={"python_module": __name__, "target_queue": QueueNames.BROADCASTS}
+        )
+        for cbc_name in current_app.config["ENABLED_CBCS"]:
+            trigger_link_test_primary_to_A.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
+            trigger_link_test_primary_to_B.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
+            trigger_link_test_secondary_to_A.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
+            trigger_link_test_secondary_to_B.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
 
 
 @notify_celery.task(name="trigger-link-test")
