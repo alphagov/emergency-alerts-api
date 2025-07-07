@@ -247,7 +247,7 @@ class Hosted(Config):
         "run-sqs-test": {
             "task": "run-sqs-test",
             "schedule": crontab(minute="*/5"),
-            "options": {"queue": "j-owens-test-queue"},
+            "options": {"queue": QueueNames.PERIODIC},
         },
         "run-health-check": {
             "task": "run-health-check",
