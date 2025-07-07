@@ -237,7 +237,7 @@ def init_app(app):
         response.headers.add("Referrer-Policy", "no-referrer")
 
         # Remove the 'server' header to reduce the amount of identifiable information
-        response["headers"].pop("server", None)
+        response.headers.pop("server", None)
 
         return response
 
