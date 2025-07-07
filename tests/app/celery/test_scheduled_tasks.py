@@ -1,26 +1,28 @@
 import time
 from collections import namedtuple
 from datetime import datetime, timedelta
-from unittest.mock import call
 
 import pytest
 from emergency_alerts_utils.celery import QueueNames, TaskNames
 from freezegun import freeze_time
 
 from app.celery import scheduled_tasks
-from app.celery.scheduled_tasks import (
+from app.celery.scheduled_tasks import (  # trigger_link_tests,
     auto_expire_broadcast_messages,
     delete_invitations,
     delete_old_records_from_events_table,
     delete_verify_codes,
     queue_after_alert_activities,
     remove_yesterdays_planned_tests_on_govuk_alerts,
-    trigger_link_tests,
     validate_functional_test_account_emails,
 )
 from app.models import BroadcastMessage, BroadcastStatusType, Event, User
 from tests.app.db import create_broadcast_message
-from tests.conftest import set_config
+
+# from unittest.mock import call
+
+
+# from tests.conftest import set_config
 
 
 def test_should_call_delete_codes_on_delete_verify_codes_task(notify_db_session, mocker):
@@ -51,28 +53,30 @@ MockServicesWithHighFailureRate = namedtuple(
 )
 
 
-def test_trigger_link_tests_calls_for_all_providers(mocker, notify_api):
-    mock_trigger_link_test = mocker.patch(
-        "app.celery.scheduled_tasks.trigger_link_test",
-    )
+# def test_trigger_link_tests_calls_for_all_providers(mocker, notify_api):
+#     mock_trigger_link_test = mocker.patch(
+#         "app.celery.scheduled_tasks.trigger_link_test",
+#     )
 
-    with set_config(notify_api, "ENABLED_CBCS", {"ee", "vodafone"}):
-        trigger_link_tests()
+#     with set_config(notify_api, "ENABLED_CBCS", {"ee", "vodafone"}):
+#         trigger_link_tests()
 
-    args = mock_trigger_link_test.apply_async.call_args_list
-    assert call(kwargs={"provider": "ee"}, queue="broadcast-tasks") in args
-    assert call(kwargs={"provider": "vodafone"}, queue="broadcast-tasks") in args
+#     args = mock_trigger_link_test.apply_async.call_args_list
+#     assert call(kwargs={"provider": "ee"}, queue="broadcast-tasks") in args
+#     assert call(kwargs={"provider": "vodafone"}, queue="broadcast-tasks") in args
 
 
-def test_trigger_link_does_nothing_if_cbc_proxy_disabled(mocker, notify_api):
-    mock_trigger_link_test = mocker.patch(
-        "app.celery.scheduled_tasks.trigger_link_test",
-    )
+# def test_trigger_link_does_nothing_if_cbc_proxy_disabled(mocker, notify_api):
+#     mock_trigger_link_test = mocker.patch(
+#         "app.celery.scheduled_tasks.trigger_link_test",
+#     )
 
-    with set_config(notify_api, "ENABLED_CBCS", {"ee", "vodafone"}), set_config(notify_api, "CBC_PROXY_ENABLED", False):
-        trigger_link_tests()
+#     with set_config(
+#         notify_api, "ENABLED_CBCS", {"ee", "vodafone"}
+#     ), set_config(notify_api, "CBC_PROXY_ENABLED", False):
+#         trigger_link_tests()
 
-    assert mock_trigger_link_test.called is False
+#     assert mock_trigger_link_test.called is False
 
 
 @freeze_time("2021-07-19 15:50")

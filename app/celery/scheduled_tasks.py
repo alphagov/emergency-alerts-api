@@ -6,7 +6,14 @@ from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
 
 from app import db, notify_celery
-from app.celery.broadcast_message_tasks import trigger_link_test
+
+# from app.celery.broadcast_message_tasks import trigger_link_test
+from app.celery.broadcast_message_tasks import (
+    trigger_link_test_primary_to_A,
+    trigger_link_test_primary_to_B,
+    trigger_link_test_secondary_to_A,
+    trigger_link_test_secondary_to_B,
+)
 from app.dao.broadcast_message_dao import (
     dao_get_all_finished_broadcast_messages_with_outstanding_actions,
 )
@@ -72,7 +79,11 @@ def trigger_link_tests():
             "trigger_link_tests", extra={"python_module": __name__, "target_queue": QueueNames.BROADCASTS}
         )
         for cbc_name in current_app.config["ENABLED_CBCS"]:
-            trigger_link_test.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
+            # trigger_link_test.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
+            trigger_link_test_primary_to_A.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
+            trigger_link_test_primary_to_B.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
+            trigger_link_test_secondary_to_A.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
+            trigger_link_test_secondary_to_B.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
 
 
 @notify_celery.task(name=TaskNames.AUTO_EXPIRE_BROADCAST_MESSAGES)

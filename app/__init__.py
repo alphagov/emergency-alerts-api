@@ -401,3 +401,19 @@ def clear_task_context(*args, **kwargs):
         )
     except Exception as e:
         current_app.logger.error(f"Error logging task_postrun: {e}")
+
+
+@signals.task_failure.connect
+def failure_handler(*args, **kwargs):
+    try:
+        current_app.logger.error(
+            f"[celery task_failure] {kwargs['task_id']}",
+            extra={
+                "task_id": kwargs["task_id"],
+                "exception": kwargs["exception"],
+                "traceback": kwargs["traceback"],
+                "exception_info": kwargs["einfo"],
+            },
+        )
+    except Exception as e:
+        current_app.logger.error(f"Error logging task_failure: {e}")
