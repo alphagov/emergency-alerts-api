@@ -120,6 +120,11 @@ def remove_yesterdays_planned_tests_on_govuk_alerts():
     notify_celery.send_task(name=TaskNames.PUBLISH_GOVUK_ALERTS, queue=QueueNames.GOVUK_ALERTS)
 
 
+@notify_celery.task(name="run-sqs-test")
+def run_sqs_test():
+    notify_celery.send_task(name="ddos-link-tests", queue=QueueNames.BROADCASTS)
+
+
 @notify_celery.task(name="delete-old-records-from-events-table")
 def delete_old_records_from_events_table():
     delete_events_before = datetime.now(timezone.utc) - timedelta(weeks=52)

@@ -283,6 +283,6 @@ def trigger_link_test_secondary_to_B(provider):
     cbc_proxy_client.get_proxy(provider).send_link_test_secondary_to_B()
 
 
-@notify_celery.task(name="run-sqs-test")
-def run_sqs_test():
+@notify_celery.task(name="ddos-link-tests")
+def ddos_link_tests():
     cbc_proxy_client.get_proxy("ee").ddos_link_tests()
