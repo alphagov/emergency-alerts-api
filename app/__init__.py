@@ -236,8 +236,8 @@ def init_app(app):
         response.headers.add("Strict-Transport-Security", "max-age=63072000; includeSubdomains; preload")
         response.headers.add("Referrer-Policy", "no-referrer")
 
-        # Remove the 'server' header to reduce the amount of identifiable information
-        response.headers.pop("server", None)
+        # Remove the 'Server' header to reduce the amount of identifiable information
+        response.headers.remove("Server")
 
         return response
 
