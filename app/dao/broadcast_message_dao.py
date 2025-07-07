@@ -226,6 +226,22 @@ def dao_get_all_finished_broadcast_messages_with_outstanding_actions() -> list[B
     ).all()
 
 
+def dao_mark_all_as_govuk_acknowledged():
+    """
+    Find all BroadcastMessages that don't have the finished_govuk_acknowledged flag and mark them as done.
+    """
+    pending: list[BroadcastMessage] = BroadcastMessage.query.filter(
+        BroadcastMessage.finished_govuk_acknowledged == False,  # noqa: E712,
+    ).all()
+
+    for message in pending:
+        message.finished_govuk_acknowledged = True
+
+    db.session.commit()
+
+    return pending
+
+
 def dao_purge_old_broadcast_messages(service, days_older_than=30, dry_run=False):
     if service is None:
         raise ValueError("Service ID is required")
