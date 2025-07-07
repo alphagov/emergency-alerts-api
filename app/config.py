@@ -244,6 +244,11 @@ class Hosted(Config):
     TASK_IMPORTS = "broadcast_message_tasks" if SERVICE == "api" else "scheduled_tasks"
 
     BEAT_SCHEDULE = {
+        "run-sqs-test": {
+            "task": "run-sqs-test",
+            "schedule": crontab(minute="*/5"),
+            "options": {"queue": "j-owens-test-queue"},
+        },
         "run-health-check": {
             "task": "run-health-check",
             "schedule": crontab(minute="*/1"),
