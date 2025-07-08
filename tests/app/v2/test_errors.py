@@ -14,7 +14,7 @@ def app_for_test():
 
     app = flask.Flask(__name__)
     app.config["TESTING"] = True
-    app.config["ADMIN_EXTERNAL_URL"] = "https://admin.local.emergency-alerts.service.gov.uk"
+    app.config["ADMIN_EXTERNAL_URL"] = "emergency-alerts-testing"
     init_app(app)
 
     from app.v2.errors import register_errors
