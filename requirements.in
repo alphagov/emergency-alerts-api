@@ -2,13 +2,14 @@
 # with package version changes made in requirements.in
 
 cffi==1.15.1
-celery[sqs]==5.5.2
+celery[sqs]==5.5.3
 cryptography==44.0.3
 Flask-Bcrypt==1.0.1
 flask-marshmallow==1.3.0
 Flask-Migrate==3.1.0
 flask-sqlalchemy==3.0.5
 Flask==3.0.2
+Werkzeug==3.1.3
 click-datetime==0.2
 iso8601==1.1.0
 itsdangerous==2.1.2
