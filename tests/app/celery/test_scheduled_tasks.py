@@ -81,13 +81,13 @@ MockServicesWithHighFailureRate = namedtuple(
 
 @freeze_time("2021-07-19 15:50")
 @pytest.mark.parametrize(
-    "status, finishes_at, final_status, should_call_publish_task",
+    "status, finishes_at, final_status",
     [
-        (BroadcastStatusType.BROADCASTING, "2021-07-19 16:00", BroadcastStatusType.BROADCASTING, False),
-        (BroadcastStatusType.BROADCASTING, "2021-07-19 15:40", BroadcastStatusType.COMPLETED, True),
-        (BroadcastStatusType.BROADCASTING, None, BroadcastStatusType.BROADCASTING, False),
-        (BroadcastStatusType.PENDING_APPROVAL, None, BroadcastStatusType.PENDING_APPROVAL, False),
-        (BroadcastStatusType.CANCELLED, "2021-07-19 15:40", BroadcastStatusType.CANCELLED, False),
+        (BroadcastStatusType.BROADCASTING, "2021-07-19 16:00", BroadcastStatusType.BROADCASTING),
+        (BroadcastStatusType.BROADCASTING, "2021-07-19 15:40", BroadcastStatusType.COMPLETED),
+        (BroadcastStatusType.BROADCASTING, None, BroadcastStatusType.BROADCASTING),
+        (BroadcastStatusType.PENDING_APPROVAL, None, BroadcastStatusType.PENDING_APPROVAL),
+        (BroadcastStatusType.CANCELLED, "2021-07-19 15:40", BroadcastStatusType.CANCELLED),
     ],
 )
 def test_auto_expire_broadcast_messages(
@@ -108,10 +108,7 @@ def test_auto_expire_broadcast_messages(
     auto_expire_broadcast_messages()
     assert message.status == final_status
 
-    if should_call_publish_task:
-        mock_celery.assert_called_once_with(name=TaskNames.PUBLISH_GOVUK_ALERTS, queue=QueueNames.GOVUK_ALERTS)
-    else:
-        assert not mock_celery.called
+    assert not mock_celery.called
 
 
 def test_remove_yesterdays_planned_tests_on_govuk_alerts(mocker):
