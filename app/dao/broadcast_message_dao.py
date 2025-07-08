@@ -162,6 +162,7 @@ def dao_get_all_broadcast_messages():
             BroadcastMessage.finishes_at,
             BroadcastMessage.approved_at,
             BroadcastMessage.cancelled_at,
+            BroadcastMessage.extra_content,
         )
         .join(ServiceBroadcastSettings, ServiceBroadcastSettings.service_id == BroadcastMessage.service_id)
         .filter(
