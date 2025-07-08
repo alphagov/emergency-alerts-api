@@ -96,7 +96,6 @@ def test_auto_expire_broadcast_messages(
     finishes_at,
     final_status,
     sample_template,
-    should_call_publish_task,
 ):
     message = create_broadcast_message(
         status=status,
