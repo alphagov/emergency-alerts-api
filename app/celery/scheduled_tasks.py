@@ -167,16 +167,14 @@ def validate_functional_test_account_emails():
 def queue_after_alert_activities():
     """Check for any recently expired alerts and process any activities that are due on them"""
 
-    current_app.logger.info("Queuing any post-alert activities")
-
     # Find recently expired which have one or more actions due
     expired_and_pending_alerts = dao_get_all_finished_broadcast_messages_with_outstanding_actions()
 
-    if len(expired_and_pending_alerts) > 0:
-        current_app.logger.info(
-            "There are %d recently expired/cancelled alerts with pending activities", len(expired_and_pending_alerts)
-        )
+    current_app.logger.info(
+        "There are %d recently expired/cancelled alerts with pending activities", len(expired_and_pending_alerts)
+    )
 
+    if len(expired_and_pending_alerts) > 0:
         if any(not x.finished_govuk_acknowledged for x in expired_and_pending_alerts):
             # This need not be idempotent as any regeneration is 'free', and we rely upon
             # GovUK calling us back to mark the action as 'done' instead of just assuming.
