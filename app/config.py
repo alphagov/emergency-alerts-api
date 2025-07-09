@@ -309,7 +309,8 @@ class Hosted(Config):
         "task_queues": [Queue(QUEUE_NAME, Exchange("default"), routing_key=QUEUE_NAME)],
         "worker_max_tasks_per_child": 10,
         "task_reject_on_worker_lost": True,
-        "worker_soft_shutdown_timeout": 30,  # Lambda invocation window
+        "task_acks_on_failure_or_timeout": False,
+        "worker_soft_shutdown_timeout": 36,  # Lambda invocation window + 20%
         "beat_schedule": BEAT_SCHEDULE,
     }
 
