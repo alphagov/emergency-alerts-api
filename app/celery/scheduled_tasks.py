@@ -1,6 +1,7 @@
 import time
 from datetime import datetime, timedelta, timezone
 
+from emergency_alerts_utils.celery import QueueNames, TaskNames
 from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -13,7 +14,9 @@ from app.celery.broadcast_message_tasks import (
     trigger_link_test_secondary_to_A,
     trigger_link_test_secondary_to_B,
 )
-from app.config import QueueNames, TaskNames
+from app.dao.broadcast_message_dao import (
+    dao_get_all_finished_broadcast_messages_with_outstanding_actions,
+)
 from app.dao.invited_org_user_dao import (
     delete_org_invitations_created_more_than_two_days_ago,
 )
@@ -28,7 +31,7 @@ from app.dao.users_dao import (
 from app.models import BroadcastMessage, BroadcastStatusType, Event
 
 
-@notify_celery.task(name="run-health-check")
+@notify_celery.task(name=TaskNames.RUN_HEALTH_CHECK)
 def run_health_check():
     try:
         time_stamp = int(time.time())
@@ -40,7 +43,7 @@ def run_health_check():
         raise
 
 
-@notify_celery.task(name="delete-verify-codes")
+@notify_celery.task(name=TaskNames.DELETE_VERIFY_CODES)
 def delete_verify_codes():
     try:
         start = datetime.now(timezone.utc)
@@ -54,7 +57,7 @@ def delete_verify_codes():
         raise
 
 
-@notify_celery.task(name="delete-invitations")
+@notify_celery.task(name=TaskNames.DELETE_INVITATIONS)
 def delete_invitations():
     try:
         start = datetime.now(timezone.utc)
@@ -69,7 +72,7 @@ def delete_invitations():
         raise
 
 
-@notify_celery.task(name="trigger-link-tests")
+@notify_celery.task(name=TaskNames.TRIGGER_LINK_TESTS)
 def trigger_link_tests():
     if current_app.config["CBC_PROXY_ENABLED"]:
         current_app.logger.info(
@@ -83,7 +86,7 @@ def trigger_link_tests():
             trigger_link_test_secondary_to_B.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
 
 
-@notify_celery.task(name="auto-expire-broadcast-messages")
+@notify_celery.task(name=TaskNames.AUTO_EXPIRE_BROADCAST_MESSAGES)
 def auto_expire_broadcast_messages():
     expired_broadcasts = BroadcastMessage.query.filter(
         BroadcastMessage.finishes_at <= datetime.now(),
@@ -95,19 +98,8 @@ def auto_expire_broadcast_messages():
 
     db.session.commit()
 
-    if expired_broadcasts:
-        current_app.logger.info(
-            "auto_expire_broadcast_messages",
-            extra={
-                "python_module": __name__,
-                "send_task": TaskNames.PUBLISH_GOVUK_ALERTS,
-                "target_queue": QueueNames.GOVUK_ALERTS,
-            },
-        )
-        notify_celery.send_task(name=TaskNames.PUBLISH_GOVUK_ALERTS, queue=QueueNames.GOVUK_ALERTS)
 
-
-@notify_celery.task(name="remove-yesterdays-planned-tests-on-govuk-alerts")
+@notify_celery.task(name=TaskNames.REMOVE_YESTERDAYS_PLANNED_TESTS_ON_GOVUK_ALERTS)
 def remove_yesterdays_planned_tests_on_govuk_alerts():
     current_app.logger.info(
         "remove_yesterdays_planned_tests_on_govuk_alerts",
@@ -120,7 +112,7 @@ def remove_yesterdays_planned_tests_on_govuk_alerts():
     notify_celery.send_task(name=TaskNames.PUBLISH_GOVUK_ALERTS, queue=QueueNames.GOVUK_ALERTS)
 
 
-@notify_celery.task(name="delete-old-records-from-events-table")
+@notify_celery.task(name=TaskNames.DELETE_OLD_RECORDS_FROM_EVENTS_TABLE)
 def delete_old_records_from_events_table():
     delete_events_before = datetime.now(timezone.utc) - timedelta(weeks=52)
     event_query = Event.query.filter(Event.created_at < delete_events_before)
@@ -139,7 +131,7 @@ def delete_old_records_from_events_table():
     db.session.commit()
 
 
-@notify_celery.task(name="validate-functional-test-account-emails")
+@notify_celery.task(name=TaskNames.VALIDATE_FUNCTIONAL_TEST_ACCOUNT_EMAILS)
 def validate_functional_test_account_emails():
     try:
         user1 = get_user_by_email("emergency-alerts-tests+user1@digital.cabinet-office.gov.uk")
@@ -169,3 +161,24 @@ def validate_functional_test_account_emails():
                 "target_queue": QueueNames.PERIODIC,
             },
         )
+
+
+@notify_celery.task(name=TaskNames.QUEUE_AFTER_ALERT_ACTIVITIES)
+def queue_after_alert_activities():
+    """Check for any recently expired alerts and process any activities that are due on them"""
+
+    # Find recently expired which have one or more actions due
+    expired_and_pending_alerts = dao_get_all_finished_broadcast_messages_with_outstanding_actions()
+
+    current_app.logger.info(
+        "There are %d recently expired/cancelled alerts with pending activities", len(expired_and_pending_alerts)
+    )
+
+    if len(expired_and_pending_alerts) > 0:
+        if any(not x.finished_govuk_acknowledged for x in expired_and_pending_alerts):
+            # This need not be idempotent as any regeneration is 'free', and we rely upon
+            # GovUK calling us back to mark the action as 'done' instead of just assuming.
+            current_app.logger.info("Requesting GovUK publish")
+            notify_celery.send_task(name=TaskNames.PUBLISH_GOVUK_ALERTS, queue=QueueNames.GOVUK_ALERTS)
+
+        # Down the line we will look to request logs from MNOs

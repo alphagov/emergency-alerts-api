@@ -3,6 +3,7 @@ from unittest.mock import ANY, Mock, call
 
 import pytest
 from celery.exceptions import Retry
+from emergency_alerts_utils.celery import QueueNames, TaskNames
 from freezegun import freeze_time
 
 from app.celery.broadcast_message_tasks import (
@@ -13,7 +14,6 @@ from app.celery.broadcast_message_tasks import (
     trigger_link_test,
 )
 from app.clients.cbc_proxy import CBCProxyRetryableException
-from app.config import QueueNames, TaskNames
 from app.dao.broadcast_service_dao import set_service_broadcast_providers
 from app.models import (
     BROADCAST_TYPE,

@@ -1,6 +1,9 @@
-from flask import Blueprint, jsonify
+from flask import Blueprint, current_app, jsonify
 
-from app.dao.broadcast_message_dao import dao_get_all_broadcast_messages
+from app.dao.broadcast_message_dao import (
+    dao_get_all_broadcast_messages,
+    dao_mark_all_as_govuk_acknowledged,
+)
 from app.errors import register_errors
 from app.utils import get_dt_string_or_none
 
@@ -35,3 +38,13 @@ def get_broadcasts():
         ]
     }
     return jsonify(broadcasts_dict), 200
+
+
+@govuk_alerts_blueprint.route("/acknowledge", methods=["POST"])
+def acknowledge_finished_broadcasts():
+    """Called by GovUK after it has finished publishing. We mark any finished BroadcastMessages as having completed"""
+    marked_done = dao_mark_all_as_govuk_acknowledged()
+
+    current_app.logger.info(f"GovUK has finished publishing. Marked {len(marked_done)} records as acknowledged")
+
+    return {}, 200
