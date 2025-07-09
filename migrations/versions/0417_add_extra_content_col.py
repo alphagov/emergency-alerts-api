@@ -1,16 +1,16 @@
 """
 
-Revision ID: 0416_add_extra_content_col
-Revises: 0415_add_edit_reasons
-Create Date: 2025-01-6 11:56:00
+Revision ID: 0417_add_extra_content_col
+Revises: 0416_add_govuk_acknowledged
+Create Date: 2025-07-06 11:56:00
 
 """
 
 import sqlalchemy as sa
 from alembic import op
 
-revision = "0416_add_extra_content_col"
-down_revision = "0415_add_edit_reasons"
+revision = "0417_add_extra_content_col"
+down_revision = "0416_add_govuk_acknowledged"
 
 
 def upgrade():
