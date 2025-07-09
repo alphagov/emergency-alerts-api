@@ -295,6 +295,7 @@ def create_broadcast_message(
     created_at=None,  # only used for testing
     reference=None,
     submitted_by=None,
+    extra_content=None,
     finished_govuk_acknowledged=False,
 ):
     if template:
@@ -327,6 +328,7 @@ def create_broadcast_message(
         reference=reference,
         submitted_by=submitted_by,
         submitted_at=datetime.now(),
+        extra_content=extra_content,
         finished_govuk_acknowledged=finished_govuk_acknowledged,
     )
     db.session.add(broadcast_message)
