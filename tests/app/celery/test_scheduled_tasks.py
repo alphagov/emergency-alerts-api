@@ -3,6 +3,7 @@ from collections import namedtuple
 from datetime import datetime, timedelta
 
 import pytest
+from emergency_alerts_utils.celery import QueueNames, TaskNames
 from freezegun import freeze_time
 
 from app.celery import scheduled_tasks
@@ -11,11 +12,11 @@ from app.celery.scheduled_tasks import (  # trigger_link_tests,
     delete_invitations,
     delete_old_records_from_events_table,
     delete_verify_codes,
+    queue_after_alert_activities,
     remove_yesterdays_planned_tests_on_govuk_alerts,
     validate_functional_test_account_emails,
 )
-from app.config import QueueNames, TaskNames
-from app.models import BroadcastStatusType, Event, User
+from app.models import BroadcastMessage, BroadcastStatusType, Event, User
 from tests.app.db import create_broadcast_message
 
 # from unittest.mock import call
@@ -80,13 +81,13 @@ MockServicesWithHighFailureRate = namedtuple(
 
 @freeze_time("2021-07-19 15:50")
 @pytest.mark.parametrize(
-    "status, finishes_at, final_status, should_call_publish_task",
+    "status, finishes_at, final_status",
     [
-        (BroadcastStatusType.BROADCASTING, "2021-07-19 16:00", BroadcastStatusType.BROADCASTING, False),
-        (BroadcastStatusType.BROADCASTING, "2021-07-19 15:40", BroadcastStatusType.COMPLETED, True),
-        (BroadcastStatusType.BROADCASTING, None, BroadcastStatusType.BROADCASTING, False),
-        (BroadcastStatusType.PENDING_APPROVAL, None, BroadcastStatusType.PENDING_APPROVAL, False),
-        (BroadcastStatusType.CANCELLED, "2021-07-19 15:40", BroadcastStatusType.CANCELLED, False),
+        (BroadcastStatusType.BROADCASTING, "2021-07-19 16:00", BroadcastStatusType.BROADCASTING),
+        (BroadcastStatusType.BROADCASTING, "2021-07-19 15:40", BroadcastStatusType.COMPLETED),
+        (BroadcastStatusType.BROADCASTING, None, BroadcastStatusType.BROADCASTING),
+        (BroadcastStatusType.PENDING_APPROVAL, None, BroadcastStatusType.PENDING_APPROVAL),
+        (BroadcastStatusType.CANCELLED, "2021-07-19 15:40", BroadcastStatusType.CANCELLED),
     ],
 )
 def test_auto_expire_broadcast_messages(
@@ -95,7 +96,6 @@ def test_auto_expire_broadcast_messages(
     finishes_at,
     final_status,
     sample_template,
-    should_call_publish_task,
 ):
     message = create_broadcast_message(
         status=status,
@@ -107,10 +107,7 @@ def test_auto_expire_broadcast_messages(
     auto_expire_broadcast_messages()
     assert message.status == final_status
 
-    if should_call_publish_task:
-        mock_celery.assert_called_once_with(name=TaskNames.PUBLISH_GOVUK_ALERTS, queue=QueueNames.GOVUK_ALERTS)
-    else:
-        assert not mock_celery.called
+    assert not mock_celery.called
 
 
 def test_remove_yesterdays_planned_tests_on_govuk_alerts(mocker):
@@ -166,3 +163,25 @@ def test_validate_functional_test_account_emails(notify_db_session):
 
     assert users[0].email_access_validated_at > now
     assert users[1].email_access_validated_at > now
+
+
+@pytest.mark.parametrize(
+    "finished_govuk_acknowledged",
+    (True, False),
+)
+def test_queue_after_alert_activities_does_govuk_refresh(notify_api, mocker, finished_govuk_acknowledged):
+    celery_mock = mocker.patch(
+        "app.notify_celery.send_task",
+    )
+    mocker.patch(
+        "app.celery.scheduled_tasks.dao_get_all_finished_broadcast_messages_with_outstanding_actions",
+        return_value=[BroadcastMessage(finished_govuk_acknowledged=finished_govuk_acknowledged)],
+    )
+
+    queue_after_alert_activities()
+
+    # We expect a publish event if anything returned looked to be pending (i.e. not acknowledged)
+    if not finished_govuk_acknowledged:
+        celery_mock.assert_called_once_with(name=TaskNames.PUBLISH_GOVUK_ALERTS, queue=QueueNames.GOVUK_ALERTS)
+    else:
+        celery_mock.assert_not_called()

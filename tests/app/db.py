@@ -295,6 +295,7 @@ def create_broadcast_message(
     created_at=None,  # only used for testing
     reference=None,
     submitted_by=None,
+    finished_govuk_acknowledged=False,
 ):
     if template:
         service = template.service
@@ -326,6 +327,7 @@ def create_broadcast_message(
         reference=reference,
         submitted_by=submitted_by,
         submitted_at=datetime.now(),
+        finished_govuk_acknowledged=finished_govuk_acknowledged,
     )
     db.session.add(broadcast_message)
     db.session.commit()
