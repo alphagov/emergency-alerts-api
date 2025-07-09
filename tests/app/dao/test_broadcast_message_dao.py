@@ -1,8 +1,11 @@
 from datetime import datetime, timedelta
 
+from freezegun import freeze_time
+
 from app.dao.broadcast_message_dao import (
     create_broadcast_provider_message,
     dao_get_all_broadcast_messages,
+    dao_get_all_finished_broadcast_messages_with_outstanding_actions,
     dao_get_all_pre_broadcast_messages,
     dao_get_broadcast_message_by_id_and_service_id_with_user,
     dao_get_broadcast_messages_for_service_with_user,
@@ -149,6 +152,78 @@ def test_dao_get_all_broadcast_messages(sample_broadcast_service):
             None,
         ),
     ]
+
+
+@freeze_time("2024-12-12 12:12:12")
+def test_dao_get_all_finished_broadcast_messages_with_outstanding_actions(sample_broadcast_service):
+    t = create_template(sample_broadcast_service, BROADCAST_TYPE)
+
+    # --- Not to be picked up (all in 2023) ---
+    create_broadcast_message(
+        # Not finished
+        t,
+        created_at=datetime(2023, 10, 10, 12, 0, 0),
+        starts_at=datetime.now(),
+        status=BroadcastStatusType.BROADCASTING,
+    )
+    create_broadcast_message(
+        # Completed, but already actioned
+        t,
+        created_at=datetime(2023, 10, 12, 12, 0, 0),
+        starts_at=datetime.now(),
+        status=BroadcastStatusType.COMPLETED,
+        finished_govuk_acknowledged=True,
+    )
+    create_broadcast_message(
+        # Broadcasting and expired, but already actioned
+        t,
+        created_at=datetime(2023, 10, 11, 12, 0, 0),
+        starts_at=datetime.now(),
+        finishes_at=datetime(2023, 10, 11, 13, 0, 0),
+        status=BroadcastStatusType.BROADCASTING,
+        finished_govuk_acknowledged=True,
+    )
+    create_broadcast_message(
+        # Cancelled, but already actioned
+        t,
+        created_at=datetime(2023, 10, 12, 12, 0, 0),
+        starts_at=datetime.now(),
+        status=BroadcastStatusType.CANCELLED,
+        finished_govuk_acknowledged=True,
+    )
+
+    # --- Should be picked up (all in 2024) ---
+
+    create_broadcast_message(
+        # Cancelled, should be picked up
+        t,
+        created_at=datetime(2024, 10, 12, 12, 0, 0),
+        starts_at=datetime.now(),
+        status=BroadcastStatusType.CANCELLED,
+    )
+    create_broadcast_message(
+        # Completed, should be picked up
+        t,
+        created_at=datetime(2024, 10, 12, 12, 0, 0),
+        starts_at=datetime.now(),
+        status=BroadcastStatusType.COMPLETED,
+    )
+    create_broadcast_message(
+        # Broadcasting and expired, should be picked up
+        t,
+        created_at=datetime(2024, 10, 11, 12, 0, 0),
+        starts_at=datetime.now(),
+        finishes_at=datetime(2024, 10, 11, 13, 0, 0),
+        status=BroadcastStatusType.BROADCASTING,
+    )
+
+    oustanding_action_broadcast_messages = dao_get_all_finished_broadcast_messages_with_outstanding_actions()
+
+    assert len(oustanding_action_broadcast_messages) == 3
+
+    # All ones to *not* pickup are in 2023
+    assert not any([x.created_at < datetime(2024, 1, 1, 0, 0) for x in oustanding_action_broadcast_messages])
+    assert not any([x.finished_govuk_acknowledged for x in oustanding_action_broadcast_messages])
 
 
 def test_dao_purge_old_broadcast_messages(sample_broadcast_service):

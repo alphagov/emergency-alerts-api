@@ -1,11 +1,11 @@
 from datetime import datetime, timezone
 
+from emergency_alerts_utils.celery import QueueNames, TaskNames
 from emergency_alerts_utils.xml.common import HEADLINE
 from flask import current_app
 
 from app import cbc_proxy_client, notify_celery
 from app.clients.cbc_proxy import CBCProxyRetryableException
-from app.config import QueueNames, TaskNames
 from app.dao.broadcast_message_dao import (
     create_broadcast_provider_message,
     dao_get_broadcast_event_by_id,
@@ -105,7 +105,7 @@ def check_event_makes_sense_in_sequence(broadcast_event, provider):
                 )
 
 
-@notify_celery.task(name="send-broadcast-event")
+@notify_celery.task(name=TaskNames.SEND_BROADCAST_EVENT)
 def send_broadcast_event(broadcast_event_id):
     try:
         broadcast_event = dao_get_broadcast_event_by_id(broadcast_event_id)
@@ -145,7 +145,7 @@ def send_broadcast_event(broadcast_event_id):
 
 @notify_celery.task(
     bind=True,
-    name="send-broadcast-provider-message",
+    name=TaskNames.SEND_BROADCAST_PROVIDER_MESSAGE,
     autoretry_for=(CBCProxyRetryableException,),
     retry_backoff=3,
     retry_jitter=False,
@@ -245,7 +245,39 @@ def send_broadcast_provider_message(self, broadcast_event_id, provider):
         raise
 
 
-@notify_celery.task(name="trigger-link-test")
+@notify_celery.task(name=TaskNames.TRIGGER_LINK_TEST)
 def trigger_link_test(provider):
     current_app.logger.info("trigger_link_test", extra={"python_module": __name__, "target_provider": provider})
     cbc_proxy_client.get_proxy(provider).send_link_test()
+
+
+@notify_celery.task(name="trigger-link-test-primary-to-A")
+def trigger_link_test_primary_to_A(provider):
+    current_app.logger.info(
+        "trigger_link_test_primary_to_A", extra={"python_module": __name__, "target_provider": provider}
+    )
+    cbc_proxy_client.get_proxy(provider).send_link_test_primary_to_A()
+
+
+@notify_celery.task(name="trigger-link-test-primary-to-B")
+def trigger_link_test_primary_to_B(provider):
+    current_app.logger.info(
+        "trigger_link_test_primary_to_B", extra={"python_module": __name__, "target_provider": provider}
+    )
+    cbc_proxy_client.get_proxy(provider).send_link_test_primary_to_B()
+
+
+@notify_celery.task(name="trigger-link-test-secondary-to-A")
+def trigger_link_test_secondary_to_A(provider):
+    current_app.logger.info(
+        "trigger_link_test_secondary_to_A", extra={"python_module": __name__, "target_provider": provider}
+    )
+    cbc_proxy_client.get_proxy(provider).send_link_test_secondary_to_A()
+
+
+@notify_celery.task(name="trigger-link-test-secondary-to-B")
+def trigger_link_test_secondary_to_B(provider):
+    current_app.logger.info(
+        "trigger_link_test_secondary_to_B", extra={"python_module": __name__, "target_provider": provider}
+    )
+    cbc_proxy_client.get_proxy(provider).send_link_test_secondary_to_B()

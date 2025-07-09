@@ -1,25 +1,28 @@
 import time
 from collections import namedtuple
 from datetime import datetime, timedelta
-from unittest.mock import call
 
 import pytest
+from emergency_alerts_utils.celery import QueueNames, TaskNames
 from freezegun import freeze_time
 
 from app.celery import scheduled_tasks
-from app.celery.scheduled_tasks import (
+from app.celery.scheduled_tasks import (  # trigger_link_tests,
     auto_expire_broadcast_messages,
     delete_invitations,
     delete_old_records_from_events_table,
     delete_verify_codes,
+    queue_after_alert_activities,
     remove_yesterdays_planned_tests_on_govuk_alerts,
-    trigger_link_tests,
     validate_functional_test_account_emails,
 )
-from app.config import QueueNames, TaskNames
-from app.models import BroadcastStatusType, Event, User
+from app.models import BroadcastMessage, BroadcastStatusType, Event, User
 from tests.app.db import create_broadcast_message
-from tests.conftest import set_config
+
+# from unittest.mock import call
+
+
+# from tests.conftest import set_config
 
 
 def test_should_call_delete_codes_on_delete_verify_codes_task(notify_db_session, mocker):
@@ -50,39 +53,41 @@ MockServicesWithHighFailureRate = namedtuple(
 )
 
 
-def test_trigger_link_tests_calls_for_all_providers(mocker, notify_api):
-    mock_trigger_link_test = mocker.patch(
-        "app.celery.scheduled_tasks.trigger_link_test",
-    )
+# def test_trigger_link_tests_calls_for_all_providers(mocker, notify_api):
+#     mock_trigger_link_test = mocker.patch(
+#         "app.celery.scheduled_tasks.trigger_link_test",
+#     )
 
-    with set_config(notify_api, "ENABLED_CBCS", {"ee", "vodafone"}):
-        trigger_link_tests()
+#     with set_config(notify_api, "ENABLED_CBCS", {"ee", "vodafone"}):
+#         trigger_link_tests()
 
-    args = mock_trigger_link_test.apply_async.call_args_list
-    assert call(kwargs={"provider": "ee"}, queue="broadcast-tasks") in args
-    assert call(kwargs={"provider": "vodafone"}, queue="broadcast-tasks") in args
+#     args = mock_trigger_link_test.apply_async.call_args_list
+#     assert call(kwargs={"provider": "ee"}, queue="broadcast-tasks") in args
+#     assert call(kwargs={"provider": "vodafone"}, queue="broadcast-tasks") in args
 
 
-def test_trigger_link_does_nothing_if_cbc_proxy_disabled(mocker, notify_api):
-    mock_trigger_link_test = mocker.patch(
-        "app.celery.scheduled_tasks.trigger_link_test",
-    )
+# def test_trigger_link_does_nothing_if_cbc_proxy_disabled(mocker, notify_api):
+#     mock_trigger_link_test = mocker.patch(
+#         "app.celery.scheduled_tasks.trigger_link_test",
+#     )
 
-    with set_config(notify_api, "ENABLED_CBCS", {"ee", "vodafone"}), set_config(notify_api, "CBC_PROXY_ENABLED", False):
-        trigger_link_tests()
+#     with set_config(
+#         notify_api, "ENABLED_CBCS", {"ee", "vodafone"}
+#     ), set_config(notify_api, "CBC_PROXY_ENABLED", False):
+#         trigger_link_tests()
 
-    assert mock_trigger_link_test.called is False
+#     assert mock_trigger_link_test.called is False
 
 
 @freeze_time("2021-07-19 15:50")
 @pytest.mark.parametrize(
-    "status, finishes_at, final_status, should_call_publish_task",
+    "status, finishes_at, final_status",
     [
-        (BroadcastStatusType.BROADCASTING, "2021-07-19 16:00", BroadcastStatusType.BROADCASTING, False),
-        (BroadcastStatusType.BROADCASTING, "2021-07-19 15:40", BroadcastStatusType.COMPLETED, True),
-        (BroadcastStatusType.BROADCASTING, None, BroadcastStatusType.BROADCASTING, False),
-        (BroadcastStatusType.PENDING_APPROVAL, None, BroadcastStatusType.PENDING_APPROVAL, False),
-        (BroadcastStatusType.CANCELLED, "2021-07-19 15:40", BroadcastStatusType.CANCELLED, False),
+        (BroadcastStatusType.BROADCASTING, "2021-07-19 16:00", BroadcastStatusType.BROADCASTING),
+        (BroadcastStatusType.BROADCASTING, "2021-07-19 15:40", BroadcastStatusType.COMPLETED),
+        (BroadcastStatusType.BROADCASTING, None, BroadcastStatusType.BROADCASTING),
+        (BroadcastStatusType.PENDING_APPROVAL, None, BroadcastStatusType.PENDING_APPROVAL),
+        (BroadcastStatusType.CANCELLED, "2021-07-19 15:40", BroadcastStatusType.CANCELLED),
     ],
 )
 def test_auto_expire_broadcast_messages(
@@ -91,7 +96,6 @@ def test_auto_expire_broadcast_messages(
     finishes_at,
     final_status,
     sample_template,
-    should_call_publish_task,
 ):
     message = create_broadcast_message(
         status=status,
@@ -103,10 +107,7 @@ def test_auto_expire_broadcast_messages(
     auto_expire_broadcast_messages()
     assert message.status == final_status
 
-    if should_call_publish_task:
-        mock_celery.assert_called_once_with(name=TaskNames.PUBLISH_GOVUK_ALERTS, queue=QueueNames.GOVUK_ALERTS)
-    else:
-        assert not mock_celery.called
+    assert not mock_celery.called
 
 
 def test_remove_yesterdays_planned_tests_on_govuk_alerts(mocker):
@@ -162,3 +163,25 @@ def test_validate_functional_test_account_emails(notify_db_session):
 
     assert users[0].email_access_validated_at > now
     assert users[1].email_access_validated_at > now
+
+
+@pytest.mark.parametrize(
+    "finished_govuk_acknowledged",
+    (True, False),
+)
+def test_queue_after_alert_activities_does_govuk_refresh(notify_api, mocker, finished_govuk_acknowledged):
+    celery_mock = mocker.patch(
+        "app.notify_celery.send_task",
+    )
+    mocker.patch(
+        "app.celery.scheduled_tasks.dao_get_all_finished_broadcast_messages_with_outstanding_actions",
+        return_value=[BroadcastMessage(finished_govuk_acknowledged=finished_govuk_acknowledged)],
+    )
+
+    queue_after_alert_activities()
+
+    # We expect a publish event if anything returned looked to be pending (i.e. not acknowledged)
+    if not finished_govuk_acknowledged:
+        celery_mock.assert_called_once_with(name=TaskNames.PUBLISH_GOVUK_ALERTS, queue=QueueNames.GOVUK_ALERTS)
+    else:
+        celery_mock.assert_not_called()

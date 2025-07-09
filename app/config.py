@@ -1,18 +1,8 @@
 import os
 
 from celery.schedules import crontab
+from emergency_alerts_utils.celery import QueueNames, TaskNames
 from kombu import Exchange, Queue
-
-
-class QueueNames(object):
-    PERIODIC = "periodic-tasks"
-    BROADCASTS = "broadcast-tasks"
-    GOVUK_ALERTS = "govuk-alerts"
-
-
-class TaskNames(object):
-    PUBLISH_GOVUK_ALERTS = "publish-govuk-alerts"
-    TRIGGER_GOVUK_HEALTHCHECK = "trigger-govuk-alerts-healthcheck"
 
 
 class BroadcastProvider:
@@ -142,6 +132,7 @@ class Config(object):
     SECURITY_INFO_CHANGE_SMS_TEMPLATE_ID = "b2bfe780-ca4a-45a3-8a03-ba7a64cf0953"
     SECURITY_KEY_CHANGE_EMAIL_TEMPLATE_ID = "43d7b34a-45c5-4d37-96f8-2c3f48d4d0a5"
     NOTIFY_INTERNATIONAL_SMS_SENDER = "07984404008"
+
     SERVICE = os.environ.get("SERVICE")
     QUEUE_NAME = QueueNames.BROADCASTS if SERVICE == "api" else QueueNames.PERIODIC
     TASK_IMPORTS = "broadcast_message_tasks" if SERVICE == "api" else "scheduled_tasks"
@@ -157,6 +148,7 @@ class Config(object):
         "task_queues": [Queue(QUEUE_NAME, Exchange("default"), routing_key=QUEUE_NAME)],
         "worker_max_tasks_per_child": 2,
     }
+    POST_ALERT_CHECK_INTERVAL_MINUTES = 15
 
     FROM_NUMBER = "development"
 
@@ -244,8 +236,8 @@ class Hosted(Config):
     TASK_IMPORTS = "broadcast_message_tasks" if SERVICE == "api" else "scheduled_tasks"
 
     BEAT_SCHEDULE = {
-        "run-health-check": {
-            "task": "run-health-check",
+        TaskNames.RUN_HEALTH_CHECK: {
+            "task": TaskNames.RUN_HEALTH_CHECK,
             "schedule": crontab(minute="*/1"),
             "options": {"queue": QueueNames.PERIODIC},
         },
@@ -254,39 +246,44 @@ class Hosted(Config):
             "schedule": crontab(minute="*/1"),
             "options": {"queue": QueueNames.GOVUK_ALERTS},
         },
-        "trigger-link-tests": {
-            "task": "trigger-link-tests",
+        TaskNames.TRIGGER_LINK_TESTS: {
+            "task": TaskNames.TRIGGER_LINK_TESTS,
             "schedule": crontab(minute="*/15"),
             "options": {"queue": QueueNames.PERIODIC},
         },
-        "delete-verify-codes": {
-            "task": "delete-verify-codes",
+        TaskNames.DELETE_VERIFY_CODES: {
+            "task": TaskNames.DELETE_VERIFY_CODES,
             "schedule": crontab(minute=10),
             "options": {"queue": QueueNames.PERIODIC},
         },
-        "delete-invitations": {
-            "task": "delete-invitations",
+        TaskNames.DELETE_INVITATIONS: {
+            "task": TaskNames.DELETE_INVITATIONS,
             "schedule": crontab(minute=20),
             "options": {"queue": QueueNames.PERIODIC},
         },
-        "auto-expire-broadcast-messages": {
-            "task": "auto-expire-broadcast-messages",
-            "schedule": crontab(minute=40),
+        TaskNames.AUTO_EXPIRE_BROADCAST_MESSAGES: {
+            "task": TaskNames.AUTO_EXPIRE_BROADCAST_MESSAGES,
+            "schedule": crontab(minute=Config.POST_ALERT_CHECK_INTERVAL_MINUTES),
             "options": {"queue": QueueNames.PERIODIC},
         },
-        "remove-yesterdays-planned-tests-on-govuk-alerts": {
-            "task": "remove-yesterdays-planned-tests-on-govuk-alerts",
+        TaskNames.REMOVE_YESTERDAYS_PLANNED_TESTS_ON_GOVUK_ALERTS: {
+            "task": TaskNames.REMOVE_YESTERDAYS_PLANNED_TESTS_ON_GOVUK_ALERTS,
             "schedule": crontab(hour=00, minute=00),
             "options": {"queue": QueueNames.PERIODIC},
         },
-        "delete-old-records-from-events-table": {
-            "task": "delete-old-records-from-events-table",
+        TaskNames.DELETE_OLD_RECORDS_FROM_EVENTS_TABLE: {
+            "task": TaskNames.DELETE_OLD_RECORDS_FROM_EVENTS_TABLE,
             "schedule": crontab(hour=3, minute=00),
             "options": {"queue": QueueNames.PERIODIC},
         },
-        "validate-functional-test-account-emails": {
-            "task": "validate-functional-test-account-emails",
+        TaskNames.VALIDATE_FUNCTIONAL_TEST_ACCOUNT_EMAILS: {
+            "task": TaskNames.VALIDATE_FUNCTIONAL_TEST_ACCOUNT_EMAILS,
             "schedule": crontab(day_of_month="1"),
+            "options": {"queue": QueueNames.PERIODIC},
+        },
+        TaskNames.QUEUE_AFTER_ALERT_ACTIVITIES: {
+            "task": TaskNames.QUEUE_AFTER_ALERT_ACTIVITIES,
+            "schedule": crontab(minute=f"*/{Config.POST_ALERT_CHECK_INTERVAL_MINUTES}"),
             "options": {"queue": QueueNames.PERIODIC},
         },
     }
