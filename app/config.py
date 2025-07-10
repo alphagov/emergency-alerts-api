@@ -307,8 +307,7 @@ class Hosted(Config):
         "timezone": "UTC",
         "imports": [f"app.celery.{TASK_IMPORTS}"],
         "task_queues": [Queue(QUEUE_NAME, Exchange("default"), routing_key=QUEUE_NAME)],
-        "worker_max_tasks_per_child": 10,
-        "task_reject_on_worker_lost": True,
+        "worker_max_tasks_per_child": 20,  # 16 link tests at once + 20%
         "task_acks_on_failure_or_timeout": False,
         "worker_soft_shutdown_timeout": 36,  # Lambda invocation window + 20%
         "beat_schedule": BEAT_SCHEDULE,
