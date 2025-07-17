@@ -4,6 +4,7 @@ ARG ECS_ACCOUNT_NUMBER
 ARG RESOURCE_PREFIX=eas-app
 ARG AWS_REGION=eu-west-2
 ARG BASE_VERSION=latest
+ARG APP_VERSION=unknown
 FROM ${ECS_ACCOUNT_NUMBER}.dkr.ecr.${AWS_REGION}.amazonaws.com/${RESOURCE_PREFIX}-base:${BASE_VERSION}
 
 ENV SERVICE='api'
@@ -29,7 +30,7 @@ RUN cd $DIR_API && \
     . $VENV_API/bin/activate && \
     python$PYTHON_VERSION -m pip install --upgrade pip wheel setuptools && \
     python$PYTHON_VERSION -m pip install pycurl && \
-    make bootstrap
+    BASE_VERSION=$BASE_VERSION APP_VERSION=$APP_VERSION make bootstrap
 
 # Create a blank configuration file
 RUN echo "" > $DIR_API/environment.sh
