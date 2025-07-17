@@ -1,8 +1,11 @@
 .DEFAULT_GOAL := help
 SHELL := /bin/bash
-DATE = $(shell date +%Y-%m-%d:%H:%M:%S)
+TIME = $(shell date +%Y-%m-%dT%H:%M:%S%z)
 
 APP_VERSION_FILE = app/version.py
+# Passed through by Dockerfile/buildspec
+APP_VERSION ?= unknown
+BASE_VERSION ?= unknown
 
 GIT_BRANCH ?= $(shell git symbolic-ref --short HEAD 2> /dev/null || echo "detached")
 GIT_COMMIT ?= $(shell git rev-parse HEAD)
@@ -137,8 +140,8 @@ help:
 	@cat $(MAKEFILE_LIST) | grep -E '^[a-zA-Z_-]+:.*?## .*$$' | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
 .PHONY: generate-version-file
-generate-version-file: ## Generates the app version file
-	@echo -e "__git_commit__ = \"${GIT_COMMIT}\"\n__time__ = \"${DATE}\"" > ${APP_VERSION_FILE}
+generate-version-file: ## Generate the app/version.py file
+	@ GIT_COMMIT=${GIT_COMMIT} TIME=${TIME} APP_VERSION=${APP_VERSION} BASE_VERSION=${BASE_VERSION} envsubst < app/version.dist.py > app/version.py
 
 .PHONY: test
 test: ## Run tests
