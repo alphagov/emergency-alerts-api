@@ -7,17 +7,6 @@ APP_VERSION_FILE = app/version.py
 GIT_BRANCH ?= $(shell git symbolic-ref --short HEAD 2> /dev/null || echo "detached")
 GIT_COMMIT ?= $(shell git rev-parse HEAD)
 
-CF_API ?= api.cloud.service.gov.uk
-CF_ORG ?= govuk-notify
-CF_SPACE ?= ${DEPLOY_ENV}
-CF_HOME ?= ${HOME}
-$(eval export CF_HOME)
-
-CF_MANIFEST_PATH ?= /tmp/manifest.yml
-
-
-NOTIFY_CREDENTIALS ?= ~/.notify-credentials
-
 VIRTUALENV_ROOT := $(shell [ -z $$VIRTUAL_ENV ] && echo $$(pwd)/venv || echo $$VIRTUAL_ENV)
 PYTHON_EXECUTABLE_PREFIX := $(shell test -d "$${VIRTUALENV_ROOT}" && echo "$${VIRTUALENV_ROOT}/bin/" || echo "")
 
@@ -177,7 +166,7 @@ bump-utils:  # Bump emergency-alerts-utils package to latest version
 
 .PHONY: clean
 clean:
-	rm -rf node_modules cache target venv .coverage build tests/.cache ${CF_MANIFEST_PATH}
+	rm -rf node_modules cache target venv .coverage build tests/.cache
 
 .PHONY: uninstall-packages
 uninstall-packages:
