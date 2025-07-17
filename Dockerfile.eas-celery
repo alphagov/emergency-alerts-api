@@ -21,7 +21,7 @@ RUN cd $DIR_API && \
     . $VENV_API/bin/activate && \
     python$PYTHON_VERSION -m pip install --upgrade pip wheel setuptools && \
     python$PYTHON_VERSION -m pip install pycurl && \
-    BASE_VERSION=$BASE_VERSION APP_VERSION=$APP_VERSION make bootstrap
+    APP_VERSION=$APP_VERSION make bootstrap
 
 # Create a blank configuration file
 RUN echo "" > $DIR_API/environment.sh
