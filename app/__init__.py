@@ -98,6 +98,7 @@ def register_blueprint(application):
     from app.admin_action.rest import admin_action_blueprint
     from app.authentication.auth import (
         requires_admin_auth,
+        requires_auth,
         requires_govuk_alerts_auth,
         requires_no_auth,
     )
@@ -113,6 +114,7 @@ def register_blueprint(application):
     from app.failed_logins.rest import failed_logins_blueprint
     from app.feature_toggle.rest import feature_toggle_blueprint
     from app.govuk_alerts.rest import govuk_alerts_blueprint
+    from app.link_tests.rest import link_tests
     from app.organisation.invite_rest import organisation_invite_blueprint
     from app.organisation.rest import organisation_blueprint
     from app.password_history.rest import password_history_blueprint
@@ -194,6 +196,9 @@ def register_blueprint(application):
 
     common_passwords_blueprint.before_request(requires_admin_auth)
     application.register_blueprint(common_passwords_blueprint)
+
+    link_tests.before_request(requires_auth)
+    application.register_blueprint(link_tests)
 
 
 def register_v2_blueprints(application):

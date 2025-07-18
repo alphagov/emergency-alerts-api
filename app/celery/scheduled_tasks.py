@@ -73,17 +73,26 @@ def delete_invitations():
 
 
 @notify_celery.task(name=TaskNames.TRIGGER_LINK_TESTS)
-def trigger_link_tests():
+def trigger_link_tests(cbc=None):
     if current_app.config["CBC_PROXY_ENABLED"]:
+        if cbc is None:
+            cbc = "ALL"
         current_app.logger.info(
-            "trigger_link_tests", extra={"python_module": __name__, "target_queue": QueueNames.BROADCASTS}
+            "trigger_link_tests",
+            extra={"python_module": __name__, "cbc_target": cbc, "target_queue": QueueNames.BROADCASTS},
         )
-        for cbc_name in current_app.config["ENABLED_CBCS"]:
-            # trigger_link_test.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
-            trigger_link_test_primary_to_A.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
-            trigger_link_test_primary_to_B.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
-            trigger_link_test_secondary_to_A.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
-            trigger_link_test_secondary_to_B.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
+        if cbc == "ALL":
+            for cbc_name in current_app.config["ENABLED_CBCS"]:
+                # trigger_link_test.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
+                trigger_link_test_primary_to_A.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
+                trigger_link_test_primary_to_B.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
+                trigger_link_test_secondary_to_A.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
+                trigger_link_test_secondary_to_B.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
+        elif cbc in current_app.config["ENABLED_CBCS"]:
+            trigger_link_test_primary_to_A.apply_async(kwargs={"provider": cbc}, queue=QueueNames.BROADCASTS)
+            trigger_link_test_primary_to_B.apply_async(kwargs={"provider": cbc}, queue=QueueNames.BROADCASTS)
+            trigger_link_test_secondary_to_A.apply_async(kwargs={"provider": cbc}, queue=QueueNames.BROADCASTS)
+            trigger_link_test_secondary_to_B.apply_async(kwargs={"provider": cbc}, queue=QueueNames.BROADCASTS)
 
 
 @notify_celery.task(name=TaskNames.AUTO_EXPIRE_BROADCAST_MESSAGES)
