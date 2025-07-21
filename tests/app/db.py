@@ -436,6 +436,7 @@ def create_broadcast_message_version(
     created_by_id=None,
     service_id=None,
     duration=None,
+    extra_content=None,
 ):
     broadcast_message_version = BroadcastMessageHistory(
         id=id,
@@ -447,6 +448,7 @@ def create_broadcast_message_version(
         created_at=created_at,
         reference=reference,
         duration=duration,
+        extra_content=extra_content,
     )
     db.session.add(broadcast_message_version)
     db.session.commit()
