@@ -1,10 +1,13 @@
+import boto3
 import pytest
 from flask import json
+from moto import mock_aws
 
 from tests.app.db import create_organisation, create_service
 
 
 @pytest.mark.parametrize("path", ["/", "/_api_status"])
+@mock_aws
 def test_get_status_all_ok(client, notify_db_session, path):
     response = client.get(path)
     assert response.status_code == 200
@@ -13,6 +16,10 @@ def test_get_status_all_ok(client, notify_db_session, path):
     assert resp_json["db_version"]
     assert resp_json["git_commit"]
     assert resp_json["build_time"]
+
+    cloudwatch = boto3.client("cloudwatch")
+    metric = cloudwatch.list_metrics()["Metrics"][0]
+    assert metric["MetricName"] == "AppVersion"
 
 
 def test_empty_live_service_and_organisation_counts(admin_request):
