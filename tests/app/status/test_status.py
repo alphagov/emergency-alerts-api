@@ -20,6 +20,7 @@ def test_get_status_all_ok(client, notify_db_session, path):
     cloudwatch = boto3.client("cloudwatch")
     metric = cloudwatch.list_metrics()["Metrics"][0]
     assert metric["MetricName"] == "AppVersion"
+    assert metric["Namespace"] == "Emergency Alerts"
 
 
 def test_empty_live_service_and_organisation_counts(admin_request):

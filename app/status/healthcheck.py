@@ -84,7 +84,7 @@ def post_version_to_cloudwatch():
                     "Value": 1,
                 }
             ],
-            Namespace="Versioning",
+            Namespace="Emergency Alerts",
         )
     except Exception:
         current_app.logger.exception(
