@@ -2,7 +2,6 @@
 SHELL := /bin/bash
 TIME = $(shell date +%Y-%m-%dT%H:%M:%S%z)
 
-APP_VERSION_FILE = app/version.py
 # Passed through by Dockerfile/buildspec
 APP_VERSION ?= unknown
 
