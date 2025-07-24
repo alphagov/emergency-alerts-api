@@ -16,6 +16,7 @@ def test_get_broadcast_message_version(admin_request, sample_service):
             id=uuid.uuid4(),
             content="Test 3",
             duration="04:00:00",
+            extra_content="Test Extra Content",
         )
     with freeze_time("2020-01-01 12:00"):
         create_broadcast_message_version(
@@ -42,6 +43,7 @@ def test_get_broadcast_message_version(admin_request, sample_service):
     assert response["content"] == bmv3.content
     assert response["reference"] == bmv3.reference
     assert response["duration"] == get_interval_seconds_or_none(bmv3.duration)
+    assert response["extra_content"] == "Test Extra Content"
 
 
 @freeze_time("2020-01-01")
