@@ -1,22 +1,12 @@
 .DEFAULT_GOAL := help
 SHELL := /bin/bash
-DATE = $(shell date +%Y-%m-%d:%H:%M:%S)
+TIME = $(shell date +%Y-%m-%dT%H:%M:%S%z)
 
-APP_VERSION_FILE = app/version.py
+# Passed through by Dockerfile/buildspec
+APP_VERSION ?= unknown
 
 GIT_BRANCH ?= $(shell git symbolic-ref --short HEAD 2> /dev/null || echo "detached")
 GIT_COMMIT ?= $(shell git rev-parse HEAD)
-
-CF_API ?= api.cloud.service.gov.uk
-CF_ORG ?= govuk-notify
-CF_SPACE ?= ${DEPLOY_ENV}
-CF_HOME ?= ${HOME}
-$(eval export CF_HOME)
-
-CF_MANIFEST_PATH ?= /tmp/manifest.yml
-
-
-NOTIFY_CREDENTIALS ?= ~/.notify-credentials
 
 VIRTUALENV_ROOT := $(shell [ -z $$VIRTUAL_ENV ] && echo $$(pwd)/venv || echo $$VIRTUAL_ENV)
 PYTHON_EXECUTABLE_PREFIX := $(shell test -d "$${VIRTUALENV_ROOT}" && echo "$${VIRTUALENV_ROOT}/bin/" || echo "")
@@ -148,8 +138,8 @@ help:
 	@cat $(MAKEFILE_LIST) | grep -E '^[a-zA-Z_-]+:.*?## .*$$' | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
 .PHONY: generate-version-file
-generate-version-file: ## Generates the app version file
-	@echo -e "__git_commit__ = \"${GIT_COMMIT}\"\n__time__ = \"${DATE}\"" > ${APP_VERSION_FILE}
+generate-version-file: ## Generate the app/version.py file
+	@ GIT_COMMIT=${GIT_COMMIT} TIME=${TIME} APP_VERSION=${APP_VERSION} envsubst < app/version.dist.py > app/version.py
 
 .PHONY: test
 test: ## Run tests
@@ -160,7 +150,7 @@ test: ## Run tests
 
 .PHONY: pytests
 pytests: ## Run python tests only
-	pytest -n auto --maxfail=5
+	pytest -n auto
 
 .PHONY: freeze-requirements
 freeze-requirements: ## create static requirements.txt
@@ -177,7 +167,7 @@ bump-utils:  # Bump emergency-alerts-utils package to latest version
 
 .PHONY: clean
 clean:
-	rm -rf node_modules cache target venv .coverage build tests/.cache ${CF_MANIFEST_PATH}
+	rm -rf node_modules cache target venv .coverage build tests/.cache
 
 .PHONY: uninstall-packages
 uninstall-packages:
