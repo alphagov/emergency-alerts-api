@@ -148,7 +148,7 @@ class Config(object):
         "task_queues": [Queue(QUEUE_NAME, Exchange("default"), routing_key=QUEUE_NAME)],
         "worker_max_tasks_per_child": 2,
     }
-    POST_ALERT_CHECK_INTERVAL_MINUTES = 15
+    POST_ALERT_CHECK_INTERVAL_MINUTES = 1
 
     FROM_NUMBER = "development"
 
