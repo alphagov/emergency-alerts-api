@@ -12,6 +12,8 @@ aws_region = os.environ.get("AWS_REGION", "eu-west-2")
 
 
 @pytest.mark.parametrize("path", ["/", "/_api_status"])
+# Celery won't be called via the HTTP path (it's via a health check scheduled task)
+# but we can assert the CLoudWatch logic respects using the SERVICE param anyway
 @pytest.mark.parametrize("service", ["api", "celery"])
 @mock_aws
 def test_get_status_all_ok(client, notify_db_session, notify_api, service, path):

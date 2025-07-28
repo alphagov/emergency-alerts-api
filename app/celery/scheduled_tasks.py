@@ -29,11 +29,14 @@ from app.dao.users_dao import (
     save_model_user,
 )
 from app.models import BroadcastMessage, BroadcastStatusType, Event
+from app.status.healthcheck import post_version_to_cloudwatch
 
 
 @notify_celery.task(name=TaskNames.RUN_HEALTH_CHECK)
 def run_health_check():
     try:
+        post_version_to_cloudwatch()
+
         time_stamp = int(time.time())
         with open("/eas/emergency-alerts-api/celery-beat-healthcheck", mode="w") as file:
             file.write(str(time_stamp))
