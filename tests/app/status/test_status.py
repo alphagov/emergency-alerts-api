@@ -1,15 +1,23 @@
+import os
+
 import boto3
 import pytest
 from flask import json
 from moto import mock_aws
 
 from tests.app.db import create_organisation, create_service
+from tests.conftest import set_config
+
+aws_region = os.environ.get("AWS_REGION", "eu-west-2")
 
 
 @pytest.mark.parametrize("path", ["/", "/_api_status"])
+@pytest.mark.parametrize("service", ["api", "celery"])
 @mock_aws
-def test_get_status_all_ok(client, notify_db_session, path):
-    response = client.get(path)
+def test_get_status_all_ok(client, notify_db_session, notify_api, service, path):
+    with set_config(notify_api, "SERVICE", service):
+        response = client.get(path)
+
     assert response.status_code == 200
     resp_json = json.loads(response.get_data(as_text=True))
     assert resp_json["status"] == "ok"
@@ -17,10 +25,11 @@ def test_get_status_all_ok(client, notify_db_session, path):
     assert resp_json["git_commit"]
     assert resp_json["build_time"]
 
-    cloudwatch = boto3.client("cloudwatch")
+    cloudwatch = boto3.client("cloudwatch", region_name=aws_region)
     metric = cloudwatch.list_metrics()["Metrics"][0]
     assert metric["MetricName"] == "AppVersion"
     assert metric["Namespace"] == "Emergency Alerts"
+    assert {"Name": "Application", "Value": service} in metric["Dimensions"]
 
 
 def test_empty_live_service_and_organisation_counts(admin_request):
