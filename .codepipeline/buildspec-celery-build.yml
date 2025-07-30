@@ -20,6 +20,7 @@ phases:
       - docker build $TAGS -f Dockerfile.eas-celery
         --build-arg ECS_ACCOUNT_NUMBER=$ACCOUNT_NUMBER
         --build-arg AWS_REGION=${AWS_REGION:-eu-west-2}
+        --build-arg APP_VERSION=$COMMIT_ID
         --build-arg RESOURCE_PREFIX=$TENANT_PREFIX --no-cache
         .
   post_build:

@@ -1,10 +1,15 @@
+import builtins
 import time
 from collections import namedtuple
 from datetime import datetime, timedelta
+from unittest.mock import mock_open, patch
 
+import boto3
 import pytest
 from emergency_alerts_utils.celery import QueueNames, TaskNames
+from flask import current_app
 from freezegun import freeze_time
+from moto import mock_aws
 
 from app.celery import scheduled_tasks
 from app.celery.scheduled_tasks import (  # trigger_link_tests,
@@ -14,10 +19,12 @@ from app.celery.scheduled_tasks import (  # trigger_link_tests,
     delete_verify_codes,
     queue_after_alert_activities,
     remove_yesterdays_planned_tests_on_govuk_alerts,
+    run_health_check,
     validate_functional_test_account_emails,
 )
 from app.models import BroadcastMessage, BroadcastStatusType, Event, User
 from tests.app.db import create_broadcast_message
+from tests.conftest import set_config
 
 # from unittest.mock import call
 
@@ -185,3 +192,27 @@ def test_queue_after_alert_activities_does_govuk_refresh(notify_api, mocker, fin
         celery_mock.assert_called_once_with(name=TaskNames.PUBLISH_GOVUK_ALERTS, queue=QueueNames.GOVUK_ALERTS)
     else:
         celery_mock.assert_not_called()
+
+
+# Mock only open() for the healthcheck path, but allow others (botocore) to read
+# normally for its internal init logic
+def open_for_healthcheck(original_open):
+    def side_effect(*args, **kwargs):
+        if args[0] == "/eas/emergency-alerts-api/celery-beat-healthcheck":
+            return mock_open()()
+        return original_open(*args, **kwargs)
+
+    return side_effect
+
+
+@mock_aws
+def test_celery_healthcheck_posts_to_cloudwatch(mocker, notify_api):
+    with patch.object(builtins, "open", side_effect=open_for_healthcheck(open)):
+        with set_config(notify_api, "SERVICE", "celery"):
+            run_health_check()
+
+    cloudwatch = boto3.client("cloudwatch", region_name=current_app.config["AWS_REGION"])
+    metric = cloudwatch.list_metrics()["Metrics"][0]
+    assert metric["MetricName"] == "AppVersion"
+    assert metric["Namespace"] == "Emergency Alerts"
+    assert {"Name": "Application", "Value": "celery"} in metric["Dimensions"]

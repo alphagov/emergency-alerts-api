@@ -1,4 +1,5 @@
 import os
+from typing import Literal
 
 from celery.schedules import crontab
 from emergency_alerts_utils.celery import QueueNames, TaskNames
@@ -133,7 +134,7 @@ class Config(object):
     SECURITY_KEY_CHANGE_EMAIL_TEMPLATE_ID = "43d7b34a-45c5-4d37-96f8-2c3f48d4d0a5"
     NOTIFY_INTERNATIONAL_SMS_SENDER = "07984404008"
 
-    SERVICE = os.environ.get("SERVICE")
+    SERVICE: Literal["api", "celery"] = os.environ.get("SERVICE")
     QUEUE_NAME = QueueNames.BROADCASTS if SERVICE == "api" else QueueNames.PERIODIC
     TASK_IMPORTS = "broadcast_message_tasks" if SERVICE == "api" else "scheduled_tasks"
 

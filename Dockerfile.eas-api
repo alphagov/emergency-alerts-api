@@ -6,6 +6,8 @@ ARG AWS_REGION=eu-west-2
 ARG BASE_VERSION=latest
 FROM ${ECS_ACCOUNT_NUMBER}.dkr.ecr.${AWS_REGION}.amazonaws.com/${RESOURCE_PREFIX}-base:${BASE_VERSION}
 
+ARG APP_VERSION=unknown
+
 ENV SERVICE='api'
 
 # Create root directory and copy repo
@@ -29,7 +31,7 @@ RUN cd $DIR_API && \
     . $VENV_API/bin/activate && \
     python$PYTHON_VERSION -m pip install --upgrade pip wheel setuptools && \
     python$PYTHON_VERSION -m pip install pycurl && \
-    make bootstrap
+    APP_VERSION=${APP_VERSION} make bootstrap
 
 # Create a blank configuration file
 RUN echo "" > $DIR_API/environment.sh
