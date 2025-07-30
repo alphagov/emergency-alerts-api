@@ -100,6 +100,7 @@ def test_dao_get_all_broadcast_messages(sample_broadcast_service):
         stubbed=False,
         status="broadcasting",
         starts_at=datetime(2021, 6, 20, 12, 0, 0),
+        extra_content="Test Extra Content",
     )
 
     # broadcast_message_stubbed
@@ -138,6 +139,7 @@ def test_dao_get_all_broadcast_messages(sample_broadcast_service):
             None,
             None,
             None,
+            "Test Extra Content",
         ),
         (
             broadcast_message_1.id,
@@ -147,6 +149,7 @@ def test_dao_get_all_broadcast_messages(sample_broadcast_service):
             {"ids": [], "simple_polygons": []},
             "cancelled",
             datetime(2021, 6, 15, 12, 0),
+            None,
             None,
             None,
             None,
