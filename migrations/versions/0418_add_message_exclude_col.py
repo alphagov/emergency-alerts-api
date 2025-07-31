@@ -1,6 +1,6 @@
 """
 
-Revision ID: 
+Revision ID: 0418_add_message_exclude_col
 Revises: 0417_add_extra_content_cols
 Create Date: 2025-07-06 11:56:00
 
@@ -9,7 +9,7 @@ Create Date: 2025-07-06 11:56:00
 import sqlalchemy as sa
 from alembic import op
 
-revision = ""
+revision = "0418_add_message_exclude_col"
 down_revision = "0417_add_extra_content_cols"
 
 
