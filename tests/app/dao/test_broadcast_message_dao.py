@@ -89,6 +89,10 @@ def test_dao_get_all_broadcast_messages(sample_broadcast_service):
     broadcast_message_1 = create_broadcast_message(
         template_1, starts_at=datetime(2021, 6, 15, 12, 0, 0), status="cancelled"
     )
+    # exluded message, should not appear in list
+    _ = create_broadcast_message(
+        template_1, starts_at=datetime(2021, 6, 15, 14, 0, 0), status="broadcasting", exclude=True
+    )
 
     service_2 = create_service(service_name="broadcast service 2", service_permissions=[BROADCAST_TYPE])
     insert_or_update_service_broadcast_settings(service_2, channel="severe")
