@@ -27,7 +27,9 @@ RUN cd $DIR_API && \
 # Create a blank configuration file
 RUN echo "" > $DIR_API/environment.sh
 
-RUN useradd -ms /bin/bash easuser && chown -R easuser:easuser $DIR_API && chown -R easuser:easuser $DIR_UTILS
+RUN adduser -D -s /bin/bash easuser && \
+    chown -R easuser:easuser $DIR_API && \
+    chown -R easuser:easuser $DIR_UTILS
 
 COPY scripts/link-test.sh /
 COPY scripts/healthcheck.sh /
