@@ -30,45 +30,45 @@ BEGIN
 	WHERE id = alert_id;
 
 	-- BLOCK COMPROMISED USER ACCOUNTS
-	-- IF alert_created_by IS NOT NULL THEN
-	-- 	UPDATE users SET state = 'blocked' WHERE id = alert_created_by;
-	-- 	DELETE FROM user_to_service WHERE user_id = alert_created_by;
-	-- 	DELETE FROM user_to_organisation WHERE user_id = alert_created_by;
-	-- 	DELETE FROM user_folder_permissions WHERE user_id = alert_created_by;
-	-- 	DELETE FROM permissions WHERE user_id = alert_created_by;
-	-- END IF;
+	IF alert_created_by IS NOT NULL THEN
+		UPDATE users SET state = 'blocked' WHERE id = alert_created_by;
+		DELETE FROM user_to_service WHERE user_id = alert_created_by;
+		DELETE FROM user_to_organisation WHERE user_id = alert_created_by;
+		DELETE FROM user_folder_permissions WHERE user_id = alert_created_by;
+		DELETE FROM permissions WHERE user_id = alert_created_by;
+	END IF;
 
-	-- IF alert_approved_by IS DISTINCT FROM alert_created_by THEN
-	-- 	UPDATE users SET state = 'blocked' WHERE id = alert_approved_by;
-	-- 	DELETE FROM user_to_service WHERE user_id = alert_approved_by;
-	-- 	DELETE FROM user_to_organisation WHERE user_id = alert_approved_by;
-	-- 	DELETE FROM user_folder_permissions WHERE user_id = alert_approved_by;
-	-- 	DELETE FROM permissions WHERE user_id = alert_approved_by;
-	-- END IF;
+	IF alert_approved_by IS DISTINCT FROM alert_created_by THEN
+		UPDATE users SET state = 'blocked' WHERE id = alert_approved_by;
+		DELETE FROM user_to_service WHERE user_id = alert_approved_by;
+		DELETE FROM user_to_organisation WHERE user_id = alert_approved_by;
+		DELETE FROM user_folder_permissions WHERE user_id = alert_approved_by;
+		DELETE FROM permissions WHERE user_id = alert_approved_by;
+	END IF;
 
 	-- BLOCK COMPROMOSED API KEYS
-	-- IF alert_created_by_api_key IS NOT NULL THEN
-	-- 	UPDATE api_keys
-	-- 	SET expiry_date = NOW(),
-	-- 		updated_at = NOW(),
-	-- 		version = version + 1
-	-- 	WHERE id = alert_created_by_api_key;
+	IF alert_created_by_api_key IS NOT NULL THEN
+		UPDATE api_keys
+		SET expiry_date = NOW(),
+			updated_at = NOW(),
+			version = version + 1
+		WHERE id = alert_created_by_api_key;
 
-	-- 	INSERT INTO api_keys_history (
-	-- 	    id,
-	-- 	    name,
-	-- 	    secret,
-	-- 	    service_id,
-	-- 	    expiry_date,
-	-- 	    created_at,
-	-- 	    created_by_id,
-	-- 	    updated_at,
-	-- 	    version,
-	-- 	    key_type
-	-- 	)
-	-- 	SELECT * FROM api_keys
-	-- 	WHERE id = alert_created_by_api_key;
-	-- END IF;
+		INSERT INTO api_keys_history (
+		    id,
+		    name,
+		    secret,
+		    service_id,
+		    expiry_date,
+		    created_at,
+		    created_by_id,
+		    updated_at,
+		    version,
+		    key_type
+		)
+		SELECT * FROM api_keys
+		WHERE id = alert_created_by_api_key;
+	END IF;
 END
 $$;
 
