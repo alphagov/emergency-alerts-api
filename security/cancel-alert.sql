@@ -91,7 +91,7 @@ BEGIN
 	LOOP
 		IF msg.mno = 'vodafone' THEN
 			RAISE NOTICE $msg1$
-TO CANCEL THE % ALERT, RUN THE FOLLOWING COMMAND IN A GDS CLI SHELL:
+TO CANCEL THE % ALERT, RUN THE FOLLOWING COMMAND IN A GDS CLI CELL-BROADCAST SHELL:
 
 aws lambda invoke \
 --function-name %-1-proxy \
@@ -120,7 +120,7 @@ EOF
 			$msg1$, UPPER(msg.mno), msg.mno, msg.id, msg.number, msg.id, msg.number, msg.created_at, msg.sent_at;
 		ELSE
 			RAISE NOTICE $msg2$
-TO CANCEL THE % ALERT, RUN THE FOLLOWING COMMAND IN A GDS CLI SHELL:
+TO CANCEL THE % ALERT, RUN THE FOLLOWING COMMAND IN A GDS CLI CELL-BROADCAST SHELL:
 
 aws lambda invoke \
 --function-name %-1-proxy \
@@ -147,5 +147,67 @@ EOF
 			$msg2$, UPPER(msg.mno), msg.mno, msg.id, msg.id, msg.created_at, msg.sent_at;
 		END IF;
 	END LOOP;
+END
+$$;
+
+-- EMIT COMMANDS TO PURGE ALL SQS QUEUES
+DO $$
+DECLARE
+	target_env text := 'production';
+BEGIN
+
+	RAISE NOTICE $msg1$
+TO PURGE ALL SQS QUEUES, RUN THE FOLLOWING COMMAND IN A GDS CLI EMERGENCY-ALERTS SHELL:
+
+aws sqs list-queues --queue-name-prefix % --output text --query 'QueueUrls[]' \
+| xargs -n 1 aws sqs purge-queue --queue-url > /dev/null
+
+	$msg1$, target_env;
+
+END
+$$;
+
+-- EMIT COMMANDS TO RESTART ALL INSTANCES WITH CELERY WORKERS
+DO $$
+DECLARE
+	target_cluster text := 'eas-app-cluster';
+	service_prefix text := 'eas-app';
+BEGIN
+
+	RAISE NOTICE $msg1$
+TO RESTART THE CELERY ECS INSTANCE, RUN THE FOLLOWING COMMAND IN A GDS CLI EMERGENCY-ALERTS SHELL:
+
+aws ecs list-tasks \
+    --cluster % \
+    --service-name %-celery \
+    --query 'taskArns[]' \
+    --output text \
+| xargs -n 1 aws ecs stop-task --cluster % --task > dev/null
+
+	$msg1$, target_cluster, service_prefix, target_cluster;
+
+
+	RAISE NOTICE $msg2$
+TO RESTART THE GOVUK-ALERTS INSTANCE, RUN THE FOLLOWING COMMAND IN A GDS CLI EMERGENCY-ALERTS SHELL:
+
+aws ecs list-tasks \
+    --cluster % \
+    --service-name %-govuk-alerts \
+    --query 'taskArns[]' \
+    --output text \
+| xargs -n 1 aws ecs stop-task --cluster % --task > dev/null
+
+	$msg2$, target_cluster, service_prefix, target_cluster;
+
+
+	RAISE NOTICE $msg3$
+TO RESTART THE API INSTANCES, RUN THE FOLLOWING COMMAND IN A GDS CLI EMERGENCY-ALERTS SHELL:
+
+for task in $(aws ecs list-tasks --cluster % --service-name %-api --query 'taskArns[]' --output text); do
+    aws ecs stop-task --cluster % --task $task > dev/null
+done
+
+	$msg3$, target_cluster, service_prefix, target_cluster;
+
 END
 $$;
