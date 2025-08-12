@@ -10,14 +10,16 @@ phases:
     commands:
       - |
         TAGS="-t $REPOSITORY_URI:latest -t $REPOSITORY_URI:pipeline_$EXECUTION_ID"
+        IMAGE_COMMIT_TAG=latest
         if [ -n "$COMMIT_ID" ]; then
           COMMIT_ID=$(echo $COMMIT_ID | cut -c 1-7)
           TAGS="$TAGS -t $REPOSITORY_URI:commit_$COMMIT_ID"
+          IMAGE_COMMIT_TAG=$REPOSITORY_URI:commit_$COMMIT_ID
         fi
       - echo Build started on `date`
       - echo Building Docker image...
       - export TENANT_PREFIX="${RESOURCE_PREFIX:-eas-app}"
-      - docker build $TAGS -f Dockerfile.eas-celery
+      - docker build $TAGS -f Dockerfile.eas-api
         --build-arg ECS_ACCOUNT_NUMBER=$ACCOUNT_NUMBER
         --build-arg AWS_REGION=${AWS_REGION:-eu-west-2}
         --build-arg APP_VERSION=$COMMIT_ID
@@ -28,3 +30,9 @@ phases:
       - echo Building complete on `date`
       - echo Pushing the Docker image...
       - docker push --all-tags $REPOSITORY_URI
+      - aws ecs describe-task-definition --task-definition $TASK_DEFINITION_ARN > orig-taskdef.json
+      - cat orig-taskdef.json | jq '.taskDefinition | .containerDefinitions[].image = "'$IMAGE_COMMIT_TAG'"' > taskdef.json
+artifacts:
+  files:
+    - appspec.yaml
+    - taskdef.json

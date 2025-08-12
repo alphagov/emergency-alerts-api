@@ -28,15 +28,22 @@ update_task_defintion(){
 
     if [ -z "$latest_task_def" ]; then
         echo "Unable to retrieve the latest task definition."
-        exit
+        exit 1
     else
-        echo "Updating the service with the task definition arn: $latest_task_def."
+        echo "=============== UPDATING LATEST TASK DEFINITION ==============="
+        cat taskdef.json
+        task_definition_arn=$(aws ecs register-task-definition \
+                                --family "${PREFIX}-${SERVICE}" \
+                                --cli-input-json file://taskdef.json  \
+                                --query 'taskDefinition.taskDefinitionArn' \
+                                --output text)
+        echo "Updating the service with the task definition arn: $task_definition_arn."
         echo ""
         echo "=============== UPDATING SERVICE ==============="
         aws ecs update-service \
         --cluster "$CLUSTER_NAME" \
         --service "${PREFIX}-${SERVICE}" \
-        --task-definition "$latest_task_def" \
+        --task-definition "$task_definition_arn" \
         --force-new-deployment
     fi
 }
