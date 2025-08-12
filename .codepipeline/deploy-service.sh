@@ -12,7 +12,7 @@ PREFIX="${RESOURCE_PREFIX:-eas-app}"
 CLUSTER_NAME="${PREFIX}-cluster"
 IMAGE_COMMIT_TAG=$REPOSITORY_URI:commit_$COMMIT_ID
 
-update_task_defintion(){
+update_task_definition(){
     if [ -z "$SERVICE" ]; then
         echo "SERVICE is required."
         exit
@@ -53,4 +53,4 @@ update_task_defintion(){
     fi
 }
 
-update_task_defintion
+update_task_definition
