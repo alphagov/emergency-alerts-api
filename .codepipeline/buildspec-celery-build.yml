@@ -34,5 +34,4 @@ phases:
       - cat orig-taskdef.json | jq '.taskDefinition | .containerDefinitions[].image = "'$IMAGE_COMMIT_TAG'"' > taskdef.json
 artifacts:
   files:
-    - appspec.yaml
     - taskdef.json
