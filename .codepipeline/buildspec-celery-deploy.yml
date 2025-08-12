@@ -7,11 +7,10 @@ phases:
         if [ -n "$MANUAL_PIPELINE_BRANCH" ]; then
           echo Manual pipeline branch provided, checking out branch $MANUAL_PIPELINE_BRANCH
           git checkout $MANUAL_PIPELINE_BRANCH
-        elif [ -n "$COMMIT_ID" ]; then
+        elif [ -z "$COMMIT_ID" ]; then
           echo Checking out to celery_${ENVIRONMENT}_latest tag...
-          # git checkout tags/celery_${ENVIRONMENT}_latest
+          git checkout tags/celery_${ENVIRONMENT}_latest
         fi
-        env
   build:
     commands:
       - echo Deployment started on `date`
