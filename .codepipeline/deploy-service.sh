@@ -10,6 +10,7 @@ done
 
 PREFIX="${RESOURCE_PREFIX:-eas-app}"
 CLUSTER_NAME="${PREFIX}-cluster"
+IMAGE_COMMIT_TAG=$REPOSITORY_URI:commit_$COMMIT_ID
 
 update_task_defintion(){
     if [ -z "$SERVICE" ]; then
@@ -31,7 +32,11 @@ update_task_defintion(){
         exit 1
     else
         echo "=============== UPDATING LATEST TASK DEFINITION ==============="
+
+        aws ecs describe-task-definition --task-definition $TASK_DEFINITION_ARN > orig-taskdef.json
+        cat orig-taskdef.json | jq '.taskDefinition | .containerDefinitions[].image = "'$IMAGE_COMMIT_TAG'"' > taskdef.json
         cat taskdef.json
+
         task_definition_arn=$(aws ecs register-task-definition \
                                 --family "${PREFIX}-${SERVICE}" \
                                 --cli-input-json file://taskdef.json  \
