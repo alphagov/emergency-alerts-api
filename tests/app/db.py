@@ -118,7 +118,7 @@ def create_template(
     folder=None,
 ):
     data = {
-        "name": template_name or "{} Template Name".format(template_type),
+        "reference": template_name or "{} Template Name".format(template_type),
         "template_type": template_type,
         "content": content,
         "service": service,
@@ -303,7 +303,7 @@ def create_broadcast_message(
         template_id = template.id
         template_version = template.version
         content = template.content
-        reference = template.name
+        reference = template.reference
     elif content:
         template_id = None
         template_version = None

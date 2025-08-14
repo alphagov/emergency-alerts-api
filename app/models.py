@@ -555,13 +555,14 @@ class TemplateBase(db.Model):
         super().__init__(**kwargs)
 
     id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    name = db.Column(db.String(255), nullable=False)
+    reference = db.Column(db.String(255), nullable=False)
     template_type = db.Column(template_types, nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
     updated_at = db.Column(db.DateTime, onupdate=datetime.datetime.utcnow)
     content = db.Column(db.Text, nullable=False)
     archived = db.Column(db.Boolean, nullable=False, default=False)
     broadcast_data = db.Column(JSONB(none_as_null=True), nullable=True)
+    areas = db.Column(JSONB(none_as_null=True), nullable=False, default=dict)
 
     @declared_attr
     def service_id(cls):
@@ -588,7 +589,8 @@ class TemplateBase(db.Model):
             "created_by": self.created_by.email_address,
             "version": self.version,
             "body": self.content,
-            "name": self.name,
+            "reference": self.reference,
+            "areas": self.areas,
         }
 
         return serialized
@@ -964,7 +966,7 @@ class BroadcastMessage(db.Model):
             "service_id": str(self.service_id),
             "template_id": str(self.template_id) if self.template else None,
             "template_version": self.template_version,
-            "template_name": self.template.name if self.template else None,
+            "template_name": self.template.reference if self.template else None,
             "personalisation": self.personalisation if self.template else None,
             "content": self.content,
             "extra_content": self.extra_content or None,
