@@ -7,14 +7,15 @@ post_create_template_schema = {
     "type": "object",
     "title": "payload for POST /service/<uuid:service_id>/template",
     "properties": {
-        "name": {"type": "string"},
+        "reference": {"type": "string"},
         "template_type": {"enum": TEMPLATE_TYPES},
         "service": uuid,
         "content": {"type": "string"},
         "created_by": uuid,
         "parent_folder_id": uuid,
+        "areas": {"type": "object"},
     },
-    "required": ["name", "template_type", "content", "service", "created_by"],
+    "required": ["reference", "template_type", "content", "service", "created_by"],
 }
 
 post_update_template_schema = {
@@ -24,12 +25,13 @@ post_update_template_schema = {
     "title": "payload for POST /service/<uuid:service_id>/template/<uuid:template_id>",
     "properties": {
         "id": uuid,
-        "name": {"type": "string"},
+        "reference": {"type": "string"},
         "template_type": {"enum": TEMPLATE_TYPES},
         "service": uuid,
         "content": {"type": "string"},
         "created_by": uuid,
         "archived": {"type": "boolean"},
         "current_user": uuid,
+        "areas": {"type": "object"},
     },
 }
