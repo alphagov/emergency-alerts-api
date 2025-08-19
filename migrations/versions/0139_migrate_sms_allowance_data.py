@@ -5,6 +5,7 @@ Revises: 0138_sms_sender_nullable.py
 Create Date: 2017-11-10 21:42:59.715203
 
 """
+
 from alembic import op
 
 revision = "0139_migrate_sms_allowance_data"
