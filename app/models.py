@@ -910,6 +910,10 @@ class BroadcastMessage(db.Model):
     # Set to true after GovUK has (re)published after being requested to
     finished_govuk_acknowledged: bool = db.Column(db.Boolean, nullable=False, default=False)
 
+    # Set to true to stop the message being shown on the current/past alert
+    # page of the Admin UI or rendered on the gov.uk/alerts page/feed
+    exclude: bool = db.Column(db.Boolean, nullable=False, default=False)
+
     # these times correspond to when
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
     approved_at = db.Column(db.DateTime, nullable=True)

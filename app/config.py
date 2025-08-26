@@ -186,9 +186,7 @@ class Hosted(Config):
     SUBDOMAIN = (
         "dev."
         if os.environ.get("ENVIRONMENT") == "development"
-        else f"{os.environ.get('ENVIRONMENT')}."
-        if os.environ.get("ENVIRONMENT") != "production"
-        else ""
+        else f"{os.environ.get('ENVIRONMENT')}." if os.environ.get("ENVIRONMENT") != "production" else ""
     )
     ADMIN_BASE_URL = f"http://admin.{TENANT}ecs.local:6012"
     ADMIN_EXTERNAL_URL = f"https://{TENANT}admin.{SUBDOMAIN}emergency-alerts.service.gov.uk"
@@ -338,9 +336,7 @@ class Test(Config):
     SUBDOMAIN = (
         "dev."
         if os.environ.get("ENVIRONMENT") == "development"
-        else f"{os.environ.get('ENVIRONMENT')}."
-        if os.environ.get("ENVIRONMENT") != "production"
-        else ""
+        else f"{os.environ.get('ENVIRONMENT')}." if os.environ.get("ENVIRONMENT") != "production" else ""
     )
     ADMIN_EXTERNAL_URL = f"https://{TENANT}admin.{SUBDOMAIN}emergency-alerts.service.gov.uk"
     REPORTS_SLACK_WEBHOOK_URL = "https://hooks.slack.com/somewhere"
