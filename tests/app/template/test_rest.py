@@ -403,6 +403,7 @@ def test_should_get_return_all_fields_by_default(
     )
     assert json_response["data"][0].keys() == {
         "archived",
+        "areas",
         "broadcast_data",
         "content",
         "created_at",
