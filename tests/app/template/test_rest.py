@@ -20,7 +20,7 @@ from tests.app.db import create_service, create_template, create_template_folder
 def test_should_create_a_new_template_for_a_service(client, sample_user):
     service = create_service(service_permissions=[BROADCAST_TYPE])
     data = {
-        "name": "my template",
+        "reference": "my template",
         "template_type": BROADCAST_TYPE,
         "content": "template <b>content</b>",
         "service": str(service.id),
@@ -36,7 +36,7 @@ def test_should_create_a_new_template_for_a_service(client, sample_user):
     )
     assert response.status_code == 201
     json_resp = json.loads(response.get_data(as_text=True))
-    assert json_resp["data"]["name"] == "my template"
+    assert json_resp["data"]["reference"] == "my template"
     assert json_resp["data"]["template_type"] == BROADCAST_TYPE
     assert json_resp["data"]["content"] == "template <b>content</b>"
     assert json_resp["data"]["service"] == str(service.id)
@@ -54,7 +54,7 @@ def test_create_a_new_template_for_a_service_adds_folder_relationship(client, sa
     parent_folder = create_template_folder(service=sample_service, name="parent folder")
 
     data = {
-        "name": "my template",
+        "reference": "my template",
         "template_type": "broadcast",
         "content": "template <b>content</b>",
         "service": str(sample_service.id),
@@ -70,7 +70,7 @@ def test_create_a_new_template_for_a_service_adds_folder_relationship(client, sa
         data=data,
     )
     assert response.status_code == 201
-    template = Template.query.filter(Template.name == "my template").first()
+    template = Template.query.filter(Template.reference == "my template").first()
     assert template.folder == parent_folder
 
 
@@ -79,7 +79,7 @@ def test_create_template_should_return_400_if_folder_is_for_a_different_service(
     parent_folder = create_template_folder(service=service2)
 
     data = {
-        "name": "my template",
+        "reference": "my template",
         "template_type": "broadcast",
         "content": "template <b>content</b>",
         "service": str(sample_service.id),
@@ -100,7 +100,7 @@ def test_create_template_should_return_400_if_folder_is_for_a_different_service(
 
 def test_create_template_should_return_400_if_folder_does_not_exist(client, sample_service):
     data = {
-        "name": "my template",
+        "reference": "my template",
         "template_type": "broadcast",
         "content": "template content",
         "service": str(sample_service.id),
@@ -121,7 +121,7 @@ def test_create_template_should_return_400_if_folder_does_not_exist(client, samp
 
 def test_should_raise_error_if_service_does_not_exist_on_create(client, sample_user, fake_uuid):
     data = {
-        "name": "my template",
+        "reference": "my template",
         "template_type": BROADCAST_TYPE,
         "content": "template content",
         "service": fake_uuid,
@@ -152,7 +152,7 @@ def test_should_raise_error_if_service_does_not_exist_on_create(client, sample_u
 def test_should_raise_error_on_create_if_no_permission(client, sample_user, permissions, template_type, expected_error):
     service = create_service(service_permissions=permissions)
     data = {
-        "name": "my template",
+        "reference": "my template",
         "template_type": template_type,
         "content": "template content",
         "service": str(service.id),
@@ -212,7 +212,7 @@ def test_should_be_error_on_update_if_no_permission(
 def test_should_error_if_created_by_missing(client, sample_user, sample_service):
     service_id = str(sample_service.id)
     data = {
-        "name": "my template",
+        "reference": "my template",
         "template_type": BROADCAST_TYPE,
         "content": "template content",
         "service": service_id,
@@ -232,7 +232,7 @@ def test_should_error_if_created_by_missing(client, sample_user, sample_service)
 
 
 def test_should_be_error_if_service_does_not_exist_on_update(client, fake_uuid):
-    data = {"name": "my template"}
+    data = {"reference": "my template"}
     data = json.dumps(data)
     auth_header = create_admin_authorization_header()
 
@@ -267,7 +267,7 @@ def test_update_should_update_a_template(client, sample_user):
     assert update_response.status_code == 200
     update_json_resp = json.loads(update_response.get_data(as_text=True))
     assert update_json_resp["data"]["content"] == ("my template has new content")
-    assert update_json_resp["data"]["name"] == template.name
+    assert update_json_resp["data"]["reference"] == template.reference
     assert update_json_resp["data"]["template_type"] == template.template_type
     assert update_json_resp["data"]["version"] == 2
 
@@ -280,7 +280,7 @@ def test_update_should_update_a_template(client, sample_user):
 
 def test_should_be_able_to_archive_template(client, sample_template):
     data = {
-        "name": sample_template.name,
+        "reference": sample_template.reference,
         "template_type": sample_template.template_type,
         "content": sample_template.content,
         "archived": True,
@@ -323,7 +323,7 @@ def test_should_be_able_to_archive_template_should_remove_template_folders(clien
 
 def test_should_be_able_to_get_all_templates_for_a_service(client, sample_user, sample_service):
     data = {
-        "name": "my template 1",
+        "reference": "my template 1",
         "template_type": BROADCAST_TYPE,
         "content": "template content",
         "service": str(sample_service.id),
@@ -331,7 +331,7 @@ def test_should_be_able_to_get_all_templates_for_a_service(client, sample_user, 
     }
     data_1 = json.dumps(data)
     data = {
-        "name": "my template 2",
+        "reference": "my template 2",
         "template_type": BROADCAST_TYPE,
         "content": "template content",
         "service": str(sample_service.id),
@@ -358,10 +358,10 @@ def test_should_be_able_to_get_all_templates_for_a_service(client, sample_user, 
 
     assert response.status_code == 200
     update_json_resp = json.loads(response.get_data(as_text=True))
-    assert update_json_resp["data"][0]["name"] == "my template 1"
+    assert update_json_resp["data"][0]["reference"] == "my template 1"
     assert update_json_resp["data"][0]["version"] == 1
     assert update_json_resp["data"][0]["created_at"]
-    assert update_json_resp["data"][1]["name"] == "my template 2"
+    assert update_json_resp["data"][1]["reference"] == "my template 2"
     assert update_json_resp["data"][1]["version"] == 1
     assert update_json_resp["data"][1]["created_at"]
 
@@ -409,7 +409,7 @@ def test_should_get_return_all_fields_by_default(
         "created_by",
         "folder",
         "id",
-        "name",
+        "reference",
         "service",
         "template_type",
         "updated_at",
@@ -462,7 +462,7 @@ def test_create_400_for_over_limit_content(
         random.choice(string.ascii_uppercase + string.digits) for _ in range(MAX_BROADCAST_CHAR_COUNT + 1)
     )
     data = {
-        "name": "too big template",
+        "reference": "too big template",
         "template_type": BROADCAST_TYPE,
         "content": content,
         "service": str(sample_service.id),
@@ -554,7 +554,7 @@ def test_update_does_not_create_new_version_when_there_is_no_change(client, samp
         (
             {},
             [
-                {"error": "ValidationError", "message": "name is a required property"},
+                {"error": "ValidationError", "message": "reference is a required property"},
                 {"error": "ValidationError", "message": "template_type is a required property"},
                 {"error": "ValidationError", "message": "content is a required property"},
                 {"error": "ValidationError", "message": "service is a required property"},
@@ -571,7 +571,7 @@ def test_update_does_not_create_new_version_when_there_is_no_change(client, samp
             [
                 {
                     "error": "ValidationError",
-                    "message": "name is a required property",
+                    "message": "reference is a required property",
                 },
             ],
         ),

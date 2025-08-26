@@ -234,7 +234,7 @@ def sample_template(sample_user):
     service = create_service(service_permissions=[BROADCAST_TYPE], check_if_service_exists=True)
 
     data = {
-        "name": "Template Name",
+        "reference": "Template Name",
         "template_type": BROADCAST_TYPE,
         "content": "This is a template:\nwith a newline",
         "service": service,
