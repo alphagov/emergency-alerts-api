@@ -1,7 +1,7 @@
 """
 
 Revision ID: 0417_add_extra_content_cols
-Revises: 0418_add_area_col
+Revises: 0419_add_area_col
 Create Date: 2025-08-06 16:23:00
 
 """
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision = "0418_add_area_col"
-down_revision = "0417_add_extra_content_cols"
+revision = "0419_add_area_col"
+down_revision = "0418_add_message_exclude_col"
 
 
 def upgrade():
