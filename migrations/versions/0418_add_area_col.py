@@ -15,14 +15,14 @@ down_revision = "0417_add_extra_content_cols"
 
 
 def upgrade():
-    op.alter_column('templates', 'name', nullable=False, new_column_name='reference')
-    op.alter_column('templates_history', 'name', nullable=False, new_column_name='reference')
+    op.alter_column("templates", "name", nullable=False, new_column_name="reference")
+    op.alter_column("templates_history", "name", nullable=False, new_column_name="reference")
     op.add_column("templates", sa.Column("areas", postgresql.JSONB(none_as_null=True, astext_type=sa.Text())))
     op.add_column("templates_history", sa.Column("areas", postgresql.JSONB(none_as_null=True, astext_type=sa.Text())))
 
 
 def downgrade():
-    op.alter_column('templates', 'reference', nullable=False, new_column_name='name')
-    op.alter_column('templates_history', 'reference', nullable=False, new_column_name='name')
+    op.alter_column("templates", "reference", nullable=False, new_column_name="name")
+    op.alter_column("templates_history", "reference", nullable=False, new_column_name="name")
     op.drop_column("templates_history", "areas")
     op.drop_column("templates", "areas")
