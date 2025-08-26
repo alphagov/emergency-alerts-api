@@ -115,6 +115,10 @@ bootstrap-for-tests: generate-version-file install-node ## Set up everything to 
 run-flask: ## Run flask
 	. environment.sh && flask run -p 6011
 
+.PHONY: run-flask-debug
+run-flask: ## Run flask
+	. environment.sh && flask --debug run -p 6011
+
 .PHONY: run-celery
 run-celery: ## Run celery
 	. environment.sh && celery \
