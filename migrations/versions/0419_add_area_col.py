@@ -1,7 +1,7 @@
 """
 
-Revision ID: 0417_add_extra_content_cols
-Revises: 0419_add_area_col
+Revision ID: 0419_add_area_col
+Revises: 0418_add_message_exclude_col
 Create Date: 2025-08-06 16:23:00
 
 """
