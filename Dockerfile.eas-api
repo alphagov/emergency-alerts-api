@@ -4,14 +4,13 @@ ARG ECS_ACCOUNT_NUMBER
 ARG RESOURCE_PREFIX=eas-app
 ARG AWS_REGION=eu-west-2
 ARG BASE_VERSION=latest
-FROM ${ECS_ACCOUNT_NUMBER}.dkr.ecr.${AWS_REGION}.amazonaws.com/${RESOURCE_PREFIX}-base:${BASE_VERSION}
+ARG BASE_IMAGE=${ECS_ACCOUNT_NUMBER}.dkr.ecr.${AWS_REGION}.amazonaws.com/${RESOURCE_PREFIX}-base:${BASE_VERSION}
+
+FROM ${BASE_IMAGE}
 
 ARG APP_VERSION=unknown
 
 ENV SERVICE='api'
-
-# Create root directory and copy repo
-COPY . $DIR_API
 
 # Download the database certificate
 RUN wget https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem -O /etc/ssl/certs/global-bundle.pem && \
@@ -19,6 +18,9 @@ RUN wget https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem -O /e
 
 RUN apk add postgresql17-client && \
     echo "POSTGRESQL/PG_DUMP VERSION:" && pg_dump --version
+
+# Create root directory and copy repo
+COPY . $DIR_API
 
 # Build emergency-alerts-api
 RUN cd $DIR_API && \
