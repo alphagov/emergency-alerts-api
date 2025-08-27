@@ -14,7 +14,12 @@ from app.models import (
     TemplateHistory,
 )
 from tests import create_admin_authorization_header
-from tests.app.db import create_service, create_template, create_template_folder
+from tests.app.db import (
+    create_service,
+    create_template,
+    create_template_folder,
+    create_template_with_only_area,
+)
 
 
 def test_should_create_a_new_template_for_a_service(client, sample_user):
@@ -604,3 +609,95 @@ def test_purge_templates_and_folders_for_service_removes_db_objects(mocker, samp
 
     template_purge_mock.assert_called_once_with(service_id=sample_service.id)
     folder_purge_mock.assert_called_once_with(service_id=sample_service.id)
+
+
+def test_create_template_with_area(sample_user, sample_service, client):
+    auth_header = create_admin_authorization_header()
+    template = create_template(
+        service=sample_service,
+        template_name="Test Template",
+        content="Test Content",
+        areas={"ids": ["london", "glasgow"], "simple_polygons": [[[51.12, 0.2], [50.13, 0.4], [50.14, 0.45]]]},
+    )
+    resp = client.get(
+        f"/service/{sample_service.id}/template/{template.id}",
+        headers=[("Content-Type", "application/json"), auth_header],
+    )
+    assert resp.status_code == 200
+    json_resp = json.loads(resp.get_data(as_text=True))
+    assert json_resp["data"]["reference"] == "Test Template"
+    assert json_resp["data"]["template_type"] == BROADCAST_TYPE
+    assert json_resp["data"]["content"] == "Test Content"
+    assert json_resp["data"]["service"] == str(sample_service.id)
+    assert json_resp["data"]["id"] == str(template.id)
+    assert json_resp["data"]["version"] == 1
+    assert json_resp["data"]["created_by"] == str(sample_user.id)
+
+
+def test_create_template_with_only_area(sample_user, sample_service, client):
+    auth_header = create_admin_authorization_header()
+    template = create_template_with_only_area(
+        service=sample_service,
+        areas={"ids": ["london", "glasgow"], "simple_polygons": [[[51.12, 0.2], [50.13, 0.4], [50.14, 0.45]]]},
+    )
+    resp = client.get(
+        f"/service/{sample_service.id}/template/{template.id}",
+        headers=[("Content-Type", "application/json"), auth_header],
+    )
+    assert resp.status_code == 200
+    json_resp = json.loads(resp.get_data(as_text=True))
+    assert json_resp["data"]["reference"] == ""
+    assert json_resp["data"]["template_type"] == BROADCAST_TYPE
+    assert json_resp["data"]["content"] == ""
+    assert json_resp["data"]["service"] == str(sample_service.id)
+    assert json_resp["data"]["id"] == str(template.id)
+    assert json_resp["data"]["version"] == 1
+    assert json_resp["data"]["created_by"] == str(sample_user.id)
+
+
+def test_update_template_area(client, sample_user, sample_service, sample_user_2):
+    auth_header = create_admin_authorization_header()
+    template = create_template(
+        sample_service,
+        template_type=BROADCAST_TYPE,
+        areas={"ids": ["london", "glasgow"], "simple_polygons": [[[51.12, 0.2], [50.13, 0.4], [50.14, 0.45]]]},
+    )
+
+    response = client.get(
+        f"/service/{sample_service.id}/template/{template.id}",
+        headers=[("Content-Type", "application/json"), auth_header],
+    )
+    assert response.status_code == 200
+    json_resp = json.loads(response.get_data(as_text=True))
+    assert json_resp["data"]["reference"] == "broadcast Template Name"
+    assert json_resp["data"]["template_type"] == BROADCAST_TYPE
+    assert json_resp["data"]["content"] == "Dear Sir/Madam, Hello. Yours Truly, The Government."
+    assert json_resp["data"]["service"] == str(sample_service.id)
+    assert json_resp["data"]["id"] == str(template.id)
+    assert json_resp["data"]["version"] == 1
+    assert json_resp["data"]["created_by"] == str(sample_user.id)
+    assert json_resp["data"]["areas"] == {
+        "ids": ["london", "glasgow"],
+        "simple_polygons": [[[51.12, 0.2], [50.13, 0.4], [50.14, 0.45]]],
+    }
+
+    # New data
+    data = {"areas": {}, "created_by": str(sample_user_2.id)}
+    data = json.dumps(data)
+
+    update_response = client.post(
+        f"/service/{sample_service.id}/template/{template.id}",
+        headers=[("Content-Type", "application/json"), auth_header],
+        data=data,
+    )
+
+    assert update_response.status_code == 200
+    json_resp = json.loads(update_response.get_data(as_text=True))
+    assert json_resp["data"]["reference"] == "broadcast Template Name"
+    assert json_resp["data"]["template_type"] == BROADCAST_TYPE
+    assert json_resp["data"]["content"] == "Dear Sir/Madam, Hello. Yours Truly, The Government."
+    assert json_resp["data"]["service"] == str(sample_service.id)
+    assert json_resp["data"]["id"] == str(template.id)
+    assert json_resp["data"]["version"] == 2
+    assert json_resp["data"]["created_by"] == str(sample_user_2.id)
+    assert json_resp["data"]["areas"] == {}
