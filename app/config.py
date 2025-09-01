@@ -260,11 +260,6 @@ class Hosted(Config):
             "schedule": crontab(minute=20),
             "options": {"queue": QueueNames.PERIODIC},
         },
-        TaskNames.AUTO_EXPIRE_BROADCAST_MESSAGES: {
-            "task": TaskNames.AUTO_EXPIRE_BROADCAST_MESSAGES,
-            "schedule": crontab(minute=f"*/{Config.POST_ALERT_CHECK_INTERVAL_MINUTES}"),
-            "options": {"queue": QueueNames.PERIODIC},
-        },
         TaskNames.REMOVE_YESTERDAYS_PLANNED_TESTS_ON_GOVUK_ALERTS: {
             "task": TaskNames.REMOVE_YESTERDAYS_PLANNED_TESTS_ON_GOVUK_ALERTS,
             "schedule": crontab(hour=00, minute=00),
