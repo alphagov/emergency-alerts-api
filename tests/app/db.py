@@ -287,6 +287,7 @@ def create_broadcast_message(
     created_by=None,
     content=None,
     status=BroadcastStatusType.DRAFT,
+    exclude=False,
     starts_at=None,
     finishes_at=None,
     areas=None,
@@ -295,6 +296,7 @@ def create_broadcast_message(
     created_at=None,  # only used for testing
     reference=None,
     submitted_by=None,
+    extra_content=None,
     finished_govuk_acknowledged=False,
 ):
     if template:
@@ -316,6 +318,7 @@ def create_broadcast_message(
         template_version=template_version,
         # personalisation=personalisation,
         status=status,
+        exclude=exclude,
         starts_at=starts_at,
         finishes_at=finishes_at,
         created_by_id=created_by.id if created_by else service.created_by_id,
@@ -327,6 +330,7 @@ def create_broadcast_message(
         reference=reference,
         submitted_by=submitted_by,
         submitted_at=datetime.now(),
+        extra_content=extra_content,
         finished_govuk_acknowledged=finished_govuk_acknowledged,
     )
     db.session.add(broadcast_message)
@@ -434,6 +438,7 @@ def create_broadcast_message_version(
     created_by_id=None,
     service_id=None,
     duration=None,
+    extra_content=None,
 ):
     broadcast_message_version = BroadcastMessageHistory(
         id=id,
@@ -445,6 +450,7 @@ def create_broadcast_message_version(
         created_at=created_at,
         reference=reference,
         duration=duration,
+        extra_content=extra_content,
     )
     db.session.add(broadcast_message_version)
     db.session.commit()

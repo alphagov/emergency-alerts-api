@@ -32,6 +32,7 @@ def get_broadcasts():
                 "finishes_at": get_dt_string_or_none(broadcast.finishes_at),
                 "approved_at": get_dt_string_or_none(broadcast.approved_at),
                 "cancelled_at": get_dt_string_or_none(broadcast.cancelled_at),
+                "extra_content": broadcast.extra_content,
             }
             for broadcast in broadcasts
         ]

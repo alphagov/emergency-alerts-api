@@ -908,6 +908,10 @@ class BroadcastMessage(db.Model):
     # Set to true after GovUK has (re)published after being requested to
     finished_govuk_acknowledged: bool = db.Column(db.Boolean, nullable=False, default=False)
 
+    # Set to true to stop the message being shown on the current/past alert
+    # page of the Admin UI or rendered on the gov.uk/alerts page/feed
+    exclude: bool = db.Column(db.Boolean, nullable=False, default=False)
+
     # these times correspond to when
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
     approved_at = db.Column(db.DateTime, nullable=True)
@@ -937,6 +941,8 @@ class BroadcastMessage(db.Model):
     rejected_by_api_key_id = db.Column(UUID(as_uuid=True), db.ForeignKey("api_keys.id"), nullable=True)
     rejected_by_api_key = db.relationship("ApiKey", foreign_keys=[rejected_by_api_key_id])
 
+    extra_content = db.Column(db.String, nullable=True)
+
     reference = db.Column(db.String(255), nullable=True)
     cap_event = db.Column(db.String(255), nullable=True)
 
@@ -965,6 +971,7 @@ class BroadcastMessage(db.Model):
             "template_name": self.template.name if self.template else None,
             "personalisation": self.personalisation if self.template else None,
             "content": self.content,
+            "extra_content": self.extra_content or None,
             "areas": self.areas,
             "status": self.status,
             "duration": get_interval_seconds_or_none(self.duration),
@@ -999,6 +1006,7 @@ class BroadcastMessageHistory(db.Model):
     created_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=True)
     areas = db.Column(JSONB(none_as_null=True), nullable=False, default=dict)
     duration = db.Column(db.Interval, nullable=True)
+    extra_content = db.Column(db.String, nullable=True)
 
     def serialize(self):
         return {
@@ -1011,6 +1019,7 @@ class BroadcastMessageHistory(db.Model):
             "created_at": get_dt_string_or_none(self.created_at),
             "created_by_id": get_uuid_string_or_none(self.created_by_id),
             "duration": get_interval_seconds_or_none(self.duration),
+            "extra_content": self.extra_content,
         }
 
 

@@ -73,7 +73,7 @@ def post_version_to_cloudwatch():
                     "Dimensions": [
                         {
                             "Name": "Application",
-                            "Value": "api",
+                            "Value": current_app.config["SERVICE"],
                         },
                         {
                             "Name": "Version",

@@ -162,12 +162,14 @@ def dao_get_all_broadcast_messages():
             BroadcastMessage.finishes_at,
             BroadcastMessage.approved_at,
             BroadcastMessage.cancelled_at,
+            BroadcastMessage.extra_content,
         )
         .join(ServiceBroadcastSettings, ServiceBroadcastSettings.service_id == BroadcastMessage.service_id)
         .filter(
             BroadcastMessage.starts_at >= datetime(2021, 5, 25, 0, 0, 0),
             BroadcastMessage.stubbed == False,  # noqa
             BroadcastMessage.status.in_(BroadcastStatusType.LIVE_STATUSES),
+            BroadcastMessage.exclude == False,  # noqa
         )
         .order_by(desc(BroadcastMessage.starts_at))
         .all()

@@ -89,6 +89,10 @@ def test_dao_get_all_broadcast_messages(sample_broadcast_service):
     broadcast_message_1 = create_broadcast_message(
         template_1, starts_at=datetime(2021, 6, 15, 12, 0, 0), status="cancelled"
     )
+    # exluded message, should not appear in list
+    _ = create_broadcast_message(
+        template_1, starts_at=datetime(2021, 6, 15, 14, 0, 0), status="broadcasting", exclude=True
+    )
 
     service_2 = create_service(service_name="broadcast service 2", service_permissions=[BROADCAST_TYPE])
     insert_or_update_service_broadcast_settings(service_2, channel="severe")
@@ -100,6 +104,7 @@ def test_dao_get_all_broadcast_messages(sample_broadcast_service):
         stubbed=False,
         status="broadcasting",
         starts_at=datetime(2021, 6, 20, 12, 0, 0),
+        extra_content="Test Extra Content",
     )
 
     # broadcast_message_stubbed
@@ -138,6 +143,7 @@ def test_dao_get_all_broadcast_messages(sample_broadcast_service):
             None,
             None,
             None,
+            "Test Extra Content",
         ),
         (
             broadcast_message_1.id,
@@ -147,6 +153,7 @@ def test_dao_get_all_broadcast_messages(sample_broadcast_service):
             {"ids": [], "simple_polygons": []},
             "cancelled",
             datetime(2021, 6, 15, 12, 0),
+            None,
             None,
             None,
             None,
