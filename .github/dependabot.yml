@@ -3,7 +3,19 @@
 
 version: 2
 updates:
+
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
       interval: "daily"
+    open-pull-requests-limit: 10
+    rebase-strategy: "auto"
+    groups:
+      pip-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+      pip-updates:
+        applies-to: version-updates
+        patterns:
+          - "*"
