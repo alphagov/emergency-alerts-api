@@ -318,7 +318,7 @@ def create_custom_template(service, user, template_config_name, template_type, c
     if not template:
         data = {
             "id": current_app.config[template_config_name],
-            "name": template_config_name,
+            "reference": template_config_name,
             "template_type": template_type,
             "content": content,
             "service": service,
