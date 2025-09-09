@@ -234,7 +234,7 @@ def sample_template(sample_user):
     service = create_service(service_permissions=[BROADCAST_TYPE], check_if_service_exists=True)
 
     data = {
-        "name": "Template Name",
+        "reference": "Template Name",
         "template_type": BROADCAST_TYPE,
         "content": "This is a template:\nwith a newline",
         "service": service,
@@ -318,7 +318,7 @@ def create_custom_template(service, user, template_config_name, template_type, c
     if not template:
         data = {
             "id": current_app.config[template_config_name],
-            "name": template_config_name,
+            "reference": template_config_name,
             "template_type": template_type,
             "content": content,
             "service": service,
