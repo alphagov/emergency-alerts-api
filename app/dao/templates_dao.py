@@ -69,7 +69,7 @@ def dao_get_all_templates_for_service(service_id, template_type=None):
         return (
             Template.query.filter_by(service_id=service_id, template_type=template_type, archived=False)
             .order_by(
-                asc(Template.name),
+                asc(Template.reference),
                 asc(Template.template_type),
             )
             .all()
@@ -78,7 +78,7 @@ def dao_get_all_templates_for_service(service_id, template_type=None):
     return (
         Template.query.filter_by(service_id=service_id, archived=False)
         .order_by(
-            asc(Template.name),
+            asc(Template.reference),
             asc(Template.template_type),
         )
         .all()

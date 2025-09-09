@@ -166,4 +166,4 @@ def purge_templates_and_folders_for_service(service_id):
 
 
 def _template_has_not_changed(current_data, updated_template):
-    return all(current_data[key] == updated_template[key] for key in ("name", "content", "archived"))
+    return all(current_data[key] == updated_template[key] for key in ("reference", "content", "archived"))
