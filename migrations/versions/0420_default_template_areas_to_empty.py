@@ -17,14 +17,14 @@ def upgrade():
         """
         UPDATE templates
         SET areas = '{}'
-        WHERE areas = '' OR areas IS NULL;
+        WHERE areas IS NULL;
     """
     )
     op.execute(
         """
         UPDATE templates_history
         SET areas = '{}'
-        WHERE areas = '' OR areas IS NULL;
+        WHERE areas IS NULL;
     """
     )
 
