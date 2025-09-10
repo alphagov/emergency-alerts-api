@@ -1,6 +1,6 @@
 """
 
-Revision ID: 0420_default_template_areas_to_empty
+Revision ID: 0420_add_default_template_areas
 Revises: 0419_add_area_col
 Create Date: 2025-09-10 12:04:00
 
@@ -8,7 +8,7 @@ Create Date: 2025-09-10 12:04:00
 
 from alembic import op
 
-revision = "0420_default_template_areas_to_empty"
+revision = "0420_add_default_template_areas"
 down_revision = "0419_add_area_col"
 
 
