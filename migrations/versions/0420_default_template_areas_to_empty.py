@@ -6,9 +6,7 @@ Create Date: 2025-09-10 12:04:00
 
 """
 
-import sqlalchemy as sa
 from alembic import op
-from sqlalchemy.dialects import postgresql
 
 revision = "0420_default_template_areas_to_empty"
 down_revision = "0419_add_area_col"
