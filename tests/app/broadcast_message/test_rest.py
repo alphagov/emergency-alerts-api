@@ -46,7 +46,7 @@ def test_get_broadcast_message(admin_request, sample_broadcast_service):
     assert response["id"] == str(bm.id)
     assert response["template_id"] == str(t.id)
     assert response["content"] == "This is a test"
-    assert response["template_name"] == t.name
+    assert response["template_name"] == t.reference
     assert response["status"] == BroadcastStatusType.DRAFT
     assert response["created_at"] is not None
     assert response["starts_at"] is None
@@ -74,7 +74,7 @@ def test_get_broadcast_message_with_user(mocker, admin_request, sample_broadcast
     assert response["id"] == str(bm.id)
     assert response["template_id"] == str(t.id)
     assert response["content"] == "This is a test"
-    assert response["template_name"] == t.name
+    assert response["template_name"] == t.reference
     assert response["status"] == BroadcastStatusType.DRAFT
     assert response["created_at"] is not None
     assert response["starts_at"] is None
@@ -259,7 +259,7 @@ def test_create_broadcast_message(admin_request, sample_broadcast_service, train
         _expected_status=201,
     )
 
-    assert response["template_name"] == t.name
+    assert response["template_name"] == t.reference
     assert response["status"] == BroadcastStatusType.DRAFT
     assert response["created_at"] is not None
     assert response["created_by_id"] == str(t.created_by_id)
@@ -277,7 +277,7 @@ def test_create_broadcast_message(admin_request, sample_broadcast_service, train
         broadcast_message.id, sample_broadcast_service.id
     )
     broadcast_message_version = dao_get_broadcast_message_version_by_id(latest_version.id)
-    assert broadcast_message_version.reference == t.name
+    assert broadcast_message_version.reference == t.reference
     assert broadcast_message_version.created_by_id == t.created_by_id
     assert broadcast_message_version.created_at is not None
     assert broadcast_message_version.areas == {
