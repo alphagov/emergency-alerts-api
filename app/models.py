@@ -562,6 +562,7 @@ class TemplateBase(db.Model):
     content = db.Column(db.Text, nullable=False)
     archived = db.Column(db.Boolean, nullable=False, default=False)
     broadcast_data = db.Column(JSONB(none_as_null=True), nullable=True)
+    areas = db.Column(JSONB(none_as_null=True), nullable=False, default=dict)
 
     @declared_attr
     def service_id(cls):
@@ -589,6 +590,7 @@ class TemplateBase(db.Model):
             "version": self.version,
             "body": self.content,
             "reference": self.reference,
+            "areas": self.areas,
         }
 
         return serialized

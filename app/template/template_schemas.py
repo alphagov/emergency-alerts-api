@@ -13,6 +13,7 @@ post_create_template_schema = {
         "content": {"type": "string"},
         "created_by": uuid,
         "parent_folder_id": uuid,
+        "areas": {"type": "object"},
     },
     "required": ["reference", "template_type", "content", "service", "created_by"],
 }
@@ -31,5 +32,6 @@ post_update_template_schema = {
         "created_by": uuid,
         "archived": {"type": "boolean"},
         "current_user": uuid,
+        "areas": {"type": "object"},
     },
 }

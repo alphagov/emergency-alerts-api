@@ -36,7 +36,7 @@ def dao_update_template_reply_to(template_id, reply_to):
     history = TemplateHistory(
         **{
             "id": template.id,
-            "name": template.name,
+            "reference": template.reference,
             "template_type": template.template_type,
             "created_at": template.created_at,
             "updated_at": template.updated_at,

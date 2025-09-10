@@ -116,14 +116,42 @@ def create_template(
     content="Dear Sir/Madam, Hello. Yours Truly, The Government.",
     archived=False,
     folder=None,
+    areas=None,
 ):
     data = {
-        "reference": template_name or "{} Template Name".format(template_type),
+        "reference": template_name or f"{template_type} Template Name",
         "template_type": template_type,
         "content": content,
         "service": service,
         "created_by": service.created_by,
         "folder": folder,
+        "areas": areas or {},
+    }
+    template = Template(**data)
+    dao_create_template(template)
+
+    if archived:
+        template.archived = archived
+        dao_update_template(template)
+
+    return template
+
+
+def create_template_with_only_area(
+    service,
+    template_type=BROADCAST_TYPE,
+    archived=False,
+    folder=None,
+    areas=None,
+):
+    data = {
+        "reference": "",
+        "template_type": template_type,
+        "content": "",
+        "service": service,
+        "created_by": service.created_by,
+        "folder": folder,
+        "areas": areas or {},
     }
     template = Template(**data)
     dao_create_template(template)

@@ -38,7 +38,7 @@ register_errors(template_blueprint)
 def _content_count_greater_than_limit(content, template_type):
     if template_type == BROADCAST_TYPE:
         template = BroadcastMessageTemplate({"content": content, "template_type": template_type})
-        return template.is_message_too_long()
+        return template.content_too_long
     return False
 
 
@@ -166,4 +166,4 @@ def purge_templates_and_folders_for_service(service_id):
 
 
 def _template_has_not_changed(current_data, updated_template):
-    return all(current_data[key] == updated_template[key] for key in ("reference", "content", "archived"))
+    return all(current_data[key] == updated_template[key] for key in ("reference", "content", "archived", "areas"))
