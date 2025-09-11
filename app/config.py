@@ -149,7 +149,7 @@ class Config(object):
         "task_queues": [Queue(QUEUE_NAME, Exchange("default"), routing_key=QUEUE_NAME)],
         "worker_max_tasks_per_child": 2,
     }
-    POST_ALERT_CHECK_INTERVAL_MINUTES = 15
+    POST_ALERT_CHECK_INTERVAL_MINUTES = 1
 
     FROM_NUMBER = "development"
 
@@ -258,11 +258,6 @@ class Hosted(Config):
         TaskNames.DELETE_INVITATIONS: {
             "task": TaskNames.DELETE_INVITATIONS,
             "schedule": crontab(minute=20),
-            "options": {"queue": QueueNames.PERIODIC},
-        },
-        TaskNames.AUTO_EXPIRE_BROADCAST_MESSAGES: {
-            "task": TaskNames.AUTO_EXPIRE_BROADCAST_MESSAGES,
-            "schedule": crontab(minute=Config.POST_ALERT_CHECK_INTERVAL_MINUTES),
             "options": {"queue": QueueNames.PERIODIC},
         },
         TaskNames.REMOVE_YESTERDAYS_PLANNED_TESTS_ON_GOVUK_ALERTS: {
