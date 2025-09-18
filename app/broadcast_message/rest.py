@@ -130,19 +130,18 @@ def create_broadcast_message(service_id):
 
     if template_id:
         template = dao_get_template_by_id_and_service_id(template_id, data["service_id"])
-        content = str(template._as_utils_template())
-        reference = str(template.reference)
     else:
-        temporary_template = BroadcastMessageTemplate.from_content(data["content"])
-        if temporary_template.content_too_long:
-            raise InvalidRequest(
-                (f"Content must be " f"{temporary_template.max_content_count:,.0f} " f"characters or fewer")
-                + (" (because it could not be GSM7 encoded)" if temporary_template.non_gsm_characters else ""),
-                status_code=400,
-            )
         template = None
-        content = str(temporary_template)
-        reference = data["reference"]
+
+    temporary_template = BroadcastMessageTemplate.from_content(data["content"])
+    if temporary_template.content_too_long:
+        raise InvalidRequest(
+            (f"Content must be " f"{temporary_template.max_content_count:,.0f} " f"characters or fewer")
+            + (" (because it could not be GSM7 encoded)" if temporary_template.non_gsm_characters else ""),
+            status_code=400,
+        )
+    content = str(temporary_template)
+    reference = data["reference"]
 
     broadcast_message = BroadcastMessage(
         service_id=service.id,

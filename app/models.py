@@ -970,7 +970,7 @@ class BroadcastMessage(db.Model):
             "service_id": str(self.service_id),
             "template_id": str(self.template_id) if self.template else None,
             "template_version": self.template_version,
-            "template_name": self.template.reference if self.template else None,
+            "template_name": self.template.reference if (self.template and self.template.reference) else None,
             "personalisation": self.personalisation if self.template else None,
             "content": self.content,
             "extra_content": self.extra_content or None,
