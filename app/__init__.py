@@ -288,7 +288,7 @@ def setup_sqlalchemy_events(app):
         @event.listens_for(db.engine, "close")
         def close(dbapi_connection, connection_record):
             # connection closed (probably only happens with overflow connections)
-            current_app.logger.info(f"[CLOSE] Connection id {id(dbapi_connection)}")
+            current_app.logger.debug(f"[CLOSE] Connection id {id(dbapi_connection)}")
 
         @event.listens_for(db.engine, "checkout")
         def checkout(dbapi_connection, connection_record, connection_proxy):
@@ -302,7 +302,7 @@ def setup_sqlalchemy_events(app):
 
                 # web requests
                 if has_request_context():
-                    current_app.logger.info(
+                    current_app.logger.debug(
                         f"[CHECKOUT] in request {request.method} "
                         f"{request.host}{request.url_rule} "
                         f"Connection id {id(dbapi_connection)}"
@@ -315,7 +315,7 @@ def setup_sqlalchemy_events(app):
                 # celery apps
                 elif _celery_tasks:
                     task = _celery_tasks[next(iter(_celery_tasks))]
-                    current_app.logger.info(
+                    current_app.logger.debug(
                         f"[CHECKOUT] in celery task. Connection id {id(dbapi_connection)}",
                         extra={
                             "celery_task": task.name,
@@ -332,7 +332,7 @@ def setup_sqlalchemy_events(app):
                     }
                 # anything else. migrations possibly, or flask cli commands.
                 else:
-                    current_app.logger.info(f"[CHECKOUT] outside request. Connection id {id(dbapi_connection)}")
+                    current_app.logger.debug(f"[CHECKOUT] outside request. Connection id {id(dbapi_connection)}")
                     connection_record.info["request_data"] = {
                         "method": "unknown",
                         "host": "unknown",
@@ -348,16 +348,16 @@ def setup_sqlalchemy_events(app):
 
                 if checkout_at:
                     duration = time.monotonic() - checkout_at
-                    current_app.logger.info(
+                    current_app.logger.debug(
                         f"[CHECKIN]. Connection id {id(dbapi_connection)} " f"used for {duration:.4f} seconds"
                     )
                 else:
-                    current_app.logger.info(
+                    current_app.logger.debug(
                         f"[CHECKIN]. Connection id {id(dbapi_connection)} " "(no recorded checkout time)"
                     )
 
             except Exception:
-                current_app.logger.exception("Exception caught for checkin event.")
+                current_app.logger.exception("Unable to retrieve connection_record info")
 
 
 @signals.task_prerun.connect
