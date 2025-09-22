@@ -310,16 +310,6 @@ def setup_sqlalchemy_events(app):
                 # celery apps
                 elif _celery_tasks:
                     task = _celery_tasks[next(iter(_celery_tasks))]
-                    current_app.logger.info(
-                        f"[CHECKOUT] in celery task. Connection id {id(dbapi_connection)}",
-                        extra={
-                            "celery_task": task.name,
-                            "celery_task_id": task.request.id,
-                            "retries": task.request.retries,
-                            "worker_hostname": task.request.hostname,
-                            "delivery_info": task.request.delivery_info,
-                        },
-                    )
                     connection_record.info["request_data"] = {
                         "method": f"celery task {task.name}",
                         "host": current_app.config["EAS_APP_NAME"],
