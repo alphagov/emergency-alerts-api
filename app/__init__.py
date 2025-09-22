@@ -302,11 +302,6 @@ def setup_sqlalchemy_events(app):
 
                 # web requests
                 if has_request_context():
-                    current_app.logger.debug(
-                        f"[CHECKOUT] in request {request.method} "
-                        f"{request.host}{request.url_rule} "
-                        f"Connection id {id(dbapi_connection)}"
-                    )
                     connection_record.info["request_data"] = {
                         "method": request.method,
                         "host": request.host,
@@ -315,16 +310,6 @@ def setup_sqlalchemy_events(app):
                 # celery apps
                 elif _celery_tasks:
                     task = _celery_tasks[next(iter(_celery_tasks))]
-                    current_app.logger.debug(
-                        f"[CHECKOUT] in celery task. Connection id {id(dbapi_connection)}",
-                        extra={
-                            "celery_task": task.name,
-                            "celery_task_id": task.request.id,
-                            "retries": task.request.retries,
-                            "worker_hostname": task.request.hostname,
-                            "delivery_info": task.request.delivery_info,
-                        },
-                    )
                     connection_record.info["request_data"] = {
                         "method": f"celery task {task.name}",
                         "host": current_app.config["EAS_APP_NAME"],
@@ -332,7 +317,6 @@ def setup_sqlalchemy_events(app):
                     }
                 # anything else. migrations possibly, or flask cli commands.
                 else:
-                    current_app.logger.debug(f"[CHECKOUT] outside request. Connection id {id(dbapi_connection)}")
                     connection_record.info["request_data"] = {
                         "method": "unknown",
                         "host": "unknown",
@@ -340,24 +324,6 @@ def setup_sqlalchemy_events(app):
                     }
             except Exception:
                 current_app.logger.exception("Exception caught for checkout event.")
-
-        @event.listens_for(db.engine, "checkin")
-        def checkin(dbapi_connection, connection_record):
-            try:
-                checkout_at = connection_record.info.get("checkout_at", None)
-
-                if checkout_at:
-                    duration = time.monotonic() - checkout_at
-                    current_app.logger.debug(
-                        f"[CHECKIN]. Connection id {id(dbapi_connection)} " f"used for {duration:.4f} seconds"
-                    )
-                else:
-                    current_app.logger.debug(
-                        f"[CHECKIN]. Connection id {id(dbapi_connection)} " "(no recorded checkout time)"
-                    )
-
-            except Exception:
-                current_app.logger.exception("Unable to retrieve connection_record info")
 
 
 @signals.task_prerun.connect
