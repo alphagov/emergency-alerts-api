@@ -14,14 +14,14 @@ attrs==25.3.0
     # via
     #   flake8-bugbear
     #   jsonschema
-    #   pytest
+    #   referencing
 bcrypt==4.3.0
     # via flask-bcrypt
-beautifulsoup4==4.11.1
+beautifulsoup4==4.14.2
     # via -r requirements.in
 billiard==4.2.1
     # via celery
-black==25.1.0
+black==25.9.0
     # via -r requirements.in
 blinker==1.9.0
     # via flask
@@ -35,13 +35,13 @@ botocore==1.39.1
     #   boto3
     #   moto
     #   s3transfer
-cachetools==5.2.0
+cachetools==6.2.0
     # via -r requirements.in
 celery[sqs]==5.5.3
     # via -r requirements.in
 certifi==2025.6.15
     # via requests
-cffi==1.15.1
+cffi==2.0.0
     # via
     #   -r requirements.in
     #   cryptography
@@ -56,7 +56,7 @@ click==8.2.1
     #   click-plugins
     #   click-repl
     #   flask
-click-datetime==0.2
+click-datetime==0.4.0
     # via -r requirements.in
 click-didyoumean==0.3.1
     # via celery
@@ -64,9 +64,9 @@ click-plugins==1.1.1.2
     # via celery
 click-repl==0.3.0
     # via celery
-coverage[toml]==7.9.1
+coverage[toml]==7.10.7
     # via pytest-cov
-cryptography==44.0.3
+cryptography==46.0.2
     # via
     #   -r requirements.in
     #   moto
@@ -74,15 +74,15 @@ docopt==0.6.2
     # via notifications-python-client
 execnet==2.1.1
     # via pytest-xdist
-flake8==7.1.1
+flake8==7.3.0
     # via
     #   -r requirements.in
     #   flake8-bugbear
-flake8-bugbear==22.9.23
+flake8-bugbear==24.12.12
     # via -r requirements.in
-flaky==3.7.0
+flaky==3.8.1
     # via -r requirements.in
-flask==3.0.2
+flask==3.0.3
     # via
     #   -r requirements.in
     #   flask-bcrypt
@@ -93,7 +93,7 @@ flask-bcrypt==1.0.1
     # via -r requirements.in
 flask-marshmallow==1.3.0
     # via -r requirements.in
-flask-migrate==3.1.0
+flask-migrate==4.1.0
     # via -r requirements.in
 flask-sqlalchemy==3.0.5
     # via
@@ -101,21 +101,23 @@ flask-sqlalchemy==3.0.5
     #   flask-migrate
 fqdn==1.5.1
     # via jsonschema
-freezegun==1.2.2
+freezegun==1.5.5
     # via -r requirements.in
+greenlet==3.2.4
+    # via sqlalchemy
 idna==3.10
     # via
     #   jsonschema
     #   requests
 iniconfig==2.1.0
     # via pytest
-iso8601==1.1.0
+iso8601==2.1.0
     # via -r requirements.in
 isoduration==20.11.0
     # via jsonschema
-isort==5.12.0
+isort==6.1.0
     # via -r requirements.in
-itsdangerous==2.1.2
+itsdangerous==2.2.0
     # via
     #   -r requirements.in
     #   flask
@@ -129,11 +131,13 @@ jmespath==1.0.1
     #   botocore
 jsonpointer==3.0.0
     # via jsonschema
-jsonschema[format]==4.16.0
+jsonschema[format]==4.25.1
     # via -r requirements.in
+jsonschema-specifications==2025.9.1
+    # via jsonschema
 kombu[sqs]==5.5.4
     # via celery
-lxml==5.4.0
+lxml==6.0.2
     # via -r requirements.in
 mako==1.3.10
     # via alembic
@@ -142,73 +146,66 @@ markupsafe==3.0.2
     #   jinja2
     #   mako
     #   werkzeug
-marshmallow==3.18.0
+marshmallow==4.0.1
     # via
     #   -r requirements.in
     #   flask-marshmallow
     #   marshmallow-sqlalchemy
-marshmallow-sqlalchemy==0.28.1
+marshmallow-sqlalchemy==1.4.2
     # via -r requirements.in
 mccabe==0.7.0
     # via flake8
-moto==5.1.3
+moto==5.1.14
     # via -r requirements.in
 mypy-extensions==1.1.0
     # via black
-notifications-python-client==8.0.0
+notifications-python-client==10.0.1
     # via -r requirements.in
 packaging==25.0
     # via
     #   black
     #   kombu
-    #   marshmallow
-    #   marshmallow-sqlalchemy
     #   pytest
 pathspec==0.12.1
     # via black
 platformdirs==4.3.8
     # via black
 pluggy==1.6.0
-    # via pytest
+    # via
+    #   pytest
+    #   pytest-cov
 prompt-toolkit==3.0.51
     # via click-repl
 psycopg2-binary==2.9.10
     # via -r requirements.in
 pwdpy==1.0.1
     # via -r requirements.in
-py==1.11.0
-    # via
-    #   pytest
-    #   pytest-forked
-pycodestyle==2.12.1
+pycodestyle==2.14.0
     # via flake8
 pycparser==2.22
     # via cffi
-pyflakes==3.2.0
+pyflakes==3.4.0
     # via flake8
-pyjwt==2.5.0
+pygments==2.19.2
+    # via pytest
+pyjwt==2.10.1
     # via
     #   -r requirements.in
     #   notifications-python-client
-pyrsistent==0.20.0
-    # via jsonschema
-pytest==7.1.3
+pytest==8.4.2
     # via
     #   -r requirements.in
     #   pytest-cov
     #   pytest-env
-    #   pytest-forked
     #   pytest-mock
     #   pytest-xdist
-pytest-cov==4.0.0
+pytest-cov==7.0.0
     # via -r requirements.in
-pytest-env==0.6.2
+pytest-env==1.1.5
     # via -r requirements.in
-pytest-forked==1.6.0
-    # via pytest-xdist
-pytest-mock==3.9.0
+pytest-mock==3.15.1
     # via -r requirements.in
-pytest-xdist==2.5.0
+pytest-xdist==3.8.0
     # via -r requirements.in
 python-dateutil==2.9.0.post0
     # via
@@ -217,15 +214,21 @@ python-dateutil==2.9.0.post0
     #   celery
     #   freezegun
     #   moto
+pytokens==0.1.10
+    # via black
 pyyaml==6.0.2
     # via responses
+referencing==0.36.2
+    # via
+    #   jsonschema
+    #   jsonschema-specifications
 requests==2.32.4
     # via
     #   moto
     #   notifications-python-client
     #   requests-mock
     #   responses
-requests-mock==1.10.0
+requests-mock==1.12.1
     # via -r requirements.in
 responses==0.25.7
     # via moto
@@ -233,27 +236,32 @@ rfc3339-validator==0.1.4
     # via jsonschema
 rfc3987==1.3.8
     # via jsonschema
+rpds-py==0.27.1
+    # via
+    #   jsonschema
+    #   referencing
 s3transfer==0.13.0
     # via boto3
 six==1.17.0
     # via
     #   python-dateutil
-    #   requests-mock
     #   rfc3339-validator
 soupsieve==2.7
     # via beautifulsoup4
-sqlalchemy==1.4.41
+sqlalchemy==2.0.43
     # via
     #   -r requirements.in
     #   alembic
     #   flask-sqlalchemy
     #   marshmallow-sqlalchemy
-tomli==2.2.1
-    # via pytest
 types-python-dateutil==2.9.0.20250516
     # via arrow
 typing-extensions==4.14.0
-    # via alembic
+    # via
+    #   alembic
+    #   beautifulsoup4
+    #   referencing
+    #   sqlalchemy
 tzdata==2025.2
     # via kombu
 uri-template==1.3.0
@@ -279,5 +287,7 @@ werkzeug==3.1.3
     #   -r requirements.in
     #   flask
     #   moto
+wheel==0.44.0
+    # via click-datetime
 xmltodict==0.14.2
     # via moto
