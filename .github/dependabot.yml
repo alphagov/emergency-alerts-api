@@ -3,13 +3,15 @@
 
 version: 2
 updates:
-
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
       interval: "daily"
     open-pull-requests-limit: 10
     rebase-strategy: "auto"
+    exclude-paths:
+      # Dependabot fails completely as it contains a local path
+      - requirements_local_utils.txt
     groups:
       pip-security:
         applies-to: security-updates
