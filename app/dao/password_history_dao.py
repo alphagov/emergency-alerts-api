@@ -17,3 +17,8 @@ def dao_create_password_for_user_id(user_id, password):
 
 def dao_get_all_passwords_for_user(user_id):
     return PasswordHistory.query.filter_by(user_id=user_id).all()
+
+
+def dao_purge_password_history(user_id):
+    PasswordHistory.query.filter_by(user_id=user_id).delete()
+    db.session.commit()
