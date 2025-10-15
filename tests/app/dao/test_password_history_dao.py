@@ -1,8 +1,11 @@
+import random
+import string
 import uuid
 
 from app.dao.password_history_dao import (
     dao_create_password_for_user_id,
     dao_get_all_passwords_for_user,
+    dao_purge_password_history,
 )
 from app.hashing import check_hash
 
@@ -33,3 +36,26 @@ def test_creates_passwords_adds_passwords_to_password_history(notify_db_session)
         f"{test_password}1",
         dao_get_all_passwords_for_user(test_uuid)[1]._password,
     )
+
+
+def test_delete_passwords_deletes_passwords_from_password_history(notify_db_session):
+    """
+    Adds 2 passwords and then deletes them from PasswordHistory and checks that they're
+    no longer in the table.
+    """
+
+    assert len(dao_get_all_passwords_for_user(test_uuid)) == 0
+
+    random_password_1 = "".join(
+        [random.choice(string.ascii_letters + string.digits + string.punctuation) for _ in range(15)]
+    )
+    random_password_2 = "".join(
+        [random.choice(string.ascii_letters + string.digits + string.punctuation) for _ in range(15)]
+    )
+    dao_create_password_for_user_id(test_uuid, random_password_1)
+    dao_create_password_for_user_id(test_uuid, random_password_2)
+
+    assert len(dao_get_all_passwords_for_user(test_uuid)) == 2
+
+    dao_purge_password_history(test_uuid)
+    assert len(dao_get_all_passwords_for_user(test_uuid)) == 0
