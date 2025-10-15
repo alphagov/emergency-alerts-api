@@ -14,6 +14,7 @@ from sqlalchemy.exc import IntegrityError
 from app.clients.notify_client import notify_send
 from app.common_passwords.rest import is_password_common
 from app.dao.invited_user_dao import get_invited_user_by_email
+from app.dao.password_history_dao import dao_purge_password_history
 from app.dao.permissions_dao import permission_dao
 from app.dao.service_user_dao import (
     dao_get_service_user,
@@ -82,7 +83,13 @@ from app.user.utils import (  # send_user_updated_by_notification,
     send_security_change_notification,
     validate_field,
 )
-from app.utils import is_local_host, log_auth_activity, log_user, url_with_token
+from app.utils import (
+    is_local_host,
+    is_public_environment,
+    log_auth_activity,
+    log_user,
+    url_with_token,
+)
 
 user_blueprint = Blueprint("user", __name__)
 register_errors(user_blueprint)
@@ -832,6 +839,21 @@ def redeem_platform_admin_elevation(user_id):
     save_user_attribute(user, {"platform_admin_redemption": None})
 
     return jsonify(user_id)
+
+
+@user_blueprint.route("/<uuid:user_id>/purge-password-history", methods=["DELETE"])
+def purge_password_history(user_id):
+    """Purge password history. Primarily to be applied to the account used in the password reset functional test"""
+
+    if is_public_environment():
+        raise InvalidRequest("Endpoint not found", status_code=404)
+
+    try:
+        dao_purge_password_history(user_id=user_id)
+    except Exception as e:
+        return jsonify(result="error", message=f"Unable to purge password_history for user {user_id}: {e}"), 500
+
+    return jsonify({"message": f"Purged password history for user {user_id}"}), 200
 
 
 @user_blueprint.route("/<uuid:user_id>/organisations-and-services", methods=["GET"])
