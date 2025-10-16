@@ -14,13 +14,18 @@ from app.models import (
     TemplateHistory,
 )
 from tests import create_admin_authorization_header
-from tests.app.db import create_service, create_template, create_template_folder
+from tests.app.db import (
+    create_service,
+    create_template,
+    create_template_folder,
+    create_template_with_only_area,
+)
 
 
 def test_should_create_a_new_template_for_a_service(client, sample_user):
     service = create_service(service_permissions=[BROADCAST_TYPE])
     data = {
-        "name": "my template",
+        "reference": "my template",
         "template_type": BROADCAST_TYPE,
         "content": "template <b>content</b>",
         "service": str(service.id),
@@ -36,7 +41,7 @@ def test_should_create_a_new_template_for_a_service(client, sample_user):
     )
     assert response.status_code == 201
     json_resp = json.loads(response.get_data(as_text=True))
-    assert json_resp["data"]["name"] == "my template"
+    assert json_resp["data"]["reference"] == "my template"
     assert json_resp["data"]["template_type"] == BROADCAST_TYPE
     assert json_resp["data"]["content"] == "template <b>content</b>"
     assert json_resp["data"]["service"] == str(service.id)
@@ -54,7 +59,7 @@ def test_create_a_new_template_for_a_service_adds_folder_relationship(client, sa
     parent_folder = create_template_folder(service=sample_service, name="parent folder")
 
     data = {
-        "name": "my template",
+        "reference": "my template",
         "template_type": "broadcast",
         "content": "template <b>content</b>",
         "service": str(sample_service.id),
@@ -70,7 +75,7 @@ def test_create_a_new_template_for_a_service_adds_folder_relationship(client, sa
         data=data,
     )
     assert response.status_code == 201
-    template = Template.query.filter(Template.name == "my template").first()
+    template = Template.query.filter(Template.reference == "my template").first()
     assert template.folder == parent_folder
 
 
@@ -79,7 +84,7 @@ def test_create_template_should_return_400_if_folder_is_for_a_different_service(
     parent_folder = create_template_folder(service=service2)
 
     data = {
-        "name": "my template",
+        "reference": "my template",
         "template_type": "broadcast",
         "content": "template <b>content</b>",
         "service": str(sample_service.id),
@@ -100,7 +105,7 @@ def test_create_template_should_return_400_if_folder_is_for_a_different_service(
 
 def test_create_template_should_return_400_if_folder_does_not_exist(client, sample_service):
     data = {
-        "name": "my template",
+        "reference": "my template",
         "template_type": "broadcast",
         "content": "template content",
         "service": str(sample_service.id),
@@ -121,7 +126,7 @@ def test_create_template_should_return_400_if_folder_does_not_exist(client, samp
 
 def test_should_raise_error_if_service_does_not_exist_on_create(client, sample_user, fake_uuid):
     data = {
-        "name": "my template",
+        "reference": "my template",
         "template_type": BROADCAST_TYPE,
         "content": "template content",
         "service": fake_uuid,
@@ -152,7 +157,7 @@ def test_should_raise_error_if_service_does_not_exist_on_create(client, sample_u
 def test_should_raise_error_on_create_if_no_permission(client, sample_user, permissions, template_type, expected_error):
     service = create_service(service_permissions=permissions)
     data = {
-        "name": "my template",
+        "reference": "my template",
         "template_type": template_type,
         "content": "template content",
         "service": str(service.id),
@@ -212,7 +217,7 @@ def test_should_be_error_on_update_if_no_permission(
 def test_should_error_if_created_by_missing(client, sample_user, sample_service):
     service_id = str(sample_service.id)
     data = {
-        "name": "my template",
+        "reference": "my template",
         "template_type": BROADCAST_TYPE,
         "content": "template content",
         "service": service_id,
@@ -232,7 +237,7 @@ def test_should_error_if_created_by_missing(client, sample_user, sample_service)
 
 
 def test_should_be_error_if_service_does_not_exist_on_update(client, fake_uuid):
-    data = {"name": "my template"}
+    data = {"reference": "my template"}
     data = json.dumps(data)
     auth_header = create_admin_authorization_header()
 
@@ -267,7 +272,7 @@ def test_update_should_update_a_template(client, sample_user):
     assert update_response.status_code == 200
     update_json_resp = json.loads(update_response.get_data(as_text=True))
     assert update_json_resp["data"]["content"] == ("my template has new content")
-    assert update_json_resp["data"]["name"] == template.name
+    assert update_json_resp["data"]["reference"] == template.reference
     assert update_json_resp["data"]["template_type"] == template.template_type
     assert update_json_resp["data"]["version"] == 2
 
@@ -280,7 +285,7 @@ def test_update_should_update_a_template(client, sample_user):
 
 def test_should_be_able_to_archive_template(client, sample_template):
     data = {
-        "name": sample_template.name,
+        "reference": sample_template.reference,
         "template_type": sample_template.template_type,
         "content": sample_template.content,
         "archived": True,
@@ -323,7 +328,7 @@ def test_should_be_able_to_archive_template_should_remove_template_folders(clien
 
 def test_should_be_able_to_get_all_templates_for_a_service(client, sample_user, sample_service):
     data = {
-        "name": "my template 1",
+        "reference": "my template 1",
         "template_type": BROADCAST_TYPE,
         "content": "template content",
         "service": str(sample_service.id),
@@ -331,7 +336,7 @@ def test_should_be_able_to_get_all_templates_for_a_service(client, sample_user, 
     }
     data_1 = json.dumps(data)
     data = {
-        "name": "my template 2",
+        "reference": "my template 2",
         "template_type": BROADCAST_TYPE,
         "content": "template content",
         "service": str(sample_service.id),
@@ -358,10 +363,10 @@ def test_should_be_able_to_get_all_templates_for_a_service(client, sample_user, 
 
     assert response.status_code == 200
     update_json_resp = json.loads(response.get_data(as_text=True))
-    assert update_json_resp["data"][0]["name"] == "my template 1"
+    assert update_json_resp["data"][0]["reference"] == "my template 1"
     assert update_json_resp["data"][0]["version"] == 1
     assert update_json_resp["data"][0]["created_at"]
-    assert update_json_resp["data"][1]["name"] == "my template 2"
+    assert update_json_resp["data"][1]["reference"] == "my template 2"
     assert update_json_resp["data"][1]["version"] == 1
     assert update_json_resp["data"][1]["created_at"]
 
@@ -403,13 +408,14 @@ def test_should_get_return_all_fields_by_default(
     )
     assert json_response["data"][0].keys() == {
         "archived",
+        "areas",
         "broadcast_data",
         "content",
         "created_at",
         "created_by",
         "folder",
         "id",
-        "name",
+        "reference",
         "service",
         "template_type",
         "updated_at",
@@ -462,7 +468,7 @@ def test_create_400_for_over_limit_content(
         random.choice(string.ascii_uppercase + string.digits) for _ in range(MAX_BROADCAST_CHAR_COUNT + 1)
     )
     data = {
-        "name": "too big template",
+        "reference": "too big template",
         "template_type": BROADCAST_TYPE,
         "content": content,
         "service": str(sample_service.id),
@@ -554,7 +560,7 @@ def test_update_does_not_create_new_version_when_there_is_no_change(client, samp
         (
             {},
             [
-                {"error": "ValidationError", "message": "name is a required property"},
+                {"error": "ValidationError", "message": "reference is a required property"},
                 {"error": "ValidationError", "message": "template_type is a required property"},
                 {"error": "ValidationError", "message": "content is a required property"},
                 {"error": "ValidationError", "message": "service is a required property"},
@@ -571,7 +577,7 @@ def test_update_does_not_create_new_version_when_there_is_no_change(client, samp
             [
                 {
                     "error": "ValidationError",
-                    "message": "name is a required property",
+                    "message": "reference is a required property",
                 },
             ],
         ),
@@ -603,3 +609,95 @@ def test_purge_templates_and_folders_for_service_removes_db_objects(mocker, samp
 
     template_purge_mock.assert_called_once_with(service_id=sample_service.id)
     folder_purge_mock.assert_called_once_with(service_id=sample_service.id)
+
+
+def test_create_template_with_area(sample_user, sample_service, client):
+    auth_header = create_admin_authorization_header()
+    template = create_template(
+        service=sample_service,
+        template_name="Test Template",
+        content="Test Content",
+        areas={"ids": ["london", "glasgow"], "simple_polygons": [[[51.12, 0.2], [50.13, 0.4], [50.14, 0.45]]]},
+    )
+    resp = client.get(
+        f"/service/{sample_service.id}/template/{template.id}",
+        headers=[("Content-Type", "application/json"), auth_header],
+    )
+    assert resp.status_code == 200
+    json_resp = json.loads(resp.get_data(as_text=True))
+    assert json_resp["data"]["reference"] == "Test Template"
+    assert json_resp["data"]["template_type"] == BROADCAST_TYPE
+    assert json_resp["data"]["content"] == "Test Content"
+    assert json_resp["data"]["service"] == str(sample_service.id)
+    assert json_resp["data"]["id"] == str(template.id)
+    assert json_resp["data"]["version"] == 1
+    assert json_resp["data"]["created_by"] == str(sample_user.id)
+
+
+def test_create_template_with_only_area(sample_user, sample_service, client):
+    auth_header = create_admin_authorization_header()
+    template = create_template_with_only_area(
+        service=sample_service,
+        areas={"ids": ["london", "glasgow"], "simple_polygons": [[[51.12, 0.2], [50.13, 0.4], [50.14, 0.45]]]},
+    )
+    resp = client.get(
+        f"/service/{sample_service.id}/template/{template.id}",
+        headers=[("Content-Type", "application/json"), auth_header],
+    )
+    assert resp.status_code == 200
+    json_resp = json.loads(resp.get_data(as_text=True))
+    assert json_resp["data"]["reference"] == ""
+    assert json_resp["data"]["template_type"] == BROADCAST_TYPE
+    assert json_resp["data"]["content"] == ""
+    assert json_resp["data"]["service"] == str(sample_service.id)
+    assert json_resp["data"]["id"] == str(template.id)
+    assert json_resp["data"]["version"] == 1
+    assert json_resp["data"]["created_by"] == str(sample_user.id)
+
+
+def test_update_template_area(client, sample_user, sample_service, sample_user_2):
+    auth_header = create_admin_authorization_header()
+    template = create_template(
+        sample_service,
+        template_type=BROADCAST_TYPE,
+        areas={"ids": ["london", "glasgow"], "simple_polygons": [[[51.12, 0.2], [50.13, 0.4], [50.14, 0.45]]]},
+    )
+
+    response = client.get(
+        f"/service/{sample_service.id}/template/{template.id}",
+        headers=[("Content-Type", "application/json"), auth_header],
+    )
+    assert response.status_code == 200
+    json_resp = json.loads(response.get_data(as_text=True))
+    assert json_resp["data"]["reference"] == "broadcast Template Name"
+    assert json_resp["data"]["template_type"] == BROADCAST_TYPE
+    assert json_resp["data"]["content"] == "Dear Sir/Madam, Hello. Yours Truly, The Government."
+    assert json_resp["data"]["service"] == str(sample_service.id)
+    assert json_resp["data"]["id"] == str(template.id)
+    assert json_resp["data"]["version"] == 1
+    assert json_resp["data"]["created_by"] == str(sample_user.id)
+    assert json_resp["data"]["areas"] == {
+        "ids": ["london", "glasgow"],
+        "simple_polygons": [[[51.12, 0.2], [50.13, 0.4], [50.14, 0.45]]],
+    }
+
+    # New data
+    data = {"areas": {}, "created_by": str(sample_user_2.id)}
+    data = json.dumps(data)
+
+    update_response = client.post(
+        f"/service/{sample_service.id}/template/{template.id}",
+        headers=[("Content-Type", "application/json"), auth_header],
+        data=data,
+    )
+
+    assert update_response.status_code == 200
+    json_resp = json.loads(update_response.get_data(as_text=True))
+    assert json_resp["data"]["reference"] == "broadcast Template Name"
+    assert json_resp["data"]["template_type"] == BROADCAST_TYPE
+    assert json_resp["data"]["content"] == "Dear Sir/Madam, Hello. Yours Truly, The Government."
+    assert json_resp["data"]["service"] == str(sample_service.id)
+    assert json_resp["data"]["id"] == str(template.id)
+    assert json_resp["data"]["version"] == 2
+    assert json_resp["data"]["created_by"] == str(sample_user_2.id)
+    assert json_resp["data"]["areas"] == {}

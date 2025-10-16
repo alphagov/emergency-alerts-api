@@ -46,7 +46,7 @@ def test_get_broadcast_message(admin_request, sample_broadcast_service):
     assert response["id"] == str(bm.id)
     assert response["template_id"] == str(t.id)
     assert response["content"] == "This is a test"
-    assert response["template_name"] == t.name
+    assert response["template_name"] == t.reference
     assert response["status"] == BroadcastStatusType.DRAFT
     assert response["created_at"] is not None
     assert response["starts_at"] is None
@@ -74,7 +74,7 @@ def test_get_broadcast_message_with_user(mocker, admin_request, sample_broadcast
     assert response["id"] == str(bm.id)
     assert response["template_id"] == str(t.id)
     assert response["content"] == "This is a test"
-    assert response["template_name"] == t.name
+    assert response["template_name"] == t.reference
     assert response["status"] == BroadcastStatusType.DRAFT
     assert response["created_at"] is not None
     assert response["starts_at"] is None
@@ -251,6 +251,8 @@ def test_create_broadcast_message(admin_request, sample_broadcast_service, train
         "broadcast_message.create_broadcast_message",
         _data={
             "template_id": str(t.id),
+            "reference": t.reference,
+            "content": "Some content\r\n€ŷŵ~\r\n‘’“”—–-",
             "service_id": str(t.service_id),
             "created_by": str(t.created_by_id),
             "areas": {"ids": ["manchester"], "simple_polygons": [[[50.12, 1.2], [50.13, 1.2], [50.14, 1.21]]]},
@@ -259,7 +261,7 @@ def test_create_broadcast_message(admin_request, sample_broadcast_service, train
         _expected_status=201,
     )
 
-    assert response["template_name"] == t.name
+    assert response["template_name"] == t.reference
     assert response["status"] == BroadcastStatusType.DRAFT
     assert response["created_at"] is not None
     assert response["created_by_id"] == str(t.created_by_id)
@@ -277,7 +279,7 @@ def test_create_broadcast_message(admin_request, sample_broadcast_service, train
         broadcast_message.id, sample_broadcast_service.id
     )
     broadcast_message_version = dao_get_broadcast_message_version_by_id(latest_version.id)
-    assert broadcast_message_version.reference == t.name
+    assert broadcast_message_version.reference == t.reference
     assert broadcast_message_version.created_by_id == t.created_by_id
     assert broadcast_message_version.created_at is not None
     assert broadcast_message_version.areas == {
@@ -295,7 +297,8 @@ def test_create_broadcast_message(admin_request, sample_broadcast_service, train
             [
                 {"error": "ValidationError", "message": "service_id is a required property"},
                 {"error": "ValidationError", "message": "created_by is a required property"},
-                {"error": "ValidationError", "message": "{} is not valid under any of the given schemas"},
+                {"error": "ValidationError", "message": "reference is a required property"},
+                {"error": "ValidationError", "message": "content is a required property"},
             ],
         ),
         (
@@ -305,7 +308,11 @@ def test_create_broadcast_message(admin_request, sample_broadcast_service, train
                 "created_by": str(uuid.uuid4()),
                 "foo": "something else",
             },
-            [{"error": "ValidationError", "message": "Additional properties are not allowed (foo was unexpected)"}],
+            [
+                {"error": "ValidationError", "message": "reference is a required property"},
+                {"error": "ValidationError", "message": "content is a required property"},
+                {"error": "ValidationError", "message": "Additional properties are not allowed (foo was unexpected)"},
+            ],
         ),
     ],
 )
@@ -389,12 +396,7 @@ def test_create_broadcast_message_400s_if_content_and_template_provided(
     )
 
     assert len(response["errors"]) == 1
-    assert response["errors"][0]["error"] == "ValidationError"
-    # The error message for oneOf is ugly, non-deterministic in ordering
-    # and contains some UUID, so let’s just pick out the important bits
-    assert (" is valid under each of ") in response["errors"][0]["message"]
-    assert ("{required: [content]}") in response["errors"][0]["message"]
-    assert ("{required: [template_id]}") in response["errors"][0]["message"]
+    assert response["errors"][0] == {"error": "ValidationError", "message": "reference is a required property"}
 
 
 def test_create_broadcast_message_400s_if_reference_and_template_provided(
@@ -415,12 +417,7 @@ def test_create_broadcast_message_400s_if_reference_and_template_provided(
     )
 
     assert len(response["errors"]) == 1
-    assert response["errors"][0]["error"] == "ValidationError"
-    # The error message for oneOf is ugly, non-deterministic in ordering
-    # and contains some UUID, so let’s just pick out the important bits
-    assert (" is valid under each of ") in response["errors"][0]["message"]
-    assert ("{required: [reference]}") in response["errors"][0]["message"]
-    assert ("{required: [template_id]}") in response["errors"][0]["message"]
+    assert response["errors"][0] == {"error": "ValidationError", "message": "content is a required property"}
 
 
 def test_create_broadcast_message_400s_if_reference_not_provided_with_content(
@@ -439,7 +436,7 @@ def test_create_broadcast_message_400s_if_reference_not_provided_with_content(
     )
     assert len(response["errors"]) == 1
     assert response["errors"][0]["error"] == "ValidationError"
-    assert response["errors"][0]["message"].endswith("is not valid under any of the given schemas")
+    assert response["errors"][0]["message"] == "reference is a required property"
 
 
 def test_create_broadcast_message_400s_if_no_content_or_template(
@@ -455,9 +452,14 @@ def test_create_broadcast_message_400s_if_no_content_or_template(
         service_id=sample_broadcast_service.id,
         _expected_status=400,
     )
-    assert len(response["errors"]) == 1
-    assert response["errors"][0]["error"] == "ValidationError"
-    assert response["errors"][0]["message"].endswith("is not valid under any of the given schemas")
+    assert len(response["errors"]) == 2
+    assert response["errors"] == [
+        {"error": "ValidationError", "message": "reference is a required property"},
+        {
+            "error": "ValidationError",
+            "message": "content is a required property",
+        },
+    ]
 
 
 @pytest.mark.parametrize(

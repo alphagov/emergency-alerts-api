@@ -206,13 +206,20 @@ def open_for_healthcheck(original_open):
 
 
 @mock_aws
-def test_celery_healthcheck_posts_to_cloudwatch(mocker, notify_api):
+def test_celery_healthcheck_posts_to_cloudwatch(mocker, notify_api, notify_db_session):
     with patch.object(builtins, "open", side_effect=open_for_healthcheck(open)):
         with set_config(notify_api, "SERVICE", "celery"):
             run_health_check()
 
     cloudwatch = boto3.client("cloudwatch", region_name=current_app.config["AWS_REGION"])
-    metric = cloudwatch.list_metrics()["Metrics"][0]
-    assert metric["MetricName"] == "AppVersion"
-    assert metric["Namespace"] == "Emergency Alerts"
-    assert {"Name": "Application", "Value": "celery"} in metric["Dimensions"]
+    app_metric = cloudwatch.list_metrics()["Metrics"][0]
+    assert app_metric["MetricName"] == "AppVersion"
+    assert app_metric["Namespace"] == "Emergency Alerts"
+    assert {"Name": "Application", "Value": "celery"} in app_metric["Dimensions"]
+
+    db_version = notify_db_session.execute("SELECT version_num FROM alembic_version").fetchone()[0]
+    db_metric = cloudwatch.list_metrics()["Metrics"][1]
+    assert db_metric["MetricName"] == "DBVersion"
+    assert db_metric["Namespace"] == "Emergency Alerts"
+    assert {"Name": "Application", "Value": "celery"} in db_metric["Dimensions"]
+    assert {"Name": "Version", "Value": db_version} in db_metric["Dimensions"]

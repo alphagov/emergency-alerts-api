@@ -11,7 +11,9 @@ status = Blueprint("status", __name__)
 @status.route("/", methods=["GET"])
 @status.route("/_api_status", methods=["GET", "POST"])
 def show_api_status():
-    post_version_to_cloudwatch()
+    post_app_version_to_cloudwatch()
+    db_version = get_db_version()
+    post_db_version_to_cloudwatch(db_version)
 
     if request.args.get("simple", None):
         return jsonify(status="ok"), 200
@@ -21,7 +23,7 @@ def show_api_status():
                 status="ok",  # This should be considered part of the public API
                 git_commit=version.git_commit,
                 build_time=version.time,
-                db_version=get_db_version(),
+                db_version=db_version,
                 app_version=version.app_version,
             ),
             200,
@@ -64,7 +66,7 @@ def get_db_version():
     return full_name
 
 
-def post_version_to_cloudwatch():
+def post_app_version_to_cloudwatch():
     try:
         boto3.client("cloudwatch").put_metric_data(
             MetricData=[
@@ -87,6 +89,30 @@ def post_version_to_cloudwatch():
             Namespace="Emergency Alerts",
         )
     except Exception:
-        current_app.logger.exception(
-            "Couldn't post app version to CloudWatch. App version: %s",
+        current_app.logger.exception("Couldn't post app version to CloudWatch. App version: %s", version.app_version)
+
+
+def post_db_version_to_cloudwatch(db_version: str):
+    try:
+        boto3.client("cloudwatch").put_metric_data(
+            MetricData=[
+                {
+                    "MetricName": "DBVersion",
+                    "Dimensions": [
+                        {
+                            "Name": "Application",
+                            "Value": current_app.config["SERVICE"],
+                        },
+                        {
+                            "Name": "Version",
+                            "Value": db_version,
+                        },
+                    ],
+                    "Unit": "Count",
+                    "Value": 1,
+                }
+            ],
+            Namespace="Emergency Alerts",
         )
+    except Exception:
+        current_app.logger.exception("Couldn't post DB version to CloudWatch. DB version: %s", db_version)

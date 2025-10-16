@@ -22,7 +22,7 @@ valid_json_get_all_response = [
                 "version": 1,
                 "created_by": "someone@test.com",
                 "body": "some body",
-                "name": "some name",
+                "reference": "some reference",
             },
             {
                 "id": str(uuid.uuid4()),
@@ -33,7 +33,7 @@ valid_json_get_all_response = [
                 "created_by": "someone@test.com",
                 "subject": "test subject",
                 "body": "some body",
-                "name": "some name",
+                "reference": "some reference",
             },
         ]
     },
@@ -47,7 +47,7 @@ valid_json_get_all_response = [
                 "version": 2,
                 "created_by": "someone@test.com",
                 "body": "some body",
-                "name": "some name",
+                "reference": "some reference",
             }
         ]
     },
@@ -66,7 +66,7 @@ invalid_json_get_all_response = [
                     "version": 1,
                     "created_by": "someone@test.com",
                     "body": "some body",
-                    "name": "some name",
+                    "reference": "some reference",
                 }
             ]
         },
@@ -83,7 +83,7 @@ invalid_json_get_all_response = [
                     "version": "invalid_version",
                     "created_by": "someone@test.com",
                     "body": "some body",
-                    "name": "some name",
+                    "reference": "some reference",
                 }
             ]
         },
@@ -100,7 +100,7 @@ invalid_json_get_all_response = [
                     "version": 1,
                     "created_by": "someone@test.com",
                     "body": "some body",
-                    "name": "some name",
+                    "reference": "some reference",
                 }
             ]
         },
@@ -117,7 +117,7 @@ invalid_json_get_all_response = [
                     "version": 1,
                     "created_by": "someone@test.com",
                     "body": "some body",
-                    "name": "some name",
+                    "reference": "some reference",
                 }
             ]
         },
@@ -137,7 +137,7 @@ invalid_json_get_all_response = [
                 }
             ]
         },
-        ["templates name is a required property"],
+        ["templates reference is a required property"],
     ),
     (
         {
@@ -149,7 +149,7 @@ invalid_json_get_all_response = [
                     "version": 1,
                     "created_by": "someone@test.com",
                     "body": "some body",
-                    "name": "some name",
+                    "reference": "some reference",
                 }
             ]
         },
@@ -165,7 +165,7 @@ invalid_json_get_all_response = [
                     "version": 1,
                     "created_by": "someone@test.com",
                     "body": "some body",
-                    "name": "some name",
+                    "reference": "some reference",
                 }
             ]
         },
@@ -181,7 +181,7 @@ invalid_json_get_all_response = [
                     "version": 1,
                     "created_by": "someone@test.com",
                     "body": "some body",
-                    "name": "some name",
+                    "reference": "some reference",
                 }
             ]
         },
@@ -197,7 +197,7 @@ invalid_json_get_all_response = [
                     "updated_at": None,
                     "created_by": "someone@test.com",
                     "body": "some body",
-                    "name": "some name",
+                    "reference": "some reference",
                 }
             ]
         },
@@ -213,7 +213,7 @@ invalid_json_get_all_response = [
                     "updated_at": None,
                     "version": 1,
                     "body": "some body",
-                    "name": "some name",
+                    "reference": "some reference",
                 }
             ]
         },
@@ -229,7 +229,7 @@ invalid_json_get_all_response = [
                     "updated_at": None,
                     "version": 1,
                     "created_by": "someone@test.com",
-                    "name": "some name",
+                    "reference": "some reference",
                 }
             ]
         },
@@ -244,7 +244,7 @@ invalid_json_get_all_response = [
                     "updated_at": None,
                     "created_by": "someone@test.com",
                     "body": "some body",
-                    "name": "some name",
+                    "reference": "some reference",
                 }
             ]
         },

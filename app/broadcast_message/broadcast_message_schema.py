@@ -18,21 +18,7 @@ create_broadcast_message_schema = {
         "content": {"type": "string", "minLength": 1},
         "reference": {"type": "string", "minLength": 1, "maxLength": 255},
     },
-    "required": ["service_id", "created_by"],
-    "allOf": [
-        {
-            "oneOf": [
-                {"required": ["template_id"]},
-                {"required": ["content"]},
-            ]
-        },
-        {
-            "oneOf": [
-                {"required": ["template_id"]},
-                {"required": ["reference"]},
-            ]
-        },
-    ],
+    "required": ["service_id", "created_by", "reference", "content"],
     "additionalProperties": False,
 }
 

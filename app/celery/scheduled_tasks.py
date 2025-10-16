@@ -29,13 +29,18 @@ from app.dao.users_dao import (
     save_model_user,
 )
 from app.models import BroadcastMessage, BroadcastStatusType, Event
-from app.status.healthcheck import post_version_to_cloudwatch
+from app.status.healthcheck import (
+    get_db_version,
+    post_app_version_to_cloudwatch,
+    post_db_version_to_cloudwatch,
+)
 
 
 @notify_celery.task(name=TaskNames.RUN_HEALTH_CHECK)
 def run_health_check():
     try:
-        post_version_to_cloudwatch()
+        post_app_version_to_cloudwatch()
+        post_db_version_to_cloudwatch(get_db_version())
 
         time_stamp = int(time.time())
         with open("/eas/emergency-alerts-api/celery-beat-healthcheck", mode="w") as file:
@@ -89,7 +94,6 @@ def trigger_link_tests():
             trigger_link_test_secondary_to_B.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
 
 
-@notify_celery.task(name=TaskNames.AUTO_EXPIRE_BROADCAST_MESSAGES)
 def auto_expire_broadcast_messages():
     expired_broadcasts = BroadcastMessage.query.filter(
         BroadcastMessage.finishes_at <= datetime.now(),
@@ -98,6 +102,7 @@ def auto_expire_broadcast_messages():
 
     for broadcast in expired_broadcasts:
         broadcast.status = BroadcastStatusType.COMPLETED
+        broadcast.finished_govuk_acknowledged = False
 
     db.session.commit()
 
@@ -169,6 +174,8 @@ def validate_functional_test_account_emails():
 @notify_celery.task(name=TaskNames.QUEUE_AFTER_ALERT_ACTIVITIES)
 def queue_after_alert_activities():
     """Check for any recently expired alerts and process any activities that are due on them"""
+
+    auto_expire_broadcast_messages()
 
     # Find recently expired which have one or more actions due
     expired_and_pending_alerts = dao_get_all_finished_broadcast_messages_with_outstanding_actions()
