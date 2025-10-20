@@ -370,7 +370,8 @@ def purge_broadcast_messages(service_id, older_than):
     try:
         count = dao_purge_old_broadcast_messages(service=service_id, days_older_than=older_than)
     except Exception as e:
-        return jsonify(result="error", message=f"Unable to purge old alert items: {e}"), 500
+        current_app.logger.exception("Unable to purge old alert items")
+        return jsonify(result="error", message=f"Unable to purge old alert items: {e}"), 400
 
     return (
         jsonify(
