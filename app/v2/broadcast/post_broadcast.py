@@ -36,7 +36,7 @@ def create_broadcast():
 
     cap_xml = request.get_data()
 
-    current_app.logger.debug("Provided with CAP XML: %s", cap_xml)
+    current_app.logger.info("Provided with CAP XML: %s", cap_xml)
 
     xml_validation_error = validate_xml(cap_xml, "CAP-v1.2.xsd")
     if xml_validation_error is not None:
@@ -72,7 +72,7 @@ def create_broadcast():
         )
 
         if len(polygons) > 12 or polygons.point_count > 250:
-            current_app.logger.debug(
+            current_app.logger.info(
                 "Polygons were high (%d polygons / point count %d), simplifying", len(polygons), polygons.point_count
             )
             simple_polygons = polygons.smooth.simplify
