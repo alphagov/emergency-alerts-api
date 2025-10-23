@@ -4,20 +4,18 @@ ARG ECS_ACCOUNT_NUMBER
 ARG RESOURCE_PREFIX=eas-app
 ARG AWS_REGION=eu-west-2
 ARG BASE_VERSION=latest
-ARG BASE_IMAGE=${ECS_ACCOUNT_NUMBER}.dkr.ecr.${AWS_REGION}.amazonaws.com/${RESOURCE_PREFIX}-base:${BASE_VERSION}
-
-FROM ${BASE_IMAGE}
+FROM ${ECS_ACCOUNT_NUMBER}.dkr.ecr.${AWS_REGION}.amazonaws.com/${RESOURCE_PREFIX}-base:${BASE_VERSION}
 
 ARG APP_VERSION=unknown
 
 ENV SERVICE='celery'
 
+# Create root directory and copy repo
+COPY . $DIR_API
+
 # Download the database certificate
 RUN wget https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem -O /etc/ssl/certs/global-bundle.pem && \
     update-ca-certificates
-
-# Create root directory and copy repo
-COPY . $DIR_API
 
 # Build emergency-alerts-api
 RUN cd $DIR_API && \
@@ -29,9 +27,7 @@ RUN cd $DIR_API && \
 # Create a blank configuration file
 RUN echo "" > $DIR_API/environment.sh
 
-RUN adduser -D -s /bin/bash easuser && \
-    chown -R easuser:easuser $DIR_API && \
-    chown -R easuser:easuser $DIR_UTILS
+RUN useradd -ms /bin/bash easuser && chown -R easuser:easuser $DIR_API && chown -R easuser:easuser $DIR_UTILS
 
 COPY scripts/link-test.sh /
 COPY scripts/healthcheck.sh /
