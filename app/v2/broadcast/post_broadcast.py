@@ -103,7 +103,9 @@ def create_broadcast():
             # the admin app
         )
 
-        current_app.logger.info("Saving new BroadcastMessage to database", broadcast_message)
+        current_app.logger.info(
+            "Saving new BroadcastMessage to database", extra={"broadcast_message": broadcast_message}
+        )
 
         dao_save_object(broadcast_message)
 
