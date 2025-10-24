@@ -1,3 +1,4 @@
+import json
 from itertools import chain
 
 from emergency_alerts_utils.polygons import Polygons
@@ -103,7 +104,9 @@ def create_broadcast():
             # the admin app
         )
 
-        current_app.logger.info(f"Saving new BroadcastMessage to database:\n{broadcast_message.serialize()}")
+        current_app.logger.info(
+            f"Saving new BroadcastMessage to database: {json.dumps(broadcast_message.serialize(), indent=2)}"
+        )
 
         dao_save_object(broadcast_message)
 
