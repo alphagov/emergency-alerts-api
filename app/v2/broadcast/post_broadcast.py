@@ -103,7 +103,7 @@ def create_broadcast():
             # the admin app
         )
 
-        current_app.logger.info(f"Saving new BroadcastMessage to database: {jsonify(broadcast_message.serialize())}")
+        current_app.logger.info(f"Saving new BroadcastMessage to database:\n{broadcast_message.serialize()}")
 
         dao_save_object(broadcast_message)
 
