@@ -71,6 +71,14 @@ def create_broadcast():
             )
         )
 
+        current_app.logger.info(message=str(polygons))
+
+        if not _validate_polygons(polygons):
+            raise BadRequestError(
+                message="Invalid polygon(s). Please amend broadcast area and resubmit.",
+                status_code=400,
+            )
+
         if len(polygons) > 12 or polygons.point_count > 250:
             current_app.logger.info(
                 "High polygon complexity (%d polygons / %d points ), simplifying...",
@@ -158,3 +166,7 @@ def _validate_template(broadcast_json):
 def _check_service_has_permission(type, permissions):
     if type not in permissions:
         raise BadRequestError(message="Service is not allowed to send broadcast messages")
+
+
+def _validate_polygons(polygons):
+    return True
