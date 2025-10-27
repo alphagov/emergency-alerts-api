@@ -71,7 +71,7 @@ def create_broadcast():
             )
         )
 
-        current_app.logger.info(message=str(polygons))
+        print(polygons)
 
         if not _validate_polygons(polygons):
             raise BadRequestError(
