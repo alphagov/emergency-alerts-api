@@ -3,6 +3,8 @@ from itertools import chain
 from emergency_alerts_utils.polygons import Polygons
 from emergency_alerts_utils.template import BroadcastMessageTemplate
 from flask import current_app, jsonify, make_response, request
+from shapely.geometry import Polygon as ShapelyPolygon
+from shapely.validation import explain_validity
 from sqlalchemy.orm.exc import MultipleResultsFound
 
 from app import api_user, authenticated_service
@@ -63,6 +65,8 @@ def create_broadcast():
     else:
         _validate_template(broadcast_json)
 
+        _validate_areas(broadcast_json["areas"])
+
         polygons = Polygons(
             list(
                 chain.from_iterable(
@@ -70,14 +74,6 @@ def create_broadcast():
                 )
             )
         )
-
-        print(polygons)
-
-        if not _validate_polygons(polygons):
-            raise BadRequestError(
-                message="Invalid polygon(s). Please amend broadcast area and resubmit.",
-                status_code=400,
-            )
 
         if len(polygons) > 12 or polygons.point_count > 250:
             current_app.logger.info(
@@ -168,5 +164,31 @@ def _check_service_has_permission(type, permissions):
         raise BadRequestError(message="Service is not allowed to send broadcast messages")
 
 
-def _validate_polygons(polygons):
+def _validate_areas(areas):
+    for area in areas:
+        for coords in area["polygons"]:
+            try:
+                poly = ShapelyPolygon(coords)
+
+                # Check if valid (no self-intersections, no duplicate vertices,
+                # minimum vertex count, no overlapping segments)
+                if not poly.is_valid:
+                    raise ValidationError(
+                        message=f"Invalid polygon: {explain_validity(poly)}",
+                        status_code=400,
+                    )
+
+                # Check for holes (interiors)
+                if len(poly.interiors) > 0:
+                    raise ValidationError(
+                        message="Polygon contains holes",
+                        status_code=400,
+                    )
+
+            except Exception as e:
+                raise ValidationError(
+                    message=f"Invalid polygon(s): {str(e)}",
+                    status_code=400,
+                ) from e
+
     return True
