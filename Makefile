@@ -12,7 +12,7 @@ VIRTUALENV_ROOT := $(shell [ -z $$VIRTUAL_ENV ] && echo $$(pwd)/venv || echo $$V
 PYTHON_EXECUTABLE_PREFIX := $(shell test -d "$${VIRTUALENV_ROOT}" && echo "$${VIRTUALENV_ROOT}/bin/" || echo "")
 
 NVM_VERSION := 0.40.3
-NODE_VERSION := 22.18.0
+NODE_VERSION := 22.21.0
 
 write-source-file:
 	@if [ -f ~/.zshrc ]; then \
