@@ -168,7 +168,12 @@ def test_valid_cancel_broadcast_request_calls_update_broadcast_message_status_an
         (
             sample_cap_xml_documents.WAINFLEET_CANCEL_WITH_MISSING_REFERENCES,
             400,
-            [{"error": "BadRequestError", "message": "Missing <references>"}],
+            [
+                {
+                    "error": "BadRequestError",
+                    "message": "Unable to cancel broadcast. Cap_xml is missing field: <references>",
+                }
+            ],
         ),
     ),
 )
@@ -237,7 +242,8 @@ def test_cancel_raises_error_if_multiple_broadcasts_referenced(
     assert response_for_cancel_json["errors"] == [
         {
             "error": "BadRequestError",
-            "message": "Multiple alerts found - unclear which one to cancel",
+            "message": "Multiple alerts found - unclear which one to cancel."
+            " Ensure references uniquely identify a single alert.",
         }
     ]
 
