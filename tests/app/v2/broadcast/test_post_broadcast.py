@@ -491,20 +491,20 @@ def test_invalid_areas_returns_400(client, sample_broadcast_service):
             sample_cap_xml_documents.INVALID_AREA_WITH_INTERSECTIONS,
             "ValidationError",
             "Invalid polygon(s): {'result': 'error', 'message': 'Invalid polygon:"
-            " Self-intersection[51.4203525826068 0.266774330539577]'}",
+            " Self-intersection[53.2385475878471 -0.537929124449147]'}",
             400,
         ),
         (
             sample_cap_xml_documents.INVALID_DEGENERATE_AREA,
             "ValidationError",
-            "Invalid polygon(s): {'result': 'error', 'message': 'Invalid polygon: Self-intersection[51.41723 0.2588]'}",
+            "areas [[51.41723, 0.27094], [51.41723, 0.2569]] is not valid under any of the given schemas",
             400,
         ),
         (
             sample_cap_xml_documents.INVALID_AREA_WITH_DUPLICATED_VERTEX,
             "ValidationError",
             "Invalid polygon(s): {'result': 'error', 'message': 'Invalid polygon:"
-            " Self-intersection[51.4203525826068 0.266774330539577]'}",
+            " Ring Self-intersection[53.24471 -0.53508]'}",
             400,
         ),
     ),
