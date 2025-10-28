@@ -22,7 +22,7 @@ from app.xml_schemas import validate_xml
 
 @v2_broadcast_blueprint.route("", methods=["POST"])
 def create_broadcast():
-    current_app.logger.info("Received POST broadcast")
+    current_app.logger.info("/v2/broadcast API request received")
     _check_service_has_permission(
         BROADCAST_TYPE,
         authenticated_service.permissions,
@@ -51,7 +51,7 @@ def create_broadcast():
     if broadcast_json["msgType"] == "Cancel":
         if broadcast_json["references"] is None:
             raise BadRequestError(
-                message="Missing <references>",
+                message="Unable to cancel broadcast. Cap_xml is missing field: <references>",
                 status_code=400,
             )
         broadcast_message = _cancel_or_reject_broadcast(
@@ -73,11 +73,17 @@ def create_broadcast():
 
         if len(polygons) > 12 or polygons.point_count > 250:
             current_app.logger.info(
-                "Polygons were high (%d polygons / point count %d), simplifying", len(polygons), polygons.point_count
+                "High polygon complexity (%d polygons / %d points ), simplifying...",
+                len(polygons),
+                polygons.point_count,
             )
             simple_polygons = polygons.smooth.simplify
         else:
             simple_polygons = polygons
+
+        current_app.logger.info(
+            "Polygon complexity (%d polygons / %d points)", len(simple_polygons), simple_polygons.point_count
+        )
 
         broadcast_message = BroadcastMessage(
             service_id=authenticated_service.id,
@@ -97,11 +103,13 @@ def create_broadcast():
             # the admin app
         )
 
+        current_app.logger.info(f"Saving new BroadcastMessage to database: {broadcast_message.serialize()}")
+
         dao_save_object(broadcast_message)
 
         current_app.logger.info(
             f"Broadcast message {broadcast_message.id} created for service "
-            f'{authenticated_service.id} with reference {broadcast_json["reference"]}'
+            f"{authenticated_service.id} with reference {broadcast_json['reference']}"
         )
 
         return jsonify(broadcast_message.serialize()), 201
@@ -123,7 +131,8 @@ def _cancel_or_reject_broadcast(references_to_original_broadcast, service_id):
         )
     except MultipleResultsFound:
         raise BadRequestError(
-            message="Multiple alerts found - unclear which one to cancel",
+            message="Multiple alerts found - unclear which one to cancel. "
+            "Ensure references uniquely identify a single alert.",
             status_code=400,
         )
 
