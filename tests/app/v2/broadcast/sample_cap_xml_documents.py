@@ -232,6 +232,38 @@ WITH_PLACEHOLDER_FOR_AREAS = """
   </alert>
 """
 
+WITH_TWO_PLACEHOLDERS_FOR_AREAS = """
+  <alert xmlns='urn:oasis:names:tc:emergency:cap:1.2'>
+      <identifier>c60bc14b-8411-4dd7-8d9e-0f159f79eab3</identifier>
+      <sender>broadcasts@notifications.service.gov.uk</sender>
+      <sent>2025-02-16T23:01:13-00:00</sent>
+      <status>Actual</status>
+      <msgType>Alert</msgType>
+      <scope>Public</scope>
+      <info>
+          <language>en-GB</language>
+          <category>Safety</category>
+          <event>Test Alert</event>
+          <urgency>Expected</urgency>
+          <severity>Severe</severity>
+          <certainty>Likely</certainty>
+          <expires>2025-02-17T21:31:13-00:00</expires>
+          <senderName>GOV.UK Emergency Alerts</senderName>
+          <headline>GOV.UK Emergency Alert</headline>
+          <description>This is a mobile network operator test of the UK Emergency Alerts service.&#xA;&#xA;You do not need to take any action.&#xA;&#xA;If you want to stop receiving operator test alerts, visit gov.uk/alerts/system-testing to find out how to opt out.</description>
+          <area>
+              <areaDesc>area-1</areaDesc>
+              <polygon>{}</polygon>
+              <polygon>{}</polygon>
+          </area>
+          <area>
+              <areaDesc>area-2</areaDesc>
+              <polygon>51.44937,0.21352 51.44694,0.21373 51.44658,0.21301 51.44536,0.21258 51.44543,0.21074 51.44458,0.21035 51.4445,0.21111 51.44243,0.21069 51.44218,0.21028 51.44199,0.20283 51.44016,0.20253 51.43968,0.20026 51.44107,0.19764 51.44094,0.19662 51.44171,0.19581 51.44226,0.19647 51.44242,0.19739 51.44402,0.19669 51.44713,0.19801 51.44724,0.19735 51.44761,0.1975 51.44879,0.19098 51.45084,0.19206 51.45119,0.19742 51.45106,0.20222 51.44937,0.21352</polygon>
+          </area>
+      </info>
+  </alert>
+"""
+
 WINDEMERE = """
     <alert xmlns="urn:oasis:names:tc:emergency:cap:1.2">
         <identifier>4f6d28b10ab7aa447bbd46d85f1e9effE</identifier>
@@ -286,4 +318,8 @@ INVALID_AREA_WITH_INTERSECTIONS = WITH_PLACEHOLDER_FOR_AREAS.format(
 INVALID_DEGENERATE_AREA = WITH_PLACEHOLDER_FOR_AREAS.format("51.41723,0.27094 51.41723,0.2569")
 INVALID_AREA_WITH_DUPLICATED_VERTEX = WITH_PLACEHOLDER_FOR_AREAS.format(
     "53.24448,-0.54919 53.24471,-0.53508 53.24096,-0.51960 53.23357,-0.52411 53.24471,-0.53508 53.23369,-0.54664 53.24448,-0.54919"
+)
+INVALID_AREA_WITH_HOLE = WITH_TWO_PLACEHOLDERS_FOR_AREAS.format(
+    "53.25397,-0.53900 53.23814,-0.57075 53.22325,-0.55115 53.22301,-0.51686 53.24319,-0.50745 53.25397,-0.53900",
+    "53.24342,-0.54351 53.24354,-0.52862 53.23885,-0.52999 53.23850,-0.54351 53.24342,-0.54351",
 )

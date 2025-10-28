@@ -507,6 +507,12 @@ def test_invalid_areas_returns_400(client, sample_broadcast_service):
             " Ring Self-intersection[53.24471 -0.53508]'}",
             400,
         ),
+        (
+            sample_cap_xml_documents.INVALID_AREA_WITH_HOLE,
+            "ValidationError",
+            "Invalid polygon(s): {'result': 'error', 'message': 'Overlapping areas'}",
+            400,
+        ),
     ),
 )
 def test_invalid_area_polygons_returns_400(

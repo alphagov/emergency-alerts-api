@@ -166,29 +166,41 @@ def _check_service_has_permission(type, permissions):
 
 def _validate_areas(areas):
     for area in areas:
+        coord_list = []
         for coords in area["polygons"]:
-            try:
-                poly = ShapelyPolygon(coords)
+            # Create a list when a single area has multiple polygons
+            coord_list.append(coords)
 
+        try:
+            polygon_list = []
+            for shape in coord_list:
+                # The shapely.Polygon class constructor catches most (if
+                # not all) invalid polygons)
+                polygon_list.append(ShapelyPolygon(shape))
+
+            for polygon1 in polygon_list:
+                for polygon2 in polygon_list:
+                    # Check for overlapping polygons, including partial
+                    # intersections and enclosed polygons (holes)
+                    if polygon1 != polygon2 and polygon1.intersects(polygon2):
+                        raise ValidationError(
+                            message="Overlapping areas",
+                            status_code=400,
+                        )
+
+            for polygon in polygon_list:
                 # Check if valid (no self-intersections, no duplicate vertices,
                 # minimum vertex count, no overlapping segments)
-                if not poly.is_valid:
+                if not polygon.is_valid:
                     raise ValidationError(
-                        message=f"Invalid polygon: {explain_validity(poly)}",
+                        message=f"Invalid polygon: {explain_validity(polygon)}",
                         status_code=400,
                     )
 
-                # Check for holes (interiors)
-                if len(poly.interiors) > 0:
-                    raise ValidationError(
-                        message="Polygon contains holes",
-                        status_code=400,
-                    )
-
-            except Exception as e:
-                raise ValidationError(
-                    message=f"Invalid polygon(s): {str(e)}",
-                    status_code=400,
-                ) from e
+        except Exception as e:
+            raise ValidationError(
+                message=f"Invalid polygon(s): {str(e)}",
+                status_code=400,
+            ) from e
 
     return True
