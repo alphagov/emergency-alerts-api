@@ -175,7 +175,7 @@ def _validate_areas(areas):
             polygon_list = []
             for shape in coord_list:
                 # The shapely.Polygon class constructor catches most (if
-                # not all) invalid polygons)
+                # not all) invalid polygons
                 polygon_list.append(ShapelyPolygon(shape))
 
             for polygon1 in polygon_list:
