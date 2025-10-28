@@ -168,7 +168,12 @@ def test_valid_cancel_broadcast_request_calls_update_broadcast_message_status_an
         (
             sample_cap_xml_documents.WAINFLEET_CANCEL_WITH_MISSING_REFERENCES,
             400,
-            [{"error": "BadRequestError", "message": "Missing <references>"}],
+            [
+                {
+                    "error": "BadRequestError",
+                    "message": "Unable to cancel broadcast. Cap_xml is missing field: <references>",
+                }
+            ],
         ),
     ),
 )
@@ -237,7 +242,8 @@ def test_cancel_raises_error_if_multiple_broadcasts_referenced(
     assert response_for_cancel_json["errors"] == [
         {
             "error": "BadRequestError",
-            "message": "Multiple alerts found - unclear which one to cancel",
+            "message": "Multiple alerts found - unclear which one to cancel."
+            " Ensure references uniquely identify a single alert.",
         }
     ]
 
@@ -470,6 +476,60 @@ def test_invalid_areas_returns_400(client, sample_broadcast_service):
         ],
         "status_code": 400,
     }
+
+
+@pytest.mark.parametrize(
+    "xml_document, expected_exception, expected_message, status_code",
+    (
+        (
+            sample_cap_xml_documents.VALID_AREA_POLYGON,
+            None,
+            None,
+            201,
+        ),
+        (
+            sample_cap_xml_documents.INVALID_AREA_WITH_INTERSECTIONS,
+            "ValidationError",
+            "Invalid polygon(s): {'result': 'error', 'message': 'Invalid polygon:"
+            " Self-intersection[51.4203525826068 0.266774330539577]'}",
+            400,
+        ),
+        (
+            sample_cap_xml_documents.INVALID_DEGENERATE_AREA,
+            "ValidationError",
+            "Invalid polygon(s): {'result': 'error', 'message': 'Invalid polygon: Self-intersection[51.41723 0.2588]'}",
+            400,
+        ),
+        (
+            sample_cap_xml_documents.INVALID_AREA_WITH_DUPLICATED_VERTEX,
+            "ValidationError",
+            "Invalid polygon(s): {'result': 'error', 'message': 'Invalid polygon:"
+            " Self-intersection[51.4203525826068 0.266774330539577]'}",
+            400,
+        ),
+    ),
+)
+def test_invalid_area_polygons_returns_400(
+    client,
+    sample_broadcast_service,
+    xml_document,
+    expected_exception,
+    expected_message,
+    status_code,
+):
+    auth_header = create_service_authorization_header(service_id=sample_broadcast_service.id)
+    response = client.post(
+        path="/v2/broadcast",
+        data=xml_document,
+        headers=[("Content-Type", "application/cap+xml"), auth_header],
+    )
+
+    errors = response.json.get("errors")
+    if errors:
+        assert errors[0]["error"] == expected_exception
+        assert errors[0]["message"] == expected_message
+
+    assert response.status_code == status_code
 
 
 def test_request_for_status_returns_allowed_methods(client, sample_broadcast_service):
