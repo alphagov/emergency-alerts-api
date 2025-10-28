@@ -184,7 +184,7 @@ def _validate_areas(areas):
                     # intersections and enclosed polygons (holes)
                     if polygon1 != polygon2 and polygon1.intersects(polygon2):
                         raise ValidationError(
-                            message="Overlapping areas",
+                            message="Overlapping areas are not supported.",
                             status_code=400,
                         )
 

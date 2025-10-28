@@ -510,7 +510,7 @@ def test_invalid_areas_returns_400(client, sample_broadcast_service):
         (
             sample_cap_xml_documents.INVALID_AREA_WITH_HOLE,
             "ValidationError",
-            "Invalid polygon(s): {'result': 'error', 'message': 'Overlapping areas'}",
+            "Invalid polygon(s): {'result': 'error', 'message': 'Overlapping areas are not supported.'}",
             400,
         ),
     ),
