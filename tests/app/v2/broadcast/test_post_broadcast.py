@@ -478,6 +478,66 @@ def test_invalid_areas_returns_400(client, sample_broadcast_service):
     }
 
 
+@pytest.mark.parametrize(
+    "xml_document, expected_exception, expected_message, status_code",
+    (
+        (
+            sample_cap_xml_documents.VALID_AREA_POLYGON,
+            None,
+            None,
+            201,
+        ),
+        (
+            sample_cap_xml_documents.INVALID_AREA_WITH_INTERSECTIONS,
+            "ValidationError",
+            "Invalid polygon(s): {'result': 'error', 'message': 'Invalid polygon:"
+            " Self-intersection[53.2385475878471 -0.537929124449147]'}",
+            400,
+        ),
+        (
+            sample_cap_xml_documents.INVALID_DEGENERATE_AREA,
+            "ValidationError",
+            "areas [[51.41723, 0.27094], [51.41723, 0.2569]] is not valid under any of the given schemas",
+            400,
+        ),
+        (
+            sample_cap_xml_documents.INVALID_AREA_WITH_DUPLICATED_VERTEX,
+            "ValidationError",
+            "Invalid polygon(s): {'result': 'error', 'message': 'Invalid polygon:"
+            " Ring Self-intersection[53.24471 -0.53508]'}",
+            400,
+        ),
+        (
+            sample_cap_xml_documents.INVALID_AREA_WITH_HOLE,
+            "ValidationError",
+            "Invalid polygon(s): {'result': 'error', 'message': 'Overlapping areas are not supported.'}",
+            400,
+        ),
+    ),
+)
+def test_invalid_area_polygons_returns_400(
+    client,
+    sample_broadcast_service,
+    xml_document,
+    expected_exception,
+    expected_message,
+    status_code,
+):
+    auth_header = create_service_authorization_header(service_id=sample_broadcast_service.id)
+    response = client.post(
+        path="/v2/broadcast",
+        data=xml_document,
+        headers=[("Content-Type", "application/cap+xml"), auth_header],
+    )
+
+    errors = response.json.get("errors")
+    if errors:
+        assert errors[0]["error"] == expected_exception
+        assert errors[0]["message"] == expected_message
+
+    assert response.status_code == status_code
+
+
 def test_request_for_status_returns_allowed_methods(client, sample_broadcast_service):
     auth_header = create_service_authorization_header(service_id=sample_broadcast_service.id)
     response = client.options(

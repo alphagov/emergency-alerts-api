@@ -3,6 +3,8 @@ from itertools import chain
 from emergency_alerts_utils.polygons import Polygons
 from emergency_alerts_utils.template import BroadcastMessageTemplate
 from flask import current_app, jsonify, make_response, request
+from shapely.geometry import Polygon as ShapelyPolygon
+from shapely.validation import explain_validity
 from sqlalchemy.orm.exc import MultipleResultsFound
 
 from app import api_user, authenticated_service
@@ -62,6 +64,8 @@ def create_broadcast():
 
     else:
         _validate_template(broadcast_json)
+
+        _validate_areas(broadcast_json["areas"])
 
         polygons = Polygons(
             list(
@@ -158,3 +162,45 @@ def _validate_template(broadcast_json):
 def _check_service_has_permission(type, permissions):
     if type not in permissions:
         raise BadRequestError(message="Service is not allowed to send broadcast messages")
+
+
+def _validate_areas(areas):
+    for area in areas:
+        coord_list = []
+        for coords in area["polygons"]:
+            # Create a list when a single area has multiple polygons
+            coord_list.append(coords)
+
+        try:
+            polygon_list = []
+            for shape in coord_list:
+                # The shapely.Polygon class constructor catches most (if
+                # not all) invalid polygons
+                polygon_list.append(ShapelyPolygon(shape))
+
+            for polygon1 in polygon_list:
+                for polygon2 in polygon_list:
+                    # Check for overlapping polygons, including partial
+                    # intersections and enclosed polygons (holes)
+                    if polygon1 != polygon2 and polygon1.intersects(polygon2):
+                        raise ValidationError(
+                            message="Overlapping areas are not supported.",
+                            status_code=400,
+                        )
+
+            for polygon in polygon_list:
+                # Check if valid (no self-intersections, no duplicate vertices,
+                # minimum vertex count, no overlapping segments)
+                if not polygon.is_valid:
+                    raise ValidationError(
+                        message=f"Invalid polygon: {explain_validity(polygon)}",
+                        status_code=400,
+                    )
+
+        except Exception as e:
+            raise ValidationError(
+                message=f"Invalid polygon(s): {str(e)}",
+                status_code=400,
+            ) from e
+
+    return True
