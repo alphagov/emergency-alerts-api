@@ -127,7 +127,7 @@ run-celery: ## Run celery
 		--pidfile=/tmp/api_celery_worker.pid \
 		--prefetch-multiplier=1 \
 		--loglevel=INFO \
-		--autoscale=8,1 \
+		--autoscale=16,1 \
 		--hostname='$(SERVICE)@%h'
 
 .PHONY: run-celery-beat
