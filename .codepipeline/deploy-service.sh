@@ -34,7 +34,7 @@ update_task_definition(){
         echo "=============== UPDATING LATEST TASK DEFINITION ==============="
 
         aws ecs describe-task-definition --task-definition $TASK_DEFINITION_ARN > orig-taskdef.json
-        cat orig-taskdef.json | jq '.taskDefinition | .containerDefinitions[].image = "'$IMAGE_COMMIT_TAG'" | del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)' > taskdef.json
+        cat orig-taskdef.json | jq '.taskDefinition | .containerDefinitions[0].image = "'$IMAGE_COMMIT_TAG'" | del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)' > taskdef.json
         cat taskdef.json
 
         task_definition_arn=$(aws ecs register-task-definition \
