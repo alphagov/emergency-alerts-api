@@ -230,10 +230,15 @@ def dao_get_all_finished_broadcast_messages_with_outstanding_actions() -> list[B
 
 def dao_mark_all_as_govuk_acknowledged():
     """
-    Find all BroadcastMessages that don't have the finished_govuk_acknowledged flag and mark them as done.
+    Find all BroadcastMessages, within active live services, that don't have the
+    finished_govuk_acknowledged flag and mark them as done.
     """
     pending: list[BroadcastMessage] = BroadcastMessage.query.filter(
-        BroadcastMessage.finished_govuk_acknowledged == False,  # noqa: E712,
+        and_(
+            BroadcastMessage.finished_govuk_acknowledged == False,  # noqa: E712
+            BroadcastMessage.service.restricted == False,  # noqa: E712
+            BroadcastMessage.service.active == True,  # noqa: E712
+        )
     ).all()
 
     for message in pending:
