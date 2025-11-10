@@ -238,7 +238,7 @@ def dao_mark_all_as_govuk_acknowledged():
             BroadcastMessage.finished_govuk_acknowledged == False,  # noqa: E712
             BroadcastMessage.service.restricted == False,  # noqa: E712
             BroadcastMessage.service.active == True,  # noqa: E712
-        )
+        ),
     ).all()
 
     for message in pending:
