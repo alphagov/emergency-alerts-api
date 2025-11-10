@@ -209,23 +209,29 @@ def dao_get_all_finished_broadcast_messages_with_outstanding_actions() -> list[B
     """
 
     now = datetime.now(timezone.utc)
-    return BroadcastMessage.query.filter(
-        and_(
-            or_(
-                # Get those recently cancelled
-                BroadcastMessage.status == BroadcastStatusType.CANCELLED,
-                # Or have COMPLETED or are BROADCASTING and have naturally finished
-                # (Transitioning to COMPLETED occurs as a background activity)
-                BroadcastMessage.status == BroadcastStatusType.COMPLETED,
-                and_(
-                    BroadcastMessage.finishes_at < now,
-                    BroadcastMessage.status == BroadcastStatusType.BROADCASTING,
+    return (
+        BroadcastMessage.query.join(Service)
+        .filter(
+            and_(
+                or_(
+                    # Get those recently cancelled
+                    BroadcastMessage.status == BroadcastStatusType.CANCELLED,
+                    # Or have COMPLETED or are BROADCASTING and have naturally finished
+                    # (Transitioning to COMPLETED occurs as a background activity)
+                    BroadcastMessage.status == BroadcastStatusType.COMPLETED,
+                    and_(
+                        BroadcastMessage.finishes_at < now,
+                        BroadcastMessage.status == BroadcastStatusType.BROADCASTING,
+                    ),
                 ),
+                # And has an action due
+                BroadcastMessage.finished_govuk_acknowledged == False,  # noqa: E712
+                Service.restricted == False,  # noqa: E712
+                Service.active == True,  # noqa: E712
             ),
-            # And has an action due
-            BroadcastMessage.finished_govuk_acknowledged == False,  # noqa: E712
-        ),
-    ).all()
+        )
+        .all()
+    )
 
 
 def dao_mark_all_as_govuk_acknowledged():
@@ -233,13 +239,8 @@ def dao_mark_all_as_govuk_acknowledged():
     Find all BroadcastMessages, within active live services, that don't have the
     finished_govuk_acknowledged flag and mark them as done.
     """
-    pending: list[BroadcastMessage] = BroadcastMessage.query.filter(
-        and_(
-            BroadcastMessage.finished_govuk_acknowledged == False,  # noqa: E712
-            BroadcastMessage.service.restricted == False,  # noqa: E712
-            BroadcastMessage.service.active == True,  # noqa: E712
-        ),
-    ).all()
+
+    pending = dao_get_all_finished_broadcast_messages_with_outstanding_actions()
 
     for message in pending:
         message.finished_govuk_acknowledged = True
