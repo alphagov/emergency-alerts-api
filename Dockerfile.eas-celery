@@ -10,6 +10,10 @@ ARG APP_VERSION=unknown
 
 ENV SERVICE='celery'
 
+ENV OTEL_SERVICE_NAME="celery"
+ENV OTEL_PYTHON_DISTRO="aws_distro"
+ENV OTEL_PYTHON_CONFIGURATOR="aws_configurator"
+
 # Create root directory and copy repo
 COPY . $DIR_API
 

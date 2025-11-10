@@ -121,7 +121,7 @@ run-flask-debug: ## Run flask in debug mode
 
 .PHONY: run-celery
 run-celery: ## Run celery
-	. environment.sh && OTEL_PYTHON_DISTRO="aws_distro" OTEL_PYTHON_CONFIGURATOR="aws_configurator" opentelemetry-instrument celery \
+	. environment.sh && opentelemetry-instrument celery \
 		-A run_celery.notify_celery worker \
 		--uid=$(shell id -u easuser) \
 		--pidfile=/tmp/api_celery_worker.pid \
@@ -132,7 +132,7 @@ run-celery: ## Run celery
 
 .PHONY: run-celery-beat
 run-celery-beat: ## Run celery beat
-	. environment.sh && celery \
+	. environment.sh && opentelemetry-instrument celery \
 		-A run_celery.notify_celery beat \
 		--pidfile=/tmp/celery_beat.pid \
 		--loglevel=INFO

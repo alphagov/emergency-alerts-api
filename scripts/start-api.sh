@@ -143,7 +143,7 @@ function run_celery(){
 
 function run_api(){
     cd $DIR_API;
-    . $VENV_API/bin/activate && OTEL_PYTHON_DISTRO="aws_distro" OTEL_PYTHON_CONFIGURATOR="aws_configurator" opentelemetry-instrument flask run -p 6011 --host=0.0.0.0
+    . $VENV_API/bin/activate && opentelemetry-instrument flask run -p 6011 --host=0.0.0.0
 }
 
 if [[ ! -z $DEBUG ]]; then
