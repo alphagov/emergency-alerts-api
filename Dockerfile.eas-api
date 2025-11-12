@@ -15,6 +15,7 @@ ENV OTEL_PYTHON_DISTRO="aws_distro"
 ENV OTEL_PYTHON_CONFIGURATOR="aws_configurator"
 # This is incredibly noisy
 ENV OTEL_PYTHON_DISABLED_INSTRUMENTATIONS=psycopg2
+ENV OTEL_PYTHON_EXCLUDED_URLS="_api_status"
 
 # Create root directory and copy repo
 COPY . $DIR_API
