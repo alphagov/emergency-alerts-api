@@ -233,6 +233,126 @@ def test_dao_get_all_finished_broadcast_messages_with_outstanding_actions(sample
     assert not any([x.finished_govuk_acknowledged for x in oustanding_action_broadcast_messages])
 
 
+@freeze_time("2024-12-12 12:12:12")
+def test_dao_get_only_relevant_broadcast_messages_with_outstanding_actions(sample_broadcast_service):
+    # Asserts that not all broadcast messages are picked up and acknowledged. For example, broadcast
+    # messages that have been rejected do not need to be acknowledged as they have not been & will not be
+    # published on gov.uk/alerts.
+
+    t = create_template(sample_broadcast_service, BROADCAST_TYPE)
+
+    # --- Not to be picked up (would not be published as have pre-broadcast status) ---
+    create_broadcast_message(
+        # Pending approval
+        t,
+        created_at=datetime(2023, 10, 10, 12, 0, 0),
+        starts_at=datetime.now(),
+        status=BroadcastStatusType.PENDING_APPROVAL,
+    )
+    create_broadcast_message(
+        # Rejected
+        t,
+        created_at=datetime(2023, 10, 10, 12, 0, 5),
+        starts_at=datetime.now(),
+        status=BroadcastStatusType.REJECTED,
+    )
+
+    # --- Should be picked up (all have been published) ---
+    create_broadcast_message(
+        # Cancelled, should be picked up
+        t,
+        created_at=datetime(2024, 10, 12, 12, 0, 0),
+        starts_at=datetime.now(),
+        status=BroadcastStatusType.CANCELLED,
+    )
+    create_broadcast_message(
+        # Completed, should be picked up
+        t,
+        created_at=datetime(2024, 10, 12, 12, 0, 0),
+        starts_at=datetime.now(),
+        status=BroadcastStatusType.COMPLETED,
+    )
+    create_broadcast_message(
+        # Broadcasting and expired, should be picked up
+        t,
+        created_at=datetime(2024, 10, 11, 12, 0, 0),
+        starts_at=datetime.now(),
+        finishes_at=datetime(2024, 10, 11, 13, 0, 0),
+        status=BroadcastStatusType.BROADCASTING,
+    )
+
+    oustanding_action_broadcast_messages = dao_get_all_finished_broadcast_messages_with_outstanding_actions()
+
+    assert len(oustanding_action_broadcast_messages) == 3
+
+    # All ones to *not* pickup have pre-broadcast status
+    assert not any(
+        [x.status in BroadcastStatusType.PRE_BROADCAST_STATUSES for x in oustanding_action_broadcast_messages]
+    )
+    assert not any([x.finished_govuk_acknowledged for x in oustanding_action_broadcast_messages])
+
+
+@freeze_time("2024-12-12 12:12:12")
+def test_dao_get_only_broadcast_messages_with_outstanding_actions_from_live_services(
+    sample_broadcast_service, sample_training_service
+):
+    # Asserts that only broadcast messages created within services that aren't live
+    # are not picked up, because they do not need to be acknowledged as they are not published on gov.uk/alerts.
+
+    # Creates template within live service
+    t = create_template(sample_broadcast_service, BROADCAST_TYPE)
+
+    # Creates template within training service
+    t_2 = create_template(sample_training_service, BROADCAST_TYPE)
+
+    # --- Not to be picked up (not in a live service) ---
+    create_broadcast_message(
+        # Not finished
+        t_2,
+        created_at=datetime(2023, 10, 10, 12, 0, 0),
+        starts_at=datetime.now(),
+        status=BroadcastStatusType.BROADCASTING,
+    )
+    create_broadcast_message(
+        # Not finished
+        t_2,
+        created_at=datetime(2023, 10, 10, 12, 0, 0),
+        starts_at=datetime.now(),
+        status=BroadcastStatusType.BROADCASTING,
+    )
+    create_broadcast_message(
+        # Not finished
+        t_2,
+        created_at=datetime(2023, 10, 10, 12, 0, 0),
+        starts_at=datetime.now(),
+        status=BroadcastStatusType.BROADCASTING,
+    )
+
+    # --- Should be picked up ---
+    create_broadcast_message(
+        # Cancelled, should be picked up
+        t,
+        created_at=datetime(2024, 10, 12, 12, 0, 0),
+        starts_at=datetime.now(),
+        status=BroadcastStatusType.CANCELLED,
+    )
+    create_broadcast_message(
+        # Completed, should be picked up
+        t,
+        created_at=datetime(2024, 10, 12, 12, 0, 0),
+        starts_at=datetime.now(),
+        status=BroadcastStatusType.COMPLETED,
+    )
+
+    oustanding_action_broadcast_messages = dao_get_all_finished_broadcast_messages_with_outstanding_actions()
+
+    assert len(oustanding_action_broadcast_messages) == 2
+
+    # All ones to *not* pickup are not in live services
+    assert not any([x.service.restricted for x in oustanding_action_broadcast_messages])
+    assert not any([x.finished_govuk_acknowledged for x in oustanding_action_broadcast_messages])
+
+
 def test_dao_purge_old_broadcast_messages(sample_broadcast_service):
     t = create_template(sample_broadcast_service, BROADCAST_TYPE)
 
