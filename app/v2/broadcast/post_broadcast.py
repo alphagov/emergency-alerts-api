@@ -165,23 +165,35 @@ def _check_service_has_permission(type, permissions):
 
 
 def _validate_polygons(polygons):
-    for polygon1 in polygons:
-        for polygon2 in polygons:
-            # Check for overlapping polygons, including partial
-            # intersections and enclosed polygons (holes)
-            if polygon1 != polygon2 and polygon1.intersects(polygon2):
+    try:
+        for polygon1 in polygons:
+            for polygon2 in polygons:
+                p1 = ShapelyPolygon(polygon1) if not isinstance(polygon1, ShapelyPolygon) else polygon1
+                p2 = ShapelyPolygon(polygon2) if not isinstance(polygon2, ShapelyPolygon) else polygon2
+                # Check for overlapping polygons, including partial
+                # intersections and enclosed polygons (holes)
+                if p1 != p2 and p1.intersects(p2):
+                    raise ValidationError(
+                        message="Overlapping areas are not supported.",
+                        status_code=400,
+                    )
+        for polygon in polygons:
+            p = ShapelyPolygon(polygon) if not isinstance(polygon, ShapelyPolygon) else polygon
+            # Check if valid (no self-intersections, no duplicate vertices,
+            # minimum vertex count, no overlapping segments)
+            if not p.is_valid:
                 raise ValidationError(
-                    message=f"Overlapping areas are not supported. P1: {polygon1.wkt}, P2: {polygon2.wkt}",
+                    message=f"Invalid polygon: {explain_validity(p)}",
                     status_code=400,
                 )
-    for polygon in polygons:
-        # Check if valid (no self-intersections, no duplicate vertices,
-        # minimum vertex count, no overlapping segments)
-        if not polygon.is_valid:
-            raise ValidationError(
-                message=f"Invalid polygon: {explain_validity(polygon)}",
-                status_code=400,
-            )
+
+    except Exception as e:
+        raise ValidationError(
+            message=f"Invalid polygon(s): {str(e)}",
+            status_code=400,
+        ) from e
+
+    return True
 
 
 def _validate_areas(areas):
@@ -204,7 +216,7 @@ def _validate_areas(areas):
                     # intersections and enclosed polygons (holes)
                     if polygon1 != polygon2 and polygon1.intersects(polygon2):
                         raise ValidationError(
-                            message=f"Overlapping areas are not supported. P1: {polygon1.wkt}, P2: {polygon2.wkt}",
+                            message="Overlapping areas are not supported.",
                             status_code=400,
                         )
 
