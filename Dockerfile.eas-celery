@@ -25,8 +25,7 @@ RUN wget https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem -O /e
 RUN cd $DIR_API && \
     . $VENV_API/bin/activate && \
     python$PYTHON_VERSION -m pip install --upgrade pip wheel setuptools && \
-    python$PYTHON_VERSION -m pip install pycurl && \
-    APP_VERSION=${APP_VERSION} make bootstrap
+    APP_VERSION=${APP_VERSION} make bootstrap-for-tests
 
 # Create a blank configuration file
 RUN echo "" > $DIR_API/environment.sh

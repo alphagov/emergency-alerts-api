@@ -1,2 +1,2 @@
 -r requirements.txt
-emergency-alerts-utils @ git+https://github.com/alphagov/emergency-alerts-utils.git
+emergency-alerts-utils @ git+https://github.com/alphagov/emergency-alerts-utils.git@spike/eas-2861-lakin-utils-opentelemetry
