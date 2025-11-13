@@ -497,7 +497,7 @@ def test_invalid_areas_returns_400(client, sample_broadcast_service):
         (
             sample_cap_xml_documents.INVALID_DEGENERATE_AREA,
             "ValidationError",
-            "areas [[51.41723, 0.27094], [51.41723, 0.2569]] is not valid under any of the given schemas",
+            "areas [[0.27094, 51.41723], [0.2569, 51.41723]] is not valid under any of the given schemas",
             400,
         ),
         (

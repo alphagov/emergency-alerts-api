@@ -65,8 +65,6 @@ def create_broadcast():
     else:
         _validate_template(broadcast_json)
 
-        _validate_areas(broadcast_json["areas"])
-
         polygons = Polygons(
             list(
                 chain.from_iterable(
@@ -84,6 +82,8 @@ def create_broadcast():
             simple_polygons = polygons.smooth.simplify
         else:
             simple_polygons = polygons
+
+        _validate_polygons(simple_polygons.polygons)
 
         current_app.logger.info(
             "Polygon complexity (%d polygons / %d points)", len(simple_polygons), simple_polygons.point_count
@@ -164,43 +164,33 @@ def _check_service_has_permission(type, permissions):
         raise BadRequestError(message="Service is not allowed to send broadcast messages")
 
 
-def _validate_areas(areas):
-    for area in areas:
-        coord_list = []
-        for coords in area["polygons"]:
-            # Create a list when a single area has multiple polygons
-            coord_list.append(coords)
-
-        try:
-            polygon_list = []
-            for shape in coord_list:
-                # The shapely.Polygon class constructor catches most (if
-                # not all) invalid polygons
-                polygon_list.append(ShapelyPolygon(shape))
-
-            for polygon1 in polygon_list:
-                for polygon2 in polygon_list:
-                    # Check for overlapping polygons, including partial
-                    # intersections and enclosed polygons (holes)
-                    if polygon1 != polygon2 and polygon1.intersects(polygon2):
-                        raise ValidationError(
-                            message="Overlapping areas are not supported.",
-                            status_code=400,
-                        )
-
-            for polygon in polygon_list:
-                # Check if valid (no self-intersections, no duplicate vertices,
-                # minimum vertex count, no overlapping segments)
-                if not polygon.is_valid:
+def _validate_polygons(polygons):
+    try:
+        for polygon1 in polygons:
+            for polygon2 in polygons:
+                p1 = ShapelyPolygon(polygon1) if not isinstance(polygon1, ShapelyPolygon) else polygon1
+                p2 = ShapelyPolygon(polygon2) if not isinstance(polygon2, ShapelyPolygon) else polygon2
+                # Check for overlapping polygons, including partial
+                # intersections and enclosed polygons (holes)
+                if p1 != p2 and p1.intersects(p2):
                     raise ValidationError(
-                        message=f"Invalid polygon: {explain_validity(polygon)}",
+                        message="Overlapping areas are not supported.",
                         status_code=400,
                     )
+        for polygon in polygons:
+            p = ShapelyPolygon(polygon) if not isinstance(polygon, ShapelyPolygon) else polygon
+            # Check if valid (no self-intersections, no duplicate vertices,
+            # minimum vertex count, no overlapping segments)
+            if not p.is_valid:
+                raise ValidationError(
+                    message=f"Invalid polygon: {explain_validity(p)}",
+                    status_code=400,
+                )
 
-        except Exception as e:
-            raise ValidationError(
-                message=f"Invalid polygon(s): {str(e)}",
-                status_code=400,
-            ) from e
+    except Exception as e:
+        raise ValidationError(
+            message=f"Invalid polygon(s): {str(e)}",
+            status_code=400,
+        ) from e
 
     return True
