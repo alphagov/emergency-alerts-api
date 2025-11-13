@@ -123,6 +123,7 @@ run-flask-debug: ## Run flask in debug mode
 run-celery: ## Run celery
 	. environment.sh && opentelemetry-instrument celery \
 		-A run_celery.notify_celery worker \
+		--pool=threads \
 		--uid=$(shell id -u easuser) \
 		--pidfile=/tmp/api_celery_worker.pid \
 		--prefetch-multiplier=1 \
