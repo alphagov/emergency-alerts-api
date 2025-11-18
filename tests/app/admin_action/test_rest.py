@@ -101,9 +101,10 @@ def test_get_all_pending_admin_actions(admin_request, sample_service, sample_use
 @pytest.mark.parametrize(
     "created_time, expect_invalidation",
     [
-        (datetime(2025, 4, 1, 9, 59), True),
-        (datetime(2025, 4, 1, 10, 0), True),
-        (datetime(2025, 4, 1, 11, 0), False),
+        (datetime(2025, 4, 1, 10, 30), True),
+        (datetime(2025, 4, 1, 11, 0), True),
+        (datetime(2025, 4, 1, 11, 1), False),
+        (datetime(2025, 4, 1, 11, 30), False),
     ],
 )
 def test_older_elevation_admin_actions_are_invalidated(
