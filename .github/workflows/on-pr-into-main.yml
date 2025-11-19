@@ -50,6 +50,9 @@ jobs:
           export ENCRYPTION_SECRET_KEY='dev-notify-secret-key'
           export ADMIN_CLIENT_SECRET='dev-notify-secret-key'
           export FLASK_APP=application.py
+          export POSTGRES_PASSWORD=root
+          export POSTGRES_USER=postgres
+          export POSTGRES_DB=postgres
           export TEST_RDS_HOST=localhost
           export TEST_RDS_USER=postgres
           export TEST_RDS_PASSWORD=root
