@@ -123,7 +123,6 @@ run-flask-debug: ## Run flask in debug mode
 run-celery: ## Run celery
 	. environment.sh && celery \
 		-A run_celery.notify_celery worker \
-		--uid=$(shell id -u easuser) \
 		--pidfile=/tmp/api_celery_worker.pid \
 		--prefetch-multiplier=1 \
 		--loglevel=INFO \
