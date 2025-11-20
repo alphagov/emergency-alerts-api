@@ -39,6 +39,9 @@ jobs:
 
       - name: Launch a postgres instance
         run: |
+          export POSTGRES_PASSWORD=root
+          export POSTGRES_USER=postgres
+          export POSTGRES_DB=postgres
           docker compose -f docker-compose-tests.yml up --detach pg
 
       - name: Bootstrap Python app and run tests
