@@ -1,35 +1,36 @@
 # Sensible defaults, but they will be explicitly overridden in the context of a buildspec anyway.
 # The only one that needs to be passed in however is the ECS_ACCOUNT_NUMBER, as this changes per environment.
+# For local/ad-hoc builds you can specify BASE_IMAGE entirely
 ARG ECS_ACCOUNT_NUMBER
 ARG RESOURCE_PREFIX=eas-app
 ARG AWS_REGION=eu-west-2
 ARG BASE_VERSION=latest
-FROM ${ECS_ACCOUNT_NUMBER}.dkr.ecr.${AWS_REGION}.amazonaws.com/${RESOURCE_PREFIX}-base:${BASE_VERSION}
+ARG BASE_IMAGE=${ECS_ACCOUNT_NUMBER}.dkr.ecr.${AWS_REGION}.amazonaws.com/${RESOURCE_PREFIX}-base:${BASE_VERSION}
+FROM ${BASE_IMAGE}
 
 ARG APP_VERSION=unknown
 
 ENV SERVICE='celery'
 
 # Create root directory and copy repo
-COPY . $DIR_API
+COPY --chown=easuser:easuser . $DIR_API
 
 # Download the database certificate
+USER root
 RUN wget https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem -O /etc/ssl/certs/global-bundle.pem && \
     update-ca-certificates
+USER easuser
 
 # Build emergency-alerts-api
+RUN python$PYTHON_VERSION -m venv $VENV_API
 RUN cd $DIR_API && \
     . $VENV_API/bin/activate && \
-    python$PYTHON_VERSION -m pip install --upgrade pip wheel setuptools && \
-    python$PYTHON_VERSION -m pip install pycurl && \
     APP_VERSION=${APP_VERSION} make bootstrap
 
 # Create a blank configuration file
 RUN echo "" > $DIR_API/environment.sh
 
-RUN useradd -ms /bin/bash easuser && chown -R easuser:easuser $DIR_API && chown -R easuser:easuser $DIR_UTILS
-
-COPY scripts/link-test.sh /
-COPY scripts/healthcheck.sh /
-COPY scripts/start-celery.sh /
+COPY --chown=easuser:easuser scripts/link-test.sh /
+COPY --chown=easuser:easuser scripts/healthcheck.sh /
+COPY --chown=easuser:easuser scripts/start-celery.sh /
 CMD bash /start-celery.sh
