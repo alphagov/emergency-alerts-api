@@ -16,6 +16,8 @@ COPY . $DIR_API
 # Download the database certificate
 RUN wget https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem -O /etc/ssl/certs/global-bundle.pem && \
     update-ca-certificates
+RUN sed -i 's|http://archive.ubuntu.com|https://archive.ubuntu.com|g' /etc/apt/sources.list
+RUN sed -i 's|http://security.ubuntu.com|https://security.ubuntu.com|g' /etc/apt/sources.list
 RUN apt-get update
 RUN apt-get install lsb-release -y && \
     install -d /usr/share/postgresql-common/pgdg && \
