@@ -234,7 +234,7 @@ class Hosted(Config):
     QUEUE_NAME = QueueNames.BROADCASTS if SERVICE == "api" else QueueNames.PERIODIC
     TASK_IMPORTS = "broadcast_message_tasks" if SERVICE == "api" else "scheduled_tasks"
 
-    HTTP_PROXY = os.environ.get("HTTP_PROXY")
+    HTTPS_PROXY = os.environ.get("HTTPS_PROXY")
     NO_PROXY = os.environ.get("NO_PROXY")
 
     BEAT_SCHEDULE = {
