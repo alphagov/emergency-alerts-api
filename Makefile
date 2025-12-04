@@ -37,7 +37,7 @@ run-flask-debug: ## Run flask in debug mode
 
 .PHONY: run-celery
 run-celery: ## Run celery
-	. environment.sh && celery \
+	. environment.sh && opentelemetry-instrument celery \
 		-A run_celery.notify_celery worker \
 		--pidfile=/tmp/api_celery_worker.pid \
 		--prefetch-multiplier=1 \
@@ -47,7 +47,7 @@ run-celery: ## Run celery
 
 .PHONY: run-celery-beat
 run-celery-beat: ## Run celery beat
-	. environment.sh && celery \
+	. environment.sh && opentelemetry-instrument celery \
 		-A run_celery.notify_celery beat \
 		--pidfile=/tmp/celery_beat.pid \
 		--loglevel=INFO

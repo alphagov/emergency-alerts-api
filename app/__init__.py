@@ -15,6 +15,7 @@ from emergency_alerts_utils.clients.encryption.encryption_client import (
 from emergency_alerts_utils.clients.slack.slack_client import SlackClient
 from emergency_alerts_utils.clients.zendesk.zendesk_client import ZendeskClient
 from flask import (
+    Response,
     current_app,
     g,
     has_request_context,
@@ -25,6 +26,7 @@ from flask import (
 from flask_marshmallow import Marshmallow
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
+from opentelemetry import trace
 from sqlalchemy import event
 from werkzeug.exceptions import HTTPException as WerkzeugHTTPException
 from werkzeug.local import LocalProxy
@@ -235,6 +237,16 @@ def init_app(app):
         response.headers.add("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE")
         response.headers.add("Strict-Transport-Security", "max-age=63072000; includeSubdomains; preload")
         response.headers.add("Referrer-Policy", "no-referrer")
+        return response
+
+    @app.after_request
+    def trace_id_after_request(response: Response):
+        span = trace.get_current_span()
+        if span is not trace.INVALID_SPAN:
+            # Convert to hex and strip out the 0x prefix
+            trace_id = hex(span.get_span_context().trace_id)[2:]
+            response.headers.add("X-EAS-Trace-Id", trace_id)
+
         return response
 
     @app.errorhandler(Exception)
