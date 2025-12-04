@@ -70,6 +70,11 @@ class Config(object):
     }
     DATABASE_STATEMENT_TIMEOUT_MS = 1200000
 
+    # Default to True if hosted, unless opted out with an explicit 'false'
+    USE_RDS_IAM_AUTH = os.environ.get("HOST", "") != "local" and (
+        not os.environ.get("USE_RDS_IAM_AUTH", "").lower() == "false"
+    )
+
     if os.environ.get("MASTER_USERNAME"):
         print("Using master credentials for db connection")
         SQLALCHEMY_DATABASE_URI = "postgresql://{user}:{password}@{host}:{port}/{database}".format(
