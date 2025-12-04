@@ -3,10 +3,6 @@
 # notify_celery must be imported here
 import logging
 
-from opentelemetry.instrumentation.auto_instrumentation import initialize
-
-initialize()
-
 from app import create_app, notify_celery  # noqa
 from app.notify_api_flask_app import NotifyApiFlaskApp  # noqa: E402
 
