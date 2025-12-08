@@ -98,8 +98,11 @@ function backup_database(){
     fi
 
     # Must be in /eas as it's owned by easuser
-    SQL_FILENAME=/eas/$ENVIRONMENT-$(date -u +"%Y-%m-%d-%H-%M-%S").sql
+    SQL_FILENAME_SUFFIX=$ENVIRONMENT-$(date -u +"%Y-%m-%d-%H-%M-%S").sql
+    SQL_FILENAME=/eas/$SQL_FILENAME_SUFFIX
     rm -f $SQL_FILENAME
+
+    echo "Running pg_dump to $SQL_FILENAME"
 
     # To exclude table use: --exclude-table TABLE_NAME
     PGPASSWORD=$MASTER_PASSWORD pg_dump -h $RDS_HOST -p $RDS_PORT -U $MASTER_USERNAME \
@@ -115,14 +118,17 @@ function backup_database(){
     ARCHIVE_FILENAME=$SQL_FILENAME.tar
     tar -cf $ARCHIVE_FILENAME $SQL_FILENAME
 
+    echo "Created $ARCHIVE_FILENAME"
+    ls -lh $ARCHIVE_FILENAME
+
     # Upload the backup to S3
     if aws s3api put-object \
         --bucket $BACKUP_BUCKET_NAME \
-        --key $ENVIRONMENT/$ARCHIVE_FILENAME \
+        --key $ENVIRONMENT/$ARCHIVE_FILENAME_SUFFIX \
         --body $ARCHIVE_FILENAME;
     then
         echo "Bucket name: $BACKUP_BUCKET_NAME"
-        echo "Bucket key: $ENVIRONMENT/$ARCHIVE_FILENAME"
+        echo "Bucket key: $ENVIRONMENT/$ARCHIVE_FILENAME_SUFFIX"
         echo "Backup created successfully."
 
         put_metric_data "Backups" "success"
