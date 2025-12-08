@@ -97,7 +97,8 @@ function backup_database(){
         exit 1;
     fi
 
-    SQL_FILENAME=$ENVIRONMENT-$(date -u +"%Y-%m-%d-%H-%M-%S").sql
+    # Must be in /eas as it's owned by easuser
+    SQL_FILENAME=/eas/$ENVIRONMENT-$(date -u +"%Y-%m-%d-%H-%M-%S").sql
     rm -f $SQL_FILENAME
 
     # To exclude table use: --exclude-table TABLE_NAME
