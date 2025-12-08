@@ -115,7 +115,8 @@ function backup_database(){
         exit 1;
     fi
 
-    ARCHIVE_FILENAME=$SQL_FILENAME.tar
+    ARCHIVE_FILENAME_SUFFIX=$SQL_FILENAME_SUFFIX.tar
+    ARCHIVE_FILENAME=/eas/$ARCHIVE_FILENAME_SUFFIX
     tar -cf $ARCHIVE_FILENAME $SQL_FILENAME
 
     echo "Created $ARCHIVE_FILENAME"
