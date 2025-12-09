@@ -2,7 +2,7 @@ import builtins
 import time
 from collections import namedtuple
 from datetime import datetime, timedelta
-from unittest.mock import mock_open, patch
+from unittest.mock import call, mock_open, patch
 
 import boto3
 import pytest
@@ -12,7 +12,7 @@ from freezegun import freeze_time
 from moto import mock_aws
 
 from app.celery import scheduled_tasks
-from app.celery.scheduled_tasks import (  # trigger_link_tests,
+from app.celery.scheduled_tasks import (
     auto_expire_broadcast_messages,
     delete_invitations,
     delete_old_records_from_events_table,
@@ -20,14 +20,12 @@ from app.celery.scheduled_tasks import (  # trigger_link_tests,
     queue_after_alert_activities,
     remove_yesterdays_planned_tests_on_govuk_alerts,
     run_health_check,
+    trigger_link_tests,
     validate_functional_test_account_emails,
 )
 from app.models import BroadcastMessage, BroadcastStatusType, Event, User
 from tests.app.db import create_broadcast_message
 from tests.conftest import set_config
-
-# from unittest.mock import call
-
 
 # from tests.conftest import set_config
 
@@ -60,30 +58,64 @@ MockServicesWithHighFailureRate = namedtuple(
 )
 
 
-# def test_trigger_link_tests_calls_for_all_providers(mocker, notify_api):
-#     mock_trigger_link_test = mocker.patch(
-#         "app.celery.scheduled_tasks.trigger_link_test",
-#     )
+def test_trigger_link_tests_calls_for_all_providers(mocker, notify_api):
+    _ = mocker.patch(
+        "app.celery.scheduled_tasks.trigger_link_tests",
+    )
+    primary_to_A = mocker.patch("app.celery.scheduled_tasks.trigger_link_test_primary_to_A")
+    primary_to_B = mocker.patch("app.celery.scheduled_tasks.trigger_link_test_primary_to_B")
+    secondary_to_A = mocker.patch("app.celery.scheduled_tasks.trigger_link_test_secondary_to_A")
+    secondary_to_B = mocker.patch("app.celery.scheduled_tasks.trigger_link_test_secondary_to_B")
 
-#     with set_config(notify_api, "ENABLED_CBCS", {"ee", "vodafone"}):
-#         trigger_link_tests()
+    with set_config(notify_api, "ENABLED_CBCS", {"ee", "vodafone", "o2", "three"}):
+        trigger_link_tests()
 
-#     args = mock_trigger_link_test.apply_async.call_args_list
-#     assert call(kwargs={"provider": "ee"}, queue="broadcast-tasks") in args
-#     assert call(kwargs={"provider": "vodafone"}, queue="broadcast-tasks") in args
+    assert len(primary_to_A.method_calls) == 4
+    assert len(primary_to_B.method_calls) == 4
+    assert len(secondary_to_A.method_calls) == 4
+    assert len(secondary_to_B.method_calls) == 4
+
+    for cbc_name in ["ee", "vodafone", "o2", "three"]:
+        assert call.apply_async(kwargs={"provider": cbc_name}, queue="broadcast-tasks") in primary_to_A.method_calls
+        assert call.apply_async(kwargs={"provider": cbc_name}, queue="broadcast-tasks") in primary_to_B.method_calls
+        assert call.apply_async(kwargs={"provider": cbc_name}, queue="broadcast-tasks") in secondary_to_A.method_calls
+        assert call.apply_async(kwargs={"provider": cbc_name}, queue="broadcast-tasks") in secondary_to_B.method_calls
 
 
-# def test_trigger_link_does_nothing_if_cbc_proxy_disabled(mocker, notify_api):
-#     mock_trigger_link_test = mocker.patch(
-#         "app.celery.scheduled_tasks.trigger_link_test",
-#     )
+def test_trigger_link_tests_calls_for_a_single_provider(mocker, notify_api):
+    _ = mocker.patch(
+        "app.celery.scheduled_tasks.trigger_link_tests",
+    )
+    primary_to_A = mocker.patch("app.celery.scheduled_tasks.trigger_link_test_primary_to_A")
+    primary_to_B = mocker.patch("app.celery.scheduled_tasks.trigger_link_test_primary_to_B")
+    secondary_to_A = mocker.patch("app.celery.scheduled_tasks.trigger_link_test_secondary_to_A")
+    secondary_to_B = mocker.patch("app.celery.scheduled_tasks.trigger_link_test_secondary_to_B")
 
-#     with set_config(
-#         notify_api, "ENABLED_CBCS", {"ee", "vodafone"}
-#     ), set_config(notify_api, "CBC_PROXY_ENABLED", False):
-#         trigger_link_tests()
+    with set_config(notify_api, "ENABLED_CBCS", {"ee"}):
+        trigger_link_tests()
 
-#     assert mock_trigger_link_test.called is False
+    assert len(primary_to_A.method_calls) == 1
+
+    assert call.apply_async(kwargs={"provider": "ee"}, queue="broadcast-tasks") in primary_to_A.method_calls
+    assert call.apply_async(kwargs={"provider": "ee"}, queue="broadcast-tasks") in primary_to_B.method_calls
+    assert call.apply_async(kwargs={"provider": "ee"}, queue="broadcast-tasks") in secondary_to_A.method_calls
+    assert call.apply_async(kwargs={"provider": "ee"}, queue="broadcast-tasks") in secondary_to_B.method_calls
+
+    assert call.apply_async(kwargs={"provider": "o2"}, queue="broadcast-tasks") not in primary_to_A.method_calls
+    assert call.apply_async(kwargs={"provider": "three"}, queue="broadcast-tasks") not in primary_to_B.method_calls
+    assert call.apply_async(kwargs={"provider": "vodafone"}, queue="broadcast-tasks") not in secondary_to_A.method_calls
+    assert call.apply_async(kwargs={"provider": "o2"}, queue="broadcast-tasks") not in secondary_to_B.method_calls
+
+
+def test_trigger_link_does_nothing_if_cbc_proxy_disabled(mocker, notify_api):
+    mock_trigger_link_tests = mocker.patch(
+        "app.celery.scheduled_tasks.trigger_link_tests",
+    )
+
+    with set_config(notify_api, "ENABLED_CBCS", {"ee", "vodafone"}), set_config(notify_api, "CBC_PROXY_ENABLED", False):
+        trigger_link_tests()
+
+    assert mock_trigger_link_tests.called is False
 
 
 @freeze_time("2021-07-19 15:50")
