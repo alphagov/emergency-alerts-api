@@ -117,7 +117,7 @@ def test_auto_expire_broadcast_messages(
     assert not mock_celery.called
 
 
-def test_remove_yesterdays_planned_tests_on_govuk_alerts(mocker):
+def test_remove_yesterdays_planned_tests_on_govuk_alerts(notify_db_session, mocker):
     mock_celery = mocker.patch("app.celery.scheduled_tasks.notify_celery.send_task")
 
     remove_yesterdays_planned_tests_on_govuk_alerts()
