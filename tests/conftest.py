@@ -5,6 +5,7 @@ import pytest
 import sqlalchemy
 from alembic.command import upgrade
 from alembic.config import Config
+from sqlalchemy import event
 
 from app import create_app, db
 from app.notify_api_flask_app import NotifyApiFlaskApp
@@ -91,12 +92,18 @@ def _notify_db(notify_api, worker_id):
     with notify_api.app_context():
         upgrade(config, "head")
 
-        db.session.execute(
-            f"SET statement_timeout = {current_app.config['DATABASE_STATEMENT_TIMEOUT_MS']}",
-        )
-        db.session.execute(
-            f"SET application_name = {current_app.config['EAS_APP_NAME']}",
-        )
+        timeout = current_app.config["DATABASE_STATEMENT_TIMEOUT_MS"]
+        app_name = current_app.config["EAS_APP_NAME"]
+
+        # Set parameters on every connection checkout. If executing SET commands
+        # using a db.session, it is possible that the tests are getting a
+        # different connection from the pool and may not see these settings.
+        @event.listens_for(db.engine, "connect")
+        def receive_connect(dbapi_conn, connection_record):
+            cursor = dbapi_conn.cursor()
+            cursor.execute(f"SET statement_timeout = '{timeout}'")
+            cursor.execute(f"SET application_name = '{app_name}'")
+            cursor.close()
 
         yield db
 
