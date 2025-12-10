@@ -288,6 +288,9 @@ class Hosted(Config):
     }
 
     PREDEFINED_SQS_QUEUES = {
+        "high-priority-tasks": {
+            "url": f"{SQS_QUEUE_BASE_URL}/{QUEUE_PREFIX}high-priority-tasks",
+        },
         "broadcast-tasks": {
             "url": f"{SQS_QUEUE_BASE_URL}/{QUEUE_PREFIX}broadcast-tasks",
         },
