@@ -36,13 +36,23 @@ run-flask-debug: ## Run flask in debug mode
 	. environment.sh && flask --debug run -p 6011
 
 .PHONY: run-celery
-run-celery: ## Run celery
+run-celery: ## Run Celery workers for our highest priority tasks, then for our lower priority tasks
 	. environment.sh && celery \
 		-A run_celery.notify_celery worker \
+		-Q high-priority-tasks \
+		--pidfile=/tmp/api_celery_worker_hp.pid \
+		--prefetch-multiplier=1 \
+		--loglevel=INFO \
+		--autoscale=8,1 \
+		--hostname='$(SERVICE)_hp@%h'
+
+	. environment.sh && celery \
+		-A run_celery.notify_celery worker \
+		-Q broadcast-tasks,periodic-tasks,govuk-alerts \
 		--pidfile=/tmp/api_celery_worker.pid \
 		--prefetch-multiplier=1 \
 		--loglevel=INFO \
-		--autoscale=16,1 \
+		--autoscale=8,1 \
 		--hostname='$(SERVICE)@%h'
 
 .PHONY: run-celery-beat

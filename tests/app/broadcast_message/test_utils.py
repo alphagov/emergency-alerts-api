@@ -41,7 +41,7 @@ def test_update_broadcast_message_status_stores_approved_by_and_approved_at_and_
     assert len(broadcast_message.events) == 1
     alert_event = broadcast_message.events[0]
 
-    mock_task.assert_called_once_with(kwargs={"broadcast_event_id": str(alert_event.id)}, queue="high-priority")
+    mock_task.assert_called_once_with(kwargs={"broadcast_event_id": str(alert_event.id)}, queue="high-priority-tasks")
 
     assert alert_event.service_id == sample_broadcast_service.id
     assert alert_event.transmitted_areas == broadcast_message.areas
@@ -76,7 +76,7 @@ def test_update_broadcast_message_status_for_cancelling_broadcast_from_admin_int
     assert len(broadcast_message.events) == 1
     alert_event = broadcast_message.events[0]
 
-    mock_task.assert_called_once_with(kwargs={"broadcast_event_id": str(alert_event.id)}, queue="high-priority")
+    mock_task.assert_called_once_with(kwargs={"broadcast_event_id": str(alert_event.id)}, queue="high-priority-tasks")
 
     assert alert_event.service_id == sample_broadcast_service.id
     assert alert_event.message_type == BroadcastEventMessageType.CANCEL
@@ -107,7 +107,7 @@ def test_update_broadcast_message_status_for_cancelling_broadcast_from_API_call(
     assert len(broadcast_message.events) == 1
     alert_event = broadcast_message.events[0]
 
-    mock_task.assert_called_once_with(kwargs={"broadcast_event_id": str(alert_event.id)}, queue="high-priority")
+    mock_task.assert_called_once_with(kwargs={"broadcast_event_id": str(alert_event.id)}, queue="high-priority-tasks")
 
     assert alert_event.service_id == sample_broadcast_service.id
     assert alert_event.message_type == BroadcastEventMessageType.CANCEL
@@ -328,7 +328,7 @@ def test_update_broadcast_message_status_creates_event_with_correct_content_if_b
     assert len(broadcast_message.events) == 1
     alert_event = broadcast_message.events[0]
 
-    mock_task.assert_called_once_with(kwargs={"broadcast_event_id": str(alert_event.id)}, queue="high-priority")
+    mock_task.assert_called_once_with(kwargs={"broadcast_event_id": str(alert_event.id)}, queue="high-priority-tasks")
 
     assert alert_event.transmitted_content == {"body": "tailor made emergency broadcast content"}
 
