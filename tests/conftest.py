@@ -95,7 +95,7 @@ def _notify_db(notify_api, worker_id):
         timeout = current_app.config["DATABASE_STATEMENT_TIMEOUT_MS"]
         app_name = current_app.config["EAS_APP_NAME"]
 
-        # Set parameters on every connection checkout. If execuring SET commands
+        # Set parameters on every connection checkout. If executing SET commands
         # using a db.session, it is possible that the tests are getting a
         # different connection from the pool and may not see these settings.
         @event.listens_for(db.engine, "connect")
