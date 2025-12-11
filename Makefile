@@ -36,7 +36,7 @@ run-flask-debug: ## Run flask in debug mode
 	. environment.sh && flask --debug run -p 6011
 
 .PHONY: run-celery
-run-celery: ## Run Celery workers for our highest priority tasks, then for our lower priority tasks
+run-celery: ## Run Celery workers for periodic tasks
 	. environment.sh && celery \
 		-A run_celery.notify_celery worker \
 		--pidfile=/tmp/api_celery_worker.pid \
@@ -46,7 +46,7 @@ run-celery: ## Run Celery workers for our highest priority tasks, then for our l
 		--hostname='$(SERVICE)@%h' &
 
 .PHONY: run-celery-api
-run-celery-api: ## Run Celery workers for our highest priority tasks, then for our lower priority tasks
+run-celery-api: ## Run Celery workers for tasks executed by the API; high-priority ones first, then lower-priority ones
 	. environment.sh && celery \
 		-A run_celery.notify_celery worker \
 		-Q high-priority-tasks \
@@ -58,7 +58,7 @@ run-celery-api: ## Run Celery workers for our highest priority tasks, then for o
 
 	. environment.sh && celery \
 		-A run_celery.notify_celery worker \
-		-Q broadcast-tasks,periodic-tasks,govuk-alerts \
+		-Q broadcast-tasks \
 		--pidfile=/tmp/api_celery_worker.pid \
 		--prefetch-multiplier=1 \
 		--loglevel=INFO \
