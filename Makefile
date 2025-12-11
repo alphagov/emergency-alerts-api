@@ -44,7 +44,7 @@ run-celery: ## Run Celery workers for our highest priority tasks, then for our l
 		--prefetch-multiplier=1 \
 		--loglevel=INFO \
 		--autoscale=8,1 \
-		--hostname='$(SERVICE)_hp@%h'
+		--hostname='$(SERVICE)_hp@%h' &
 
 	. environment.sh && celery \
 		-A run_celery.notify_celery worker \
@@ -53,7 +53,7 @@ run-celery: ## Run Celery workers for our highest priority tasks, then for our l
 		--prefetch-multiplier=1 \
 		--loglevel=INFO \
 		--autoscale=8,1 \
-		--hostname='$(SERVICE)@%h'
+		--hostname='$(SERVICE)@%h' &
 
 .PHONY: run-celery-beat
 run-celery-beat: ## Run celery beat
