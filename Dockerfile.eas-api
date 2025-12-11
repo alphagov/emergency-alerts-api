@@ -12,6 +12,11 @@ ARG APP_VERSION=unknown
 
 ENV SERVICE='api'
 
+ENV OTEL_SERVICE_NAME="api"
+ENV OTEL_PYTHON_DISTRO="aws_distro"
+ENV OTEL_PYTHON_CONFIGURATOR="aws_configurator"
+ENV OTEL_PYTHON_EXCLUDED_URLS="_api_status"
+
 # Create root directory and copy repo
 COPY --chown=easuser:easuser . $DIR_API
 

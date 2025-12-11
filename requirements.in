@@ -23,6 +23,12 @@ psycopg2-binary==2.9.10
 pwdpy==1.0.1
 PyJWT==2.5.0
 SQLAlchemy==1.4.41
+cachetools==5.2.0
+beautifulsoup4==4.11.1
+lxml==5.4.0
+pwdpy==1.0.1
+notifications-python-client==8.0.0
+aws-opentelemetry-distro==0.12.2
 Werkzeug==3.1.3
 
 # Package for testing
