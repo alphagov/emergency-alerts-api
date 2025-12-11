@@ -137,7 +137,7 @@ def _create_broadcast_event(broadcast_message):
         )
         dao_save_object(event)
         send_broadcast_event.apply_async(
-            queue=QueueNames.BROADCASTS,
+            queue=QueueNames.HIGH_PRIORITY,
             kwargs={"broadcast_event_id": str(event.id)},
         )
     elif broadcast_message.stubbed != service.restricted:

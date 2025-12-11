@@ -42,8 +42,28 @@ run-celery: ## Run celery
 		--pidfile=/tmp/api_celery_worker.pid \
 		--prefetch-multiplier=1 \
 		--loglevel=INFO \
-		--autoscale=16,1 \
-		--hostname='$(SERVICE)@%h'
+		--autoscale=8,1 \
+		--hostname='$(SERVICE)@%h' &
+
+.PHONY: run-celery-api
+run-celery-api: ## Run Celery workers for tasks executed by the API; high-priority ones first, then lower-priority ones
+	. environment.sh && celery \
+		-A run_celery.notify_celery worker \
+		-Q high-priority-tasks \
+		--pidfile=/tmp/api_celery_worker_hp.pid \
+		--prefetch-multiplier=1 \
+		--loglevel=INFO \
+		--autoscale=8,1 \
+		--hostname='$(SERVICE)_hp@%h' &
+
+	. environment.sh && celery \
+		-A run_celery.notify_celery worker \
+		-Q broadcast-tasks \
+		--pidfile=/tmp/api_celery_worker.pid \
+		--prefetch-multiplier=1 \
+		--loglevel=INFO \
+		--autoscale=8,1 \
+		--hostname='$(SERVICE)@%h' &
 
 .PHONY: run-celery-beat
 run-celery-beat: ## Run celery beat
