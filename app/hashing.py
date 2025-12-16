@@ -7,4 +7,8 @@ def hashpw(password):
 
 def check_hash(password, hashed_password):
     # If salt is invalid throws a 500 should add try/catch here
-    return check_password_hash(hashed_password, password)
+    try:
+        check = check_password_hash(hashed_password, password)
+    except ValueError:
+        check = False
+    return check
