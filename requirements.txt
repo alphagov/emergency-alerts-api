@@ -40,7 +40,7 @@ botocore==1.41.6
     #   s3transfer
 cachetools==5.2.0
     # via -r requirements.in
-celery[sqs]==5.5.3
+celery[redis,sqs]==5.5.3
     # via -r requirements.in
 certifi==2025.11.12
     # via requests
@@ -147,7 +147,7 @@ jsonpointer==3.0.0
     # via jsonschema
 jsonschema[format]==4.16.0
     # via -r requirements.in
-kombu[sqs]==5.5.4
+kombu[redis,sqs]==5.5.4
     # via celery
 lxml==5.4.0
     # via -r requirements.in
@@ -538,6 +538,8 @@ python-dateutil==2.9.0.post0
     #   moto
 pyyaml==6.0.3
     # via responses
+redis==5.2.1
+    # via kombu
 requests==2.32.5
     # via
     #   moto

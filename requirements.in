@@ -4,7 +4,7 @@
 aws-opentelemetry-distro==0.12.2
 beautifulsoup4==4.11.1
 cachetools==5.2.0
-celery[sqs]==5.5.3
+celery[sqs,redis]==5.5.3
 cffi==1.15.1
 click-datetime==0.2
 cryptography==44.0.3
