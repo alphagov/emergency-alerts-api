@@ -300,7 +300,8 @@ class Hosted(Config):
 
     if os.getenv("VALKEY_ENDPOINT"):
         CELERY = {
-            "broker_url": f"redis://{os.getenv('VALKEY_ENDPOINT')}",
+            # rediss:// means use TLS:
+            "broker_url": f"rediss://{os.getenv('VALKEY_ENDPOINT')}",
             "broker_transport_options": {
                 "visibility_timeout": 1200,
                 "task_acks_late": True,
