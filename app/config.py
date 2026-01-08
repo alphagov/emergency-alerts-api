@@ -298,10 +298,10 @@ class Hosted(Config):
         "govuk-alerts": {"url": f"{SQS_QUEUE_BASE_URL}/{QUEUE_PREFIX}govuk-alerts"},
     }
 
-    if os.getenv("VALKEY_ENDPOINT"):
+    if os.getenv("VALKEY_URL"):
         CELERY = {
             # rediss:// means use TLS:
-            "broker_url": f"rediss://{os.getenv('VALKEY_ENDPOINT')}",
+            "broker_url": os.getenv("VALKEY_URL"),
             "broker_transport_options": {
                 "visibility_timeout": 1200,
                 "task_acks_late": True,
