@@ -726,7 +726,7 @@ def test_update_broadcast_message_allows_service_user_and_platform_admin_to_canc
 
     cancel_id = str(cancel_event.id)
 
-    mock_task.assert_called_once_with(kwargs={"broadcast_event_id": cancel_id}, queue="broadcast-tasks")
+    mock_task.assert_called_once_with(kwargs={"broadcast_event_id": cancel_id}, queue="high-priority-tasks")
     assert response["status"] == BroadcastStatusType.CANCELLED
     assert response["cancelled_at"] is not None
     assert response["cancelled_by_id"] == str(canceller.id)

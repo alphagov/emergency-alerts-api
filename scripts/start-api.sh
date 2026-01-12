@@ -97,8 +97,12 @@ function backup_database(){
         exit 1;
     fi
 
-    SQL_FILENAME=$ENVIRONMENT-$(date -u +"%Y-%m-%d-%H-%M-%S").sql
+    # Must be in /eas as it's owned by easuser
+    SQL_FILENAME_SUFFIX=$ENVIRONMENT-$(date -u +"%Y-%m-%d-%H-%M-%S").sql
+    SQL_FILENAME=/eas/$SQL_FILENAME_SUFFIX
     rm -f $SQL_FILENAME
+
+    echo "Running pg_dump to $SQL_FILENAME"
 
     # To exclude table use: --exclude-table TABLE_NAME
     PGPASSWORD=$MASTER_PASSWORD pg_dump -h $RDS_HOST -p $RDS_PORT -U $MASTER_USERNAME \
@@ -111,17 +115,21 @@ function backup_database(){
         exit 1;
     fi
 
-    ARCHIVE_FILENAME=$SQL_FILENAME.tar
+    ARCHIVE_FILENAME_SUFFIX=$SQL_FILENAME_SUFFIX.tar
+    ARCHIVE_FILENAME=/eas/$ARCHIVE_FILENAME_SUFFIX
     tar -cf $ARCHIVE_FILENAME $SQL_FILENAME
+
+    echo "Created $ARCHIVE_FILENAME"
+    ls -lh $ARCHIVE_FILENAME
 
     # Upload the backup to S3
     if aws s3api put-object \
         --bucket $BACKUP_BUCKET_NAME \
-        --key $ENVIRONMENT/$ARCHIVE_FILENAME \
+        --key $ENVIRONMENT/$ARCHIVE_FILENAME_SUFFIX \
         --body $ARCHIVE_FILENAME;
     then
         echo "Bucket name: $BACKUP_BUCKET_NAME"
-        echo "Bucket key: $ENVIRONMENT/$ARCHIVE_FILENAME"
+        echo "Bucket key: $ENVIRONMENT/$ARCHIVE_FILENAME_SUFFIX"
         echo "Backup created successfully."
 
         put_metric_data "Backups" "success"
@@ -138,12 +146,12 @@ function configure_container_role(){
 
 function run_celery(){
     cd $DIR_API;
-    . $VENV_API/bin/activate && make run-celery &
+    . $VENV_API/bin/activate && make run-celery-api &
 }
 
 function run_api(){
     cd $DIR_API;
-    . $VENV_API/bin/activate && flask run -p 6011 --host=0.0.0.0
+    . $VENV_API/bin/activate && opentelemetry-instrument flask run -p 6011 --host=0.0.0.0
 }
 
 if [[ ! -z $DEBUG ]]; then
