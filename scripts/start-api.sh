@@ -28,7 +28,7 @@ put_metric_data(){
 
     # We have multiple backup buckets, so a third argument can be passed to
     # reflect the particular bucket the backup was pushed to.
-    if [[ -z $3 && $1 == "Backups" ]]; then
+    if [[ -n $3 && $1 == "Backups" ]]; then
         simple_dimension="$simple_dimension,Bucket=$3"
     fi
 
