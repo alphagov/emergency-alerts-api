@@ -854,14 +854,14 @@ class BroadcastStatusType(db.Model):
 
     # these are only the transitions we expect to administer via the API code.
     ALLOWED_STATUS_TRANSITIONS = {
-        DRAFT: {PENDING_APPROVAL},
+        DRAFT: {REJECTED, PENDING_APPROVAL},
         PENDING_APPROVAL: {REJECTED, BROADCASTING, RETURNED},
         REJECTED: {},
         BROADCASTING: {COMPLETED, CANCELLED},
         COMPLETED: {},
         CANCELLED: {},
         TECHNICAL_FAILURE: {},
-        RETURNED: {PENDING_APPROVAL},
+        RETURNED: {REJECTED, PENDING_APPROVAL},
     }
 
     name = db.Column(db.String, primary_key=True)
