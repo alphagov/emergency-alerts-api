@@ -861,7 +861,7 @@ class BroadcastStatusType(db.Model):
         COMPLETED: {},
         CANCELLED: {},
         TECHNICAL_FAILURE: {},
-        RETURNED: {REJECTED, PENDING_APPROVAL},
+        RETURNED: {PENDING_APPROVAL},
     }
 
     name = db.Column(db.String, primary_key=True)
