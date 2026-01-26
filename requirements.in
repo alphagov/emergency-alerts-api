@@ -18,7 +18,7 @@ itsdangerous==2.1.2
 jsonschema[format]==4.16.0
 lxml==5.4.0
 marshmallow-sqlalchemy==0.28.1
-marshmallow==3.18.0
+marshmallow==3.26.2
 notifications-python-client==8.0.0
 psycopg2-binary==2.9.10
 pwdpy==1.0.1
