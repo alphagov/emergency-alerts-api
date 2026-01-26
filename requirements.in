@@ -1,7 +1,7 @@
 # Run `make freeze-requirements` to update requirements.txt
 # with package version changes made in requirements.in
 
-aws-opentelemetry-distro==0.12.2
+aws-opentelemetry-distro==0.14.2
 beautifulsoup4==4.11.1
 cachetools==5.2.0
 celery[sqs]==5.5.3
