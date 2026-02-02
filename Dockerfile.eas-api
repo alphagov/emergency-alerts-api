@@ -53,6 +53,9 @@ RUN cd $DIR_API && \
 # Create a blank configuration file
 RUN echo "" > $DIR_API/environment.sh
 
+# Remove our .git folder, we don't need it once the build is complete
+RUN rm -rf $DIR_API/.git
+
 COPY --chown=easuser:easuser scripts/link-test.sh /
 COPY --chown=easuser:easuser scripts/start-api.sh /
 CMD bash /start-api.sh
