@@ -131,6 +131,11 @@ def send_broadcast_event(broadcast_event_id):
             send_broadcast_provider_message.apply_async(
                 kwargs={"broadcast_event_id": broadcast_event_id, "provider": provider}, queue=QueueNames.HIGH_PRIORITY
             )
+
+        # request_log_ingest_task.apply_async(
+        #     kwargs={"broadcast_event_id": broadcast_event_id}, queue=QueueNames.BROADCASTS
+        # )
+
     except Exception as e:
         current_app.logger.exception(
             f"Failed to send broadcast (event id {broadcast_event_id})",
