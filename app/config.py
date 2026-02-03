@@ -47,7 +47,7 @@ class Config(object):
     GOVUK_ALERTS_CLIENT_ID = "govuk-alerts"
     INTERNAL_CLIENT_API_KEYS = {
         ADMIN_CLIENT_ID: [os.environ.get("ADMIN_CLIENT_SECRET")],
-        GOVUK_ALERTS_CLIENT_ID: ["govuk-alerts-secret-key"],
+        GOVUK_ALERTS_CLIENT_ID: [os.environ.get("GOVUK_CLIENT_SECRET", "govuk-alerts-secret-key")],
     }
     SECRET_KEY = os.environ.get("SECRET_KEY")
     DANGEROUS_SALT = os.environ.get("DANGEROUS_SALT")
