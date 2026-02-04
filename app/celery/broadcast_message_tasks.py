@@ -132,9 +132,9 @@ def send_broadcast_event(broadcast_event_id):
                 kwargs={"broadcast_event_id": broadcast_event_id, "provider": provider}, queue=QueueNames.HIGH_PRIORITY
             )
 
-        # request_log_ingest_task.apply_async(
-        #     kwargs={"broadcast_event_id": broadcast_event_id}, queue=QueueNames.BROADCASTS
-        # )
+        TaskNames.REQUEST_LOG_INGEST.apply_async(
+            kwargs={"broadcast_event_id": broadcast_event_id}, queue=QueueNames.BROADCASTS
+        )
 
     except Exception as e:
         current_app.logger.exception(
