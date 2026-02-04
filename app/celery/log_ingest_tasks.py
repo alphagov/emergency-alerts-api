@@ -9,7 +9,7 @@ from app.celery.tasks import TaskNames
 from app.models import BroadcastEvent
 
 
-@notify_celery.task(name=TaskNames.REQUEST_LOG_INGEST_TASK)
+@notify_celery.task(name=TaskNames.REQUEST_LOG_INGEST)
 def request_log_ingest_task(broadcast_event_id):
     """
     Invokes the operator portal log upload Lambda to send invite emails to MNOs
