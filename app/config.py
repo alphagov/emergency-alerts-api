@@ -63,6 +63,8 @@ class Config(object):
     CBC_PROXY_ENABLED = True
     ENABLED_CBCS = {BroadcastProvider.EE, BroadcastProvider.THREE, BroadcastProvider.O2, BroadcastProvider.VODAFONE}
 
+    LOG_UPLOAD_LAMBDA_ARN = os.getenv("LOG_UPLOAD_LAMBDA_ARN", "mno-portal-development-log-upload-handler")
+
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_size": int(os.environ.get("SQLALCHEMY_POOL_SIZE", 5)),
         "pool_timeout": 30,
@@ -229,6 +231,8 @@ class Hosted(Config):
     CBC_PROXY_ENABLED = True
     DEBUG = False
 
+    LOG_UPLOAD_LAMBDA_ARN = os.getenv("LOG_UPLOAD_LAMBDA_ARN", "mno-portal-development-log-upload-handler")
+
     TENANT_PREFIX = f"{os.environ.get('TENANT')}-" if os.environ.get("TENANT") is not None else ""
     ENVIRONMENT = os.getenv("ENVIRONMENT")
     ENVIRONMENT_PREFIX = ENVIRONMENT if ENVIRONMENT != "development" else "dev"
@@ -344,6 +348,8 @@ class Test(Config):
     ADMIN_EXTERNAL_URL = f"https://{TENANT}admin.{SUBDOMAIN}emergency-alerts.service.gov.uk"
     REPORTS_SLACK_WEBHOOK_URL = "https://hooks.slack.com/somewhere"
     CBC_PROXY_ENABLED = True
+
+    LOG_UPLOAD_LAMBDA_ARN = os.getenv("LOG_UPLOAD_LAMBDA_ARN", "mno-portal-development-log-upload-handler")
 
 
 configs = {
