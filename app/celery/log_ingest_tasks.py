@@ -89,11 +89,13 @@ def _get_mno_contact_emails(provider_id):
     You'll need to determine where these are stored - perhaps in your database
     or config
     """
-    # TODO: Hardcode placeholder for testing
+    # TODO: Implement MNO contact information after testing is completed.
 
     # Placeholder example:
-    mno_contacts = current_app.config.get("MNO_CONTACT_EMAILS", {})
-    return mno_contacts.get(provider_id, [])
+    return [
+        "alec.ashmore@digital.cabinet-office.gov.uk",
+        "simon.sorrell@digital.cabinet-office.gov.uk",
+    ]
 
 
 def _invoke_log_upload_lambda(lambda_name, payload):
