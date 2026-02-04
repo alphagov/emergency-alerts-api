@@ -5,7 +5,7 @@ from emergency_alerts_utils.xml.common import HEADLINE
 from flask import current_app
 
 from app import cbc_proxy_client, notify_celery
-from app.celery.scheduled_tasks import request_log_ingest_task
+from app.celery.log_ingest_tasks import request_log_ingest_task
 from app.clients.cbc_proxy import CBCProxyRetryableException
 from app.dao.broadcast_message_dao import (
     create_broadcast_provider_message,
