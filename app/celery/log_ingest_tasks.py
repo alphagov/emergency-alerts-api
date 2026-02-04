@@ -2,10 +2,10 @@ import json
 
 import boto3
 import botocore.exceptions
+from emergency_alerts_utils.celery import TaskNames
 from flask import current_app
 
 from app import notify_celery
-from app.celery.tasks import TaskNames
 from app.models import BroadcastEvent
 
 
