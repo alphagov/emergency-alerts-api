@@ -13,6 +13,7 @@ def validate_xml(document: str, schema_file_name):
     contents = path.read_text()
 
     xml_parser = etree.XMLParser(
+        resolve_entities=False,
         ns_clean=True,
         encoding="utf-8",
     )
