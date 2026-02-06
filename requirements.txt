@@ -115,6 +115,8 @@ googleapis-common-protos==1.72.0
     # via
     #   opentelemetry-exporter-otlp-proto-grpc
     #   opentelemetry-exporter-otlp-proto-http
+greenlet==3.3.1
+    # via sqlalchemy
 grpcio==1.76.0
     # via opentelemetry-exporter-otlp-proto-grpc
 idna==3.11
@@ -158,7 +160,7 @@ markupsafe==3.0.3
     #   jinja2
     #   mako
     #   werkzeug
-marshmallow==3.18.0
+marshmallow==3.26.2
     # via
     #   -r requirements.in
     #   flask-marshmallow
