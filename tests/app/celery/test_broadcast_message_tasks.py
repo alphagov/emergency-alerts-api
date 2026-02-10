@@ -67,6 +67,8 @@ def test_send_broadcast_event_calls_publish_govuk_alerts_task(
         "app.celery.broadcast_message_tasks.send_broadcast_provider_message",
     )
 
+    mocker.patch("app.celery.broadcast_message_tasks.request_log_ingest_task")
+
     mock = mocker.patch("app.celery.broadcast_message_tasks.notify_celery.send_task")
 
     with set_config(notify_api, "ENABLED_CBCS", {"ee", "vodafone"}):
