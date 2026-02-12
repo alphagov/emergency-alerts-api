@@ -15,6 +15,7 @@ class TooManyRequestsError(InvalidRequest):
     message_template = "Exceeded send limits ({}) for today"
 
     def __init__(self, sending_limit):
+        super().__init__(sending_limit)
         self.message = self.message_template.format(sending_limit)
 
 
@@ -23,6 +24,7 @@ class RateLimitError(InvalidRequest):
     message_template = "Exceeded rate limit for key type {} of {} requests per {} seconds"
 
     def __init__(self, sending_limit, interval, key_type):
+        super().__init__(sending_limit, interval, key_type)
         # normal keys are spoken of as "live" in the documentation
         # so using this in the error messaging
         if key_type == "normal":
@@ -35,6 +37,7 @@ class BadRequestError(InvalidRequest):
     message = "An error occurred"
 
     def __init__(self, fields=None, message=None, status_code=400):
+        super().__init__(fields, message, status_code)
         self.status_code = status_code
         self.fields = fields or []
         self.message = message if message else self.message
@@ -44,6 +47,7 @@ class ValidationError(InvalidRequest):
     message = "Your notification has failed validation"
 
     def __init__(self, fields=None, message=None, status_code=400):
+        super().__init__(fields, message, status_code)
         self.status_code = status_code
         self.fields = fields or []
         self.message = message if message else self.message
