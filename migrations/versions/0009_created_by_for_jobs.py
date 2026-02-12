@@ -21,10 +21,8 @@ def upgrade():
     op.create_index(op.f("ix_jobs_created_by_id"), "jobs", ["created_by_id"], unique=False)
     op.create_foreign_key(None, "jobs", "users", ["created_by_id"], ["id"])
     op.get_bind()
-    op.execute(
-        "UPDATE jobs SET created_by_id = \
-                (SELECT user_id FROM user_to_service WHERE jobs.service_id = user_to_service.service_id LIMIT 1)"
-    )
+    op.execute("UPDATE jobs SET created_by_id = \
+                (SELECT user_id FROM user_to_service WHERE jobs.service_id = user_to_service.service_id LIMIT 1)")
     op.alter_column("jobs", "created_by_id", nullable=False)
     ### end Alembic commands ###
 

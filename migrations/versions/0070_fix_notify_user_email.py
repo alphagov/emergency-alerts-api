@@ -15,20 +15,16 @@ from alembic import op
 
 
 def upgrade():
-    op.execute(
-        """
+    op.execute("""
         UPDATE users
         SET email_address = 'notify-service-user@digital.cabinet-office.gov.uk'
         WHERE email_address = 'notify-service-user@digital.cabinet-office'
-    """
-    )
+    """)
 
 
 def downgrade():
-    op.execute(
-        """
+    op.execute("""
         UPDATE users
         SET email_address = 'notify-service-user@digital.cabinet-office'
         WHERE email_address = 'notify-service-user@digital.cabinet-office.gov.uk'
-    """
-    )
+    """)

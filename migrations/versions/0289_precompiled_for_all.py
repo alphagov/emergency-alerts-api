@@ -19,8 +19,7 @@ def upgrade():
 
 def downgrade():
     op.execute("INSERT INTO service_permission_types values('precompiled_letter')")
-    op.execute(
-        """
+    op.execute("""
            INSERT INTO
                service_permissions (service_id, permission, created_at)
            SELECT
@@ -36,7 +35,4 @@ def downgrade():
                        service_id = services.id and
                        permission = '{permission}'
                )
-       """.format(
-            permission="precompiled_letter"
-        )
-    )
+       """.format(permission="precompiled_letter"))

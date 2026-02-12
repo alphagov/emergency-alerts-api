@@ -27,8 +27,7 @@ def upgrade():
 def downgrade():
     # The downgrade command must not be run in production - it will lock the tables for a long time
     if environment not in ["live", "production"]:
-        op.execute(
-            """
+        op.execute("""
             ALTER TABLE notifications ADD CONSTRAINT "chk_notifications_postage_null"
             CHECK (
                 CASE WHEN notification_type = 'letter' THEN
@@ -37,10 +36,8 @@ def downgrade():
                     postage is null
                 END
             )
-        """
-        )
-        op.execute(
-            """
+        """)
+        op.execute("""
             ALTER TABLE notification_history ADD CONSTRAINT "chk_notification_history_postage_null"
             CHECK (
                 CASE WHEN notification_type = 'letter' THEN
@@ -49,10 +46,8 @@ def downgrade():
                     postage is null
                 END
             )
-        """
-        )
-        op.execute(
-            """
+        """)
+        op.execute("""
             ALTER TABLE templates ADD CONSTRAINT "chk_templates_postage"
             CHECK (
                 CASE WHEN template_type = 'letter' THEN
@@ -61,10 +56,8 @@ def downgrade():
                     postage is null
                 END
             )
-        """
-        )
-        op.execute(
-            """
+        """)
+        op.execute("""
             ALTER TABLE templates_history ADD CONSTRAINT "chk_templates_history_postage"
             CHECK (
                 CASE WHEN template_type = 'letter' THEN
@@ -73,5 +66,4 @@ def downgrade():
                     postage is null
                 END
             )
-        """
-        )
+        """)

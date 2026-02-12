@@ -31,12 +31,10 @@ def upgrade():
     op.alter_column("templates_history", "process_type", nullable=True)
     op.alter_column("templates_history", "hidden", nullable=True)
 
-    op.execute(
-        """
+    op.execute("""
             DELETE FROM permissions
             WHERE permission in ('send_letters', 'send_emails', 'send_texts');
-        """
-    )
+        """)
 
 
 def downgrade():

@@ -38,20 +38,16 @@ def upgrade():
         sa.UniqueConstraint("service_id", name="uix_service_email_branding_one_per_service"),
         sa.PrimaryKeyConstraint("service_id"),
     )
-    op.execute(
-        """
+    op.execute("""
         INSERT INTO email_branding (id, colour, logo, name)
         SELECT id, colour, logo, name
         FROM organisation
-    """
-    )
-    op.execute(
-        """
+    """)
+    op.execute("""
         INSERT INTO service_email_branding (service_id, email_branding_id)
         SELECT id, organisation_id
         FROM services where organisation_id is not null
-    """
-    )
+    """)
 
 
 def downgrade():

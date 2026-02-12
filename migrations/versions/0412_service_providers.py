@@ -27,17 +27,14 @@ def upgrade():
             ["broadcast_provider_types.name"],
         ),
     )
-    op.execute(
-        """
+    op.execute("""
         INSERT INTO broadcast_provider_types
         SELECT 'deprecated'
-        """
-    )
+        """)
 
     # Migrate the 'all' specifier in the service_broadcast_settings table
     # to individual providers in the service_broadcast_providers table
-    op.execute(
-        """
+    op.execute("""
         DO $$
             DECLARE
                 provider_itr TEXT;
@@ -55,12 +52,10 @@ def upgrade():
                     ) AND provider = 'all';
             END LOOP;
         END $$;
-        """
-    )
+        """)
 
     # Migrate the original single-provider services
-    op.execute(
-        """
+    op.execute("""
         INSERT INTO service_broadcast_providers
             (id, service_id, provider, created_at)
         SELECT gen_random_uuid(), service_id, provider, NOW()
@@ -71,15 +66,12 @@ def upgrade():
             WHERE active = true
             )
             AND provider IN ('ee', 'o2', 'three', 'vodafone')
-        """
-    )
+        """)
 
 
 def downgrade():
     op.drop_table("service_broadcast_providers")
-    op.execute(
-        """
+    op.execute("""
         DELETE FROM broadcast_provider_types
         WHERE name = 'deprecated'
-        """
-    )
+        """)
