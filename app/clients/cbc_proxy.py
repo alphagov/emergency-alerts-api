@@ -316,6 +316,20 @@ class CBCProxyOne2ManyClient(CBCProxyClientBase):
         }
         self._invoke_lambdas_with_routing(payload=payload)
 
+    def update_and_send_broadcast(
+        self,
+        identifier,
+        previous_provider_messages,
+        headline,
+        description,
+        areas,
+        sent,
+        expires,
+        channel,
+        message_number=None,
+    ):
+        pass
+
 
 class CBCProxyEE(CBCProxyOne2ManyClient):
     primary_lambda = "ee-1-proxy"
@@ -399,3 +413,17 @@ class CBCProxyVodafone(CBCProxyClientBase):
             "sent": sent,
         }
         self._invoke_lambdas_with_routing(payload=payload)
+
+    def update_and_send_broadcast(
+        self,
+        identifier,
+        previous_provider_messages,
+        headline,
+        description,
+        areas,
+        sent,
+        expires,
+        channel,
+        message_number=None,
+    ):
+        pass
