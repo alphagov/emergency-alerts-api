@@ -18,12 +18,12 @@ itsdangerous==2.2.0
 jsonschema[format]==4.26.0
 lxml==6.0.2
 marshmallow-sqlalchemy==1.4.2
-marshmallow==4.2.2
+marshmallow==3.26.2
 notifications-python-client==10.0.1
 psycopg2-binary==2.9.11
 pwdpy==1.0.1
-PyJWT==2.11.0
-SQLAlchemy==2.0.46
+PyJWT==2.5.0
+SQLAlchemy==1.4.41
 urllib3==2.6.3
 Werkzeug==3.1.5
 
