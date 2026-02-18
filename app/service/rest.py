@@ -336,7 +336,7 @@ def purge_users_created_by_tests():
         raise InvalidRequest("Endpoint not found", status_code=404)
 
     try:
-        users = get_users_by_partial_email("emergency-alerts-fake-")
+        users = get_users_by_partial_email("emergency-alerts-tests+fake-")
         for user in users:
             delete_user_verify_codes(user=user)
             delete_permissions_for_user(user=user)
