@@ -86,8 +86,7 @@ def _get_mno_details(broadcast):
 def _get_mno_contact_emails(provider_id):
     """
     Get contact emails for a specific MNO/provider
-    You'll need to determine where these are stored - perhaps in your database
-    or config
+    This process is changing!
     """
     # TODO: Implement MNO contact information after testing is completed.
 

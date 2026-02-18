@@ -143,7 +143,7 @@ class Config(object):
 
     SERVICE: Literal["api", "celery"] = os.environ.get("SERVICE")
     QUEUE_NAME = QueueNames.BROADCASTS if SERVICE == "api" else QueueNames.PERIODIC
-    TASK_IMPORTS = "broadcast_message_tasks" if SERVICE == "api" else "scheduled_tasks"
+    TASK_IMPORTS = ["broadcast_message_tasks", "log_ingest_tasks"] if SERVICE == "api" else "scheduled_tasks"
 
     CELERY = {
         "broker_url": "filesystem://",
@@ -241,7 +241,7 @@ class Hosted(Config):
     SQS_QUEUE_BASE_URL = os.getenv("SQS_QUEUE_BASE_URL")
     SERVICE = os.environ.get("SERVICE")
     QUEUE_NAME = QueueNames.BROADCASTS if SERVICE == "api" else QueueNames.PERIODIC
-    TASK_IMPORTS = "broadcast_message_tasks" if SERVICE == "api" else "scheduled_tasks"
+    TASK_IMPORTS = ["broadcast_message_tasks", "log_ingest_tasks"] if SERVICE == "api" else "scheduled_tasks"
 
     BEAT_SCHEDULE = {
         TaskNames.RUN_HEALTH_CHECK: {
