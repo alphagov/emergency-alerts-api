@@ -1425,7 +1425,7 @@ def test_purge_users_created_by_tests(mocker, sample_service, admin_request, not
     mock_delete_permissions_for_user = mocker.patch("app.service.rest.delete_permissions_for_user")
     mock_delete_model_user = mocker.patch("app.service.rest.delete_model_user")
 
-    test_user = create_user(email="emergency-alerts-tests+fake-user@example.com")
+    test_user = create_user(email="emergency-alerts-tests+fake-user@digital.cabinet-office.gov.uk")
     notify_db_session.commit()
 
     mock_get_users_by_partial_email.return_value = [test_user]
