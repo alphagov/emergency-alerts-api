@@ -241,7 +241,7 @@ class Hosted(Config):
     SQS_QUEUE_BASE_URL = os.getenv("SQS_QUEUE_BASE_URL")
     SERVICE = os.environ.get("SERVICE")
     QUEUE_NAME = QueueNames.BROADCASTS if SERVICE == "api" else QueueNames.PERIODIC
-    TASK_IMPORTS = ["broadcast_message_tasks", "log_ingest_tasks"] if SERVICE == "api" else "scheduled_tasks"
+    TASK_IMPORTS = ["broadcast_message_tasks", "log_ingest_tasks"] if SERVICE == "api" else ["scheduled_tasks"]
 
     BEAT_SCHEDULE = {
         TaskNames.RUN_HEALTH_CHECK: {
@@ -311,7 +311,7 @@ class Hosted(Config):
             "task_acks_late": True,
         },
         "timezone": "UTC",
-        "imports": [f"app.celery.{TASK_IMPORTS}"],
+        "imports": [f"app.celery.{task}" for task in TASK_IMPORTS],
         "task_queues": [Queue(QUEUE_NAME, Exchange("default"), routing_key=QUEUE_NAME)],
         "worker_max_tasks_per_child": 10,
         "beat_schedule": BEAT_SCHEDULE,
