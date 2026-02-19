@@ -40,7 +40,7 @@ def request_log_ingest_task(broadcast_event_id):
         }
 
         # Invoke the Lambda
-        lambda_name = current_app.config.get("LOG_UPLOAD_LAMBDA_NAME")
+        lambda_name = current_app.config.get("LOG_UPLOAD_LAMBDA_ARN")
         success = _invoke_log_upload_lambda(lambda_name, payload)
 
         if success:
