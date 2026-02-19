@@ -36,7 +36,7 @@ def request_log_ingest_task(broadcast_event_id):
             "broadcast_end": (
                 broadcast_event.transmitted_finishes_at.isoformat() if broadcast_event.transmitted_finishes_at else None
             ),
-            "mnos": _get_mno_details(broadcast),
+            "mnos": _get_mno_details(broadcast_event),
         }
 
         # Invoke the Lambda
@@ -69,15 +69,17 @@ def request_log_ingest_task(broadcast_event_id):
         raise
 
 
-def _get_mno_details(broadcast):
+def _get_mno_details(broadcast_event):
     """
     Build the MNOs list with their IDs and contact emails
     """
     mnos = []
 
-    # Get the providers used for this broadcast
-    for provider in broadcast.broadcast_provider_messages:
-        mno_info = {"mno_id": provider.provider_id, "emails": _get_mno_contact_emails(provider.provider_id)}
+    # Get the providers from the service
+    providers = broadcast_event.service.get_available_broadcast_providers()
+
+    for provider in providers:
+        mno_info = {"mno_id": provider.upper(), "emails": _get_mno_contact_emails(provider)}
         mnos.append(mno_info)
 
     return mnos
