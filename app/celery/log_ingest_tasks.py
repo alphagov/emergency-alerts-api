@@ -24,7 +24,7 @@ def request_log_ingest_task(broadcast_event_id):
             )
             return False
 
-        broadcast = broadcast_event.broadcast
+        broadcast = broadcast_event.broadcast_message
 
         # Build payload for Lambda
         payload = {
