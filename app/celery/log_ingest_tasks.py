@@ -13,9 +13,10 @@ from app.models import BroadcastEvent
 def request_log_ingest_task(broadcast_event_id):
     """
     Invokes the operator portal log upload Lambda to send invite emails to MNOs
-    after a broadcast has been sent.
     """
     try:
+        current_app.logger.info("Starting request_log_ingest_task", extra={"broadcast_event_id": broadcast_event_id})
+
         # Get broadcast event details
         broadcast_event = BroadcastEvent.query.get(broadcast_event_id)
         if not broadcast_event:
@@ -39,18 +40,31 @@ def request_log_ingest_task(broadcast_event_id):
             "mnos": _get_mno_details(broadcast_event),
         }
 
+        current_app.logger.info(
+            "Built Lambda payload", extra={"alert_reference": broadcast.reference, "payload": json.dumps(payload)}
+        )
+
         # Invoke the Lambda
-        lambda_name = current_app.config.get("LOG_UPLOAD_LAMBDA_ARN")
-        success = _invoke_log_upload_lambda(lambda_name, payload)
+        lambda_arn = current_app.config.get("LOG_UPLOAD_LAMBDA_ARN")
+
+        current_app.logger.info(
+            "About to invoke Lambda", extra={"lambda_arn": lambda_arn, "has_lambda_arn": lambda_arn is not None}
+        )
+
+        if not lambda_arn:
+            current_app.logger.error("LOG_UPLOAD_LAMBDA_ARN not configured!")
+            return False
+
+        success = _invoke_log_upload_lambda(lambda_arn, payload)
 
         if success:
             current_app.logger.info(
-                f"Successfully invoked log upload Lambda for broadcast {broadcast.reference}",
+                "Successfully invoked log upload Lambda",
                 extra={"broadcast_reference": broadcast.reference, "broadcast_event_id": broadcast_event_id},
             )
         else:
             current_app.logger.error(
-                f"Failed to invoke log upload Lambda for broadcast {broadcast.reference}",
+                "Failed to invoke log upload Lambda",
                 extra={"broadcast_reference": broadcast.reference, "broadcast_event_id": broadcast_event_id},
             )
 
