@@ -63,7 +63,10 @@ class Config(object):
     CBC_PROXY_ENABLED = True
     ENABLED_CBCS = {BroadcastProvider.EE, BroadcastProvider.THREE, BroadcastProvider.O2, BroadcastProvider.VODAFONE}
 
-    LOG_UPLOAD_LAMBDA_ARN = os.getenv("LOG_UPLOAD_LAMBDA_ARN", "mno-portal-development-log-upload-handler")
+    LOG_UPLOAD_LAMBDA_ARN = os.getenv(
+        "LOG_UPLOAD_LAMBDA_ARN",
+        "arn:aws:lambda:eu-west-2:435684131547:function:mno-portal-development-log-upload-handler",
+    )
 
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_size": int(os.environ.get("SQLALCHEMY_POOL_SIZE", 5)),
@@ -231,7 +234,10 @@ class Hosted(Config):
     CBC_PROXY_ENABLED = True
     DEBUG = False
 
-    LOG_UPLOAD_LAMBDA_ARN = os.getenv("LOG_UPLOAD_LAMBDA_ARN", "mno-portal-development-log-upload-handler")
+    LOG_UPLOAD_LAMBDA_ARN = os.getenv(
+        "LOG_UPLOAD_LAMBDA_ARN",
+        "arn:aws:lambda:eu-west-2:435684131547:function:mno-portal-development-log-upload-handler",
+    )
 
     TENANT_PREFIX = f"{os.environ.get('TENANT')}-" if os.environ.get("TENANT") is not None else ""
     ENVIRONMENT = os.getenv("ENVIRONMENT")
@@ -349,7 +355,10 @@ class Test(Config):
     REPORTS_SLACK_WEBHOOK_URL = "https://hooks.slack.com/somewhere"
     CBC_PROXY_ENABLED = True
 
-    LOG_UPLOAD_LAMBDA_ARN = os.getenv("LOG_UPLOAD_LAMBDA_ARN", "mno-portal-development-log-upload-handler")
+    LOG_UPLOAD_LAMBDA_ARN = os.getenv(
+        "LOG_UPLOAD_LAMBDA_ARN",
+        "arn:aws:lambda:eu-west-2:435684131547:function:mno-portal-development-log-upload-handler",
+    )
 
 
 configs = {
