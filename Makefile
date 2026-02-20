@@ -35,16 +35,6 @@ run-flask: ## Run flask
 run-flask-debug: ## Run flask in debug mode
 	. environment.sh && flask --debug run -p 6011
 
-.PHONY: run-celery
-run-celery: ## Run celery
-	. environment.sh && opentelemetry-instrument celery \
-		-A run_celery.notify_celery worker \
-		--pidfile=/tmp/api_celery_worker.pid \
-		--prefetch-multiplier=1 \
-		--loglevel=INFO \
-		--autoscale=8,1 \
-		--hostname='$(SERVICE)@%h' &
-
 .PHONY: run-celery-api
 run-celery-api: ## Run Celery workers for tasks executed by the API; high-priority ones first, then lower-priority ones
 	. environment.sh && celery \

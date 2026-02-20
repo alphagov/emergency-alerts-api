@@ -2,8 +2,7 @@ import os
 from typing import Literal
 
 from celery.schedules import crontab
-from emergency_alerts_utils.celery import QueueNames, TaskNames
-from kombu import Exchange, Queue
+from emergency_alerts_utils.tasks import QueueNames, TaskNames
 
 
 class BroadcastProvider:
@@ -140,20 +139,9 @@ class Config(object):
     NOTIFY_INTERNATIONAL_SMS_SENDER = "07984404008"
 
     SERVICE: Literal["api", "celery"] = os.environ.get("SERVICE")
-    QUEUE_NAME = QueueNames.BROADCASTS if SERVICE == "api" else QueueNames.PERIODIC
-    TASK_IMPORTS = "broadcast_message_tasks" if SERVICE == "api" else "scheduled_tasks"
 
-    CELERY = {
-        "broker_url": "filesystem://",
-        "broker_transport_options": {
-            "data_folder_in": "/tmp/.data/broker",
-            "data_folder_out": "/tmp/.data/broker/",
-        },
-        "timezone": "UTC",
-        "imports": [f"app.celery.{TASK_IMPORTS}"],
-        "task_queues": [Queue(QUEUE_NAME, Exchange("default"), routing_key=QUEUE_NAME)],
-        "worker_max_tasks_per_child": 2,
-    }
+    QUEUE_PREFIX = ""  # Overidden in hosted for multitenancy
+
     POST_ALERT_CHECK_INTERVAL_MINUTES = 1
 
     FROM_NUMBER = "development"
@@ -234,10 +222,7 @@ class Hosted(Config):
     ENVIRONMENT_PREFIX = ENVIRONMENT if ENVIRONMENT != "development" else "dev"
     AWS_REGION = os.environ.get("AWS_REGION", "eu-west-2")
     QUEUE_PREFIX = f"{ENVIRONMENT_PREFIX}-{TENANT_PREFIX}"
-    SQS_QUEUE_BASE_URL = os.getenv("SQS_QUEUE_BASE_URL")
     SERVICE = os.environ.get("SERVICE")
-    QUEUE_NAME = QueueNames.BROADCASTS if SERVICE == "api" else QueueNames.PERIODIC
-    TASK_IMPORTS = "broadcast_message_tasks" if SERVICE == "api" else "scheduled_tasks"
 
     BEAT_SCHEDULE = {
         TaskNames.RUN_HEALTH_CHECK: {
@@ -287,32 +272,6 @@ class Hosted(Config):
         },
     }
 
-    PREDEFINED_SQS_QUEUES = {
-        "high-priority-tasks": {
-            "url": f"{SQS_QUEUE_BASE_URL}/{QUEUE_PREFIX}high-priority-tasks",
-        },
-        "broadcast-tasks": {
-            "url": f"{SQS_QUEUE_BASE_URL}/{QUEUE_PREFIX}broadcast-tasks",
-        },
-        "periodic-tasks": {"url": f"{SQS_QUEUE_BASE_URL}/{QUEUE_PREFIX}periodic-tasks"},
-        "govuk-alerts": {"url": f"{SQS_QUEUE_BASE_URL}/{QUEUE_PREFIX}govuk-alerts"},
-    }
-
-    CELERY = {
-        "broker_transport": "sqs",
-        "broker_transport_options": {
-            "region": AWS_REGION,
-            "predefined_queues": PREDEFINED_SQS_QUEUES,
-            "is_secure": True,
-            "task_acks_late": True,
-        },
-        "timezone": "UTC",
-        "imports": [f"app.celery.{TASK_IMPORTS}"],
-        "task_queues": [Queue(QUEUE_NAME, Exchange("default"), routing_key=QUEUE_NAME)],
-        "worker_max_tasks_per_child": 10,
-        "beat_schedule": BEAT_SCHEDULE,
-    }
-
 
 class Test(Config):
     NOTIFY_EMAIL_DOMAIN = "test.notify.com"
@@ -329,8 +288,6 @@ class Test(Config):
     )
     SQLALCHEMY_RECORD_QUERIES = False
     DATABASE_STATEMENT_TIMEOUT_MS = 1200000
-
-    CELERY = {**Config.CELERY, "broker_url": "you-forgot-to-mock-celery-in-your-tests://"}
 
     API_RATE_LIMIT_ENABLED = True
     API_HOST_NAME = "http://localhost:6011"

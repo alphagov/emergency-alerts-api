@@ -160,7 +160,11 @@ run_celery(){
 
 run_api(){
     cd "$DIR_API";
-    . $VENV_API/bin/activate && opentelemetry-instrument flask run -p 6011 --host=0.0.0.0
+    if [[ ! -z $SERVICE_DEBUGPY ]]; then
+        . $VENV_API/bin/activate && opentelemetry-instrument python -m debugpy flask run -p 6011 --host=0.0.0.0;
+    else
+        . $VENV_API/bin/activate && opentelemetry-instrument flask run -p 6011 --host=0.0.0.0;
+    fi
 }
 
 if [[ ! -z $DEBUG ]]; then

@@ -7,8 +7,9 @@ from time import monotonic
 
 import boto3
 from celery import signals
+from dramatiq.middleware import default_middleware
+from dramatiq_sqs import SQSBroker
 from emergency_alerts_utils import logging, request_helper
-from emergency_alerts_utils.celery import NotifyCelery
 from emergency_alerts_utils.clients.encryption.encryption_client import (
     Encryption,
 )
@@ -23,6 +24,7 @@ from flask import (
     make_response,
     request,
 )
+from flask_dramatiq import AppContextMiddleware, Dramatiq
 from flask_marshmallow import Marshmallow
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
@@ -37,7 +39,8 @@ from app.clients.cbc_proxy import CBCProxyClient
 db = SQLAlchemy()
 migrate = Migrate()
 ma = Marshmallow()
-notify_celery = NotifyCelery()
+# We override the broker when init-ing
+dramatiq = Dramatiq(broker_cls="dramatiq.brokers.stub:StubBroker")
 encryption = Encryption()
 zendesk_client = ZendeskClient()
 slack_client = SlackClient()
@@ -78,7 +81,6 @@ def create_app(application):
     ma.init_app(application)
     zendesk_client.init_app(application)
     logging.init_app(application)
-    notify_celery.init_app(application)
     encryption.init_app(application)
     cbc_proxy_client.init_app(application)
 
@@ -92,6 +94,8 @@ def create_app(application):
 
     # set up sqlalchemy events
     setup_sqlalchemy_events(application)
+
+    setup_dramatiq(application)
 
     return application
 
@@ -395,3 +399,26 @@ def failure_handler(*args, **kwargs):
         )
     except Exception as e:
         current_app.logger.error(f"Error logging task_failure: {e}")
+
+
+def setup_dramatiq(app):
+    # flask_dramatiq provides its own @dramatiq.actor decorator
+    # This has the excellent property of lazily registering so we don't actually need dramatiq
+    # configured during module import. Awesome. And auto-injecting the Flask context.
+    # Except asking flask_dramatiq to init doesn't give you control of the dramatiq Broker class
+    # to the extent needed - only the `url` kwarg. The SQS broker doesn't use that :(
+
+    # So we cheat here: let flask_dramatiq do its thing and then replace the broker instance
+    # inside to what we want.
+    dramatiq.init_app(app)
+
+    middleware = [AppContextMiddleware(app)] + [m() for m in default_middleware]
+    sqs_broker = SQSBroker(
+        namespace=app.config["QUEUE_PREFIX"],
+        middleware=middleware,
+    )
+
+    dramatiq.broker = sqs_broker
+    for actor in dramatiq.actors:
+        # Replace the in-memory broker used on an actors' .send
+        actor.register(broker=sqs_broker)

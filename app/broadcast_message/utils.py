@@ -8,8 +8,6 @@ from emergency_alerts_utils.xml.common import SENDER
 from flask import current_app
 
 from app import zendesk_client
-from app.celery.broadcast_message_tasks import send_broadcast_event
-from app.config import QueueNames
 from app.dao.dao_utils import dao_save_object
 from app.errors import InvalidRequest
 from app.models import (
@@ -17,6 +15,7 @@ from app.models import (
     BroadcastEventMessageType,
     BroadcastStatusType,
 )
+from app.tasks.broadcast_message_tasks import send_broadcast_event
 
 
 def update_broadcast_message_status(
@@ -136,10 +135,8 @@ def _create_broadcast_event(broadcast_message):
             transmitted_finishes_at=broadcast_message.finishes_at,
         )
         dao_save_object(event)
-        send_broadcast_event.apply_async(
-            queue=QueueNames.HIGH_PRIORITY,
-            kwargs={"broadcast_event_id": str(event.id)},
-        )
+        broadcast_task = send_broadcast_event.call(broadcast_event_id=str(event.id))
+        current_app.logger.info("Enqueued broadcast task: %s", broadcast_task.asdict())
     elif broadcast_message.stubbed != service.restricted:
         # It's possible for a service to create a broadcast in trial mode, and then approve it after the
         # service is live (or vice versa). We don't think it's safe to send such broadcasts, as the service

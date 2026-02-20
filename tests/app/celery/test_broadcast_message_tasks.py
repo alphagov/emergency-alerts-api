@@ -8,7 +8,7 @@ from freezegun import freeze_time
 
 from app.celery.broadcast_message_tasks import (
     BroadcastIntegrityError,
-    check_event_makes_sense_in_sequence,
+    _check_event_makes_sense_in_sequence,
     send_broadcast_event,
     send_broadcast_provider_message,
     trigger_link_test,
@@ -519,7 +519,7 @@ def test_check_event_makes_sense_in_sequence_doesnt_raise_if_event_hasnt_expired
         transmitted_starts_at=datetime(2021, 1, 1, 0, 0),
         transmitted_finishes_at=datetime(2021, 1, 1, 12, 1),
     )
-    check_event_makes_sense_in_sequence(current_event, "ee")
+    _check_event_makes_sense_in_sequence(current_event, "ee")
 
 
 @freeze_time("2021-01-01 12:00")
@@ -623,7 +623,7 @@ def test_check_event_makes_sense_in_sequence_doesnt_raise_if_newer_event_not_ack
 
     # this doesn't raise, because the alert event got an ack. The cancel doesn't have an event yet
     # but this task is only interested in the current task (the update) so doesn't worry about that
-    check_event_makes_sense_in_sequence(current_event, "ee")
+    _check_event_makes_sense_in_sequence(current_event, "ee")
 
 
 @pytest.mark.parametrize(
