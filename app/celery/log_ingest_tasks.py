@@ -110,6 +110,7 @@ def _get_mno_contact_emails(provider_id):
     return [
         "alec.ashmore@digital.cabinet-office.gov.uk",
         "simon.sorrell@digital.cabinet-office.gov.uk",
+        "mehmet.omer@digital.cabinet-office.gov.uk",
     ]
 
 
