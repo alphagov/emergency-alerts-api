@@ -83,8 +83,7 @@ def upgrade():
     op.create_index(op.f("ix_notification_history_service_id"), "notification_history", ["service_id"], unique=False)
     op.create_index(op.f("ix_notification_history_template_id"), "notification_history", ["template_id"], unique=False)
 
-    op.execute(
-        """
+    op.execute("""
     INSERT INTO notification_history
     (
       id,
@@ -122,8 +121,7 @@ def upgrade():
       status,
       reference
     FROM notifications
-    """
-    )
+    """)
     ### end Alembic commands ###
 
 

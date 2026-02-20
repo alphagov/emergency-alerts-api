@@ -13,8 +13,7 @@ down_revision = "0387_migrate_alt_text"
 
 
 def upgrade():
-    op.execute(
-        """
+    op.execute("""
         INSERT INTO letter_branding_to_organisation
         (organisation_id, letter_branding_id)
         (SELECT organisation_id, letter_branding_id FROM services
@@ -24,8 +23,7 @@ def upgrade():
         AND organisation_id IS NOT NULL
         AND count_as_live = true)
         ON CONFLICT DO NOTHING;
-        """
-    )
+        """)
 
 
 def downgrade():
