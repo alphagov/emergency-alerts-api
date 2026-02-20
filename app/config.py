@@ -63,6 +63,11 @@ class Config(object):
     CBC_PROXY_ENABLED = True
     ENABLED_CBCS = {BroadcastProvider.EE, BroadcastProvider.THREE, BroadcastProvider.O2, BroadcastProvider.VODAFONE}
 
+    LOG_UPLOAD_LAMBDA_ARN = os.getenv(
+        "LOG_UPLOAD_LAMBDA_ARN",
+        "arn:aws:lambda:eu-west-2:435684131547:function:mno-portal-development-log-upload-handler",
+    )
+
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_size": int(os.environ.get("SQLALCHEMY_POOL_SIZE", 5)),
         "pool_timeout": 30,
@@ -141,7 +146,7 @@ class Config(object):
 
     SERVICE: Literal["api", "celery"] = os.environ.get("SERVICE")
     QUEUE_NAME = QueueNames.BROADCASTS if SERVICE == "api" else QueueNames.PERIODIC
-    TASK_IMPORTS = "broadcast_message_tasks" if SERVICE == "api" else "scheduled_tasks"
+    TASK_IMPORTS = ["broadcast_message_tasks", "log_ingest_tasks"] if SERVICE == "api" else ["scheduled_tasks"]
 
     CELERY = {
         "broker_url": "filesystem://",
@@ -229,6 +234,11 @@ class Hosted(Config):
     CBC_PROXY_ENABLED = True
     DEBUG = False
 
+    LOG_UPLOAD_LAMBDA_ARN = os.getenv(
+        "LOG_UPLOAD_LAMBDA_ARN",
+        "arn:aws:lambda:eu-west-2:435684131547:function:mno-portal-development-log-upload-handler",
+    )
+
     TENANT_PREFIX = f"{os.environ.get('TENANT')}-" if os.environ.get("TENANT") is not None else ""
     ENVIRONMENT = os.getenv("ENVIRONMENT")
     ENVIRONMENT_PREFIX = ENVIRONMENT if ENVIRONMENT != "development" else "dev"
@@ -237,7 +247,7 @@ class Hosted(Config):
     SQS_QUEUE_BASE_URL = os.getenv("SQS_QUEUE_BASE_URL")
     SERVICE = os.environ.get("SERVICE")
     QUEUE_NAME = QueueNames.BROADCASTS if SERVICE == "api" else QueueNames.PERIODIC
-    TASK_IMPORTS = "broadcast_message_tasks" if SERVICE == "api" else "scheduled_tasks"
+    TASK_IMPORTS = ["broadcast_message_tasks", "log_ingest_tasks"] if SERVICE == "api" else ["scheduled_tasks"]
 
     BEAT_SCHEDULE = {
         TaskNames.RUN_HEALTH_CHECK: {
@@ -307,7 +317,7 @@ class Hosted(Config):
             "task_acks_late": True,
         },
         "timezone": "UTC",
-        "imports": [f"app.celery.{TASK_IMPORTS}"],
+        "imports": [f"app.celery.{task}" for task in TASK_IMPORTS],
         "task_queues": [Queue(QUEUE_NAME, Exchange("default"), routing_key=QUEUE_NAME)],
         "worker_max_tasks_per_child": 10,
         "beat_schedule": BEAT_SCHEDULE,
@@ -344,6 +354,11 @@ class Test(Config):
     ADMIN_EXTERNAL_URL = f"https://{TENANT}admin.{SUBDOMAIN}emergency-alerts.service.gov.uk"
     REPORTS_SLACK_WEBHOOK_URL = "https://hooks.slack.com/somewhere"
     CBC_PROXY_ENABLED = True
+
+    LOG_UPLOAD_LAMBDA_ARN = os.getenv(
+        "LOG_UPLOAD_LAMBDA_ARN",
+        "arn:aws:lambda:eu-west-2:435684131547:function:mno-portal-development-log-upload-handler",
+    )
 
 
 configs = {
