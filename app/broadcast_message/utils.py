@@ -135,7 +135,7 @@ def _create_broadcast_event(broadcast_message):
             transmitted_finishes_at=broadcast_message.finishes_at,
         )
         dao_save_object(event)
-        broadcast_task = send_broadcast_event.call(broadcast_event_id=str(event.id))
+        broadcast_task = send_broadcast_event.send(broadcast_event_id=str(event.id))
         current_app.logger.info("Enqueued broadcast task: %s", broadcast_task.asdict())
     elif broadcast_message.stubbed != service.restricted:
         # It's possible for a service to create a broadcast in trial mode, and then approve it after the

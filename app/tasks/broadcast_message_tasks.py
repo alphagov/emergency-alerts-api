@@ -50,17 +50,6 @@ def _check_event_makes_sense_in_sequence(broadcast_event, provider):
     necessary, can replay the `send_broadcast_provider_message` task if the previous message has now been sent.
 
     Note: This is called before the new broadcast_provider_message is created.
-
-    # Help, I've come across this code following a pagerduty alert, what should I do?
-
-    1. Find the failing broadcast_provider_message associated with the previous event that caused this to trip.
-    2. If that provider message is still failing to send, fix the issue causing that. The task to send that previous
-       message might still be retrying in the background - look for logs related to that task.
-    3. If that provider message has sent succesfully, you might need to send this task off depending on context. This
-       might not always be true though, for example, it may not be necessary to send a cancel if the original alert has
-       already expired.
-    4. If you need to re-send this task off again, you'll need to run the following command on paas:
-       `send_broadcast_provider_message.apply_async(args=(broadcast_event_id, provider), queue=QueueNames.BROADCASTS)`
     """
     current_provider_message = broadcast_event.get_provider_message(provider)
     # if this is the first time a task is being executed, it won't have a provider message yet
@@ -127,9 +116,7 @@ def send_broadcast_event(broadcast_event_id):
         )
 
         for provider in providers:
-            send_broadcast_provider_message.apply_async(
-                kwargs={"broadcast_event_id": broadcast_event_id, "provider": provider}, queue=QueueNames.HIGH_PRIORITY
-            )
+            send_broadcast_provider_message.send(broadcast_event_id=broadcast_event_id, provider=provider)
     except Exception as e:
         current_app.logger.exception(
             f"Failed to send broadcast (event id {broadcast_event_id})",
@@ -145,6 +132,7 @@ def send_broadcast_event(broadcast_event_id):
 # TODO!
 @dramatiq.actor(
     actor_name=TaskNames.SEND_BROADCAST_PROVIDER_MESSAGE,
+    queue_name=QueueNames.HIGH_PRIORITY,
     # autoretry_for=(CBCProxyRetryableException,),
     max_retries=5,
 )
