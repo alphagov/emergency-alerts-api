@@ -6,7 +6,6 @@ import uuid
 from time import monotonic
 
 import boto3
-from celery import signals
 from dramatiq.middleware import default_middleware
 from dramatiq_sqs import SQSBroker
 from emergency_alerts_utils import logging, request_helper
@@ -340,65 +339,6 @@ def setup_sqlalchemy_events(app):
                     }
             except Exception:
                 current_app.logger.exception("Exception caught for checkout event.")
-
-
-@signals.task_prerun.connect
-def mark_task_active(*args, **kwargs):
-    task = kwargs.get("task", None)
-    if task is None:
-        return
-
-    _celery_tasks[task.request.id] = task
-
-    try:
-        current_app.logger.info(
-            f"[celery task_prerun] {task.name}",
-            extra={
-                "task_id": kwargs["task_id"],
-                "broadcast_event_id": kwargs["kwargs"].get("broadcast_event_id", None),
-                "provider": kwargs["kwargs"].get("provider", None),
-            },
-        )
-    except Exception as e:
-        current_app.logger.error(f"Error logging task_prerun: {e}")
-
-
-@signals.task_postrun.connect
-def clear_task_context(*args, **kwargs):
-    task = _celery_tasks.pop(kwargs["task_id"], None)
-    if task is None:
-        current_app.logger.warning(f"Task {kwargs['task_id']} not found.")
-        return
-
-    try:
-        current_app.logger.info(
-            f"[celery task_postrun] {task.name}",
-            extra={
-                "task_id": kwargs["task_id"],
-                "retval": kwargs["retval"],
-                "state": kwargs["state"],
-                "broadcast_event_id": kwargs["kwargs"].get("broadcast_event_id", None),
-                "provider": kwargs["kwargs"].get("provider", None),
-            },
-        )
-    except Exception as e:
-        current_app.logger.error(f"Error logging task_postrun: {e}")
-
-
-@signals.task_failure.connect
-def failure_handler(*args, **kwargs):
-    try:
-        current_app.logger.error(
-            f"[celery task_failure] {kwargs['task_id']}",
-            extra={
-                "task_id": kwargs["task_id"],
-                "exception": kwargs["exception"],
-                "traceback": kwargs["traceback"],
-                "exception_info": kwargs["einfo"],
-            },
-        )
-    except Exception as e:
-        current_app.logger.error(f"Error logging task_failure: {e}")
 
 
 def setup_dramatiq(app):

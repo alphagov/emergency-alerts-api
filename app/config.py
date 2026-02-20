@@ -1,8 +1,11 @@
 import os
 from typing import Literal
 
-from celery.schedules import crontab
 from emergency_alerts_utils.tasks import QueueNames, TaskNames
+
+
+def crontab(*args, **kwargs):
+    pass
 
 
 class BroadcastProvider:

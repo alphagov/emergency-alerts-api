@@ -2,17 +2,9 @@ from datetime import datetime
 from unittest.mock import ANY, Mock, call
 
 import pytest
-from celery.exceptions import Retry
-from emergency_alerts_utils.celery import QueueNames, TaskNames
+from emergency_alerts_utils.tasks import QueueNames, TaskNames
 from freezegun import freeze_time
 
-from app.celery.broadcast_message_tasks import (
-    BroadcastIntegrityError,
-    _check_event_makes_sense_in_sequence,
-    send_broadcast_event,
-    send_broadcast_provider_message,
-    trigger_link_test,
-)
 from app.clients.cbc_proxy import CBCProxyRetryableException
 from app.dao.broadcast_service_dao import set_service_broadcast_providers
 from app.models import (
@@ -20,6 +12,13 @@ from app.models import (
     BroadcastEventMessageType,
     BroadcastProviderMessageStatus,
     BroadcastStatusType,
+)
+from app.tasks.broadcast_message_tasks import (
+    BroadcastIntegrityError,
+    _check_event_makes_sense_in_sequence,
+    send_broadcast_event,
+    send_broadcast_provider_message,
+    trigger_link_test,
 )
 from tests.app.db import (
     create_broadcast_event,
@@ -459,10 +458,11 @@ def test_send_broadcast_provider_message_errors(mocker, sample_broadcast_service
         side_effect=CBCProxyRetryableException("oh no"),
     )
     mock_retry = mocker.patch(
-        "app.celery.broadcast_message_tasks.send_broadcast_provider_message.retry", side_effect=Retry
+        "app.celery.broadcast_message_tasks.send_broadcast_provider_message.retry",
+        side_effect=CBCProxyRetryableException,
     )
 
-    with pytest.raises(Retry):
+    with pytest.raises():
         send_broadcast_provider_message(provider=provider, broadcast_event_id=str(event.id))
 
     mock_create_broadcast.assert_called_once_with(

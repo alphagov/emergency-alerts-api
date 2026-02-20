@@ -153,18 +153,9 @@ configure_container_role(){
     aws configure set default.region ${AWS_REGION:-eu-west-2}
 }
 
-run_celery(){
-    cd "$DIR_API";
-    . $VENV_API/bin/activate && make run-celery-api &
-}
-
 run_api(){
     cd "$DIR_API";
-    if [[ ! -z $SERVICE_DEBUGPY ]]; then
-        . $VENV_API/bin/activate && opentelemetry-instrument python -m debugpy flask run -p 6011 --host=0.0.0.0;
-    else
-        . $VENV_API/bin/activate && opentelemetry-instrument flask run -p 6011 --host=0.0.0.0;
-    fi
+    . $VENV_API/bin/activate && opentelemetry-instrument flask run -p 6011 --host=0.0.0.0;
 }
 
 if [[ ! -z $DEBUG ]]; then
@@ -174,7 +165,6 @@ else
     configure_container_role
 
     if [[ $SERVICE_ACTION == "run_api" ]]; then
-        run_celery
         run_api
 
     elif [[ $SERVICE_ACTION == "run_migrations" ]]; then
