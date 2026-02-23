@@ -6,7 +6,7 @@ import uuid
 from time import monotonic
 
 import boto3
-from dramatiq.middleware import default_middleware
+from dramatiq.middleware import Callbacks, ShutdownNotifications, TimeLimit
 from dramatiq_sqs import SQSBroker
 from emergency_alerts_utils import logging, request_helper
 from emergency_alerts_utils.clients.encryption.encryption_client import (
@@ -28,6 +28,7 @@ from flask_marshmallow import Marshmallow
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from opentelemetry import trace
+from periodiq import PeriodiqMiddleware
 from sqlalchemy import event
 from werkzeug.exceptions import HTTPException as WerkzeugHTTPException
 from werkzeug.local import LocalProxy
@@ -352,7 +353,17 @@ def setup_dramatiq(app):
     # inside to what we want.
     dramatiq.init_app(app)
 
-    middleware = [AppContextMiddleware(app)] + [m() for m in default_middleware]
+    middleware = [
+        AppContextMiddleware(app),
+        PeriodiqMiddleware(),
+        # This is mostly the default_middleware - except we remove Prometheus, AgeLimit, and Retries
+        # ...the latter of which would re-queue messages onto the queue, but actually we want SQS
+        # and its visibility timeout to do that for a single message, and redrive into a DLQ after a period.
+        # i.e. let the infrastructure do the work there and not process here.
+        TimeLimit(),
+        ShutdownNotifications(),
+        Callbacks(),
+    ]
     sqs_broker = SQSBroker(
         namespace=app.config["QUEUE_PREFIX"],
         middleware=middleware,

@@ -129,12 +129,9 @@ def send_broadcast_event(broadcast_event_id):
         raise
 
 
-# TODO!
 @dramatiq.actor(
     actor_name=TaskNames.SEND_BROADCAST_PROVIDER_MESSAGE,
     queue_name=QueueNames.HIGH_PRIORITY,
-    # autoretry_for=(CBCProxyRetryableException,),
-    max_retries=5,
 )
 def send_broadcast_provider_message(self, broadcast_event_id, provider):
     if not current_app.config["CBC_PROXY_ENABLED"]:

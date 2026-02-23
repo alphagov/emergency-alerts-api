@@ -160,12 +160,12 @@ run_api(){
 
 run_worker(){
     cd $DIR_API;
-    export SERVICE=api_worker && . $VENV_API/bin/activate && exec flask worker --processes 1 --threads 2
+    export SERVICE=api_worker && . $VENV_API/bin/activate && exec dramatiq --processes 1 --threads 1 app.dramatiq:broker
 }
 
 run_periodiq(){
     cd $DIR_API;
-    export SERVICE=api_periodiq && . $VENV_API/bin/activate && exec flask periodiq -v
+    export SERVICE=api_periodiq && . $VENV_API/bin/activate && exec periodiq -v app.dramatiq:broker
 }
 
 if [[ ! -z $DEBUG ]]; then
