@@ -1,5 +1,4 @@
 import os
-from typing import Literal
 
 from emergency_alerts_utils.tasks import QueueNames, TaskNames
 
@@ -141,7 +140,9 @@ class Config(object):
     SECURITY_KEY_CHANGE_EMAIL_TEMPLATE_ID = "43d7b34a-45c5-4d37-96f8-2c3f48d4d0a5"
     NOTIFY_INTERNATIONAL_SMS_SENDER = "07984404008"
 
-    SERVICE: Literal["api", "celery"] = os.environ.get("SERVICE")
+    # What human-readable service this instance represents for versioning reporting
+    # (e.g. API, worker, etc - see start-api.sh)
+    SERVICE = os.environ.get("SERVICE")
 
     QUEUE_PREFIX = ""  # Overidden in hosted for multitenancy
 
@@ -225,7 +226,6 @@ class Hosted(Config):
     ENVIRONMENT_PREFIX = ENVIRONMENT if ENVIRONMENT != "development" else "dev"
     AWS_REGION = os.environ.get("AWS_REGION", "eu-west-2")
     QUEUE_PREFIX = f"{ENVIRONMENT_PREFIX}-{TENANT_PREFIX}"
-    SERVICE = os.environ.get("SERVICE")
 
     BEAT_SCHEDULE = {
         TaskNames.RUN_HEALTH_CHECK: {

@@ -35,33 +35,6 @@ run-flask: ## Run flask
 run-flask-debug: ## Run flask in debug mode
 	. environment.sh && flask --debug run -p 6011
 
-.PHONY: run-celery-api
-run-celery-api: ## Run Celery workers for tasks executed by the API; high-priority ones first, then lower-priority ones
-	. environment.sh && celery \
-		-A run_celery.notify_celery worker \
-		-Q high-priority-tasks \
-		--pidfile=/tmp/api_celery_worker_hp.pid \
-		--prefetch-multiplier=1 \
-		--loglevel=INFO \
-		--autoscale=8,1 \
-		--hostname='$(SERVICE)_hp@%h' &
-
-	. environment.sh && celery \
-		-A run_celery.notify_celery worker \
-		-Q broadcast-tasks \
-		--pidfile=/tmp/api_celery_worker.pid \
-		--prefetch-multiplier=1 \
-		--loglevel=INFO \
-		--autoscale=8,1 \
-		--hostname='$(SERVICE)@%h' &
-
-.PHONY: run-celery-beat
-run-celery-beat: ## Run celery beat
-	. environment.sh && opentelemetry-instrument celery \
-		-A run_celery.notify_celery beat \
-		--pidfile=/tmp/celery_beat.pid \
-		--loglevel=INFO
-
 .PHONY: help
 help:
 	@cat $(MAKEFILE_LIST) | grep -E '^[a-zA-Z_-]+:.*?## .*$$' | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'

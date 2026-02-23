@@ -348,7 +348,7 @@ def setup_dramatiq(app):
     # Except asking flask_dramatiq to init doesn't give you control of the dramatiq Broker class
     # to the extent needed - only the `url` kwarg. The SQS broker doesn't use that :(
 
-    # So we cheat here: let flask_dramatiq do its thing and then replace the broker instance
+    # So we cheat here: let flask_dramatiq do its thing and then replace the stub broker instance
     # inside to what we want.
     dramatiq.init_app(app)
 

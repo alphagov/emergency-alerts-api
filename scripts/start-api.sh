@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-echo "Start script executing for api.."
+echo "start-api.sh executing"
 
 put_metric_data(){
     if [[ $1 != "Backups" && $1 != "Migrations" ]]; then
@@ -71,7 +71,7 @@ run_db_migrations(){
     fi
 }
 
-backup_database(){
+run_backup_database(){
     if [[ -z $RDS_HOST  ]]; then
         echo "RDS_HOST is not provided but is required."
         put_metric_data "Backups" "failure"
@@ -155,7 +155,17 @@ configure_container_role(){
 
 run_api(){
     cd "$DIR_API";
-    . $VENV_API/bin/activate && opentelemetry-instrument flask run -p 6011 --host=0.0.0.0;
+    export SERVICE=api && . $VENV_API/bin/activate && exec flask run -p 6011 --host=0.0.0.0;
+}
+
+run_worker(){
+    cd $DIR_API;
+    export SERVICE=api_worker && . $VENV_API/bin/activate && exec flask worker --processes 1 --threads 2
+}
+
+run_periodiq(){
+    cd $DIR_API;
+    export SERVICE=api_periodiq && . $VENV_API/bin/activate && exec flask periodiq -v
 }
 
 if [[ ! -z $DEBUG ]]; then
@@ -164,9 +174,14 @@ if [[ ! -z $DEBUG ]]; then
 else
     configure_container_role
 
+    echo "Provided SERVICE_ACTION: $SERVICE_ACTION"
+
     if [[ $SERVICE_ACTION == "run_api" ]]; then
         run_api
-
+    elif [[ $SERVICE_ACTION == "run_worker" ]]; then
+        run_worker
+    elif [[ $SERVICE_ACTION == "run_periodiq" ]]; then
+        run_periodiq
     elif [[ $SERVICE_ACTION == "run_migrations" ]]; then
 
         if [[ ! -z $MASTER_USERNAME ]] && [[ ! -z $MASTER_PASSWORD ]]; then
@@ -179,7 +194,7 @@ else
     elif [[ $SERVICE_ACTION == "backup_database" ]]; then
 
         if [[ ! -z $MASTER_USERNAME ]] && [[ ! -z $MASTER_PASSWORD ]]; then
-            backup_database
+            run_backup_database
         else
             echo "Master credentials are required to use the service."
             put_metric_data "Backups" "failure"
