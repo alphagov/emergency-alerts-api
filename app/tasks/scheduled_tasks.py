@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 
 from emergency_alerts_utils.tasks import QueueNames, TaskNames
 from flask import current_app
+from periodiq import cron
 from sqlalchemy.exc import SQLAlchemyError
 
 from app import db, dramatiq
@@ -35,7 +36,7 @@ from app.tasks.broadcast_message_tasks import (
 from app.tasks.stub_tasks import publish_govuk_alerts
 
 
-@dramatiq.actor(actor_name=TaskNames.RUN_HEALTH_CHECK, queue_name=QueueNames.PERIODIC)
+@dramatiq.actor(actor_name=TaskNames.RUN_HEALTH_CHECK, queue_name=QueueNames.PERIODIC, periodic=cron("*/1 * * * *"))
 def run_health_check():
     try:
         post_app_version_to_cloudwatch()
