@@ -1,12 +1,9 @@
 ##!/usr/bin/env python
 
-from opentelemetry.instrumentation.auto_instrumentation.sitecustomize import (
-    initialize,
-)
+import opentelemetry.instrumentation.auto_instrumentation.sitecustomize  # noqa
 
 import app
 from app.notify_api_flask_app import NotifyApiFlaskApp
 
-initialize()  # performs the same auto-instrumentation as the CLI
 application = NotifyApiFlaskApp("app")
 app.create_app(application)
