@@ -2,6 +2,7 @@
 # with package version changes made in requirements.in
 
 aws-opentelemetry-distro==0.14.2
+opentelemetry-instrumentor-dramatiq==0.1.2
 beautifulsoup4==4.11.1
 cachetools==5.2.0
 cffi==1.15.1

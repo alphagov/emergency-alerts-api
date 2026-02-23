@@ -355,7 +355,7 @@ def setup_dramatiq(app):
 
     middleware = [
         AppContextMiddleware(app),
-        PeriodiqMiddleware(),
+        PeriodiqMiddleware(skip_delay=300),
         # This is mostly the default_middleware - except we remove Prometheus, AgeLimit, and Retries
         # ...the latter of which would re-queue messages onto the queue, but actually we want SQS
         # and its visibility timeout to do that for a single message, and redrive into a DLQ after a period.
@@ -371,5 +371,5 @@ def setup_dramatiq(app):
 
     dramatiq.broker = sqs_broker
     for actor in dramatiq.actors:
-        # Replace the in-memory broker used on an actors' .send
+        # Re-register the actors so they reference our new broker
         actor.register(broker=sqs_broker)
