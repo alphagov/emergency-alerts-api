@@ -21,11 +21,11 @@ legacy-bootstrap: generate-version-file ## Bootstrap, apply migrations and run t
 
 .PHONY: bootstrap
 bootstrap: generate-version-file ## Set up everything to run the app
-	pip3 install -r requirements_local_utils.txt
+	pip3 install -r requirements_local_utils.txt -c constraints.txt
 
 .PHONY: bootstrap-for-tests
 bootstrap-for-tests: generate-version-file ## Set up everything to run the tests
-	pip3 install -r requirements_github_utils.txt
+	pip3 install -r requirements_github_utils.txt -c constraints.txt
 
 .PHONY: run-flask
 run-flask: ## Run flask
@@ -56,7 +56,7 @@ pytests: ## Run python tests only
 
 .PHONY: freeze-requirements
 freeze-requirements: ## create static requirements.txt
-	${PYTHON_EXECUTABLE_PREFIX}pip3 install --upgrade setuptools pip-tools
+	${PYTHON_EXECUTABLE_PREFIX}pip3 install -c constraints.txt setuptools pip-tools
 	${PYTHON_EXECUTABLE_PREFIX}pip-compile requirements.in
 
 .PHONY: fix-imports
