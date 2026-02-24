@@ -165,7 +165,9 @@ run_worker(){
 
 run_periodiq(){
     cd $DIR_API;
-    export SERVICE=api_periodiq && . $VENV_API/bin/activate && exec periodiq -v app.dramatiq:broker
+    # We can't use the Periodiq CLI as then the import order is wrong for OpenTelemetry
+    # (our instrumentation can't override the __main__ module)
+    export SERVICE=api_periodiq && . $VENV_API/bin/activate && exec python -m app.periodiq -v app.dramatiq:broker
 }
 
 if [[ ! -z $DEBUG ]]; then
