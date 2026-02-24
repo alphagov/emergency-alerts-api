@@ -22,9 +22,6 @@ ENV OTEL_PYTHON_EXCLUDED_URLS="_api_status"
 # Only grab a message when we're ready to process it (i.e. don't prefetch - in-progress counts here so it's 1 and not 0)
 ENV dramatiq_queue_prefetch=1
 
-# Create root directory and copy repo
-COPY --chown=easuser:easuser . $DIR_API
-
 # Download the database certificate
 USER root
 
@@ -42,9 +39,13 @@ RUN apt -y install postgresql-client-14 && \
 
 USER easuser
 
+# Create root directory and copy repo
+COPY --chown=easuser:easuser . $DIR_API
+
 # Build emergency-alerts-api
 RUN python$PYTHON_VERSION -m venv $VENV_API
-RUN cd $DIR_API && \
+RUN --mount=type=cache,target=/home/easuser/.cache \
+    cd $DIR_API && \
     . $VENV_API/bin/activate && \
     APP_VERSION=${APP_VERSION} make bootstrap
 
