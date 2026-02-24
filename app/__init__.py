@@ -35,6 +35,7 @@ from werkzeug.local import LocalProxy
 
 from app.clients import NotificationProviderClients
 from app.clients.cbc_proxy import CBCProxyClient
+from app.dramatiq.middleware import ActorQueuePrefixMiddleware
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -356,6 +357,7 @@ def setup_dramatiq(app):
     middleware = [
         AppContextMiddleware(app),
         PeriodiqMiddleware(skip_delay=300),
+        ActorQueuePrefixMiddleware(prefix=app.config["QUEUE_PREFIX"]),
         # This is mostly the default_middleware - except we remove Prometheus, AgeLimit, and Retries
         # ...the latter of which would re-queue messages onto the queue, but actually we want SQS
         # and its visibility timeout to do that for a single message, and redrive into a DLQ after a period.
@@ -365,7 +367,6 @@ def setup_dramatiq(app):
         Callbacks(),
     ]
     sqs_broker = SQSBroker(
-        namespace=app.config["QUEUE_PREFIX"],
         middleware=middleware,
     )
 
