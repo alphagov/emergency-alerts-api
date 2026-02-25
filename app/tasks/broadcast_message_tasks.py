@@ -102,7 +102,7 @@ def send_broadcast_event(broadcast_event_id):
         broadcast_event = dao_get_broadcast_event_by_id(broadcast_event_id)
 
         publish_task = publish_govuk_alerts.send(broadcast_event_id=broadcast_event_id)
-        current_app.logger("Enqueued publish GOV UK Alerts: %s", publish_task.asdict())
+        current_app.logger.info("Enqueued publish GOV UK Alerts: %s", publish_task.asdict())
 
         providers = broadcast_event.service.get_available_broadcast_providers()
         current_app.logger.info(

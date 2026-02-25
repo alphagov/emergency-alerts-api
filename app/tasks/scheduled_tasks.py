@@ -114,7 +114,7 @@ def auto_expire_broadcast_messages():
 )
 def remove_yesterdays_planned_tests_on_govuk_alerts():
     publish_task = publish_govuk_alerts.send()
-    current_app.logger("Enqueued publish GOV UK Alerts for nightly rebuild: %s", publish_task.asdict())
+    current_app.logger.info("Enqueued publish GOV UK Alerts for nightly rebuild: %s", publish_task.asdict())
 
 
 @dramatiq.actor(
@@ -197,6 +197,6 @@ def queue_after_alert_activities():
             # GovUK calling us back to mark the action as 'done' instead of just assuming.
             current_app.logger.info("Requesting GovUK publish")
             publish_task = publish_govuk_alerts.send()
-            current_app.logger("Enqueued publish GOV UK Alerts: %s", publish_task.asdict())
+            current_app.logger.info("Enqueued publish GOV UK Alerts: %s", publish_task.asdict())
 
         # Down the line we will look to request logs from MNOs
