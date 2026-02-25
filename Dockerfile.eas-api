@@ -18,6 +18,9 @@ ENV OTEL_SERVICE_NAME="api_unspecified"
 ENV OTEL_PYTHON_DISTRO="aws_distro"
 ENV OTEL_PYTHON_CONFIGURATOR="aws_configurator"
 ENV OTEL_PYTHON_EXCLUDED_URLS="_api_status"
+# SQS instrumentation is handled by botocore instrumentation. boto3 refers to boto3sqs ...confusingly
+# boto3sqs just makes a mess of the trace contexts: https://github.com/open-telemetry/opentelemetry-python-contrib/issues/2509#issue-2285937495
+ENV OTEL_PYTHON_DISABLED_INSTRUMENTATIONS="boto3"
 
 # Only grab a message when we're ready to process it (i.e. don't prefetch - in-progress counts here so it's 1 and not 0)
 ENV dramatiq_queue_prefetch=1
