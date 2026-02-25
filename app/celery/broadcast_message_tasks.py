@@ -5,6 +5,7 @@ from emergency_alerts_utils.xml.common import HEADLINE
 from flask import current_app
 
 from app import cbc_proxy_client, notify_celery
+from app.celery.log_ingest_tasks import request_log_ingest_task
 from app.clients.cbc_proxy import CBCProxyRetryableException
 from app.dao.broadcast_message_dao import (
     create_broadcast_provider_message,
@@ -131,6 +132,11 @@ def send_broadcast_event(broadcast_event_id):
             send_broadcast_provider_message.apply_async(
                 kwargs={"broadcast_event_id": broadcast_event_id, "provider": provider}, queue=QueueNames.HIGH_PRIORITY
             )
+
+        request_log_ingest_task.apply_async(
+            kwargs={"broadcast_event_id": broadcast_event_id}, queue=QueueNames.BROADCASTS
+        )
+
     except Exception as e:
         current_app.logger.exception(
             f"Failed to send broadcast (event id {broadcast_event_id})",
