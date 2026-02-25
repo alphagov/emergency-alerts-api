@@ -240,7 +240,7 @@ class Hosted(Config):
         },
         TaskNames.TRIGGER_LINK_TESTS: {
             "task": TaskNames.TRIGGER_LINK_TESTS,
-            "schedule": crontab(minute="*/15"),
+            "schedule": crontab(minute="*/3"),
             "options": {"queue": QueueNames.PERIODIC},
         },
         TaskNames.DELETE_VERIFY_CODES: {
