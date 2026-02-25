@@ -233,7 +233,7 @@ def trigger_link_test(provider):
     cbc_proxy_client.get_proxy(provider).send_link_test()
 
 
-@dramatiq.actor(actor_name="trigger-link-test-primary-to-A", queue_name=QueueNames.BROADCASTS)
+@dramatiq.actor(actor_name=TaskNames.TRIGGER_LINK_TEST_PRIMARY_TO_A, queue_name=QueueNames.BROADCASTS)
 def trigger_link_test_primary_to_A(provider):
     current_app.logger.info(
         "trigger_link_test_primary_to_A", extra={"python_module": __name__, "target_provider": provider}
@@ -241,7 +241,7 @@ def trigger_link_test_primary_to_A(provider):
     cbc_proxy_client.get_proxy(provider).send_link_test_primary_to_A()
 
 
-@dramatiq.actor(actor_name="trigger-link-test-primary-to-B", queue_name=QueueNames.BROADCASTS)
+@dramatiq.actor(actor_name=TaskNames.TRIGGER_LINK_TEST_PRIMARY_TO_B, queue_name=QueueNames.BROADCASTS)
 def trigger_link_test_primary_to_B(provider):
     current_app.logger.info(
         "trigger_link_test_primary_to_B", extra={"python_module": __name__, "target_provider": provider}
@@ -249,7 +249,7 @@ def trigger_link_test_primary_to_B(provider):
     cbc_proxy_client.get_proxy(provider).send_link_test_primary_to_B()
 
 
-@dramatiq.actor(actor_name="trigger-link-test-secondary-to-A", queue_name=QueueNames.BROADCASTS)
+@dramatiq.actor(TaskNames.TRIGGER_LINK_TEST_SECONDARY_TO_A, queue_name=QueueNames.BROADCASTS)
 def trigger_link_test_secondary_to_A(provider):
     current_app.logger.info(
         "trigger_link_test_secondary_to_A", extra={"python_module": __name__, "target_provider": provider}
@@ -257,7 +257,7 @@ def trigger_link_test_secondary_to_A(provider):
     cbc_proxy_client.get_proxy(provider).send_link_test_secondary_to_A()
 
 
-@dramatiq.actor(actor_name="trigger-link-test-secondary-to-B", queue_name=QueueNames.BROADCASTS)
+@dramatiq.actor(actor_name=TaskNames.TRIGGER_LINK_TEST_SECONDARY_TO_B, queue_name=QueueNames.BROADCASTS)
 def trigger_link_test_secondary_to_B(provider):
     current_app.logger.info(
         "trigger_link_test_secondary_to_B", extra={"python_module": __name__, "target_provider": provider}
