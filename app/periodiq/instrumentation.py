@@ -27,7 +27,7 @@ class PeriodiqInstrumentor(BaseInstrumentor):
         tracer_p = trace.get_tracer_provider()
         tracer = trace.get_tracer(
             __name__,
-            "0.0.1-internal",
+            "eas-internal",
             tracer_provider=tracer_provider or tracer_p,
             schema_url="https://opentelemetry.io/schemas/1.11.0",
         )
@@ -42,8 +42,8 @@ class PeriodiqInstrumentor(BaseInstrumentor):
 
             for actor in actors:
                 with tracer.start_as_current_span(
-                    f"periodiq.producer.{actor.actor_name}",
-                    kind=SpanKind.SERVER,
+                    f"periodiq: {actor.actor_name}",
+                    kind=SpanKind.PRODUCER,
                 ) as span:
                     span.set_attribute("eas.cron.schedule", str(actor.options.get("periodic")))
 
