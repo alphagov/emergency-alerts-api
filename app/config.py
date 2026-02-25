@@ -1,11 +1,5 @@
 import os
 
-from emergency_alerts_utils.tasks import QueueNames, TaskNames
-
-
-def crontab(*args, **kwargs):
-    pass
-
 
 class BroadcastProvider:
     EE = "ee"
@@ -146,8 +140,6 @@ class Config(object):
 
     QUEUE_PREFIX = ""  # Overidden in hosted for multitenancy
 
-    POST_ALERT_CHECK_INTERVAL_MINUTES = 1
-
     FROM_NUMBER = "development"
 
     SENDING_NOTIFICATIONS_TIMEOUT_PERIOD = 259200  # 3 days
@@ -226,54 +218,6 @@ class Hosted(Config):
     ENVIRONMENT_PREFIX = ENVIRONMENT if ENVIRONMENT != "development" else "dev"
     AWS_REGION = os.environ.get("AWS_REGION", "eu-west-2")
     QUEUE_PREFIX = f"{ENVIRONMENT_PREFIX}-{TENANT_PREFIX}"
-
-    BEAT_SCHEDULE = {
-        TaskNames.RUN_HEALTH_CHECK: {
-            "task": TaskNames.RUN_HEALTH_CHECK,
-            "schedule": crontab(minute="*/1"),
-            "options": {"queue": QueueNames.PERIODIC},
-        },
-        TaskNames.TRIGGER_GOVUK_HEALTHCHECK: {
-            "task": TaskNames.TRIGGER_GOVUK_HEALTHCHECK,
-            "schedule": crontab(minute="*/1"),
-            "options": {"queue": QueueNames.GOVUK_ALERTS},
-        },
-        TaskNames.TRIGGER_LINK_TESTS: {
-            "task": TaskNames.TRIGGER_LINK_TESTS,
-            "schedule": crontab(minute="*/3"),
-            "options": {"queue": QueueNames.PERIODIC},
-        },
-        TaskNames.DELETE_VERIFY_CODES: {
-            "task": TaskNames.DELETE_VERIFY_CODES,
-            "schedule": crontab(minute=10),
-            "options": {"queue": QueueNames.PERIODIC},
-        },
-        TaskNames.DELETE_INVITATIONS: {
-            "task": TaskNames.DELETE_INVITATIONS,
-            "schedule": crontab(minute=20),
-            "options": {"queue": QueueNames.PERIODIC},
-        },
-        TaskNames.REMOVE_YESTERDAYS_PLANNED_TESTS_ON_GOVUK_ALERTS: {
-            "task": TaskNames.REMOVE_YESTERDAYS_PLANNED_TESTS_ON_GOVUK_ALERTS,
-            "schedule": crontab(hour=00, minute=00),
-            "options": {"queue": QueueNames.PERIODIC},
-        },
-        TaskNames.DELETE_OLD_RECORDS_FROM_EVENTS_TABLE: {
-            "task": TaskNames.DELETE_OLD_RECORDS_FROM_EVENTS_TABLE,
-            "schedule": crontab(hour=3, minute=00),
-            "options": {"queue": QueueNames.PERIODIC},
-        },
-        TaskNames.VALIDATE_FUNCTIONAL_TEST_ACCOUNT_EMAILS: {
-            "task": TaskNames.VALIDATE_FUNCTIONAL_TEST_ACCOUNT_EMAILS,
-            "schedule": crontab(day_of_month="1"),
-            "options": {"queue": QueueNames.PERIODIC},
-        },
-        TaskNames.QUEUE_AFTER_ALERT_ACTIVITIES: {
-            "task": TaskNames.QUEUE_AFTER_ALERT_ACTIVITIES,
-            "schedule": crontab(minute=f"*/{Config.POST_ALERT_CHECK_INTERVAL_MINUTES}"),
-            "options": {"queue": QueueNames.PERIODIC},
-        },
-    }
 
 
 class Test(Config):

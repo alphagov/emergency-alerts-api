@@ -33,7 +33,7 @@ from app.tasks.broadcast_message_tasks import (
     trigger_link_test_secondary_to_A,
     trigger_link_test_secondary_to_B,
 )
-from app.tasks.stub_tasks import publish_govuk_alerts
+from app.tasks.stub_tasks import publish_govuk_alerts, trigger_govuk_healthcheck
 
 
 @dramatiq.actor(actor_name=TaskNames.RUN_HEALTH_CHECK, queue_name=QueueNames.PERIODIC, periodic=cron("*/1 * * * *"))
@@ -51,7 +51,17 @@ def run_health_check():
         raise
 
 
-@dramatiq.actor(actor_name=TaskNames.DELETE_VERIFY_CODES, queue_name=QueueNames.PERIODIC)
+@dramatiq.actor(
+    actor_name=TaskNames.TRIGGER_GOVUK_HEALTHCHECK, queue_name=QueueNames.PERIODIC, periodic=cron("*/1 * * * *")
+)
+def scheduled_trigger_govuk_healthcheck():
+    # This is so periodiq has an actor to schedule against.
+    # It does mean an extra hop though: periodiq schedule -> api worker (periodic queue) -> govuk worker
+    # instead of just sending to the govuk queue
+    trigger_govuk_healthcheck.send()
+
+
+@dramatiq.actor(actor_name=TaskNames.DELETE_VERIFY_CODES, queue_name=QueueNames.PERIODIC, periodic=cron("10 * * * *"))
 def delete_verify_codes():
     try:
         start = datetime.now(timezone.utc)
@@ -65,7 +75,7 @@ def delete_verify_codes():
         raise
 
 
-@dramatiq.actor(actor_name=TaskNames.DELETE_INVITATIONS, queue_name=QueueNames.PERIODIC)
+@dramatiq.actor(actor_name=TaskNames.DELETE_INVITATIONS, queue_name=QueueNames.PERIODIC, periodic=cron("20 * * * *"))
 def delete_invitations():
     try:
         start = datetime.now(timezone.utc)
@@ -80,7 +90,7 @@ def delete_invitations():
         raise
 
 
-@dramatiq.actor(actor_name=TaskNames.TRIGGER_LINK_TESTS, queue_name=QueueNames.PERIODIC)
+@dramatiq.actor(actor_name=TaskNames.TRIGGER_LINK_TESTS, queue_name=QueueNames.PERIODIC, periodic=cron("*/3 * * * *"))
 def trigger_link_tests():
     if current_app.config["CBC_PROXY_ENABLED"]:
         current_app.logger.info(
@@ -107,13 +117,21 @@ def auto_expire_broadcast_messages():
     db.session.commit()
 
 
-@dramatiq.actor(actor_name=TaskNames.REMOVE_YESTERDAYS_PLANNED_TESTS_ON_GOVUK_ALERTS, queue_name=QueueNames.PERIODIC)
+@dramatiq.actor(
+    actor_name=TaskNames.REMOVE_YESTERDAYS_PLANNED_TESTS_ON_GOVUK_ALERTS,
+    queue_name=QueueNames.PERIODIC,
+    periodic=cron("0 0 * * *"),
+)
 def remove_yesterdays_planned_tests_on_govuk_alerts():
     publish_task = publish_govuk_alerts.send()
     current_app.logger("Enqueued publish GOV UK Alerts for nightly rebuild: %s", publish_task.asdict())
 
 
-@dramatiq.actor(actor_name=TaskNames.DELETE_OLD_RECORDS_FROM_EVENTS_TABLE, queue_name=QueueNames.PERIODIC)
+@dramatiq.actor(
+    actor_name=TaskNames.DELETE_OLD_RECORDS_FROM_EVENTS_TABLE,
+    queue_name=QueueNames.PERIODIC,
+    periodic=cron("0 3 * * *"),
+)
 def delete_old_records_from_events_table():
     delete_events_before = datetime.now(timezone.utc) - timedelta(weeks=52)
     event_query = Event.query.filter(Event.created_at < delete_events_before)
@@ -132,7 +150,11 @@ def delete_old_records_from_events_table():
     db.session.commit()
 
 
-@dramatiq.actor(actor_name=TaskNames.VALIDATE_FUNCTIONAL_TEST_ACCOUNT_EMAILS, queue_name=QueueNames.PERIODIC)
+@dramatiq.actor(
+    actor_name=TaskNames.VALIDATE_FUNCTIONAL_TEST_ACCOUNT_EMAILS,
+    queue_name=QueueNames.PERIODIC,
+    periodic=cron("0 0 1 * *"),
+)
 def validate_functional_test_account_emails():
     try:
         user1 = get_user_by_email("emergency-alerts-tests+user1@digital.cabinet-office.gov.uk")
@@ -164,7 +186,9 @@ def validate_functional_test_account_emails():
         )
 
 
-@dramatiq.actor(actor_name=TaskNames.QUEUE_AFTER_ALERT_ACTIVITIES, queue_name=QueueNames.PERIODIC)
+@dramatiq.actor(
+    actor_name=TaskNames.QUEUE_AFTER_ALERT_ACTIVITIES, queue_name=QueueNames.PERIODIC, periodic=cron("*/1 * * * *")
+)
 def queue_after_alert_activities():
     """Check for any recently expired alerts and process any activities that are due on them"""
 

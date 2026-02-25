@@ -71,7 +71,6 @@ class _SendOnlyActor:
 
 publish_govuk_alerts = _SendOnlyActor(actor_name=TaskNames.PUBLISH_GOVUK_ALERTS, queue_name=QueueNames.GOVUK_ALERTS)
 
-# TODO: Scheduled - but it's not an actor...
 trigger_govuk_healthcheck = _SendOnlyActor(
     actor_name=TaskNames.TRIGGER_GOVUK_HEALTHCHECK, queue_name=QueueNames.GOVUK_ALERTS
 )

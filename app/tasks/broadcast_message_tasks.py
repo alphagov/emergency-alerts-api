@@ -249,7 +249,7 @@ def trigger_link_test_primary_to_B(provider):
     cbc_proxy_client.get_proxy(provider).send_link_test_primary_to_B()
 
 
-@dramatiq.actor(TaskNames.TRIGGER_LINK_TEST_SECONDARY_TO_A, queue_name=QueueNames.BROADCASTS)
+@dramatiq.actor(actor_name=TaskNames.TRIGGER_LINK_TEST_SECONDARY_TO_A, queue_name=QueueNames.BROADCASTS)
 def trigger_link_test_secondary_to_A(provider):
     current_app.logger.info(
         "trigger_link_test_secondary_to_A", extra={"python_module": __name__, "target_provider": provider}
