@@ -33,7 +33,7 @@ from app.tasks.broadcast_message_tasks import (
     trigger_link_test_secondary_to_A,
     trigger_link_test_secondary_to_B,
 )
-from app.tasks.stub_tasks import publish_govuk_alerts, trigger_govuk_healthcheck
+from app.tasks.stub_tasks import publish_govuk_alerts
 
 
 @dramatiq.actor(actor_name=TaskNames.RUN_HEALTH_CHECK, queue_name=QueueNames.PERIODIC, periodic=cron("*/1 * * * *"))
@@ -49,16 +49,6 @@ def run_health_check():
     except Exception:
         current_app.logger.exception("Unable to generate health-check timestamp", extra={"python_module": __name__})
         raise
-
-
-@dramatiq.actor(
-    actor_name=TaskNames.TRIGGER_GOVUK_HEALTHCHECK, queue_name=QueueNames.PERIODIC, periodic=cron("*/1 * * * *")
-)
-def scheduled_trigger_govuk_healthcheck():
-    # This is so periodiq has an actor to schedule against.
-    # It does mean an extra hop though: periodiq schedule -> api worker (periodic queue) -> govuk worker
-    # instead of just sending to the govuk queue
-    trigger_govuk_healthcheck.send()
 
 
 @dramatiq.actor(actor_name=TaskNames.DELETE_VERIFY_CODES, queue_name=QueueNames.PERIODIC, periodic=cron("10 * * * *"))
