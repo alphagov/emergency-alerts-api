@@ -23,7 +23,7 @@ get_template_by_id_response = {
         "created_by": {"type": "string"},
         "version": {"type": "integer"},
         "body": {"type": "string"},
-        "name": {"type": "string"},
+        "reference": {"type": "string"},
     },
-    "required": ["id", "type", "created_at", "updated_at", "version", "created_by", "body", "name"],
+    "required": ["id", "type", "created_at", "updated_at", "version", "created_by", "body", "reference"],
 }

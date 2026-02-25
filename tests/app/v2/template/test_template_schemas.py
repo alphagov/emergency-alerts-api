@@ -19,7 +19,7 @@ valid_json_get_response = {
     "version": 1,
     "created_by": "someone@test.com",
     "body": "some body",
-    "name": "some name",
+    "reference": "some reference",
 }
 
 valid_json_get_response_with_optionals = {
@@ -31,7 +31,7 @@ valid_json_get_response_with_optionals = {
     "created_by": "someone",
     "body": "some body",
     "subject": "some subject",
-    "name": "some name",
+    "reference": "some reference",
 }
 
 valid_request_args = [{"id": str(uuid.uuid4()), "version": 1}, {"id": str(uuid.uuid4())}]

@@ -5,7 +5,8 @@ Revises: 0133_set_services_sms_prefix
 Create Date: 2017-11-03 13:52:59.715203
 
 """
-from datetime import datetime
+
+from datetime import datetime, timezone
 
 from alembic import op
 from flask import current_app
@@ -43,7 +44,7 @@ def upgrade():
             template_id,
             template_name,
             "email",
-            datetime.utcnow(),
+            datetime.now(timezone.utc),
             template_content,
             current_app.config["NOTIFY_SERVICE_ID"],
             template_subject,
@@ -57,7 +58,7 @@ def upgrade():
             template_id,
             template_name,
             "email",
-            datetime.utcnow(),
+            datetime.now(timezone.utc),
             template_content,
             current_app.config["NOTIFY_SERVICE_ID"],
             template_subject,
@@ -74,7 +75,7 @@ def upgrade():
 #         INSERT INTO template_redacted (template_id, redact_personalisation, updated_at, updated_by_id)
 #         VALUES ('{}', '{}', '{}', '{}')
 #         ;
-#     """.format(template_id, False, datetime.utcnow(), current_app.config['NOTIFY_USER_ID'])
+#     """.format(template_id, False, datetime.now(timezone.utc), current_app.config['NOTIFY_USER_ID'])
 # )
 
 

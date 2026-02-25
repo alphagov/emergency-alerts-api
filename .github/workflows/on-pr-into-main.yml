@@ -1,10 +1,18 @@
 name: on-pr-into-main
 
+permissions:
+  contents: read
+
 env:
-  PYTHON_VERSION: 3.9
+  PYTHON_VERSION: 3.12
 
 on:
   pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
     branches:
       - main
 
@@ -27,13 +35,16 @@ jobs:
 
       - name: Install and upgrade pre-requisites
         run: |
-          python3.9 -m pip install --upgrade pip wheel setuptools
+          python3.12 -m pip install --upgrade pip wheel setuptools
           sudo apt-get update
           sudo apt-get install -y libcurl4-openssl-dev
           sudo apt-get install -y libssl-dev
 
       - name: Launch a postgres instance
         run: |
+          export POSTGRES_PASSWORD=root
+          export POSTGRES_USER=postgres
+          export POSTGRES_DB=postgres
           docker compose -f docker-compose-tests.yml up --detach pg
 
       - name: Bootstrap Python app and run tests

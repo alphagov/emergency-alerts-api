@@ -4,11 +4,16 @@ import uuid
 
 import pytest
 import requests_mock
+from emergency_alerts_utils.api_key import (
+    KEY_TYPE_NORMAL,
+    KEY_TYPE_TEAM,
+    KEY_TYPE_TEST,
+)
 from flask import current_app, url_for
 
 from app import db
 from app.dao.api_key_dao import save_model_api_key
-from app.dao.broadcast_service_dao import (
+from app.dao.broadcast_service_dao import (  # set_service_broadcast_providers
     insert_or_update_service_broadcast_settings,
 )
 from app.dao.invited_user_dao import save_invited_user
@@ -22,9 +27,6 @@ from app.dao.users_dao import create_secret_code, create_user_code
 from app.history_meta import create_history
 from app.models import (
     BROADCAST_TYPE,
-    KEY_TYPE_NORMAL,
-    KEY_TYPE_TEAM,
-    KEY_TYPE_TEST,
     SERVICE_PERMISSION_TYPES,
     ApiKey,
     InvitedUser,
@@ -83,7 +85,7 @@ def service_factory(sample_user):
 
 @pytest.fixture(scope="function")
 def sample_user(notify_db_session):
-    return create_user(email="notify@digital.cabinet-office.gov.uk")
+    return create_user(email="emergency-alerts-tests@digital.cabinet-office.gov.uk")
 
 
 @pytest.fixture(scope="function")
@@ -102,6 +104,27 @@ def sample_sms_code(notify_db_session):
     code, txt_code = create_code(notify_db_session, code_type="sms")
     code.txt_code = txt_code
     return code
+
+
+@pytest.fixture(scope="function")
+def sample_training_service(sample_user):
+    service_name = "Sample service"
+
+    data = {
+        "name": service_name,
+        "restricted": True,
+        "created_by": sample_user,
+        "crown": True,
+    }
+    service = Service.query.filter_by(name=service_name).first()
+    if not service:
+        service = Service(**data)
+        dao_create_service(service, sample_user, service_permissions=None)
+    else:
+        if sample_user not in service.users:
+            dao_add_user_to_service(service, sample_user)
+
+    return service
 
 
 @pytest.fixture(scope="function")
@@ -211,7 +234,7 @@ def sample_template(sample_user):
     service = create_service(service_permissions=[BROADCAST_TYPE], check_if_service_exists=True)
 
     data = {
-        "name": "Template Name",
+        "reference": "Template Name",
         "template_type": BROADCAST_TYPE,
         "content": "This is a template:\nwith a newline",
         "service": service,
@@ -295,7 +318,7 @@ def create_custom_template(service, user, template_config_name, template_type, c
     if not template:
         data = {
             "id": current_app.config[template_config_name],
-            "name": template_config_name,
+            "reference": template_config_name,
             "template_type": template_type,
             "content": content,
             "service": service,

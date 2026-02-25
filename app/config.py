@@ -1,18 +1,9 @@
 import os
+from typing import Literal
 
 from celery.schedules import crontab
+from emergency_alerts_utils.celery import QueueNames, TaskNames
 from kombu import Exchange, Queue
-
-
-class QueueNames(object):
-    PERIODIC = "periodic-tasks"
-    BROADCASTS = "broadcast-tasks"
-    GOVUK_ALERTS = "govuk-alerts"
-
-
-class TaskNames(object):
-    PUBLISH_GOVUK_ALERTS = "publish-govuk-alerts"
-    TRIGGER_GOVUK_HEALTHCHECK = "trigger-govuk-alerts-healthcheck"
 
 
 class BroadcastProvider:
@@ -21,7 +12,7 @@ class BroadcastProvider:
     THREE = "three"
     O2 = "o2"
 
-    PROVIDERS = [EE, VODAFONE, THREE, O2]
+    PROVIDERS = [EE, O2, THREE, VODAFONE]
 
 
 """
@@ -56,7 +47,7 @@ class Config(object):
     GOVUK_ALERTS_CLIENT_ID = "govuk-alerts"
     INTERNAL_CLIENT_API_KEYS = {
         ADMIN_CLIENT_ID: [os.environ.get("ADMIN_CLIENT_SECRET")],
-        GOVUK_ALERTS_CLIENT_ID: ["govuk-alerts-secret-key"],
+        GOVUK_ALERTS_CLIENT_ID: [os.environ.get("GOVUK_CLIENT_SECRET", "govuk-alerts-secret-key")],
     }
     SECRET_KEY = os.environ.get("SECRET_KEY")
     DANGEROUS_SALT = os.environ.get("DANGEROUS_SALT")
@@ -71,6 +62,18 @@ class Config(object):
     CBC_ACCOUNT_NUMBER = os.getenv("CBC_ACCOUNT_NUMBER")
     CBC_PROXY_ENABLED = True
     ENABLED_CBCS = {BroadcastProvider.EE, BroadcastProvider.THREE, BroadcastProvider.O2, BroadcastProvider.VODAFONE}
+
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "pool_size": int(os.environ.get("SQLALCHEMY_POOL_SIZE", 5)),
+        "pool_timeout": 30,
+        "pool_recycle": 300,
+    }
+    DATABASE_STATEMENT_TIMEOUT_MS = 1200000
+
+    # Default to True if hosted, unless opted out with an explicit 'false'
+    USE_RDS_IAM_AUTH = os.environ.get("HOST", "") != "local" and (
+        not os.environ.get("USE_RDS_IAM_AUTH", "").lower() == "false"
+    )
 
     if os.environ.get("MASTER_USERNAME"):
         print("Using master credentials for db connection")
@@ -94,13 +97,6 @@ class Config(object):
         print("Overriding db connection string for local running")
         SQLALCHEMY_DATABASE_URI = os.environ.get("SQLALCHEMY_LOCAL_OVERRIDE")
 
-    # Prefix to identify queues in SQS
-    NOTIFICATION_QUEUE_PREFIX = (
-        f"{os.getenv('NOTIFICATION_QUEUE_PREFIX')}-"
-        if os.getenv("NOTIFICATION_QUEUE_PREFIX")
-        else f"{os.getenv('ENVIRONMENT')}-"
-    )
-
     ZENDESK_API_KEY = os.environ.get("ZENDESK_API_KEY")
     REPORTS_SLACK_WEBHOOK_URL = os.environ.get("REPORTS_SLACK_WEBHOOK_URL")
 
@@ -113,10 +109,6 @@ class Config(object):
     INVITATION_EXPIRATION_DAYS = 2
     EAS_APP_NAME = "api"
     NOTIFY_EMAIL_DOMAIN = "notify.tools"
-    SQLALCHEMY_POOL_SIZE = int(os.environ.get("SQLALCHEMY_POOL_SIZE", 5))
-    SQLALCHEMY_POOL_TIMEOUT = 30
-    SQLALCHEMY_POOL_RECYCLE = 300
-    SQLALCHEMY_STATEMENT_TIMEOUT = 1200
     PAGE_SIZE = 50
     API_PAGE_SIZE = 250
     TEST_MESSAGE_FILENAME = "Test message"
@@ -142,84 +134,32 @@ class Config(object):
     TEAM_MEMBER_EDIT_EMAIL_TEMPLATE_ID = "c5aeab5e-dd4f-431d-b544-ebd944f3c942"
     TEAM_MEMBER_EDIT_MOBILE_TEMPLATE_ID = "c8474c57-6601-47bb-ba67-caacf9716ee1"
     REPLY_TO_EMAIL_ADDRESS_VERIFICATION_TEMPLATE_ID = "3a8a49b6-6d53-412f-b346-cae568a19de9"
+    SECURITY_INFO_CHANGE_EMAIL_TEMPLATE_ID = "719a247f-f8b8-46d3-b0f8-c0f44b61d4b8"
+    SECURITY_INFO_CHANGE_SMS_TEMPLATE_ID = "b2bfe780-ca4a-45a3-8a03-ba7a64cf0953"
+    SECURITY_KEY_CHANGE_EMAIL_TEMPLATE_ID = "43d7b34a-45c5-4d37-96f8-2c3f48d4d0a5"
     NOTIFY_INTERNATIONAL_SMS_SENDER = "07984404008"
-    SERVICE = os.environ.get("SERVICE")
+
+    SERVICE: Literal["api", "celery"] = os.environ.get("SERVICE")
     QUEUE_NAME = QueueNames.BROADCASTS if SERVICE == "api" else QueueNames.PERIODIC
     TASK_IMPORTS = "broadcast_message_tasks" if SERVICE == "api" else "scheduled_tasks"
 
     CELERY = {
-        "broker_url": f"https://sqs.{AWS_REGION}.amazonaws.com",
-        "broker_transport": "sqs",
+        "broker_url": "filesystem://",
         "broker_transport_options": {
-            "region": AWS_REGION,
-            # "visibility_timeout": 310,    # Configured in Terraform
-            "queue_name_prefix": NOTIFICATION_QUEUE_PREFIX,
-            "is_secure": True,
-            "task_acks_late": True,
+            "data_folder_in": "/tmp/.data/broker",
+            "data_folder_out": "/tmp/.data/broker/",
         },
         "timezone": "UTC",
-        "imports": [
-            f"app.celery.{TASK_IMPORTS}",
-        ],
-        "worker_max_tasks_per_child": 10,
-        "worker_hijack_root_logger": False,
+        "imports": [f"app.celery.{TASK_IMPORTS}"],
         "task_queues": [Queue(QUEUE_NAME, Exchange("default"), routing_key=QUEUE_NAME)],
-        "beat_schedule": {
-            "run-health-check": {
-                "task": "run-health-check",
-                "schedule": crontab(minute="*/1"),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
-            TaskNames.TRIGGER_GOVUK_HEALTHCHECK: {
-                "task": TaskNames.TRIGGER_GOVUK_HEALTHCHECK,
-                "schedule": crontab(minute="*/1"),
-                "options": {"queue": QueueNames.GOVUK_ALERTS},
-            },
-            "trigger-link-tests": {
-                "task": "trigger-link-tests",
-                "schedule": crontab(minute="*/3"),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
-            "delete-verify-codes": {
-                "task": "delete-verify-codes",
-                "schedule": crontab(minute=10),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
-            "delete-invitations": {
-                "task": "delete-invitations",
-                "schedule": crontab(minute=20),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
-            "auto-expire-broadcast-messages": {
-                "task": "auto-expire-broadcast-messages",
-                "schedule": crontab(minute=40),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
-            "remove-yesterdays-planned-tests-on-govuk-alerts": {
-                "task": "remove-yesterdays-planned-tests-on-govuk-alerts",
-                "schedule": crontab(hour=00, minute=00),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
-            "delete-old-records-from-events-table": {
-                "task": "delete-old-records-from-events-table",
-                "schedule": crontab(hour=3, minute=00),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
-            "validate-functional-test-account-emails": {
-                "task": "validate-functional-test-account-emails",
-                "schedule": crontab(day_of_month="1"),
-                "options": {"queue": QueueNames.PERIODIC},
-            },
-        },
+        "worker_max_tasks_per_child": 2,
     }
+    POST_ALERT_CHECK_INTERVAL_MINUTES = 1
 
     FROM_NUMBER = "development"
 
-    STATSD_HOST = os.getenv("STATSD_HOST")
-    STATSD_PORT = 8125
-    STATSD_ENABLED = bool(STATSD_HOST)
-
     SENDING_NOTIFICATIONS_TIMEOUT_PERIOD = 259200  # 3 days
+    ADMIN_EXTERNAL_URL = "http://127.0.0.1:6012/"
 
     SIMULATED_EMAIL_ADDRESSES = (
         "simulate-delivered@notifications.service.gov.uk",
@@ -241,24 +181,30 @@ class Config(object):
     FUNCTIONAL_TESTS_BROADCAST_SERVICE_NAME = "Functional Tests Broadcast Service"
     FUNCTIONAL_TESTS_BROADCAST_SERVICE_ID = "8e1d56fa-12a8-4d00-bed2-db47180bed0a"
 
-    MAX_THROTTLE_PERIOD = 2 * 60
+    MAX_THROTTLE_PERIOD = 60
 
 
 class Hosted(Config):
     HOST = "hosted"
+    EAS_APP_NAME = "api"
     TENANT = f"{os.environ.get('TENANT')}." if os.environ.get("TENANT") is not None else ""
     SUBDOMAIN = (
         "dev."
         if os.environ.get("ENVIRONMENT") == "development"
-        else f"{os.environ.get('ENVIRONMENT')}."
-        if os.environ.get("ENVIRONMENT") != "production"
-        else ""
+        else f"{os.environ.get('ENVIRONMENT')}." if os.environ.get("ENVIRONMENT") != "production" else ""
     )
     ADMIN_BASE_URL = f"http://admin.{TENANT}ecs.local:6012"
     ADMIN_EXTERNAL_URL = f"https://{TENANT}admin.{SUBDOMAIN}emergency-alerts.service.gov.uk"
-    REDIS_URL = f"redis://api.{TENANT}ecs.local:6379/0"
     API_HOST_NAME = f"http://api.{TENANT}ecs.local:6011"
     TEMPLATE_PREVIEW_API_HOST = f"http://api.{TENANT}ecs.local:6013"
+
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "pool_size": int(os.environ.get("SQLALCHEMY_POOL_SIZE", 5)),
+        "pool_timeout": 30,
+        "pool_recycle": 300,
+    }
+    DATABASE_STATEMENT_TIMEOUT_MS = 1200000
+
     if os.getenv("MASTER_USERNAME"):
         print("Using master credentials for db connection")
         filtered_password = os.environ.get("MASTER_PASSWORD").replace("%", "%%")
@@ -271,7 +217,8 @@ class Hosted(Config):
         )
     else:
         SQLALCHEMY_DATABASE_URI = (
-            "postgresql://{user}@{host}:{port}/{database}?sslmode=verify-full&sslrootcert={cert}".format(
+            "postgresql://{user}@{host}:{port}/{database}"
+            "?sslmode=verify-full&sslrootcert={cert}&sslcertmode=disable".format(
                 user=os.environ.get("RDS_USER"),
                 host=os.environ.get("RDS_HOST"),
                 port=os.environ.get("RDS_PORT"),
@@ -281,6 +228,90 @@ class Hosted(Config):
         )
     CBC_PROXY_ENABLED = True
     DEBUG = False
+
+    TENANT_PREFIX = f"{os.environ.get('TENANT')}-" if os.environ.get("TENANT") is not None else ""
+    ENVIRONMENT = os.getenv("ENVIRONMENT")
+    ENVIRONMENT_PREFIX = ENVIRONMENT if ENVIRONMENT != "development" else "dev"
+    AWS_REGION = os.environ.get("AWS_REGION", "eu-west-2")
+    QUEUE_PREFIX = f"{ENVIRONMENT_PREFIX}-{TENANT_PREFIX}"
+    SQS_QUEUE_BASE_URL = os.getenv("SQS_QUEUE_BASE_URL")
+    SERVICE = os.environ.get("SERVICE")
+    QUEUE_NAME = QueueNames.BROADCASTS if SERVICE == "api" else QueueNames.PERIODIC
+    TASK_IMPORTS = "broadcast_message_tasks" if SERVICE == "api" else "scheduled_tasks"
+
+    BEAT_SCHEDULE = {
+        TaskNames.RUN_HEALTH_CHECK: {
+            "task": TaskNames.RUN_HEALTH_CHECK,
+            "schedule": crontab(minute="*/1"),
+            "options": {"queue": QueueNames.PERIODIC},
+        },
+        TaskNames.TRIGGER_GOVUK_HEALTHCHECK: {
+            "task": TaskNames.TRIGGER_GOVUK_HEALTHCHECK,
+            "schedule": crontab(minute="*/1"),
+            "options": {"queue": QueueNames.GOVUK_ALERTS},
+        },
+        TaskNames.TRIGGER_LINK_TESTS: {
+            "task": TaskNames.TRIGGER_LINK_TESTS,
+            "schedule": crontab(minute="*/3"),
+            "options": {"queue": QueueNames.PERIODIC},
+        },
+        TaskNames.DELETE_VERIFY_CODES: {
+            "task": TaskNames.DELETE_VERIFY_CODES,
+            "schedule": crontab(minute=10),
+            "options": {"queue": QueueNames.PERIODIC},
+        },
+        TaskNames.DELETE_INVITATIONS: {
+            "task": TaskNames.DELETE_INVITATIONS,
+            "schedule": crontab(minute=20),
+            "options": {"queue": QueueNames.PERIODIC},
+        },
+        TaskNames.REMOVE_YESTERDAYS_PLANNED_TESTS_ON_GOVUK_ALERTS: {
+            "task": TaskNames.REMOVE_YESTERDAYS_PLANNED_TESTS_ON_GOVUK_ALERTS,
+            "schedule": crontab(hour=00, minute=00),
+            "options": {"queue": QueueNames.PERIODIC},
+        },
+        TaskNames.DELETE_OLD_RECORDS_FROM_EVENTS_TABLE: {
+            "task": TaskNames.DELETE_OLD_RECORDS_FROM_EVENTS_TABLE,
+            "schedule": crontab(hour=3, minute=00),
+            "options": {"queue": QueueNames.PERIODIC},
+        },
+        TaskNames.VALIDATE_FUNCTIONAL_TEST_ACCOUNT_EMAILS: {
+            "task": TaskNames.VALIDATE_FUNCTIONAL_TEST_ACCOUNT_EMAILS,
+            "schedule": crontab(day_of_month="1"),
+            "options": {"queue": QueueNames.PERIODIC},
+        },
+        TaskNames.QUEUE_AFTER_ALERT_ACTIVITIES: {
+            "task": TaskNames.QUEUE_AFTER_ALERT_ACTIVITIES,
+            "schedule": crontab(minute=f"*/{Config.POST_ALERT_CHECK_INTERVAL_MINUTES}"),
+            "options": {"queue": QueueNames.PERIODIC},
+        },
+    }
+
+    PREDEFINED_SQS_QUEUES = {
+        "high-priority-tasks": {
+            "url": f"{SQS_QUEUE_BASE_URL}/{QUEUE_PREFIX}high-priority-tasks",
+        },
+        "broadcast-tasks": {
+            "url": f"{SQS_QUEUE_BASE_URL}/{QUEUE_PREFIX}broadcast-tasks",
+        },
+        "periodic-tasks": {"url": f"{SQS_QUEUE_BASE_URL}/{QUEUE_PREFIX}periodic-tasks"},
+        "govuk-alerts": {"url": f"{SQS_QUEUE_BASE_URL}/{QUEUE_PREFIX}govuk-alerts"},
+    }
+
+    CELERY = {
+        "broker_transport": "sqs",
+        "broker_transport_options": {
+            "region": AWS_REGION,
+            "predefined_queues": PREDEFINED_SQS_QUEUES,
+            "is_secure": True,
+            "task_acks_late": True,
+        },
+        "timezone": "UTC",
+        "imports": [f"app.celery.{TASK_IMPORTS}"],
+        "task_queues": [Queue(QUEUE_NAME, Exchange("default"), routing_key=QUEUE_NAME)],
+        "worker_max_tasks_per_child": 10,
+        "beat_schedule": BEAT_SCHEDULE,
+    }
 
 
 class Test(Config):
@@ -297,6 +328,7 @@ class Test(Config):
         database=os.environ.get("TEST_DATABASE", "test_emergency_alerts"),
     )
     SQLALCHEMY_RECORD_QUERIES = False
+    DATABASE_STATEMENT_TIMEOUT_MS = 1200000
 
     CELERY = {**Config.CELERY, "broker_url": "you-forgot-to-mock-celery-in-your-tests://"}
 
@@ -307,9 +339,7 @@ class Test(Config):
     SUBDOMAIN = (
         "dev."
         if os.environ.get("ENVIRONMENT") == "development"
-        else f"{os.environ.get('ENVIRONMENT')}."
-        if os.environ.get("ENVIRONMENT") != "production"
-        else ""
+        else f"{os.environ.get('ENVIRONMENT')}." if os.environ.get("ENVIRONMENT") != "production" else ""
     )
     ADMIN_EXTERNAL_URL = f"https://{TENANT}admin.{SUBDOMAIN}emergency-alerts.service.gov.uk"
     REPORTS_SLACK_WEBHOOK_URL = "https://hooks.slack.com/somewhere"

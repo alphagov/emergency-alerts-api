@@ -1,8 +1,7 @@
-import os
-
+import boto3
 from flask import Blueprint, jsonify, request
 
-from app import db, version
+from app import current_app, db, version
 from app.dao.organisation_dao import dao_count_organisations_with_live_services
 from app.dao.services_dao import dao_count_live_services
 
@@ -12,16 +11,20 @@ status = Blueprint("status", __name__)
 @status.route("/", methods=["GET"])
 @status.route("/_api_status", methods=["GET", "POST"])
 def show_api_status():
+    post_app_version_to_cloudwatch()
+    db_version = get_db_version()
+    post_db_version_to_cloudwatch(db_version)
+
     if request.args.get("simple", None):
         return jsonify(status="ok"), 200
     else:
         return (
             jsonify(
                 status="ok",  # This should be considered part of the public API
-                git_commit=version.__git_commit__,
-                build_time=version.__time__,
-                db_version=get_db_version(),
-                app_version=get_app_version(),
+                git_commit=version.git_commit,
+                build_time=version.time,
+                db_version=db_version,
+                app_version=version.app_version,
             ),
             200,
         )
@@ -38,9 +41,9 @@ def show_celery_status():
                 # This should be modified to check the celery queue for
                 # availability and correctness of function
                 status="ok",
-                git_commit=version.__git_commit__,
-                build_time=version.__time__,
-                app_version=get_app_version(),
+                git_commit=version.git_commit,
+                build_time=version.time,
+                app_version=version.app_version,
             ),
             200,
         )
@@ -63,8 +66,53 @@ def get_db_version():
     return full_name
 
 
-def get_app_version():
-    if os.getenv("APP_VERSION") is not None:
-        return os.getenv("APP_VERSION")
-    else:
-        return "0.0.0"
+def post_app_version_to_cloudwatch():
+    try:
+        boto3.client("cloudwatch").put_metric_data(
+            MetricData=[
+                {
+                    "MetricName": "AppVersion",
+                    "Dimensions": [
+                        {
+                            "Name": "Application",
+                            "Value": current_app.config["SERVICE"],
+                        },
+                        {
+                            "Name": "Version",
+                            "Value": version.app_version,
+                        },
+                    ],
+                    "Unit": "Count",
+                    "Value": 1,
+                }
+            ],
+            Namespace="Emergency Alerts",
+        )
+    except Exception:
+        current_app.logger.exception("Couldn't post app version to CloudWatch. App version: %s", version.app_version)
+
+
+def post_db_version_to_cloudwatch(db_version: str):
+    try:
+        boto3.client("cloudwatch").put_metric_data(
+            MetricData=[
+                {
+                    "MetricName": "DBVersion",
+                    "Dimensions": [
+                        {
+                            "Name": "Application",
+                            "Value": current_app.config["SERVICE"],
+                        },
+                        {
+                            "Name": "Version",
+                            "Value": db_version,
+                        },
+                    ],
+                    "Unit": "Count",
+                    "Value": 1,
+                }
+            ],
+            Namespace="Emergency Alerts",
+        )
+    except Exception:
+        current_app.logger.exception("Couldn't post DB version to CloudWatch. DB version: %s", db_version)

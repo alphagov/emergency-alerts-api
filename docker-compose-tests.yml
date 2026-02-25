@@ -1,6 +1,5 @@
-version: '3.8'
+version: "3.8"
 services:
-
   api:
     build:
       context: .
@@ -12,13 +11,14 @@ services:
       - test-network
 
   pg:
-    image: postgres:14
+    image: postgis/postgis:14-3.5
+    platform: linux/amd64
     container_name: postgres-for-api-tests
     restart: always
     environment:
-      POSTGRES_PASSWORD: root
-      POSTGRES_USER: postgres
-      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD: $POSTGRES_PASSWORD
+      POSTGRES_USER: $POSTGRES_USER
+      POSTGRES_DB: $POSTGRES_DB
       USER: $USER
     volumes:
       - ./postgres:/docker-entrypoint-initdb.d:ro
@@ -30,15 +30,18 @@ services:
 networks:
   test-network:
     driver: bridge
-
+#
 # Running tests in a container
 # docker compose -f docker-compose-tests.yml up --force-recreate --exit-code-from api
 # docker compose -f docker-compose-tests.yml down
-
+#
 # To start postgres to run tests from local api directory,
 # use the following commands:
 # cd /eas/emergency-alerts-api && . /venv/eas-api/bin/activate
+# . ./environment.sh
 # docker compose -f docker-compose-tests.yml up --force-recreate -d pg
-# . ./environment.sh && make test
+# make test
+#
 # Optional:
 # docker compose -f docker-compose-tests.yml down
+#

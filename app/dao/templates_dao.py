@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import asc, desc
 
@@ -27,7 +27,7 @@ def dao_update_template_reply_to(template_id, reply_to):
     Template.query.filter_by(id=template_id).update(
         {
             "service_letter_contact_id": reply_to,
-            "updated_at": datetime.utcnow(),
+            "updated_at": datetime.now(timezone.utc),
             "version": Template.version + 1,
         }
     )
@@ -36,7 +36,7 @@ def dao_update_template_reply_to(template_id, reply_to):
     history = TemplateHistory(
         **{
             "id": template.id,
-            "name": template.name,
+            "reference": template.reference,
             "template_type": template.template_type,
             "created_at": template.created_at,
             "updated_at": template.updated_at,
@@ -69,7 +69,7 @@ def dao_get_all_templates_for_service(service_id, template_type=None):
         return (
             Template.query.filter_by(service_id=service_id, template_type=template_type, archived=False)
             .order_by(
-                asc(Template.name),
+                asc(Template.reference),
                 asc(Template.template_type),
             )
             .all()
@@ -78,7 +78,7 @@ def dao_get_all_templates_for_service(service_id, template_type=None):
     return (
         Template.query.filter_by(service_id=service_id, archived=False)
         .order_by(
-            asc(Template.name),
+            asc(Template.reference),
             asc(Template.template_type),
         )
         .all()

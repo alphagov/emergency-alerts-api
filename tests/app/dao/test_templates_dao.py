@@ -17,7 +17,7 @@ from tests.app.db import create_template, create_template_folder
 
 def test_create_template(sample_service, sample_user):
     data = {
-        "name": "Sample Template",
+        "reference": "Sample Template",
         "template_type": "broadcast",
         "content": "Template content",
         "service": sample_service,
@@ -28,12 +28,12 @@ def test_create_template(sample_service, sample_user):
 
     assert Template.query.count() == 1
     assert len(dao_get_all_templates_for_service(sample_service.id)) == 1
-    assert dao_get_all_templates_for_service(sample_service.id)[0].name == "Sample Template"
+    assert dao_get_all_templates_for_service(sample_service.id)[0].reference == "Sample Template"
 
 
 def test_update_template(sample_service, sample_user):
     data = {
-        "name": "Sample Template",
+        "reference": "Sample Template",
         "template_type": "broadcast",
         "content": "Template content",
         "service": sample_service,
@@ -42,11 +42,11 @@ def test_update_template(sample_service, sample_user):
     template = Template(**data)
     dao_create_template(template)
     created = dao_get_all_templates_for_service(sample_service.id)[0]
-    assert created.name == "Sample Template"
+    assert created.reference == "Sample Template"
 
-    created.name = "new name"
+    created.reference = "new name"
     dao_update_template(created)
-    assert dao_get_all_templates_for_service(sample_service.id)[0].name == "new name"
+    assert dao_get_all_templates_for_service(sample_service.id)[0].reference == "new name"
 
 
 def test_get_all_templates_for_service(service_factory):
@@ -93,14 +93,14 @@ def test_get_all_templates_for_service_is_alphabetised(sample_service):
     )
 
     assert Template.query.count() == 3
-    assert dao_get_all_templates_for_service(sample_service.id)[0].name == "Sample Template 1"
-    assert dao_get_all_templates_for_service(sample_service.id)[1].name == "Sample Template 2"
-    assert dao_get_all_templates_for_service(sample_service.id)[2].name == "Sample Template 3"
+    assert dao_get_all_templates_for_service(sample_service.id)[0].reference == "Sample Template 1"
+    assert dao_get_all_templates_for_service(sample_service.id)[1].reference == "Sample Template 2"
+    assert dao_get_all_templates_for_service(sample_service.id)[2].reference == "Sample Template 3"
 
-    template_2.name = "AAAAA Sample Template 2"
+    template_2.reference = "AAAAA Sample Template 2"
     dao_update_template(template_2)
-    assert dao_get_all_templates_for_service(sample_service.id)[0].name == "AAAAA Sample Template 2"
-    assert dao_get_all_templates_for_service(sample_service.id)[1].name == "Sample Template 1"
+    assert dao_get_all_templates_for_service(sample_service.id)[0].reference == "AAAAA Sample Template 2"
+    assert dao_get_all_templates_for_service(sample_service.id)[1].reference == "Sample Template 1"
 
 
 def test_get_all_returns_empty_list_if_no_templates(sample_service):
@@ -125,7 +125,7 @@ def test_get_template_by_id_and_service(sample_service):
     sample_template = create_template(template_name="Test Template", service=sample_service)
     template = dao_get_template_by_id_and_service_id(template_id=sample_template.id, service_id=sample_service.id)
     assert template.id == sample_template.id
-    assert template.name == "Test Template"
+    assert template.reference == "Test Template"
     assert template.version == sample_template.version
 
 
@@ -139,7 +139,7 @@ def test_create_template_creates_a_history_record_with_current_data(sample_servi
     assert Template.query.count() == 0
     assert TemplateHistory.query.count() == 0
     data = {
-        "name": "Sample Template",
+        "reference": "Sample Template",
         "template_type": "broadcast",
         "content": "Template content",
         "service": sample_service,
@@ -154,7 +154,7 @@ def test_create_template_creates_a_history_record_with_current_data(sample_servi
     template_history = TemplateHistory.query.first()
 
     assert template_from_db.id == template_history.id
-    assert template_from_db.name == template_history.name
+    assert template_from_db.reference == template_history.reference
     assert template_from_db.version == 1
     assert template_from_db.version == template_history.version
     assert sample_user.id == template_history.created_by_id
@@ -165,7 +165,7 @@ def test_update_template_creates_a_history_record_with_current_data(sample_servi
     assert Template.query.count() == 0
     assert TemplateHistory.query.count() == 0
     data = {
-        "name": "Sample Template",
+        "reference": "Sample Template",
         "template_type": "broadcast",
         "content": "Template content",
         "service": sample_service,
@@ -175,12 +175,12 @@ def test_update_template_creates_a_history_record_with_current_data(sample_servi
     dao_create_template(template)
 
     created = dao_get_all_templates_for_service(sample_service.id)[0]
-    assert created.name == "Sample Template"
+    assert created.reference == "Sample Template"
     assert Template.query.count() == 1
     assert Template.query.first().version == 1
     assert TemplateHistory.query.count() == 1
 
-    created.name = "new name"
+    created.reference = "new name"
     dao_update_template(created)
 
     assert Template.query.count() == 1
@@ -190,8 +190,8 @@ def test_update_template_creates_a_history_record_with_current_data(sample_servi
 
     assert template_from_db.version == 2
 
-    assert TemplateHistory.query.filter_by(name="Sample Template").one().version == 1
-    assert TemplateHistory.query.filter_by(name="new name").one().version == 2
+    assert TemplateHistory.query.filter_by(reference="Sample Template").one().version == 1
+    assert TemplateHistory.query.filter_by(reference="new name").one().version == 2
 
 
 def test_get_template_history_version(sample_user, sample_service, sample_template):
@@ -229,7 +229,7 @@ def test_purge_templates_for_service(sample_user, sample_service):
     folder_1 = create_template_folder(sample_service, name="folder_1", users=[service_user])
 
     data = {
-        "name": "Sample Template 1",
+        "reference": "Sample Template 1",
         "template_type": "broadcast",
         "content": "Alert template content",
         "service": sample_service,
@@ -240,7 +240,7 @@ def test_purge_templates_for_service(sample_user, sample_service):
     dao_create_template(template)
 
     data = {
-        "name": "Sample Template 2",
+        "reference": "Sample Template 2",
         "template_type": "broadcast",
         "content": "Alert template content",
         "service": sample_service,

@@ -3,6 +3,8 @@ from itertools import chain
 from emergency_alerts_utils.polygons import Polygons
 from emergency_alerts_utils.template import BroadcastMessageTemplate
 from flask import current_app, jsonify, make_response, request
+from shapely.geometry import Polygon as ShapelyPolygon
+from shapely.validation import explain_validity
 from sqlalchemy.orm.exc import MultipleResultsFound
 
 from app import api_user, authenticated_service
@@ -22,6 +24,7 @@ from app.xml_schemas import validate_xml
 
 @v2_broadcast_blueprint.route("", methods=["POST"])
 def create_broadcast():
+    current_app.logger.info("/v2/broadcast API request received")
     _check_service_has_permission(
         BROADCAST_TYPE,
         authenticated_service.permissions,
@@ -35,24 +38,28 @@ def create_broadcast():
 
     cap_xml = request.get_data()
 
-    if not validate_xml(cap_xml, "CAP-v1.2.xsd"):
+    current_app.logger.info("Provided with CAP XML: %s", cap_xml)
+
+    xml_validation_error = validate_xml(cap_xml, "CAP-v1.2.xsd")
+    if xml_validation_error is not None:
         raise BadRequestError(
-            message="Request data is not valid CAP XML",
+            message="Request data is not valid CAP XML: " + xml_validation_error,
             status_code=400,
         )
-    broadcast_json = cap_xml_to_dict(cap_xml)
 
+    broadcast_json = cap_xml_to_dict(cap_xml)
     validate(broadcast_json, post_broadcast_schema)
 
     if broadcast_json["msgType"] == "Cancel":
         if broadcast_json["references"] is None:
             raise BadRequestError(
-                message="Missing <references>",
+                message="Unable to cancel broadcast. Cap_xml is missing field: <references>",
                 status_code=400,
             )
         broadcast_message = _cancel_or_reject_broadcast(
             broadcast_json["references"].split(","), authenticated_service.id
         )
+        current_app.logger.info("Cancelled/rejected BroadcastMessage %s", broadcast_message.id)
         return jsonify(broadcast_message.serialize()), 201
 
     else:
@@ -67,9 +74,20 @@ def create_broadcast():
         )
 
         if len(polygons) > 12 or polygons.point_count > 250:
+            current_app.logger.info(
+                "High polygon complexity (%d polygons / %d points ), simplifying...",
+                len(polygons),
+                polygons.point_count,
+            )
             simple_polygons = polygons.smooth.simplify
         else:
             simple_polygons = polygons
+
+        _validate_polygons(simple_polygons.polygons)
+
+        current_app.logger.info(
+            "Polygon complexity (%d polygons / %d points)", len(simple_polygons), simple_polygons.point_count
+        )
 
         broadcast_message = BroadcastMessage(
             service_id=authenticated_service.id,
@@ -82,18 +100,20 @@ def create_broadcast():
             },
             status=BroadcastStatusType.PENDING_APPROVAL,
             created_by_api_key_id=api_user.id,
-            stubbed=authenticated_service.restricted
+            stubbed=authenticated_service.restricted,
             # The client may pass in broadcast_json['expires'] but it’s
             # simpler for now to ignore it and have the rules around expiry
             # for broadcasts created with the API match those created from
             # the admin app
         )
 
+        current_app.logger.info(f"Saving new BroadcastMessage to database: {broadcast_message.serialize()}")
+
         dao_save_object(broadcast_message)
 
         current_app.logger.info(
             f"Broadcast message {broadcast_message.id} created for service "
-            f'{authenticated_service.id} with reference {broadcast_json["reference"]}'
+            f"{authenticated_service.id} with reference {broadcast_json['reference']}"
         )
 
         return jsonify(broadcast_message.serialize()), 201
@@ -115,7 +135,8 @@ def _cancel_or_reject_broadcast(references_to_original_broadcast, service_id):
         )
     except MultipleResultsFound:
         raise BadRequestError(
-            message="Multiple alerts found - unclear which one to cancel",
+            message="Multiple alerts found - unclear which one to cancel. "
+            "Ensure references uniquely identify a single alert.",
             status_code=400,
         )
 
@@ -141,3 +162,35 @@ def _validate_template(broadcast_json):
 def _check_service_has_permission(type, permissions):
     if type not in permissions:
         raise BadRequestError(message="Service is not allowed to send broadcast messages")
+
+
+def _validate_polygons(polygons):
+    try:
+        for polygon1 in polygons:
+            for polygon2 in polygons:
+                p1 = ShapelyPolygon(polygon1) if not isinstance(polygon1, ShapelyPolygon) else polygon1
+                p2 = ShapelyPolygon(polygon2) if not isinstance(polygon2, ShapelyPolygon) else polygon2
+                # Check for overlapping polygons, including partial
+                # intersections and enclosed polygons (holes)
+                if p1 != p2 and p1.intersects(p2):
+                    raise ValidationError(
+                        message="Overlapping areas are not supported.",
+                        status_code=400,
+                    )
+        for polygon in polygons:
+            p = ShapelyPolygon(polygon) if not isinstance(polygon, ShapelyPolygon) else polygon
+            # Check if valid (no self-intersections, no duplicate vertices,
+            # minimum vertex count, no overlapping segments)
+            if not p.is_valid:
+                raise ValidationError(
+                    message=f"Invalid polygon: {explain_validity(p)}",
+                    status_code=400,
+                )
+
+    except Exception as e:
+        raise ValidationError(
+            message=f"Invalid polygon(s): {str(e)}",
+            status_code=400,
+        ) from e
+
+    return True

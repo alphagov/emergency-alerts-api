@@ -1,10 +1,11 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
+from emergency_alerts_utils.celery import QueueNames, TaskNames
+from emergency_alerts_utils.xml.common import HEADLINE
 from flask import current_app
 
 from app import cbc_proxy_client, notify_celery
 from app.clients.cbc_proxy import CBCProxyRetryableException
-from app.config import QueueNames, TaskNames
 from app.dao.broadcast_message_dao import (
     create_broadcast_provider_message,
     dao_get_broadcast_event_by_id,
@@ -15,7 +16,7 @@ from app.models import (
     BroadcastProvider,
     BroadcastProviderMessageStatus,
 )
-from app.utils import format_sequential_number
+from app.utils import format_sequential_number, is_local_host
 
 
 class BroadcastIntegrityError(Exception):
@@ -68,7 +69,7 @@ def check_event_makes_sense_in_sequence(broadcast_event, provider):
             + f"It is in status {current_provider_message.status}"
         )
 
-    if broadcast_event.transmitted_finishes_at < datetime.utcnow():
+    if broadcast_event.transmitted_finishes_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
         raise BroadcastIntegrityError(
             f"Cannot send broadcast_event {broadcast_event.id} "
             + f"to provider {provider}: "
@@ -104,21 +105,47 @@ def check_event_makes_sense_in_sequence(broadcast_event, provider):
                 )
 
 
-@notify_celery.task(name="send-broadcast-event")
+@notify_celery.task(name=TaskNames.SEND_BROADCAST_EVENT)
 def send_broadcast_event(broadcast_event_id):
-    broadcast_event = dao_get_broadcast_event_by_id(broadcast_event_id)
+    try:
+        broadcast_event = dao_get_broadcast_event_by_id(broadcast_event_id)
 
-    notify_celery.send_task(name=TaskNames.PUBLISH_GOVUK_ALERTS, queue=QueueNames.GOVUK_ALERTS)
-
-    for provider in broadcast_event.service.get_available_broadcast_providers():
-        send_broadcast_provider_message.apply_async(
-            kwargs={"broadcast_event_id": broadcast_event_id, "provider": provider}, queue=QueueNames.BROADCASTS
+        notify_celery.send_task(
+            name=TaskNames.PUBLISH_GOVUK_ALERTS,
+            queue=QueueNames.GOVUK_ALERTS,
+            kwargs={"broadcast_event_id": broadcast_event_id},
         )
+
+        providers = broadcast_event.service.get_available_broadcast_providers()
+        current_app.logger.info(
+            "Send broadcast event",
+            extra={
+                "broadcast_event_id": broadcast_event_id,
+                "message_type": broadcast_event.message_type,
+                "providers": "|".join(providers),
+                "python_module": __name__,
+            },
+        )
+
+        for provider in providers:
+            send_broadcast_provider_message.apply_async(
+                kwargs={"broadcast_event_id": broadcast_event_id, "provider": provider}, queue=QueueNames.HIGH_PRIORITY
+            )
+    except Exception as e:
+        current_app.logger.exception(
+            f"Failed to send broadcast (event id {broadcast_event_id})",
+            extra={
+                "exception_type": type(e).__name__,
+                "python_module": __name__,
+                "exception": str(e),
+            },
+        )
+        raise
 
 
 @notify_celery.task(
     bind=True,
-    name="send-broadcast-provider-message",
+    name=TaskNames.SEND_BROADCAST_PROVIDER_MESSAGE,
     autoretry_for=(CBCProxyRetryableException,),
     retry_backoff=3,
     retry_jitter=False,
@@ -136,77 +163,121 @@ def send_broadcast_provider_message(self, broadcast_event_id, provider):
         )
         return
 
-    broadcast_event = dao_get_broadcast_event_by_id(broadcast_event_id)
+    try:
+        broadcast_event = dao_get_broadcast_event_by_id(broadcast_event_id)
 
-    check_event_is_authorised_to_be_sent(broadcast_event, provider)
-    check_event_makes_sense_in_sequence(broadcast_event, provider)
+        check_event_is_authorised_to_be_sent(broadcast_event, provider)
+        check_event_makes_sense_in_sequence(broadcast_event, provider)
 
-    # the broadcast_provider_message may already exist if we retried previously
-    broadcast_provider_message = broadcast_event.get_provider_message(provider)
-    is_retry = broadcast_provider_message is not None
-    if broadcast_provider_message is None:
-        broadcast_provider_message = create_broadcast_provider_message(broadcast_event, provider)
+        # the broadcast_provider_message may already exist if we retried previously
+        broadcast_provider_message = broadcast_event.get_provider_message(provider)
+        is_retry = broadcast_provider_message is not None
+        if broadcast_provider_message is None:
+            broadcast_provider_message = create_broadcast_provider_message(broadcast_event, provider)
 
-    formatted_message_number = None
-    if provider == BroadcastProvider.VODAFONE:
-        formatted_message_number = format_sequential_number(broadcast_provider_message.message_number)
+        formatted_message_number = None
+        if provider == BroadcastProvider.VODAFONE:
+            formatted_message_number = format_sequential_number(broadcast_provider_message.message_number)
 
-    current_app.logger.info(
-        "Invoking cbc proxy to send broadcast_provider_message",
-        extra={
-            "broadcast_provider_message_id": broadcast_provider_message.id,
-            "broadcast_event_id": broadcast_event_id,
-            "message_type": broadcast_event.message_type,
-            "is_retry": is_retry,
-            "python_module": __name__,
-        },
-    )
-
-    areas = [{"polygon": polygon} for polygon in broadcast_event.transmitted_areas["simple_polygons"]]
-
-    cbc_proxy_provider_client = cbc_proxy_client.get_proxy(provider)
-
-    if broadcast_event.message_type == BroadcastEventMessageType.ALERT:
-        cbc_proxy_provider_client.create_and_send_broadcast(
-            identifier=str(broadcast_provider_message.id),
-            message_number=formatted_message_number,
-            headline="GOV.UK Emergency Alert",
-            description=broadcast_event.transmitted_content["body"],
-            areas=areas,
-            sent=broadcast_event.sent_at_as_cap_datetime_string,
-            expires=broadcast_event.transmitted_finishes_at_as_cap_datetime_string,
-            channel=broadcast_event.service.broadcast_channel,
-        )
-    elif broadcast_event.message_type == BroadcastEventMessageType.UPDATE:
-        cbc_proxy_provider_client.update_and_send_broadcast(
-            identifier=str(broadcast_provider_message.id),
-            message_number=formatted_message_number,
-            headline="GOV.UK Emergency Alert",
-            description=broadcast_event.transmitted_content["body"],
-            areas=areas,
-            previous_provider_messages=broadcast_event.get_earlier_provider_messages(provider),
-            sent=broadcast_event.sent_at_as_cap_datetime_string,
-            expires=broadcast_event.transmitted_finishes_at_as_cap_datetime_string,
-            # We think an alert update should always go out on the same channel that created the alert
-            # We recognise there is a small risk with this code here that if the services channel was
-            # changed between an alert being sent out and then updated, then something might go wrong
-            # but we are relying on service channels changing almost never, and not mid incident
-            # We may consider in the future, changing this such that we store the channel a broadcast was
-            # sent on on the broadcast message itself and pick the value from there instead of the service
-            channel=broadcast_event.service.broadcast_channel,
-        )
-    elif broadcast_event.message_type == BroadcastEventMessageType.CANCEL:
-        cbc_proxy_provider_client.cancel_broadcast(
-            identifier=str(broadcast_provider_message.id),
-            message_number=formatted_message_number,
-            previous_provider_messages=broadcast_event.get_earlier_provider_messages(provider),
-            sent=broadcast_event.sent_at_as_cap_datetime_string,
+        current_app.logger.info(
+            "Invoking cbc proxy to send broadcast_provider_message",
+            extra={
+                "broadcast_provider_message_id": broadcast_provider_message.id,
+                "broadcast_event_id": broadcast_event_id,
+                "provider": provider,
+                "message_type": broadcast_event.message_type,
+                "is_retry": is_retry,
+                "python_module": __name__,
+            },
         )
 
-    update_broadcast_provider_message_status(broadcast_provider_message, status=BroadcastProviderMessageStatus.ACK)
+        areas = [{"polygon": polygon} for polygon in broadcast_event.transmitted_areas["simple_polygons"]]
+
+        cbc_proxy_provider_client = cbc_proxy_client.get_proxy(provider)
+
+        if not is_local_host():
+            if broadcast_event.message_type == BroadcastEventMessageType.ALERT:
+                cbc_proxy_provider_client.create_and_send_broadcast(
+                    identifier=str(broadcast_provider_message.id),
+                    message_number=formatted_message_number,
+                    headline=HEADLINE,
+                    description=broadcast_event.transmitted_content["body"],
+                    areas=areas,
+                    sent=broadcast_event.sent_at_as_cap_datetime_string,
+                    expires=broadcast_event.transmitted_finishes_at_as_cap_datetime_string,
+                    channel=broadcast_event.service.broadcast_channel,
+                )
+            elif broadcast_event.message_type == BroadcastEventMessageType.UPDATE:
+                cbc_proxy_provider_client.update_and_send_broadcast(
+                    identifier=str(broadcast_provider_message.id),
+                    message_number=formatted_message_number,
+                    headline=HEADLINE,
+                    description=broadcast_event.transmitted_content["body"],
+                    areas=areas,
+                    previous_provider_messages=broadcast_event.get_earlier_provider_messages(provider),
+                    sent=broadcast_event.sent_at_as_cap_datetime_string,
+                    expires=broadcast_event.transmitted_finishes_at_as_cap_datetime_string,
+                    # We think an alert update should always go out on the same channel that created the alert
+                    # We recognise there is a small risk with this code here that if the services channel was
+                    # changed between an alert being sent out and then updated, then something might go wrong
+                    # but we are relying on service channels changing almost never, and not mid incident
+                    # We may consider in the future, changing this such that we store the channel a broadcast was
+                    # sent on on the broadcast message itself and pick the value from there instead of the service
+                    channel=broadcast_event.service.broadcast_channel,
+                )
+            elif broadcast_event.message_type == BroadcastEventMessageType.CANCEL:
+                cbc_proxy_provider_client.cancel_broadcast(
+                    identifier=str(broadcast_provider_message.id),
+                    message_number=formatted_message_number,
+                    previous_provider_messages=broadcast_event.get_earlier_provider_messages(provider),
+                    sent=broadcast_event.sent_at_as_cap_datetime_string,
+                )
+
+        update_broadcast_provider_message_status(broadcast_provider_message, status=BroadcastProviderMessageStatus.ACK)
+    except Exception as e:
+        current_app.logger.exception(
+            f"Failed to send provider message (event {broadcast_event_id}, provider {provider})",
+            extra={
+                "python_module": __name__,
+                "exception": str(e),
+            },
+        )
+        raise
 
 
-@notify_celery.task(name="trigger-link-test")
+@notify_celery.task(name=TaskNames.TRIGGER_LINK_TEST)
 def trigger_link_test(provider):
     current_app.logger.info("trigger_link_test", extra={"python_module": __name__, "target_provider": provider})
     cbc_proxy_client.get_proxy(provider).send_link_test()
+
+
+@notify_celery.task(name="trigger-link-test-primary-to-A")
+def trigger_link_test_primary_to_A(provider):
+    current_app.logger.info(
+        "trigger_link_test_primary_to_A", extra={"python_module": __name__, "target_provider": provider}
+    )
+    cbc_proxy_client.get_proxy(provider).send_link_test_primary_to_A()
+
+
+@notify_celery.task(name="trigger-link-test-primary-to-B")
+def trigger_link_test_primary_to_B(provider):
+    current_app.logger.info(
+        "trigger_link_test_primary_to_B", extra={"python_module": __name__, "target_provider": provider}
+    )
+    cbc_proxy_client.get_proxy(provider).send_link_test_primary_to_B()
+
+
+@notify_celery.task(name="trigger-link-test-secondary-to-A")
+def trigger_link_test_secondary_to_A(provider):
+    current_app.logger.info(
+        "trigger_link_test_secondary_to_A", extra={"python_module": __name__, "target_provider": provider}
+    )
+    cbc_proxy_client.get_proxy(provider).send_link_test_secondary_to_A()
+
+
+@notify_celery.task(name="trigger-link-test-secondary-to-B")
+def trigger_link_test_secondary_to_B(provider):
+    current_app.logger.info(
+        "trigger_link_test_secondary_to_B", extra={"python_module": __name__, "target_provider": provider}
+    )
+    cbc_proxy_client.get_proxy(provider).send_link_test_secondary_to_B()

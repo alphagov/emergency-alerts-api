@@ -1,7 +1,8 @@
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
+from emergency_alerts_utils.api_key import KEY_TYPE_NORMAL
 
 from app import db
 from app.dao.invited_org_user_dao import save_invited_org_user
@@ -17,10 +18,12 @@ from app.dao.users_dao import save_model_user
 from app.models import (
     BROADCAST_TYPE,
     EMAIL_TYPE,
-    KEY_TYPE_NORMAL,
+    AdminAction,
     ApiKey,
     BroadcastEvent,
     BroadcastMessage,
+    BroadcastMessageEditReasons,
+    BroadcastMessageHistory,
     BroadcastProvider,
     BroadcastProviderMessage,
     BroadcastProviderMessageNumber,
@@ -43,7 +46,7 @@ from app.models import (
 )
 
 
-def create_user(*, mobile_number="+447700900986", email=None, state="active", id_=None, name="Test User"):
+def create_user(*, mobile_number="+447712345678", email=None, state="active", id_=None, name="Test User"):
     data = {
         "id": id_ or uuid.uuid4(),
         "name": name,
@@ -113,14 +116,42 @@ def create_template(
     content="Dear Sir/Madam, Hello. Yours Truly, The Government.",
     archived=False,
     folder=None,
+    areas=None,
 ):
     data = {
-        "name": template_name or "{} Template Name".format(template_type),
+        "reference": template_name or f"{template_type} Template Name",
         "template_type": template_type,
         "content": content,
         "service": service,
         "created_by": service.created_by,
         "folder": folder,
+        "areas": areas or {},
+    }
+    template = Template(**data)
+    dao_create_template(template)
+
+    if archived:
+        template.archived = archived
+        dao_update_template(template)
+
+    return template
+
+
+def create_template_with_only_area(
+    service,
+    template_type=BROADCAST_TYPE,
+    archived=False,
+    folder=None,
+    areas=None,
+):
+    data = {
+        "reference": "",
+        "template_type": template_type,
+        "content": "",
+        "service": service,
+        "created_by": service.created_by,
+        "folder": folder,
+        "areas": areas or {},
     }
     template = Template(**data)
     dao_create_template(template)
@@ -284,18 +315,24 @@ def create_broadcast_message(
     created_by=None,
     content=None,
     status=BroadcastStatusType.DRAFT,
+    exclude=False,
     starts_at=None,
     finishes_at=None,
     areas=None,
     stubbed=False,
     cap_event=None,
     created_at=None,  # only used for testing
+    reference=None,
+    submitted_by=None,
+    extra_content=None,
+    finished_govuk_acknowledged=False,
 ):
     if template:
         service = template.service
         template_id = template.id
         template_version = template.version
         content = template.content
+        reference = template.reference
     elif content:
         template_id = None
         template_version = None
@@ -309,6 +346,7 @@ def create_broadcast_message(
         template_version=template_version,
         # personalisation=personalisation,
         status=status,
+        exclude=exclude,
         starts_at=starts_at,
         finishes_at=finishes_at,
         created_by_id=created_by.id if created_by else service.created_by_id,
@@ -317,6 +355,11 @@ def create_broadcast_message(
         stubbed=stubbed,
         cap_event=cap_event,
         created_at=created_at,
+        reference=reference,
+        submitted_by=submitted_by,
+        submitted_at=datetime.now(),
+        extra_content=extra_content,
+        finished_govuk_acknowledged=finished_govuk_acknowledged,
     )
     db.session.add(broadcast_message)
     db.session.commit()
@@ -336,13 +379,13 @@ def create_broadcast_event(
     b_e = BroadcastEvent(
         service=broadcast_message.service,
         broadcast_message=broadcast_message,
-        sent_at=sent_at or datetime.utcnow(),
+        sent_at=sent_at or datetime.now(timezone.utc),
         message_type=message_type,
         transmitted_content=transmitted_content or {"body": "this is an emergency broadcast message"},
         transmitted_areas=transmitted_areas or broadcast_message.areas,
         transmitted_sender=transmitted_sender or "www.notifications.service.gov.uk",
         transmitted_starts_at=transmitted_starts_at,
-        transmitted_finishes_at=transmitted_finishes_at or datetime.utcnow() + timedelta(hours=24),
+        transmitted_finishes_at=transmitted_finishes_at or datetime.now(timezone.utc) + timedelta(hours=24),
     )
     db.session.add(b_e)
     db.session.commit()
@@ -399,3 +442,60 @@ def create_failed_login(ip, attempted_at):
     db.session.add(failed_login)
     db.session.commit()
     return failed_login
+
+
+def create_admin_action(service_id, created_by, action_type, action_data, status):
+    action = AdminAction(
+        service_id=service_id, created_by_id=created_by, action_type=action_type, action_data=action_data, status=status
+    )
+
+    db.session.add(action)
+    db.session.commit()
+    return action
+
+
+def create_broadcast_message_version(
+    *,
+    id=None,
+    broadcast_message_id=None,
+    created_by=None,
+    content="Test Broadcast Content",
+    areas=None,
+    created_at=None,
+    reference="Test Broadcast Reference",
+    created_by_id=None,
+    service_id=None,
+    duration=None,
+    extra_content=None,
+):
+    broadcast_message_version = BroadcastMessageHistory(
+        id=id,
+        broadcast_message_id=broadcast_message_id,
+        service_id=service_id,
+        created_by_id=created_by_id,
+        areas=areas or {"ids": [], "simple_polygons": []},
+        content=content,
+        created_at=created_at,
+        reference=reference,
+        duration=duration,
+        extra_content=extra_content,
+    )
+    db.session.add(broadcast_message_version)
+    db.session.commit()
+    return broadcast_message_version
+
+
+def create_broadcast_message_edit_reason(broadcast_message_id, service_id, edit_reason, user_id_1, user_id_2):
+    broadcast_message_edit_reason = BroadcastMessageEditReasons(
+        id=uuid.uuid4(),
+        broadcast_message_id=broadcast_message_id,
+        created_at=datetime.now(),
+        service_id=service_id,
+        created_by_id=user_id_1,
+        edit_reason=edit_reason,
+        submitted_by_id=user_id_2,
+        submitted_at=datetime.now(),
+    )
+    db.session.add(broadcast_message_edit_reason)
+    db.session.commit()
+    return broadcast_message_edit_reason

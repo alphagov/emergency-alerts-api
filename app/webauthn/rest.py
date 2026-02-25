@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, current_app, jsonify, request
 
 from app.dao.users_dao import get_user_by_id
 from app.dao.webauthn_credential_dao import (
@@ -9,6 +9,7 @@ from app.dao.webauthn_credential_dao import (
 )
 from app.errors import InvalidRequest, register_errors
 from app.schema_validation import validate
+from app.webauthn.utils import send_security_key_change_email
 from app.webauthn.webauthn_schema import (
     post_create_webauthn_credential_schema,
     post_update_webauthn_credential_schema,
@@ -24,15 +25,30 @@ def get_webauthn_credentials(user_id):
     return jsonify(data=[cred.serialize() for cred in user.webauthn_credentials]), 200
 
 
+@webauthn_blueprint.route("/check-credentials", methods=["GET"])
+def get_count_of_credentials_by_user(user_id):
+    user = get_user_by_id(user_id)
+    return jsonify(data=str(len(user.webauthn_credentials))), 200
+
+
 @webauthn_blueprint.route("", methods=["POST"])
 def create_webauthn_credential(user_id):
     data = request.get_json()
+    user = get_user_by_id(user_id)
     validate(data, post_create_webauthn_credential_schema)
     webauthn_credential = dao_create_webauthn_credential(
         user_id=user_id,
         name=data["name"],
         credential_data=data["credential_data"],
         registration_response=data["registration_response"],
+    )
+    send_security_key_change_email(
+        user.email_address,
+        current_app.config["EAS_EMAIL_REPLY_TO_ID"],
+        user.name,
+        "added",
+        "added to",
+        "add this security key to",
     )
 
     return jsonify(data=webauthn_credential.serialize()), 201
@@ -60,5 +76,13 @@ def delete_webauthn_credential(user_id, webauthn_credential_id):
         raise InvalidRequest("Cannot delete last remaining webauthn credential for user", status_code=400)
 
     dao_delete_webauthn_credential(webauthn_credential)
+    send_security_key_change_email(
+        user.email_address,
+        current_app.config["EAS_EMAIL_REPLY_TO_ID"],
+        user.name,
+        "deleted",
+        "deleted from",
+        "delete this security key from",
+    )
 
     return "", 204

@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytz
 from emergency_alerts_utils.url_safe_token import generate_token
@@ -32,7 +32,7 @@ def escape_special_characters(string):
 
 
 def get_archived_db_column_value(column):
-    date = datetime.utcnow().strftime("%Y-%m-%d")
+    date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     return f"_archived_{date}_{column}"
 
 
@@ -77,14 +77,15 @@ def log_auth_activity(user, message, admin_only=True):
             "user_name": user.name,
             "email_address": user.email_address,
             "auth_type": user.auth_type,
-            "platform_admin": user.platform_admin,
+            "platform_admin_capable": user.platform_admin_capable,
+            "platform_admin_redemption": user.platform_admin_redemption,
             "failed_login_count": user.failed_login_count,
             "current_session_id": user.current_session_id,
         }
     else:
         data = {"email_address": user}
 
-    if (admin_only and user.platform_admin) or (not admin_only):
+    if (admin_only and user.platform_admin_capable) or (not admin_only):
         current_app.logger.info(
             message,
             extra=data,
@@ -117,7 +118,15 @@ def get_ip_address():
 
 
 def calculate_delay_period(failed_login_count):
-    delay = 10 * (2 ** (failed_login_count - 1))
+    # Period in which user cannot make login requests, in seconds
+    if failed_login_count == 1:
+        delay = 0
+    elif failed_login_count == 2:
+        delay = 1
+    elif failed_login_count == 3:
+        delay = 2
+    else:
+        delay = 2 * calculate_delay_period(failed_login_count - 1)
     return min(delay, current_app.config["MAX_THROTTLE_PERIOD"])
 
 

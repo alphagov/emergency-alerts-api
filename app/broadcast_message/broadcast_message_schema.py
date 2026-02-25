@@ -18,21 +18,7 @@ create_broadcast_message_schema = {
         "content": {"type": "string", "minLength": 1},
         "reference": {"type": "string", "minLength": 1, "maxLength": 255},
     },
-    "required": ["service_id", "created_by"],
-    "allOf": [
-        {
-            "oneOf": [
-                {"required": ["template_id"]},
-                {"required": ["content"]},
-            ]
-        },
-        {
-            "oneOf": [
-                {"required": ["template_id"]},
-                {"required": ["reference"]},
-            ]
-        },
-    ],
+    "required": ["service_id", "created_by", "reference", "content"],
     "additionalProperties": False,
 }
 
@@ -49,6 +35,8 @@ update_broadcast_message_schema = {
         "starts_at": {"type": "string", "format": "datetime"},
         "finishes_at": {"type": "string", "format": "datetime"},
         "areas": {"type": "object"},
+        "created_by": uuid,
+        "extra_content": {"type": "string"},
     },
     "required": [],
     "additionalProperties": False,
@@ -65,5 +53,18 @@ update_broadcast_message_status_schema = {
         "created_by": uuid,
     },
     "required": ["status", "created_by"],
+    "additionalProperties": False,
+}
+
+return_broadcast_message_for_edit_schema = {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "description": "POST return broadcast message for edit schema",
+    "type": "object",
+    "title": "Return broadcast_message for edit",
+    "properties": {
+        "edit_reason": {"type": "string"},
+        "created_by": uuid,
+    },
+    "required": ["created_by", "edit_reason"],
     "additionalProperties": False,
 }

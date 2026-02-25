@@ -1,4 +1,4 @@
-from app.schema_validation.definitions import nullable_uuid
+from app.schema_validation.definitions import nullable_uuid, uuid
 
 post_verify_code_schema = {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -64,5 +64,16 @@ post_set_permissions_schema = {
         "folder_permissions": {"type": "array", "items": {"type": "string"}},
     },
     "required": ["permissions"],
+    "additionalProperties": False,
+}
+
+post_elevate_platform_admin_schema = {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "description": "POST schema for elevating a user to platform admin upon next login",
+    "type": "object",
+    "properties": {
+        "approved_by": uuid,
+    },
+    "required": ["approved_by"],
     "additionalProperties": False,
 }

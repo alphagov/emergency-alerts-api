@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy.orm import joinedload
 from sqlalchemy.sql.expression import asc
@@ -18,6 +18,7 @@ from app.models import (
     Organisation,
     Permission,
     Service,
+    ServiceBroadcastProviders,
     ServiceBroadcastSettings,
     ServicePermission,
     ServiceUser,
@@ -116,7 +117,7 @@ def dao_archive_service(service_id):
 
     for api_key in service.api_keys:
         if not api_key.expiry_date:
-            api_key.expiry_date = datetime.utcnow()
+            api_key.expiry_date = datetime.now(timezone.utc)
 
 
 def dao_fetch_service_by_id_and_user(service_id, user_id):
@@ -246,11 +247,13 @@ def delete_service_created_for_functional_testing(service):
     def _delete(query):
         query.delete(synchronize_session=False)
 
-    _delete(Permission.query.filter_by(service=service))
-    _delete(ServiceBroadcastSettings.query.filter_by(service_id=service.id))
-    _delete(ServicePermission.query.filter_by(service_id=service.id))
+    _delete(Permission.query.filter_by(service_id=service.id))
     _delete(ServiceUser.query.filter_by(service_id=service.id))
+    _delete(ServicePermission.query.filter_by(service_id=service.id))
+    _delete(ServiceBroadcastSettings.query.filter_by(service_id=service.id))
+    _delete(ServiceBroadcastProviders.query.filter_by(service_id=service.id))
     db.session.delete(service)
+    db.session.commit()
 
 
 def dao_fetch_active_users_for_service(service_id):

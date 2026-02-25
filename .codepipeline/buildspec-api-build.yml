@@ -3,11 +3,6 @@ version: 0.2
 phases:
   pre_build:
     commands:
-      - |
-        if [ -n "$COMMIT_ID" ]; then
-          echo Checking out to api_${ENVIRONMENT}_latest tag...
-          git checkout tags/api_${ENVIRONMENT}_latest
-        fi
       - echo Logging in to Amazon ECR...
       - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS
         --password-stdin $ACCOUNT_NUMBER.dkr.ecr.$AWS_REGION.amazonaws.com
@@ -15,9 +10,11 @@ phases:
     commands:
       - |
         TAGS="-t $REPOSITORY_URI:latest -t $REPOSITORY_URI:pipeline_$EXECUTION_ID"
+        IMAGE_COMMIT_TAG=latest
         if [ -n "$COMMIT_ID" ]; then
           COMMIT_ID=$(echo $COMMIT_ID | cut -c 1-7)
           TAGS="$TAGS -t $REPOSITORY_URI:commit_$COMMIT_ID"
+          IMAGE_COMMIT_TAG=$REPOSITORY_URI:commit_$COMMIT_ID
         fi
       - echo Build started on `date`
       - echo Building Docker image...
@@ -25,6 +22,7 @@ phases:
       - docker build $TAGS -f Dockerfile.eas-api
         --build-arg ECS_ACCOUNT_NUMBER=$ACCOUNT_NUMBER
         --build-arg AWS_REGION=${AWS_REGION:-eu-west-2}
+        --build-arg APP_VERSION=$COMMIT_ID
         --build-arg RESOURCE_PREFIX=$TENANT_PREFIX --no-cache
         .
   post_build:
@@ -32,10 +30,9 @@ phases:
       - echo Building complete on `date`
       - echo Pushing the Docker image...
       - docker push --all-tags $REPOSITORY_URI
-      - aws ecs describe-task-definition --task-definition $TASK_DEFINITION_ARN | jq
-        '.taskDefinition' > taskdef.json
+      - aws ecs describe-task-definition --task-definition $TASK_DEFINITION_ARN > orig-taskdef.json
+      - cat orig-taskdef.json | jq '.taskDefinition | .containerDefinitions[0].image = "'$IMAGE_COMMIT_TAG'"' > taskdef.json
       - envsubst < .codepipeline/appspec-template.yaml > appspec.yaml
-
 artifacts:
   files:
     - appspec.yaml

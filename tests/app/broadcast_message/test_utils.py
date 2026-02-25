@@ -41,7 +41,7 @@ def test_update_broadcast_message_status_stores_approved_by_and_approved_at_and_
     assert len(broadcast_message.events) == 1
     alert_event = broadcast_message.events[0]
 
-    mock_task.assert_called_once_with(kwargs={"broadcast_event_id": str(alert_event.id)}, queue="broadcast-tasks")
+    mock_task.assert_called_once_with(kwargs={"broadcast_event_id": str(alert_event.id)}, queue="high-priority-tasks")
 
     assert alert_event.service_id == sample_broadcast_service.id
     assert alert_event.transmitted_areas == broadcast_message.areas
@@ -76,7 +76,7 @@ def test_update_broadcast_message_status_for_cancelling_broadcast_from_admin_int
     assert len(broadcast_message.events) == 1
     alert_event = broadcast_message.events[0]
 
-    mock_task.assert_called_once_with(kwargs={"broadcast_event_id": str(alert_event.id)}, queue="broadcast-tasks")
+    mock_task.assert_called_once_with(kwargs={"broadcast_event_id": str(alert_event.id)}, queue="high-priority-tasks")
 
     assert alert_event.service_id == sample_broadcast_service.id
     assert alert_event.message_type == BroadcastEventMessageType.CANCEL
@@ -107,7 +107,7 @@ def test_update_broadcast_message_status_for_cancelling_broadcast_from_API_call(
     assert len(broadcast_message.events) == 1
     alert_event = broadcast_message.events[0]
 
-    mock_task.assert_called_once_with(kwargs={"broadcast_event_id": str(alert_event.id)}, queue="broadcast-tasks")
+    mock_task.assert_called_once_with(kwargs={"broadcast_event_id": str(alert_event.id)}, queue="high-priority-tasks")
 
     assert alert_event.service_id == sample_broadcast_service.id
     assert alert_event.message_type == BroadcastEventMessageType.CANCEL
@@ -167,6 +167,11 @@ def test_update_broadcast_message_status_for_rejecting_broadcast_from_API_call(s
         (BroadcastStatusType.DRAFT, BroadcastStatusType.DRAFT),
         (BroadcastStatusType.DRAFT, BroadcastStatusType.BROADCASTING),
         (BroadcastStatusType.DRAFT, BroadcastStatusType.CANCELLED),
+        (BroadcastStatusType.DRAFT, BroadcastStatusType.RETURNED),
+        (BroadcastStatusType.RETURNED, BroadcastStatusType.DRAFT),
+        (BroadcastStatusType.RETURNED, BroadcastStatusType.BROADCASTING),
+        (BroadcastStatusType.RETURNED, BroadcastStatusType.CANCELLED),
+        (BroadcastStatusType.RETURNED, BroadcastStatusType.RETURNED),
         (BroadcastStatusType.PENDING_APPROVAL, BroadcastStatusType.PENDING_APPROVAL),
         (BroadcastStatusType.PENDING_APPROVAL, BroadcastStatusType.CANCELLED),
         (BroadcastStatusType.PENDING_APPROVAL, BroadcastStatusType.COMPLETED),
@@ -177,14 +182,17 @@ def test_update_broadcast_message_status_for_rejecting_broadcast_from_API_call(s
         (BroadcastStatusType.BROADCASTING, BroadcastStatusType.DRAFT),
         (BroadcastStatusType.BROADCASTING, BroadcastStatusType.PENDING_APPROVAL),
         (BroadcastStatusType.BROADCASTING, BroadcastStatusType.BROADCASTING),
+        (BroadcastStatusType.BROADCASTING, BroadcastStatusType.RETURNED),
         (BroadcastStatusType.COMPLETED, BroadcastStatusType.DRAFT),
         (BroadcastStatusType.COMPLETED, BroadcastStatusType.PENDING_APPROVAL),
         (BroadcastStatusType.COMPLETED, BroadcastStatusType.BROADCASTING),
         (BroadcastStatusType.COMPLETED, BroadcastStatusType.CANCELLED),
+        (BroadcastStatusType.COMPLETED, BroadcastStatusType.RETURNED),
         (BroadcastStatusType.CANCELLED, BroadcastStatusType.DRAFT),
         (BroadcastStatusType.CANCELLED, BroadcastStatusType.PENDING_APPROVAL),
         (BroadcastStatusType.CANCELLED, BroadcastStatusType.BROADCASTING),
         (BroadcastStatusType.CANCELLED, BroadcastStatusType.COMPLETED),
+        (BroadcastStatusType.CANCELLED, BroadcastStatusType.RETURNED),
     ],
 )
 def test_update_broadcast_message_status_restricts_status_transitions_to_explicit_list(
@@ -204,11 +212,13 @@ def test_update_broadcast_message_status_restricts_status_transitions_to_explici
 
 
 @pytest.mark.parametrize("is_platform_admin", [True, False])
-def test_update_broadcast_message_status_rejects_approval_from_creator(
+def test_update_broadcast_message_status_rejects_approval_from_submitter(
     sample_broadcast_service, mocker, is_platform_admin
 ):
     template = create_template(sample_broadcast_service, BROADCAST_TYPE)
-    broadcast_message = create_broadcast_message(template, status=BroadcastStatusType.PENDING_APPROVAL)
+    broadcast_message = create_broadcast_message(
+        template, status=BroadcastStatusType.PENDING_APPROVAL, submitted_by=sample_broadcast_service.created_by
+    )
     creator_and_approver = sample_broadcast_service.created_by
     creator_and_approver.platform_admin = is_platform_admin
     mock_task = mocker.patch("app.celery.broadcast_message_tasks.send_broadcast_event.apply_async")
@@ -217,7 +227,7 @@ def test_update_broadcast_message_status_rejects_approval_from_creator(
         update_broadcast_message_status(broadcast_message, BroadcastStatusType.BROADCASTING, creator_and_approver)
 
     assert mock_task.called is False
-    assert "cannot approve their own broadcast" in str(e.value)
+    assert "cannot approve an alert that you submitted for approval" in str(e.value)
 
 
 def test_update_broadcast_message_status_rejects_approval_of_broadcast_with_no_areas(
@@ -318,7 +328,7 @@ def test_update_broadcast_message_status_creates_event_with_correct_content_if_b
     assert len(broadcast_message.events) == 1
     alert_event = broadcast_message.events[0]
 
-    mock_task.assert_called_once_with(kwargs={"broadcast_event_id": str(alert_event.id)}, queue="broadcast-tasks")
+    mock_task.assert_called_once_with(kwargs={"broadcast_event_id": str(alert_event.id)}, queue="high-priority-tasks")
 
     assert alert_event.transmitted_content == {"body": "tailor made emergency broadcast content"}
 

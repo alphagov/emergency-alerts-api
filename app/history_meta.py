@@ -14,6 +14,7 @@ Lastly when to create a version is done manually in dao_utils version decorator 
 session events.
 
 """
+
 import datetime
 
 from sqlalchemy import Column, ForeignKeyConstraint, Integer, Table, util
@@ -185,10 +186,10 @@ def create_history(obj, history_cls=None):
 
     if not obj.version:
         obj.version = 1
-        obj.created_at = datetime.datetime.utcnow()
+        obj.created_at = datetime.datetime.now(datetime.timezone.utc)
     else:
         obj.version += 1
-        now = datetime.datetime.utcnow()
+        now = datetime.datetime.now(datetime.timezone.utc)
         obj.updated_at = now
         data["updated_at"] = now
 

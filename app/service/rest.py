@@ -10,7 +10,10 @@ from app.dao.api_key_dao import (
     get_unsigned_secret,
     save_model_api_key,
 )
-from app.dao.broadcast_service_dao import set_broadcast_service_type
+from app.dao.broadcast_service_dao import (
+    get_service_broadcast_providers,
+    set_broadcast_service_type,
+)
 from app.dao.dao_utils import transaction
 from app.dao.failed_logins_dao import dao_delete_all_failed_logins_for_ip
 from app.dao.organisation_dao import dao_get_organisation_by_service_id
@@ -29,6 +32,7 @@ from app.dao.services_dao import (
 )
 from app.dao.users_dao import (
     delete_model_user,
+    delete_permissions_for_user,
     delete_user_verify_codes,
     get_user_by_id,
     get_users_by_partial_email,
@@ -36,7 +40,7 @@ from app.dao.users_dao import (
 from app.errors import InvalidRequest, register_errors
 from app.models import Permission, Service
 from app.schema_validation import validate
-from app.schemas import api_key_schema, service_schema
+from app.schemas import api_key_schema, providers_schema, service_schema
 from app.service.sender import send_notification_to_service_users
 from app.service.service_broadcast_settings_schema import (
     service_broadcast_settings_schema,
@@ -98,6 +102,14 @@ def get_service_by_id(service_id):
     fetched = dao_fetch_service_by_id(service_id)
 
     data = service_schema.dump(fetched)
+    return jsonify(data=data)
+
+
+@service_blueprint.route("/<uuid:service_id>/broadcast-providers", methods=["GET"])
+def get_broadcast_providers_for_service(service_id):
+    fetched = get_service_broadcast_providers(service_id=service_id)
+
+    data = providers_schema.dump(fetched, many=True)
     return jsonify(data=data)
 
 
@@ -324,9 +336,10 @@ def purge_users_created_by_tests():
         raise InvalidRequest("Endpoint not found", status_code=404)
 
     try:
-        users = get_users_by_partial_email("emergency-alerts-fake-")
+        users = get_users_by_partial_email("emergency-alerts-tests+fake-")
         for user in users:
             delete_user_verify_codes(user=user)
+            delete_permissions_for_user(user=user)
             delete_model_user(user=user)
     except Exception as e:
         return jsonify(result="error", message=f"Unable to purge users created by functional tests: {e}"), 500

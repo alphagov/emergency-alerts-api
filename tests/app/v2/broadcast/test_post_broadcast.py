@@ -168,7 +168,12 @@ def test_valid_cancel_broadcast_request_calls_update_broadcast_message_status_an
         (
             sample_cap_xml_documents.WAINFLEET_CANCEL_WITH_MISSING_REFERENCES,
             400,
-            [{"error": "BadRequestError", "message": "Missing <references>"}],
+            [
+                {
+                    "error": "BadRequestError",
+                    "message": "Unable to cancel broadcast. Cap_xml is missing field: <references>",
+                }
+            ],
         ),
     ),
 )
@@ -237,7 +242,8 @@ def test_cancel_raises_error_if_multiple_broadcasts_referenced(
     assert response_for_cancel_json["errors"] == [
         {
             "error": "BadRequestError",
-            "message": "Multiple alerts found - unclear which one to cancel",
+            "message": "Multiple alerts found - unclear which one to cancel."
+            " Ensure references uniquely identify a single alert.",
         }
     ]
 
@@ -339,10 +345,10 @@ def test_large_polygon_is_simplified(
     response_json = json.loads(response.get_data(as_text=True))
 
     assert len(response_json["areas"]["simple_polygons"]) == 1
-    assert len(response_json["areas"]["simple_polygons"][0]) == 110
+    assert len(response_json["areas"]["simple_polygons"][0]) == 109
 
-    assert response_json["areas"]["simple_polygons"][0][0] == [54.419546, -2.988521]
-    assert response_json["areas"]["simple_polygons"][0][-1] == [54.419546, -2.988521]
+    assert response_json["areas"]["simple_polygons"][0][0] == [54.418464, -2.987825]
+    assert response_json["areas"]["simple_polygons"][0][-1] == [54.418464, -2.987825]
 
 
 @pytest.mark.parametrize("training_mode_service", [True, False])
@@ -366,17 +372,19 @@ def test_valid_post_cap_xml_broadcast_sets_stubbed_to_true_for_training_mode_ser
 
 
 @pytest.mark.parametrize(
-    "xml_document",
+    ("xml_document", "error_suffix"),
     (
-        "<alert>Oh no</alert>",
-        '<?xml version="1.0" encoding="utf-8" ?><foo><bar/></foo>',
+        (
+            "<alert>Oh no</alert>",
+            "Element 'alert': No matching global declaration available for the validation root., line 1",
+        ),
+        (
+            '<?xml version="1.0" encoding="utf-8" ?><foo><bar/></foo>',
+            "Element 'foo': No matching global declaration available for the validation root., line 1",
+        ),
     ),
 )
-def test_invalid_post_cap_xml_broadcast_returns_400(
-    client,
-    sample_broadcast_service,
-    xml_document,
-):
+def test_invalid_post_cap_xml_broadcast_returns_400(client, sample_broadcast_service, xml_document, error_suffix):
     auth_header = create_service_authorization_header(service_id=sample_broadcast_service.id)
 
     response = client.post(
@@ -387,7 +395,12 @@ def test_invalid_post_cap_xml_broadcast_returns_400(
 
     assert response.status_code == 400
     assert json.loads(response.get_data(as_text=True)) == {
-        "errors": [{"error": "BadRequestError", "message": "Request data is not valid CAP XML"}],
+        "errors": [
+            {
+                "error": "BadRequestError",
+                "message": "Request data is not valid CAP XML: " + error_suffix,
+            }
+        ],
         "status_code": 400,
     }
 
@@ -463,6 +476,66 @@ def test_invalid_areas_returns_400(client, sample_broadcast_service):
         ],
         "status_code": 400,
     }
+
+
+@pytest.mark.parametrize(
+    "xml_document, expected_exception, expected_message, status_code",
+    (
+        (
+            sample_cap_xml_documents.VALID_AREA_POLYGON,
+            None,
+            None,
+            201,
+        ),
+        (
+            sample_cap_xml_documents.INVALID_AREA_WITH_INTERSECTIONS,
+            "ValidationError",
+            "Invalid polygon(s): {'result': 'error', 'message': 'Invalid polygon:"
+            " Self-intersection[53.2385475878471 -0.537929124449147]'}",
+            400,
+        ),
+        (
+            sample_cap_xml_documents.INVALID_DEGENERATE_AREA,
+            "ValidationError",
+            "areas [[0.27094, 51.41723], [0.2569, 51.41723]] is not valid under any of the given schemas",
+            400,
+        ),
+        (
+            sample_cap_xml_documents.INVALID_AREA_WITH_DUPLICATED_VERTEX,
+            "ValidationError",
+            "Invalid polygon(s): {'result': 'error', 'message': 'Invalid polygon:"
+            " Ring Self-intersection[53.24471 -0.53508]'}",
+            400,
+        ),
+        (
+            sample_cap_xml_documents.INVALID_AREA_WITH_HOLE,
+            "ValidationError",
+            "Invalid polygon(s): {'result': 'error', 'message': 'Overlapping areas are not supported.'}",
+            400,
+        ),
+    ),
+)
+def test_invalid_area_polygons_returns_400(
+    client,
+    sample_broadcast_service,
+    xml_document,
+    expected_exception,
+    expected_message,
+    status_code,
+):
+    auth_header = create_service_authorization_header(service_id=sample_broadcast_service.id)
+    response = client.post(
+        path="/v2/broadcast",
+        data=xml_document,
+        headers=[("Content-Type", "application/cap+xml"), auth_header],
+    )
+
+    errors = response.json.get("errors")
+    if errors:
+        assert errors[0]["error"] == expected_exception
+        assert errors[0]["message"] == expected_message
+
+    assert response.status_code == status_code
 
 
 def test_request_for_status_returns_allowed_methods(client, sample_broadcast_service):

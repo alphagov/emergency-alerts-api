@@ -5,6 +5,7 @@ Revises: 0138_sms_sender_nullable.py
 Create Date: 2017-11-10 21:42:59.715203
 
 """
+
 from alembic import op
 
 revision = "0139_migrate_sms_allowance_data"
@@ -32,7 +33,7 @@ def upgrade():
     #      FROM services WHERE id NOT IN
     #     (select service_id from annual_billing)
     # """.format(
-    #     current_year, default_limit, datetime.utcnow(), datetime.utcnow()
+    #     current_year, default_limit, datetime.now(timezone.utc), datetime.now(timezone.utc)
     # )
     # op.execute(insert_row_if_not_exist)
 

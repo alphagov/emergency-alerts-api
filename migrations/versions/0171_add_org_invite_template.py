@@ -5,7 +5,8 @@ Revises: 0170_hidden_non_nullable
 Create Date: 2018-02-16 14:16:43.618062
 
 """
-from datetime import datetime
+
+from datetime import datetime, timezone
 
 from alembic import op
 from flask import current_app
@@ -50,7 +51,7 @@ def upgrade():
             template_id,
             template_name,
             "email",
-            datetime.utcnow(),
+            datetime.now(timezone.utc),
             template_content,
             current_app.config["NOTIFY_SERVICE_ID"],
             template_subject,
@@ -64,7 +65,7 @@ def upgrade():
             template_id,
             template_name,
             "email",
-            datetime.utcnow(),
+            datetime.now(timezone.utc),
             template_content,
             current_app.config["NOTIFY_SERVICE_ID"],
             template_subject,
@@ -80,7 +81,7 @@ def upgrade():
     #         INSERT INTO template_redacted (template_id, redact_personalisation, updated_at, updated_by_id)
     #         VALUES ('{}', '{}', '{}', '{}')
     #         ;
-    #     """.format(template_id, False, datetime.utcnow(), current_app.config['NOTIFY_USER_ID'])
+    #     """.format(template_id, False, datetime.now(timezone.utc), current_app.config['NOTIFY_USER_ID'])
     # )
 
     # clean up constraints on org_to_service - service_id-org_id constraint is redundant

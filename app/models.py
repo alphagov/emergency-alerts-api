@@ -1,7 +1,14 @@
 import datetime
 import uuid
 
+from emergency_alerts_utils.admin_action import (
+    ADMIN_ACTION_LIST,
+    ADMIN_STATUS_LIST,
+)
 from emergency_alerts_utils.template import BroadcastMessageTemplate
+from emergency_alerts_utils.xml.cap import (
+    convert_utc_datetime_to_cap_standard_string,
+)
 from flask import current_app, url_for
 from sqlalchemy import CheckConstraint, Index, UniqueConstraint
 from sqlalchemy.dialects.postgresql import INET, JSON, JSONB, UUID
@@ -32,6 +39,10 @@ USER_AUTH_TYPES = [SMS_AUTH_TYPE, EMAIL_AUTH_TYPE, WEBAUTHN_AUTH_TYPE]
 
 DELIVERY_STATUS_CALLBACK_TYPE = "delivery_status"
 SERVICE_CALLBACK_TYPES = [DELIVERY_STATUS_CALLBACK_TYPE]
+
+
+def utc_now():
+    return datetime.datetime.now(datetime.timezone.utc)
 
 
 def filter_null_value_fields(obj):
@@ -71,7 +82,9 @@ class User(db.Model):
     logged_in_at = db.Column(db.DateTime, nullable=True)
     failed_login_count = db.Column(db.Integer, nullable=False, default=0)
     state = db.Column(db.String, nullable=False, default="pending")
-    platform_admin = db.Column(db.Boolean, nullable=False, default=False)
+    platform_admin_capable = db.Column(db.Boolean, nullable=False, default=False)
+    # To become a platform admin on next login if not in the past: (will be NULL-ed on redemption)
+    platform_admin_redemption = db.Column(db.DateTime, nullable=True, default=None)
     current_session_id = db.Column(UUID(as_uuid=True), nullable=True)
     auth_type = db.Column(db.String, db.ForeignKey("auth_type.name"), index=True, nullable=False, default=SMS_AUTH_TYPE)
     email_access_validated_at = db.Column(
@@ -90,7 +103,7 @@ class User(db.Model):
 
     @property
     def can_use_webauthn(self):
-        if self.platform_admin:
+        if self.platform_admin_capable:
             return True
 
         if self.auth_type == "webauthn_auth":
@@ -137,7 +150,10 @@ class User(db.Model):
             "organisations": [x.id for x in self.organisations if x.active],
             "password_changed_at": self.password_changed_at.strftime(DATETIME_FORMAT_NO_TIMEZONE),
             "permissions": self.get_permissions(),
-            "platform_admin": self.platform_admin,
+            # TODO: Remove this one after admin is fully deployed and uses _capable and _redemption:
+            "platform_admin": self.platform_admin_capable,
+            "platform_admin_capable": self.platform_admin_capable,
+            "platform_admin_redemption": get_dt_string_or_none(self.platform_admin_redemption),
             "services": [x.id for x in self.services if x.active],
             "can_use_webauthn": self.can_use_webauthn,
             "state": self.state,
@@ -303,7 +319,7 @@ class Service(db.Model, Versioned):
 
     notes = db.Column(db.Text, nullable=True)
 
-    allowed_broadcast_provider = association_proxy("service_broadcast_settings", "provider")
+    allowed_broadcast_provider = association_proxy("service_broadcast_providers", "provider")
     broadcast_channel = association_proxy("service_broadcast_settings", "channel")
 
     @classmethod
@@ -334,10 +350,8 @@ class Service(db.Model, Versioned):
 
     def get_available_broadcast_providers(self):
         # There may be future checks here if we add, for example, platform admin level provider killswitches.
-        if self.allowed_broadcast_provider != ALL_BROADCAST_PROVIDERS:
-            return [x for x in current_app.config["ENABLED_CBCS"] if x == self.allowed_broadcast_provider]
-        else:
-            return current_app.config["ENABLED_CBCS"]
+        providers = set(self.allowed_broadcast_provider) & current_app.config["ENABLED_CBCS"]
+        return list(providers)
 
 
 class ServicePermission(db.Model):
@@ -470,11 +484,6 @@ class ApiKey(db.Model, Versioned):
             self._secret = encryption.encrypt(str(secret))
 
 
-KEY_TYPE_NORMAL = "normal"
-KEY_TYPE_TEAM = "team"
-KEY_TYPE_TEST = "test"
-
-
 class KeyTypes(db.Model):
     __tablename__ = "key_types"
 
@@ -546,13 +555,14 @@ class TemplateBase(db.Model):
         super().__init__(**kwargs)
 
     id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    name = db.Column(db.String(255), nullable=False)
+    reference = db.Column(db.String(255), nullable=False)
     template_type = db.Column(template_types, nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
     updated_at = db.Column(db.DateTime, onupdate=datetime.datetime.utcnow)
     content = db.Column(db.Text, nullable=False)
     archived = db.Column(db.Boolean, nullable=False, default=False)
     broadcast_data = db.Column(JSONB(none_as_null=True), nullable=True)
+    areas = db.Column(JSONB(none_as_null=True), nullable=False, default=dict)
 
     @declared_attr
     def service_id(cls):
@@ -579,7 +589,8 @@ class TemplateBase(db.Model):
             "created_by": self.created_by.email_address,
             "version": self.version,
             "body": self.content,
-            "name": self.name,
+            "reference": self.reference,
+            "areas": self.areas,
         }
 
         return serialized
@@ -648,7 +659,7 @@ class VerifyCode(db.Model):
     )
     expiry_datetime = db.Column(db.DateTime, nullable=False)
     code_used = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, index=False, unique=False, nullable=False, default=datetime.datetime.utcnow)
+    created_at = db.Column(db.DateTime, index=False, unique=False, nullable=False, default=utc_now)
 
     @property
     def code(self):
@@ -776,6 +787,39 @@ class Permission(db.Model):
     __table_args__ = (UniqueConstraint("service_id", "user_id", "permission", name="uix_service_user_permission"),)
 
 
+class AdminAction(db.Model):
+    __tablename__ = "admin_actions"
+
+    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"), index=True, nullable=True)
+    service = db.relationship("Service")
+    action_type = db.Column(db.Enum(*ADMIN_ACTION_LIST, name="admin_action_types"), nullable=False)
+    action_data = db.Column(JSON, nullable=False)  # Params for the relevant action
+
+    created_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), index=True, nullable=False)
+    created_by = db.relationship("User", foreign_keys=[created_by_id])
+    created_at = db.Column(db.DateTime, nullable=False, default=utc_now)
+
+    status = db.Column(db.Enum(*ADMIN_STATUS_LIST, name="admin_action_status_types"), nullable=False)
+
+    reviewed_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), index=True, nullable=True)
+    reviewed_by = db.relationship("User", foreign_keys=[reviewed_by_id])
+    reviewed_at = db.Column(db.DateTime, nullable=True)
+
+    def serialize(self):
+        return {
+            "id": str(self.id),
+            "service_id": str(self.service_id) if self.service_id else None,
+            "action_type": self.action_type,
+            "action_data": self.action_data,
+            "created_by": str(self.created_by_id),
+            "created_at": str(self.created_at.strftime(DATETIME_FORMAT)),
+            "status": self.status,
+            "reviewed_by": str(self.reviewed_by_id) if self.reviewed_by_id else None,
+            "reviewed_at": str(self.reviewed_at.strftime(DATETIME_FORMAT)) if self.reviewed_at else None,
+        }
+
+
 class Event(db.Model):
     __tablename__ = "events"
 
@@ -800,22 +844,24 @@ class BroadcastStatusType(db.Model):
     COMPLETED = "completed"
     CANCELLED = "cancelled"
     TECHNICAL_FAILURE = "technical-failure"
+    RETURNED = "returned"
 
-    STATUSES = [DRAFT, PENDING_APPROVAL, REJECTED, BROADCASTING, COMPLETED, CANCELLED, TECHNICAL_FAILURE]
+    STATUSES = [DRAFT, PENDING_APPROVAL, REJECTED, BROADCASTING, COMPLETED, CANCELLED, TECHNICAL_FAILURE, RETURNED]
 
     # a broadcast message can be edited while in one of these states
-    PRE_BROADCAST_STATUSES = [DRAFT, PENDING_APPROVAL, REJECTED]
+    PRE_BROADCAST_STATUSES = [DRAFT, PENDING_APPROVAL, REJECTED, RETURNED]
     LIVE_STATUSES = [BROADCASTING, COMPLETED, CANCELLED]
 
     # these are only the transitions we expect to administer via the API code.
     ALLOWED_STATUS_TRANSITIONS = {
-        DRAFT: {PENDING_APPROVAL},
-        PENDING_APPROVAL: {REJECTED, DRAFT, BROADCASTING},
-        REJECTED: {DRAFT, PENDING_APPROVAL},
+        DRAFT: {REJECTED, PENDING_APPROVAL},
+        PENDING_APPROVAL: {REJECTED, BROADCASTING, RETURNED},
+        REJECTED: {},
         BROADCASTING: {COMPLETED, CANCELLED},
         COMPLETED: {},
         CANCELLED: {},
         TECHNICAL_FAILURE: {},
+        RETURNED: {PENDING_APPROVAL},
     }
 
     name = db.Column(db.String, primary_key=True)
@@ -861,22 +907,34 @@ class BroadcastMessage(db.Model):
     starts_at = db.Column(db.DateTime, nullable=True)
     finishes_at = db.Column(db.DateTime, nullable=True)  # also isn't updated if user cancels
 
+    # Set to true after GovUK has (re)published after being requested to
+    finished_govuk_acknowledged: bool = db.Column(db.Boolean, nullable=False, default=False)
+
+    # Set to true to stop the message being shown on the current/past alert
+    # page of the Admin UI or rendered on the gov.uk/alerts page/feed
+    exclude: bool = db.Column(db.Boolean, nullable=False, default=False)
+
     # these times correspond to when
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
     approved_at = db.Column(db.DateTime, nullable=True)
     cancelled_at = db.Column(db.DateTime, nullable=True)
     rejected_at = db.Column(db.DateTime, nullable=True)
     updated_at = db.Column(db.DateTime, nullable=True, onupdate=datetime.datetime.utcnow)
+    submitted_at = db.Column(db.DateTime, nullable=True)
 
     created_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=True)
     approved_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=True)
     cancelled_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=True)
     rejected_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=True)
+    submitted_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=True)
+    updated_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=True)
 
     created_by = db.relationship("User", foreign_keys=[created_by_id])
     approved_by = db.relationship("User", foreign_keys=[approved_by_id])
     cancelled_by = db.relationship("User", foreign_keys=[cancelled_by_id])
     rejected_by = db.relationship("User", foreign_keys=[rejected_by_id])
+    submitted_by = db.relationship("User", foreign_keys=[submitted_by_id])
+    updated_by = db.relationship("User", foreign_keys=[updated_by_id])
 
     created_by_api_key_id = db.Column(UUID(as_uuid=True), db.ForeignKey("api_keys.id"), nullable=True)
     cancelled_by_api_key_id = db.Column(UUID(as_uuid=True), db.ForeignKey("api_keys.id"), nullable=True)
@@ -884,6 +942,8 @@ class BroadcastMessage(db.Model):
     cancelled_by_api_key = db.relationship("ApiKey", foreign_keys=[cancelled_by_api_key_id])
     rejected_by_api_key_id = db.Column(UUID(as_uuid=True), db.ForeignKey("api_keys.id"), nullable=True)
     rejected_by_api_key = db.relationship("ApiKey", foreign_keys=[rejected_by_api_key_id])
+
+    extra_content = db.Column(db.String, nullable=True)
 
     reference = db.Column(db.String(255), nullable=True)
     cap_event = db.Column(db.String(255), nullable=True)
@@ -910,9 +970,10 @@ class BroadcastMessage(db.Model):
             "service_id": str(self.service_id),
             "template_id": str(self.template_id) if self.template else None,
             "template_version": self.template_version,
-            "template_name": self.template.name if self.template else None,
+            "template_name": self.template.reference if (self.template and self.template.reference) else None,
             "personalisation": self.personalisation if self.template else None,
             "content": self.content,
+            "extra_content": self.extra_content or None,
             "areas": self.areas,
             "status": self.status,
             "duration": get_interval_seconds_or_none(self.duration),
@@ -923,12 +984,68 @@ class BroadcastMessage(db.Model):
             "cancelled_at": get_dt_string_or_none(self.cancelled_at),
             "rejected_at": get_dt_string_or_none(self.rejected_at),
             "updated_at": get_dt_string_or_none(self.updated_at),
+            "submitted_at": get_dt_string_or_none(self.submitted_at),
             "created_by_id": get_uuid_string_or_none(self.created_by_id),
+            "submitted_by_id": get_uuid_string_or_none(self.submitted_by_id),
+            "updated_by_id": get_uuid_string_or_none(self.updated_by_id),
             "approved_by_id": get_uuid_string_or_none(self.approved_by_id),
             "cancelled_by_id": get_uuid_string_or_none(self.cancelled_by_id),
             "rejected_by_id": get_uuid_string_or_none(self.rejected_by_id),
             "rejection_reason": self.rejection_reason if self.rejection_reason else None,
             "rejected_by_api_key_id": self.rejected_by_api_key_id or None,
+            "finished_govuk_acknowledged": self.finished_govuk_acknowledged,
+        }
+
+
+class BroadcastMessageHistory(db.Model):
+    __tablename__ = "broadcast_message_history"
+    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    broadcast_message_id = db.Column(UUID(as_uuid=True), db.ForeignKey("broadcast_message.id"))
+    reference = db.Column(db.String(255), nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=utc_now)
+    content = db.Column(db.String, nullable=False)
+    service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"))
+    created_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=True)
+    areas = db.Column(JSONB(none_as_null=True), nullable=False, default=dict)
+    duration = db.Column(db.Interval, nullable=True)
+    extra_content = db.Column(db.String, nullable=True)
+
+    def serialize(self):
+        return {
+            "id": str(self.id),
+            "broadcast_message_id": str(self.broadcast_message_id),
+            "reference": self.reference,
+            "service_id": str(self.service_id),
+            "content": self.content,
+            "areas": self.areas,
+            "created_at": get_dt_string_or_none(self.created_at),
+            "created_by_id": get_uuid_string_or_none(self.created_by_id),
+            "duration": get_interval_seconds_or_none(self.duration),
+            "extra_content": self.extra_content,
+        }
+
+
+class BroadcastMessageEditReasons(db.Model):
+    __tablename__ = "broadcast_message_edit_reasons"
+    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    broadcast_message_id = db.Column(UUID(as_uuid=True), db.ForeignKey("broadcast_message.id"))
+    created_at = db.Column(db.DateTime, nullable=False, default=utc_now)
+    submitted_at = db.Column(db.DateTime, nullable=False)
+    service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"))
+    created_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=True)
+    submitted_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), nullable=True)
+    edit_reason = db.Column(db.String, nullable=False)
+
+    def serialize(self):
+        return {
+            "id": str(self.id),
+            "broadcast_message_id": str(self.broadcast_message_id),
+            "service_id": str(self.service_id),
+            "created_at": get_dt_string_or_none(self.created_at),
+            "submitted_at": get_dt_string_or_none(self.submitted_at),
+            "created_by_id": get_uuid_string_or_none(self.created_by_id),
+            "edit_reason": str(self.edit_reason),
+            "submitted_by_id": get_uuid_string_or_none(self.submitted_by_id),
         }
 
 
@@ -996,17 +1113,7 @@ class BroadcastEvent(db.Model):
         return self.formatted_datetime_for("transmitted_finishes_at")
 
     def formatted_datetime_for(self, property_name):
-        return self.convert_naive_utc_datetime_to_cap_standard_string(getattr(self, property_name))
-
-    @staticmethod
-    def convert_naive_utc_datetime_to_cap_standard_string(dt):
-        """
-        As defined in section 3.3.2 of
-        http://docs.oasis-open.org/emergency/cap/v1.2/CAP-v1.2-os.html
-        They define the standard "YYYY-MM-DDThh:mm:ssXzh:zm", where X is
-        `+` if the timezone is > UTC, otherwise `-`
-        """
-        return f"{dt.strftime('%Y-%m-%dT%H:%M:%S')}-00:00"
+        return convert_utc_datetime_to_cap_standard_string(getattr(self, property_name))
 
     def get_provider_message(self, provider):
         return next(
@@ -1063,10 +1170,10 @@ class BroadcastProvider:
     THREE = "three"
     O2 = "o2"
 
-    PROVIDERS = [EE, VODAFONE, THREE, O2]
+    PROVIDERS = [EE, O2, THREE, VODAFONE]
 
 
-ALL_BROADCAST_PROVIDERS = "all"
+ALL_BROADCAST_PROVIDERS = BroadcastProvider.PROVIDERS
 
 
 class BroadcastProviderMessageStatus:
@@ -1135,9 +1242,22 @@ class ServiceBroadcastSettings(db.Model):
     service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"), primary_key=True, nullable=False)
     service = db.relationship(Service, backref=db.backref("service_broadcast_settings", uselist=False))
     channel = db.Column(db.String(255), db.ForeignKey("broadcast_channel_types.name"), nullable=False)
-    provider = db.Column(db.String, db.ForeignKey("broadcast_provider_types.name"), nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
     updated_at = db.Column(db.DateTime, nullable=True, onupdate=datetime.datetime.utcnow)
+
+
+class ServiceBroadcastProviders(db.Model):
+    """
+    Every broadcast service has one row per MNO to which it sends broadcasts.
+    """
+
+    __tablename__ = "service_broadcast_providers"
+
+    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"), nullable=False)
+    service = db.relationship(Service, backref=db.backref("service_broadcast_providers", uselist=True))
+    provider = db.Column(db.String, db.ForeignKey("broadcast_provider_types.name"), nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
 
 
 class BroadcastChannelTypes(db.Model):
@@ -1150,28 +1270,6 @@ class BroadcastProviderTypes(db.Model):
     __tablename__ = "broadcast_provider_types"
 
     name = db.Column(db.String(255), primary_key=True)
-
-
-class ServiceBroadcastProviderRestriction(db.Model):
-    """
-    TODO: Drop this table as no longer used
-
-    Most services don't send broadcasts. Of those that do, most send to all broadcast providers.
-    However, some services don't send to all providers. These services are test services that we or the providers
-    themselves use.
-
-    This table links those services. There should only be one row per service in this table, and this is enforced by
-    the service_id being a primary key.
-    """
-
-    __tablename__ = "service_broadcast_provider_restriction"
-
-    service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"), primary_key=True, nullable=False)
-    service = db.relationship(Service, backref=db.backref("service_broadcast_provider_restriction", uselist=False))
-
-    provider = db.Column(db.String, nullable=False)
-
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
 
 
 class WebauthnCredential(db.Model):
@@ -1237,9 +1335,7 @@ class FailedLogin(db.Model):
 
     id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     ip = db.Column(INET)
-    attempted_at = db.Column(
-        db.DateTime, index=True, unique=False, nullable=False, default=datetime.datetime.now(datetime.timezone.utc)
-    )
+    attempted_at = db.Column(db.DateTime, index=True, unique=False, nullable=False, default=utc_now)
 
     def serialize(self):
         return {
@@ -1259,9 +1355,7 @@ class PasswordHistory(db.Model):
     id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = db.Column(UUID(as_uuid=True), default=uuid.uuid4)
     _password = db.Column(db.String, index=False, unique=False, nullable=False)
-    password_changed_at = db.Column(
-        db.DateTime, index=True, unique=False, nullable=False, default=datetime.datetime.now(datetime.timezone.utc)
-    )
+    password_changed_at = db.Column(db.DateTime, index=True, unique=False, nullable=False, default=utc_now)
 
     @property
     def password(self):

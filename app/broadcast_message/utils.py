@@ -1,9 +1,10 @@
 import inspect
-from datetime import datetime
+from datetime import datetime, timezone
 
 from emergency_alerts_utils.clients.zendesk.zendesk_client import (
     EASSupportTicket,
 )
+from emergency_alerts_utils.xml.common import SENDER
 from flask import current_app
 
 from app import zendesk_client
@@ -24,19 +25,24 @@ def update_broadcast_message_status(
     _validate_broadcast_update(broadcast_message, new_status, updating_user)
 
     if new_status == BroadcastStatusType.BROADCASTING:
-        broadcast_message.approved_at = datetime.utcnow()
+        broadcast_message.approved_at = datetime.now(timezone.utc)
         broadcast_message.approved_by = updating_user
 
     if new_status == BroadcastStatusType.CANCELLED:
-        broadcast_message.cancelled_at = datetime.utcnow()
+        broadcast_message.cancelled_at = datetime.now(timezone.utc)
         broadcast_message.cancelled_by = updating_user
         broadcast_message.cancelled_by_api_key_id = api_key_id
 
     if new_status == BroadcastStatusType.REJECTED:
-        broadcast_message.rejected_at = datetime.utcnow()
+        broadcast_message.rejected_at = datetime.now(timezone.utc)
         broadcast_message.rejected_by = updating_user
         broadcast_message.rejection_reason = rejection_reason
         broadcast_message.rejected_by_api_key_id = api_key_id
+
+    if new_status == BroadcastStatusType.PENDING_APPROVAL:
+        # Check here to see if same user was creator
+        broadcast_message.submitted_at = datetime.now(timezone.utc)
+        broadcast_message.submitted_by = updating_user
 
     current_app.logger.info(
         f"broadcast_message {broadcast_message.id} moving from {broadcast_message.status} to {new_status}"
@@ -59,9 +65,9 @@ def _validate_broadcast_update(broadcast_message, new_status, updating_user):
 
     if new_status == BroadcastStatusType.BROADCASTING:
         # training mode services can approve their own broadcasts
-        if updating_user == broadcast_message.created_by and not broadcast_message.service.restricted:
+        if updating_user == broadcast_message.submitted_by and not broadcast_message.service.restricted:
             raise InvalidRequest(
-                f"User {updating_user.id} cannot approve their own broadcast_message {broadcast_message.id}",
+                "You cannot approve an alert that you submitted for approval.",
                 status_code=400,
             )
         elif len(broadcast_message.areas["simple_polygons"]) == 0:
@@ -90,9 +96,6 @@ def _create_p1_zendesk_alert(broadcast_message):
         Sent on channel {broadcast_message.service.broadcast_channel} to {broadcast_message.areas["names"]}.
 
         Content starts "{broadcast_message.content[:100]}".
-
-        Follow the runbook to check the broadcast went out OK:
-        https://docs.google.com/document/d/1J99yOlfp4nQz6et0w5oJVqi-KywtIXkxrEIyq_g2XUs/edit#heading=h.lzr9aq5b4wg
     """
     )
 
@@ -121,24 +124,22 @@ def _create_broadcast_event(broadcast_message):
             BroadcastStatusType.BROADCASTING: BroadcastEventMessageType.ALERT,
             BroadcastStatusType.CANCELLED: BroadcastEventMessageType.CANCEL,
         }
-
         event = BroadcastEvent(
             service=service,
             broadcast_message=broadcast_message,
             message_type=msg_types[broadcast_message.status],
             transmitted_content={"body": broadcast_message.content},
             transmitted_areas=broadcast_message.areas,
-            # TODO: Probably move this somewhere more standalone too and imply that it shouldn't change. Should it
-            # include a service based identifier too? eg "flood-warnings@notifications.service.gov.uk" or similar
-            transmitted_sender="notifications.service.gov.uk",
+            transmitted_sender=SENDER,
             # TODO: Should this be set to now? Or the original starts_at?
             transmitted_starts_at=broadcast_message.starts_at,
             transmitted_finishes_at=broadcast_message.finishes_at,
         )
-
         dao_save_object(event)
-
-        send_broadcast_event.apply_async(kwargs={"broadcast_event_id": str(event.id)}, queue=QueueNames.BROADCASTS)
+        send_broadcast_event.apply_async(
+            queue=QueueNames.HIGH_PRIORITY,
+            kwargs={"broadcast_event_id": str(event.id)},
+        )
     elif broadcast_message.stubbed != service.restricted:
         # It's possible for a service to create a broadcast in trial mode, and then approve it after the
         # service is live (or vice versa). We don't think it's safe to send such broadcasts, as the service

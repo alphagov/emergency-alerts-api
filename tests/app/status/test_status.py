@@ -1,18 +1,45 @@
+import os
+
+import boto3
 import pytest
 from flask import json
+from moto import mock_aws
 
 from tests.app.db import create_organisation, create_service
+from tests.conftest import set_config
+
+aws_region = os.environ.get("AWS_REGION", "eu-west-2")
 
 
 @pytest.mark.parametrize("path", ["/", "/_api_status"])
-def test_get_status_all_ok(client, notify_db_session, path):
-    response = client.get(path)
+# Celery won't be called via the HTTP path (it's via a health check scheduled task)
+# but we can assert the CLoudWatch logic respects using the SERVICE param anyway
+@pytest.mark.parametrize("service", ["api", "celery"])
+@mock_aws
+def test_get_status_all_ok(client, notify_db_session, notify_api, service, path):
+    with set_config(notify_api, "SERVICE", service):
+        response = client.get(path)
+
+    db_version = notify_db_session.execute("SELECT version_num FROM alembic_version").fetchone()[0]
+
     assert response.status_code == 200
     resp_json = json.loads(response.get_data(as_text=True))
     assert resp_json["status"] == "ok"
-    assert resp_json["db_version"]
+    assert resp_json["db_version"] == db_version
     assert resp_json["git_commit"]
     assert resp_json["build_time"]
+
+    cloudwatch = boto3.client("cloudwatch", region_name=aws_region)
+    app_metric = cloudwatch.list_metrics()["Metrics"][0]
+    assert app_metric["MetricName"] == "AppVersion"
+    assert app_metric["Namespace"] == "Emergency Alerts"
+    assert {"Name": "Application", "Value": service} in app_metric["Dimensions"]
+
+    db_metric = cloudwatch.list_metrics()["Metrics"][1]
+    assert db_metric["MetricName"] == "DBVersion"
+    assert db_metric["Namespace"] == "Emergency Alerts"
+    assert {"Name": "Application", "Value": service} in db_metric["Dimensions"]
+    assert {"Name": "Version", "Value": db_version} in db_metric["Dimensions"]
 
 
 def test_empty_live_service_and_organisation_counts(admin_request):

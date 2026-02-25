@@ -4,11 +4,15 @@ phases:
   pre_build:
     commands:
       - |
-        if [ -n "$COMMIT_ID" ]; then
+        if [ -n "$MANUAL_PIPELINE_BRANCH" ]; then
+          echo Manual pipeline branch provided, checking out branch $MANUAL_PIPELINE_BRANCH
+          git checkout $MANUAL_PIPELINE_BRANCH
+        elif [ -z "$COMMIT_ID" ]; then
           echo Checking out to celery_${ENVIRONMENT}_latest tag...
           git checkout tags/celery_${ENVIRONMENT}_latest
         fi
   build:
     commands:
       - echo Deployment started on `date`
+      - export COMMIT_ID=$(echo $COMMIT_ID | cut -c 1-7)
       - bash ./.codepipeline/deploy-service.sh --SERVICE celery --RESOURCE_PREFIX ${RESOURCE_PREFIX:-eas-app}

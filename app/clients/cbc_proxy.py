@@ -99,6 +99,18 @@ class CBCProxyClientBase(ABC):
         self._send_link_test(self.secondary_lambda, self.CBC_A)
         self._send_link_test(self.secondary_lambda, self.CBC_B)
 
+    def send_link_test_primary_to_A(self):
+        self._send_link_test(self.primary_lambda, self.CBC_A)
+
+    def send_link_test_primary_to_B(self):
+        self._send_link_test(self.primary_lambda, self.CBC_B)
+
+    def send_link_test_secondary_to_A(self):
+        self._send_link_test(self.secondary_lambda, self.CBC_A)
+
+    def send_link_test_secondary_to_B(self):
+        self._send_link_test(self.secondary_lambda, self.CBC_B)
+
     def _send_link_test(
         self,
         lambda_name,
@@ -133,12 +145,12 @@ class CBCProxyClientBase(ABC):
 
     def _invoke_lambdas_with_routing(self, payload):
         payload["cbc_target"] = self.CBC_A
-        result = self._invoke_lambda(self.primary_lambda, payload)
+        result = self._invoke_lambda(self.primary_lambda, payload, self.CBC_A)
         if result:
             return True
 
         payload["cbc_target"] = self.CBC_B
-        result = self._invoke_lambda(self.primary_lambda, payload)
+        result = self._invoke_lambda(self.primary_lambda, payload, self.CBC_B)
         if result:
             return True
 
@@ -148,12 +160,12 @@ class CBCProxyClientBase(ABC):
             raise CBCProxyRetryableException(error_message)
 
         payload["cbc_target"] = self.CBC_A
-        result = self._invoke_lambda(self.secondary_lambda, payload)
+        result = self._invoke_lambda(self.secondary_lambda, payload, self.CBC_A)
         if result:
             return True
 
         payload["cbc_target"] = self.CBC_B
-        result = self._invoke_lambda(self.secondary_lambda, payload)
+        result = self._invoke_lambda(self.secondary_lambda, payload, self.CBC_B)
         if result:
             return True
 
@@ -161,13 +173,14 @@ class CBCProxyClientBase(ABC):
         current_app.logger.info(error_message, extra={"python_module": __name__})
         raise CBCProxyRetryableException(error_message)
 
-    def _invoke_lambda(self, lambda_name, payload):
+    def _invoke_lambda(self, lambda_name, payload, cbc_target):
         payload_bytes = bytes(json.dumps(payload), encoding="utf8")
         try:
             current_app.logger.info(
                 f"Calling lambda {lambda_name}",
                 extra={
-                    "lambda_payload": str(payload)[:1000],
+                    "cbc_target": cbc_target,
+                    "lambda_payload": str(payload),
                     "lambda_invocation_type": "RequestResponse",
                     "lambda_arn": f"{self._arn_prefix}{lambda_name}",
                 },
@@ -177,15 +190,32 @@ class CBCProxyClientBase(ABC):
                 InvocationType="RequestResponse",
                 Payload=payload_bytes,
             )
-        except botocore.exceptions.ClientError:
-            current_app.logger.error(f"Boto3 ClientError on lambda {lambda_name}", extra={"python_module": __name__})
-            success = False
-            return success
+        except botocore.exceptions.ClientError as e:
+            current_app.logger.error(
+                f"Boto3 ClientError on lambda {lambda_name}",
+                extra={
+                    "cbc_target": cbc_target,
+                    "python_module": __name__,
+                    "error": str(e),
+                },
+            )
+            return False
+        except Exception as e:
+            current_app.logger.error(
+                f"Unexpected error calling lambda {lambda_name}",
+                extra={
+                    "cbc_target": cbc_target,
+                    "python_module": __name__,
+                    "error": str(e),
+                },
+            )
+            return False
 
         if response["StatusCode"] > 299:
             current_app.logger.info(
                 f"Error calling lambda {lambda_name}",
                 extra={
+                    "cbc_target": cbc_target,
                     "python_module": __name__,
                     "status_code": response["StatusCode"],
                     "result_payload": _convert_lambda_payload_to_json(response.get("Payload").read()),
@@ -197,6 +227,7 @@ class CBCProxyClientBase(ABC):
             current_app.logger.info(
                 f"FunctionError calling lambda {lambda_name}",
                 extra={
+                    "cbc_target": cbc_target,
                     "python_module": __name__,
                     "status_code": response["StatusCode"],
                     "result_payload": _convert_lambda_payload_to_json(response.get("Payload").read()),
@@ -205,10 +236,10 @@ class CBCProxyClientBase(ABC):
             success = False
 
         else:
-            target = payload["cbc_target"]
             current_app.logger.info(
-                f"Success calling lambda {lambda_name} with CBC target {target}",
+                f"Success calling lambda {lambda_name}",
                 extra={
+                    "cbc_target": cbc_target,
                     "python_module": __name__,
                     "status_code": response["StatusCode"],
                 },
@@ -249,7 +280,7 @@ class CBCProxyOne2ManyClient(CBCProxyClientBase):
             "cbc_target": cbc_target,
         }
 
-        self._invoke_lambda(lambda_name=lambda_name, payload=payload)
+        self._invoke_lambda(lambda_name=lambda_name, payload=payload, cbc_target=cbc_target)
 
     def create_and_send_broadcast(
         self, identifier, headline, description, areas, sent, expires, channel, message_number=None
@@ -327,7 +358,7 @@ class CBCProxyVodafone(CBCProxyClientBase):
             "cbc_target": cbc_target,
         }
 
-        self._invoke_lambda(lambda_name=lambda_name, payload=payload)
+        self._invoke_lambda(lambda_name=lambda_name, payload=payload, cbc_target=cbc_target)
 
     def create_and_send_broadcast(
         self, identifier, message_number, headline, description, areas, sent, expires, channel

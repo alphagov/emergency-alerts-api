@@ -1,8 +1,8 @@
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from flask import current_app
-from sqlalchemy import desc
+from sqlalchemy import and_, asc, case, desc, or_
 from sqlalchemy.orm import aliased
 
 from app import db
@@ -38,6 +38,8 @@ def dao_get_broadcast_message_by_id_and_service_id_with_user(broadcast_message_i
     UserRejected = aliased(User)
     UserApproved = aliased(User)
     UserCancelled = aliased(User)
+    UserSubmitted = aliased(User)
+    UserUpdated = aliased(User)
 
     return (
         db.session.query(
@@ -46,11 +48,15 @@ def dao_get_broadcast_message_by_id_and_service_id_with_user(broadcast_message_i
             UserRejected.name.label("rejected_by"),
             UserApproved.name.label("approved_by"),
             UserCancelled.name.label("cancelled_by"),
+            UserSubmitted.name.label("submitted_by"),
+            UserUpdated.name.label("updated_by"),
         )
         .outerjoin(UserCreated, BroadcastMessage.created_by_id == UserCreated.id)
         .outerjoin(UserRejected, BroadcastMessage.rejected_by_id == UserRejected.id)
         .outerjoin(UserApproved, BroadcastMessage.approved_by_id == UserApproved.id)
         .outerjoin(UserCancelled, BroadcastMessage.cancelled_by_id == UserCancelled.id)
+        .outerjoin(UserSubmitted, BroadcastMessage.submitted_by_id == UserSubmitted.id)
+        .outerjoin(UserUpdated, BroadcastMessage.updated_by_id == UserUpdated.id)
         .filter(BroadcastMessage.id == broadcast_message_id, BroadcastMessage.service_id == service_id)
         .one()
     )
@@ -82,13 +88,30 @@ def dao_get_broadcast_messages_for_service(service_id):
 def dao_get_broadcast_messages_for_service_with_user(service_id):
     """
     This function returns a list of BroadcastMessages for the service, with additional values
-    for created_by, rejected_by, approved_by & cancelled_by.
-    These values are the names of the users sourced using joins with User table.
+    for created_by, rejected_by, approved_by, cancelled_by & submitted_by.
+
+    The User-related values are the names of the users sourced using joins with User table.
     """
     UserCreated = aliased(User)
     UserRejected = aliased(User)
     UserApproved = aliased(User)
     UserCancelled = aliased(User)
+    UserSubmitted = aliased(User)
+
+    """This is the order in which alerts should be displayed on 'Current alerts' page
+    and thus the order in which they are sent to Admin application:
+    1. Alerts that are live (Broadcasting)
+    2. Alerts that have been returned for edit (Returned)
+    3. Alerts that are awaiting approval (Pending-approval)
+    4. Alerts that are in draft state (Draft)
+    """
+
+    status_order = case(
+        (BroadcastMessage.status == BroadcastStatusType.BROADCASTING, 1),
+        (BroadcastMessage.status == BroadcastStatusType.RETURNED, 2),
+        (BroadcastMessage.status == BroadcastStatusType.PENDING_APPROVAL, 3),
+        (BroadcastMessage.status == BroadcastStatusType.DRAFT, 4),
+    )
 
     return (
         db.session.query(
@@ -97,12 +120,18 @@ def dao_get_broadcast_messages_for_service_with_user(service_id):
             UserRejected.name.label("rejected_by"),
             UserApproved.name.label("approved_by"),
             UserCancelled.name.label("cancelled_by"),
+            UserCancelled.name.label("submitted_by"),
         )
         .outerjoin(UserCreated, BroadcastMessage.created_by_id == UserCreated.id)
         .outerjoin(UserRejected, BroadcastMessage.rejected_by_id == UserRejected.id)
         .outerjoin(UserApproved, BroadcastMessage.approved_by_id == UserApproved.id)
         .outerjoin(UserCancelled, BroadcastMessage.cancelled_by_id == UserCancelled.id)
+        .outerjoin(UserSubmitted, BroadcastMessage.submitted_by_id == UserSubmitted.id)
         .filter(BroadcastMessage.service_id == service_id)
+        .order_by(
+            status_order,
+            asc(BroadcastMessage.reference),
+        )
         .all()
     )
 
@@ -133,12 +162,14 @@ def dao_get_all_broadcast_messages():
             BroadcastMessage.finishes_at,
             BroadcastMessage.approved_at,
             BroadcastMessage.cancelled_at,
+            BroadcastMessage.extra_content,
         )
         .join(ServiceBroadcastSettings, ServiceBroadcastSettings.service_id == BroadcastMessage.service_id)
         .filter(
             BroadcastMessage.starts_at >= datetime(2021, 5, 25, 0, 0, 0),
             BroadcastMessage.stubbed == False,  # noqa
             BroadcastMessage.status.in_(BroadcastStatusType.LIVE_STATUSES),
+            BroadcastMessage.exclude == False,  # noqa
         )
         .order_by(desc(BroadcastMessage.starts_at))
         .all()
@@ -169,6 +200,54 @@ def dao_get_all_pre_broadcast_messages():
         .order_by(desc(BroadcastMessage.starts_at))
         .all()
     )
+
+
+def dao_get_all_finished_broadcast_messages_with_outstanding_actions() -> list[BroadcastMessage]:
+    """
+    Find all BroadcastMessages that have finished (either expired or been cancelled)
+    and have one or more flags indicating actions due.
+    """
+
+    now = datetime.now(timezone.utc)
+    return (
+        BroadcastMessage.query.join(Service)
+        .filter(
+            and_(
+                or_(
+                    # Get those recently cancelled
+                    BroadcastMessage.status == BroadcastStatusType.CANCELLED,
+                    # Or have COMPLETED or are BROADCASTING and have naturally finished
+                    # (Transitioning to COMPLETED occurs as a background activity)
+                    BroadcastMessage.status == BroadcastStatusType.COMPLETED,
+                    and_(
+                        BroadcastMessage.finishes_at < now,
+                        BroadcastMessage.status == BroadcastStatusType.BROADCASTING,
+                    ),
+                ),
+                # And has an action due
+                BroadcastMessage.finished_govuk_acknowledged == False,  # noqa: E712
+                Service.restricted == False,  # noqa: E712
+                Service.active == True,  # noqa: E712
+            ),
+        )
+        .all()
+    )
+
+
+def dao_mark_all_as_govuk_acknowledged():
+    """
+    Find all BroadcastMessages, within active live services, that don't have the
+    finished_govuk_acknowledged flag and mark them as done.
+    """
+
+    pending = dao_get_all_finished_broadcast_messages_with_outstanding_actions()
+
+    for message in pending:
+        message.finished_govuk_acknowledged = True
+
+    db.session.commit()
+
+    return pending
 
 
 def dao_purge_old_broadcast_messages(service, days_older_than=30, dry_run=False):

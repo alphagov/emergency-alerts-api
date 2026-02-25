@@ -7,6 +7,10 @@ from freezegun import freeze_time
 from app.dao.broadcast_message_dao import (
     dao_get_broadcast_message_by_id_and_service_id,
 )
+from app.dao.broadcast_message_history_dao import (
+    dao_get_broadcast_message_version_by_id,
+    dao_get_latest_broadcast_message_version_bybroadcast_message_id_and_service_id,
+)
 from app.models import (
     BROADCAST_TYPE,
     BroadcastEventMessageType,
@@ -42,7 +46,7 @@ def test_get_broadcast_message(admin_request, sample_broadcast_service):
     assert response["id"] == str(bm.id)
     assert response["template_id"] == str(t.id)
     assert response["content"] == "This is a test"
-    assert response["template_name"] == t.name
+    assert response["template_name"] == t.reference
     assert response["status"] == BroadcastStatusType.DRAFT
     assert response["created_at"] is not None
     assert response["starts_at"] is None
@@ -66,16 +70,11 @@ def test_get_broadcast_message_with_user(mocker, admin_request, sample_broadcast
         broadcast_message_id=bm.id,
         _expected_status=200,
     )
-    mock_dao_get_messages = mocker.patch(
-        "app.dao.broadcast_message_dao.dao_get_broadcast_message_by_id_and_service_id_with_user"
-    )
-
-    assert mock_dao_get_messages.assert_called_once
 
     assert response["id"] == str(bm.id)
     assert response["template_id"] == str(t.id)
     assert response["content"] == "This is a test"
-    assert response["template_name"] == t.name
+    assert response["template_name"] == t.reference
     assert response["status"] == BroadcastStatusType.DRAFT
     assert response["created_at"] is not None
     assert response["starts_at"] is None
@@ -206,7 +205,7 @@ def test_get_broadcast_messages_for_service_with_user(
     admin_request, sample_broadcast_service, sample_broadcast_service_3, sample_user, sample_user_2
 ):
     """
-    This test invovles the creation of multiple messages across 2 different services
+    This test involves the creation of multiple messages across 2 different services
     and asserting that the responses are as we'd expect.
     """
     t = create_template(sample_broadcast_service, BROADCAST_TYPE)
@@ -252,23 +251,42 @@ def test_create_broadcast_message(admin_request, sample_broadcast_service, train
         "broadcast_message.create_broadcast_message",
         _data={
             "template_id": str(t.id),
+            "reference": t.reference,
+            "content": "Some content\r\n€ŷŵ~\r\n‘’“”—–-",
             "service_id": str(t.service_id),
             "created_by": str(t.created_by_id),
+            "areas": {"ids": ["manchester"], "simple_polygons": [[[50.12, 1.2], [50.13, 1.2], [50.14, 1.21]]]},
         },
         service_id=t.service_id,
         _expected_status=201,
     )
 
-    assert response["template_name"] == t.name
+    assert response["template_name"] == t.reference
     assert response["status"] == BroadcastStatusType.DRAFT
     assert response["created_at"] is not None
     assert response["created_by_id"] == str(t.created_by_id)
     assert response["personalisation"] == {}
-    assert response["areas"] == {}
+    assert response["areas"] == {
+        "ids": ["manchester"],
+        "simple_polygons": [[[50.12, 1.2], [50.13, 1.2], [50.14, 1.21]]],
+    }
     assert response["content"] == "Some content\n€ŷŵ~\n''\"\"---"
 
     broadcast_message = dao_get_broadcast_message_by_id_and_service_id(response["id"], sample_broadcast_service.id)
     assert broadcast_message.stubbed == training_mode_service
+
+    latest_version = dao_get_latest_broadcast_message_version_bybroadcast_message_id_and_service_id(
+        broadcast_message.id, sample_broadcast_service.id
+    )
+    broadcast_message_version = dao_get_broadcast_message_version_by_id(latest_version.id)
+    assert broadcast_message_version.reference == t.reference
+    assert broadcast_message_version.created_by_id == t.created_by_id
+    assert broadcast_message_version.created_at is not None
+    assert broadcast_message_version.areas == {
+        "ids": ["manchester"],
+        "simple_polygons": [[[50.12, 1.2], [50.13, 1.2], [50.14, 1.21]]],
+    }
+    assert broadcast_message_version.content == response["content"]
 
 
 @pytest.mark.parametrize(
@@ -279,7 +297,8 @@ def test_create_broadcast_message(admin_request, sample_broadcast_service, train
             [
                 {"error": "ValidationError", "message": "service_id is a required property"},
                 {"error": "ValidationError", "message": "created_by is a required property"},
-                {"error": "ValidationError", "message": "{} is not valid under any of the given schemas"},
+                {"error": "ValidationError", "message": "reference is a required property"},
+                {"error": "ValidationError", "message": "content is a required property"},
             ],
         ),
         (
@@ -289,7 +308,11 @@ def test_create_broadcast_message(admin_request, sample_broadcast_service, train
                 "created_by": str(uuid.uuid4()),
                 "foo": "something else",
             },
-            [{"error": "ValidationError", "message": "Additional properties are not allowed (foo was unexpected)"}],
+            [
+                {"error": "ValidationError", "message": "reference is a required property"},
+                {"error": "ValidationError", "message": "content is a required property"},
+                {"error": "ValidationError", "message": "Additional properties are not allowed (foo was unexpected)"},
+            ],
         ),
     ],
 )
@@ -373,12 +396,7 @@ def test_create_broadcast_message_400s_if_content_and_template_provided(
     )
 
     assert len(response["errors"]) == 1
-    assert response["errors"][0]["error"] == "ValidationError"
-    # The error message for oneOf is ugly, non-deterministic in ordering
-    # and contains some UUID, so let’s just pick out the important bits
-    assert (" is valid under each of ") in response["errors"][0]["message"]
-    assert ("{required: [content]}") in response["errors"][0]["message"]
-    assert ("{required: [template_id]}") in response["errors"][0]["message"]
+    assert response["errors"][0] == {"error": "ValidationError", "message": "reference is a required property"}
 
 
 def test_create_broadcast_message_400s_if_reference_and_template_provided(
@@ -399,12 +417,7 @@ def test_create_broadcast_message_400s_if_reference_and_template_provided(
     )
 
     assert len(response["errors"]) == 1
-    assert response["errors"][0]["error"] == "ValidationError"
-    # The error message for oneOf is ugly, non-deterministic in ordering
-    # and contains some UUID, so let’s just pick out the important bits
-    assert (" is valid under each of ") in response["errors"][0]["message"]
-    assert ("{required: [reference]}") in response["errors"][0]["message"]
-    assert ("{required: [template_id]}") in response["errors"][0]["message"]
+    assert response["errors"][0] == {"error": "ValidationError", "message": "content is a required property"}
 
 
 def test_create_broadcast_message_400s_if_reference_not_provided_with_content(
@@ -423,7 +436,7 @@ def test_create_broadcast_message_400s_if_reference_not_provided_with_content(
     )
     assert len(response["errors"]) == 1
     assert response["errors"][0]["error"] == "ValidationError"
-    assert response["errors"][0]["message"].endswith("is not valid under any of the given schemas")
+    assert response["errors"][0]["message"] == "reference is a required property"
 
 
 def test_create_broadcast_message_400s_if_no_content_or_template(
@@ -439,9 +452,14 @@ def test_create_broadcast_message_400s_if_no_content_or_template(
         service_id=sample_broadcast_service.id,
         _expected_status=400,
     )
-    assert len(response["errors"]) == 1
-    assert response["errors"][0]["error"] == "ValidationError"
-    assert response["errors"][0]["message"].endswith("is not valid under any of the given schemas")
+    assert len(response["errors"]) == 2
+    assert response["errors"] == [
+        {"error": "ValidationError", "message": "reference is a required property"},
+        {
+            "error": "ValidationError",
+            "message": "content is a required property",
+        },
+    ]
 
 
 @pytest.mark.parametrize(
@@ -514,7 +532,9 @@ def test_update_broadcast_message_doesnt_allow_edits_after_broadcast_goes_live(
 def test_update_broadcast_message_sets_finishes_at_separately(admin_request, sample_broadcast_service):
     t = create_template(sample_broadcast_service, BROADCAST_TYPE)
     bm = create_broadcast_message(
-        t, areas={"ids": ["london"], "simple_polygons": [[[50.12, 1.2], [50.13, 1.2], [50.14, 1.21]]]}
+        t,
+        areas={"ids": ["london"], "simple_polygons": [[[50.12, 1.2], [50.13, 1.2], [50.14, 1.21]]]},
+        reference="Test Alert",
     )
 
     response = admin_request.post(
@@ -541,7 +561,7 @@ def test_update_broadcast_message_sets_finishes_at_separately(admin_request, sam
 )
 def test_update_broadcast_message_allows_sensible_datetime_formats(admin_request, sample_broadcast_service, input_dt):
     t = create_template(sample_broadcast_service, BROADCAST_TYPE)
-    bm = create_broadcast_message(t)
+    bm = create_broadcast_message(t, reference="Test Alert")
 
     response = admin_request.post(
         "broadcast_message.update_broadcast_message",
@@ -638,7 +658,7 @@ def test_update_broadcast_message_status_rejects_with_reason(admin_request, samp
     assert response["rejection_reason"] == "TEST"
 
 
-def test_update_broadcast_message_status_errors_as_missing_reason(admin_request, sample_broadcast_service):
+def test_update_broadcast_message_status_errors_as_missing_rejection_reason(admin_request, sample_broadcast_service):
     t = create_template(sample_broadcast_service, BROADCAST_TYPE)
     bm = create_broadcast_message(t, status=BroadcastStatusType.PENDING_APPROVAL)
 
@@ -650,7 +670,7 @@ def test_update_broadcast_message_status_errors_as_missing_reason(admin_request,
         _expected_status=400,
     )
 
-    assert response["errors"] == ["Enter the reason for rejecting the alert."]
+    assert response["message"] == "Enter the reason for rejecting the alert."
 
 
 def test_update_broadcast_message_status_doesnt_let_you_update_other_things(admin_request, sample_broadcast_service):
@@ -688,7 +708,7 @@ def test_update_broadcast_message_allows_service_user_and_platform_admin_to_canc
     bm = create_broadcast_message(t, status=BroadcastStatusType.BROADCASTING)
     canceller = create_user(email="canceller@gov.uk")
     if user_is_platform_admin:
-        canceller.platform_admin = True
+        canceller.platform_admin_capable = True
     else:
         sample_broadcast_service.users.append(canceller)
     mock_task = mocker.patch("app.celery.broadcast_message_tasks.send_broadcast_event.apply_async")
@@ -706,7 +726,7 @@ def test_update_broadcast_message_allows_service_user_and_platform_admin_to_canc
 
     cancel_id = str(cancel_event.id)
 
-    mock_task.assert_called_once_with(kwargs={"broadcast_event_id": cancel_id}, queue="broadcast-tasks")
+    mock_task.assert_called_once_with(kwargs={"broadcast_event_id": cancel_id}, queue="high-priority-tasks")
     assert response["status"] == BroadcastStatusType.CANCELLED
     assert response["cancelled_at"] is not None
     assert response["cancelled_by_id"] == str(canceller.id)
@@ -752,6 +772,52 @@ def test_update_broadcast_message_status_rejects_approval_from_user_not_on_that_
 
     assert mock_task.called is False
     assert "cannot update broadcast" in response["message"]
+
+
+def test_return_broadcast_message_updates_broadcast_status_with_reason(admin_request, sample_broadcast_service, mocker):
+    t = create_template(sample_broadcast_service, BROADCAST_TYPE)
+    bm = create_broadcast_message(t, status=BroadcastStatusType.PENDING_APPROVAL)
+
+    response = admin_request.post(
+        "broadcast_message.return_broadcast_message_for_edit",
+        _data={"edit_reason": "TEST", "created_by": str(t.created_by_id)},
+        service_id=t.service_id,
+        broadcast_message_id=bm.id,
+        _expected_status=200,
+    )
+
+    assert response["status"] == BroadcastStatusType.RETURNED
+    assert response["updated_at"] is not None
+
+
+def test_return_broadcast_message_for_edit_errors_with_no_reason(admin_request, sample_broadcast_service, mocker):
+    t = create_template(sample_broadcast_service, BROADCAST_TYPE)
+    bm = create_broadcast_message(t, status=BroadcastStatusType.PENDING_APPROVAL)
+
+    response = admin_request.post(
+        "broadcast_message.return_broadcast_message_for_edit",
+        _data={"created_by": str(t.created_by_id)},
+        service_id=t.service_id,
+        broadcast_message_id=bm.id,
+        _expected_status=400,
+    )
+    # Response is ValidationError because edit_reason is a required parameter
+    assert response["errors"] == [{"error": "ValidationError", "message": "edit_reason is a required property"}]
+
+
+def test_return_broadcast_message_for_edit_errors_with_empty_reason(admin_request, sample_broadcast_service, mocker):
+    t = create_template(sample_broadcast_service, BROADCAST_TYPE)
+    bm = create_broadcast_message(t, status=BroadcastStatusType.PENDING_APPROVAL)
+
+    response = admin_request.post(
+        "broadcast_message.return_broadcast_message_for_edit",
+        _data={"edit_reason": "", "created_by": str(t.created_by_id)},
+        service_id=t.service_id,
+        broadcast_message_id=bm.id,
+        _expected_status=400,
+    )
+    # Response is InvalidRequest, raised when edit_reason is empty string
+    assert response["message"] == "Enter the reason for returning the alert for edit"
 
 
 def test_purge_broadcast_messages(admin_request, sample_broadcast_service, mocker):
