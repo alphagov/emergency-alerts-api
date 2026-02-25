@@ -16,15 +16,11 @@ down_revision = "0139_migrate_sms_allowance_data"
 
 
 def upgrade():
-    op.execute(
-        """
+    op.execute("""
         update services
         set prefix_sms = false
         where id = '{}'
-    """.format(
-            current_app.config["NOTIFY_SERVICE_ID"]
-        )
-    )
+    """.format(current_app.config["NOTIFY_SERVICE_ID"]))
 
     op.alter_column(
         "services",
@@ -42,12 +38,8 @@ def downgrade():
         nullable=True,
     )
 
-    op.execute(
-        """
+    op.execute("""
         update services
         set prefix_sms = null
         where id = '{}'
-    """.format(
-            current_app.config["NOTIFY_SERVICE_ID"]
-        )
-    )
+    """.format(current_app.config["NOTIFY_SERVICE_ID"]))

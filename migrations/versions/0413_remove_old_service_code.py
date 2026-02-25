@@ -17,12 +17,10 @@ down_revision = "0412_service_providers"
 def upgrade():
     op.drop_table("service_broadcast_provider_restriction")
     op.drop_column("service_broadcast_settings", "provider")
-    op.execute(
-        """
+    op.execute("""
         DELETE FROM broadcast_provider_types
         WHERE name IN ('all', 'deprecated')
-        """
-    )
+        """)
 
 
 def downgrade():

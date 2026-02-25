@@ -63,8 +63,7 @@ def upgrade():
     op.create_index(op.f("ix_dm_datetime_bst_date"), "dm_datetime", ["bst_date"], unique=False)
 
     # Insert data into table
-    op.execute(
-        """
+    op.execute("""
         INSERT into dm_datetime (
         SELECT
         datum AS bst_date,
@@ -96,8 +95,7 @@ def upgrade():
         ) DQ
         ORDER BY bst_date
         );
-        """
-    )
+        """)
 
 
 def downgrade():

@@ -15,16 +15,12 @@ down_revision = "0375_doc_download_verify_email"
 
 
 def upgrade():
-    op.execute(
-        textwrap.dedent(
-            """
+    op.execute(textwrap.dedent("""
             INSERT INTO email_branding_to_organisation
             (organisation_id, email_branding_id)
             (SELECT id, email_branding_id FROM organisation WHERE email_branding_id IS NOT NULL)
             ON CONFLICT DO NOTHING;
-            """
-        ).strip()
-    )
+            """).strip())
 
 
 def downgrade():

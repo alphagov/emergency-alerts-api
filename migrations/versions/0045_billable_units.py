@@ -32,11 +32,9 @@ def upgrade():
     # caveats
     # only adjusts notifications for services that have never been in research mode. On live, research mode was
     # limited to only services that we have set up ourselves so deemed this acceptable.
-    billable_services = conn.execute(
-        """
+    billable_services = conn.execute("""
         SELECT id FROM services_history WHERE id not in (select id from services_history where research_mode)
-    """
-    )
+    """)
     # set to 'null' if there are no billable services so we don't get a syntax error in the update statement
     service_ids = ",".join("'{}'".format(service.id) for service in billable_services) or "null"
 
@@ -71,11 +69,9 @@ def downgrade():
     # caveats
     # only adjusts notifications for services that have never been in research mode. On live, research mode was
     # limited to only services that we have set up ourselves
-    billable_services = conn.execute(
-        """
+    billable_services = conn.execute("""
         SELECT id FROM services_history WHERE id not in (select id from services_history where research_mode)
-    """
-    )
+    """)
     # set to 'null' if there are no billable services so we don't get a syntax error in the update statement
     service_ids = ",".join("'{}'".format(service.id) for service in billable_services) or "null"
 

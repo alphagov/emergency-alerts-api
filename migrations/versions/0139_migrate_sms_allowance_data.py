@@ -19,9 +19,7 @@ def upgrade():
     # Step 1: update the column free_sms_fragment_limit in service table if it is empty
     update_service_table = """
         UPDATE services SET free_sms_fragment_limit = {} where free_sms_fragment_limit is null
-    """.format(
-        default_limit
-    )
+    """.format(default_limit)
 
     op.execute(update_service_table)
 

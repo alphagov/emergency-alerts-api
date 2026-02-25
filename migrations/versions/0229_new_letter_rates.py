@@ -42,27 +42,23 @@ NEW_RATES = [
 def upgrade():
     conn = op.get_bind()
     conn.execute(
-        text(
-            """
+        text("""
         update
             letter_rates
         set
             end_date = :start
         where
             rate != 0.30
-    """
-        ),
+    """),
         start=START,
     )
 
     for id, start_date, sheet_count, rate, crown, post_class in NEW_RATES:
         conn.execute(
-            text(
-                """
+            text("""
             INSERT INTO letter_rates (id, start_date, sheet_count, rate, crown, post_class)
                 VALUES (:id, :start_date, :sheet_count, :rate, :crown, :post_class)
-        """
-            ),
+        """),
             id=id,
             start_date=start_date,
             sheet_count=sheet_count,
@@ -75,27 +71,23 @@ def upgrade():
 def downgrade():
     conn = op.get_bind()
     conn.execute(
-        text(
-            """
+        text("""
         delete from
             letter_rates
         where
             start_date = :start
-    """
-        ),
+    """),
         start=START,
     )
 
     conn.execute(
-        text(
-            """
+        text("""
         update
             letter_rates
         set
             end_date = null
         where
             end_date = :start
-    """
-        ),
+    """),
         start=START,
     )

@@ -111,6 +111,7 @@ class CBCProxyClientBase(ABC):
     def send_link_test_secondary_to_B(self):
         self._send_link_test(self.secondary_lambda, self.CBC_B)
 
+    @abstractmethod
     def _send_link_test(
         self,
         lambda_name,
@@ -118,12 +119,14 @@ class CBCProxyClientBase(ABC):
     ):
         pass
 
+    @abstractmethod
     def create_and_send_broadcast(
         self, identifier, headline, description, areas, sent, expires, channel, message_number=None
     ):
         pass
 
     # We have not implementated updating a broadcast
+    @abstractmethod
     def update_and_send_broadcast(
         self,
         identifier,
@@ -138,6 +141,7 @@ class CBCProxyClientBase(ABC):
     ):
         pass
 
+    @abstractmethod
     def cancel_broadcast(
         self, identifier, previous_provider_messages, headline, description, areas, sent, expires, message_number=None
     ):
@@ -312,6 +316,20 @@ class CBCProxyOne2ManyClient(CBCProxyClientBase):
         }
         self._invoke_lambdas_with_routing(payload=payload)
 
+    def update_and_send_broadcast(
+        self,
+        identifier,
+        previous_provider_messages,
+        headline,
+        description,
+        areas,
+        sent,
+        expires,
+        channel,
+        message_number=None,
+    ):
+        pass
+
 
 class CBCProxyEE(CBCProxyOne2ManyClient):
     primary_lambda = "ee-1-proxy"
@@ -395,3 +413,17 @@ class CBCProxyVodafone(CBCProxyClientBase):
             "sent": sent,
         }
         self._invoke_lambdas_with_routing(payload=payload)
+
+    def update_and_send_broadcast(
+        self,
+        identifier,
+        previous_provider_messages,
+        headline,
+        description,
+        areas,
+        sent,
+        expires,
+        channel,
+        message_number=None,
+    ):
+        pass

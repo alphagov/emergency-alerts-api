@@ -21,11 +21,17 @@ from app.models import (
     BroadcastMessage,
     BroadcastStatusType,
 )
-from tests.app.db import create_broadcast_event, create_broadcast_message
+from tests.app.db import (
+    create_broadcast_event,
+    create_broadcast_message,
+)
 from tests.app.db import (
     create_broadcast_provider_message as create_broadcast_provider_message_test,
 )
-from tests.app.db import create_service, create_template
+from tests.app.db import (
+    create_service,
+    create_template,
+)
 
 
 def test_get_earlier_events_for_broadcast_event(sample_service):

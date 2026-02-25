@@ -18,36 +18,29 @@ environment = os.environ["HOST"]
 
 def upgrade():
     if environment not in ["live", "production"]:
-        op.execute(
-            """
+        op.execute("""
             DELETE FROM service_email_branding
             WHERE email_branding_id in (
                 SELECT id
                 FROM email_branding
                 WHERE name = 'NHS'
             )
-        """
-        )
+        """)
 
-        op.execute(
-            """
+        op.execute("""
             UPDATE organisation SET email_branding_id = null
             WHERE email_branding_id in(
                 SELECT id
                 FROM email_branding
                 WHERE name = 'NHS'
             )
-        """
-        )
+        """)
 
-        op.execute(
-            """
+        op.execute("""
             DELETE FROM email_branding WHERE name = 'NHS'
-        """
-        )
+        """)
 
-        op.execute(
-            """
+        op.execute("""
             INSERT INTO email_branding (
                 id, logo, name, brand_type
             )
@@ -57,8 +50,7 @@ def upgrade():
                 'NHS',
                 'org'
             )
-        """
-        )
+        """)
 
 
 def downgrade():

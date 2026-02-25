@@ -13,8 +13,7 @@ down_revision = "0253_set_template_postage"
 
 
 def upgrade():
-    op.execute(
-        """
+    op.execute("""
         INSERT INTO
             service_permissions (service_id, permission, created_at)
         SELECT
@@ -30,10 +29,7 @@ def upgrade():
                     service_id = services.id and
                     permission = '{permission}'
             )
-    """.format(
-            permission="edit_folders"
-        )
-    )
+    """.format(permission="edit_folders"))
 
 
 def downgrade():

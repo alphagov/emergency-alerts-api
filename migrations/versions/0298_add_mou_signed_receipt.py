@@ -121,8 +121,7 @@ def upgrade():
                 )
             )
 
-        op.execute(
-            """
+        op.execute("""
             INSERT INTO template_redacted
             (
                 template_id,
@@ -130,10 +129,7 @@ def upgrade():
                 updated_at,
                 updated_by_id
             ) VALUES ( '{}', false, current_timestamp, '{}' )
-            """.format(
-                template["id"], current_app.config["NOTIFY_USER_ID"]
-            )
-        )
+            """.format(template["id"], current_app.config["NOTIFY_USER_ID"]))
 
 
 def downgrade():
