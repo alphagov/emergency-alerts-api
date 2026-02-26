@@ -2,6 +2,7 @@ import functools
 import logging
 from typing import Collection
 
+from dramatiq.actor import Actor
 from dramatiq_sqs.broker import SQSConsumer, _SQSMessage
 from opentelemetry import trace
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
@@ -12,7 +13,8 @@ logger = logging.getLogger("periodiq")
 
 class SqsBrokerInstrumentor(BaseInstrumentor):
     """
-    Instrument the interaction with SQS - namely ensuring message IDs are correctly
+    Instrument the interaction with SQS - namely ensuring message IDs are correctly assigned
+    as attributes.
     """
 
     def instrumentation_dependencies(self) -> Collection[str]:
@@ -91,11 +93,36 @@ class SqsBrokerInstrumentor(BaseInstrumentor):
 
         SQSConsumer.ack = instrumented_ack
 
-    def _uninstrument(self, **kwargs):
-        original_consumer_iterator = SQSConsumer.__next__
-        if hasattr(original_consumer_iterator, "__wrapped__"):
-            SQSConsumer.__next__ = original_consumer_iterator.__wrapped__
+        # send_with_options (Actor)
+        # ...the Dramatiq instrumentation starts a trace to inject the context into the message
+        # but doesn't actually trace the message send call (either the actor or the broker enqueue)
+        # This makes actor calling two unrelated spans - one making the message, the other
+        # from sending to SQS. This is hard to see when something like sending a broadcast message
+        # creates multiple invocations. So let's have a parent span on the actor's send:
+        original_actor_send_with_options = Actor.send_with_options
 
-        original_ack = SQSConsumer.__next__
-        if hasattr(original_ack, "__wrapped__"):
-            SQSConsumer.__next__ = original_ack.__wrapped__
+        @functools.wraps(original_actor_send_with_options)
+        def instrumented_actor_send_with_options(self, *, args=(), kwargs=None, delay=None, **options):
+            with tracer.start_as_current_span(
+                f"dramatiq.actor.{self.actor_name}.send",
+                kind=SpanKind.INTERNAL,
+            ) as span:
+                span.set_attribute("dramatiq.actor.args", str(args))
+                span.set_attribute("dramatiq.actor.kwargs", str(kwargs))
+
+                return original_actor_send_with_options(self, args=args, kwargs=kwargs, delay=delay, **options)
+
+        Actor.send_with_options = instrumented_actor_send_with_options
+
+    def _uninstrument(self, **kwargs):
+        consumer_iterator = SQSConsumer.__next__
+        if hasattr(consumer_iterator, "__wrapped__"):
+            SQSConsumer.__next__ = consumer_iterator.__wrapped__
+
+        ack = SQSConsumer.__next__
+        if hasattr(ack, "__wrapped__"):
+            SQSConsumer.__next__ = ack.__wrapped__
+
+        actor_send_with_options = Actor.send_with_options
+        if hasattr(actor_send_with_options, "__wrapped__"):
+            Actor.send_with_options = actor_send_with_options.__wrapped__
