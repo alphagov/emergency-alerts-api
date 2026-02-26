@@ -4,7 +4,7 @@
 # Get a created init-ed Flask app
 from application import app
 
-# Import so that the decorators run and register the tasks
+# Import so that the decorators run and register the actors
 import app.tasks.broadcast_message_tasks  # noqa
 import app.tasks.scheduled_tasks  # noqa
 import app.tasks.stub_tasks  # noqa

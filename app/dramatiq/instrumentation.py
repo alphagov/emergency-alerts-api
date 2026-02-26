@@ -18,7 +18,7 @@ class SqsBrokerInstrumentor(BaseInstrumentor):
     """
 
     def instrumentation_dependencies(self) -> Collection[str]:
-        return ["periodiq >= 0.13.0"]
+        return ["dramatiq >= 1.18.0"]
 
     def _instrument(self, **kwargs):
         """Instruments the SQS consumer for more detailed trace interaction (IDs)"""

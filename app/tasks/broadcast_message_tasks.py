@@ -133,7 +133,7 @@ def send_broadcast_event(broadcast_event_id):
     actor_name=TaskNames.SEND_BROADCAST_PROVIDER_MESSAGE,
     queue_name=QueueNames.HIGH_PRIORITY,
 )
-def send_broadcast_provider_message(self, broadcast_event_id, provider):
+def send_broadcast_provider_message(broadcast_event_id, provider):
     if not current_app.config["CBC_PROXY_ENABLED"]:
         current_app.logger.info(
             "CBC Proxy disabled, unable to send broadcast_provider_message",
