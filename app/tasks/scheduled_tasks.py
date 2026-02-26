@@ -6,7 +6,7 @@ from flask import current_app
 from periodiq import cron
 from sqlalchemy.exc import SQLAlchemyError
 
-from app import db, dramatiq
+from app import db, define_traced_actor
 from app.dao.broadcast_message_dao import (
     dao_get_all_finished_broadcast_messages_with_outstanding_actions,
 )
@@ -36,14 +36,16 @@ from app.tasks.broadcast_message_tasks import (
 from app.tasks.stub_tasks import publish_govuk_alerts
 
 
-@dramatiq.actor(actor_name=TaskNames.RUN_HEALTH_CHECK, queue_name=QueueNames.PERIODIC, periodic=cron("*/1 * * * *"))
+@define_traced_actor(
+    actor_name=TaskNames.RUN_HEALTH_CHECK, queue_name=QueueNames.PERIODIC, periodic=cron("*/1 * * * *")
+)
 def run_health_check():
     try:
         post_app_version_to_cloudwatch()
         post_db_version_to_cloudwatch(get_db_version())
 
         time_stamp = int(time.time())
-        with open("/eas/emergency-alerts-api/celery-beat-healthcheck", mode="w") as file:
+        with open("celery-beat-healthcheck", mode="w") as file:
             file.write(str(time_stamp))
         current_app.logger.info(f"file.write successful - celery health check timestamp: {time_stamp}")
     except Exception:
@@ -51,7 +53,9 @@ def run_health_check():
         raise
 
 
-@dramatiq.actor(actor_name=TaskNames.DELETE_VERIFY_CODES, queue_name=QueueNames.PERIODIC, periodic=cron("10 * * * *"))
+@define_traced_actor(
+    actor_name=TaskNames.DELETE_VERIFY_CODES, queue_name=QueueNames.PERIODIC, periodic=cron("10 * * * *")
+)
 def delete_verify_codes():
     try:
         start = datetime.now(timezone.utc)
@@ -65,7 +69,9 @@ def delete_verify_codes():
         raise
 
 
-@dramatiq.actor(actor_name=TaskNames.DELETE_INVITATIONS, queue_name=QueueNames.PERIODIC, periodic=cron("20 * * * *"))
+@define_traced_actor(
+    actor_name=TaskNames.DELETE_INVITATIONS, queue_name=QueueNames.PERIODIC, periodic=cron("20 * * * *")
+)
 def delete_invitations():
     try:
         start = datetime.now(timezone.utc)
@@ -80,7 +86,9 @@ def delete_invitations():
         raise
 
 
-@dramatiq.actor(actor_name=TaskNames.TRIGGER_LINK_TESTS, queue_name=QueueNames.PERIODIC, periodic=cron("*/3 * * * *"))
+@define_traced_actor(
+    actor_name=TaskNames.TRIGGER_LINK_TESTS, queue_name=QueueNames.PERIODIC, periodic=cron("*/3 * * * *")
+)
 def trigger_link_tests():
     if current_app.config["CBC_PROXY_ENABLED"]:
         current_app.logger.info(
@@ -107,7 +115,7 @@ def auto_expire_broadcast_messages():
     db.session.commit()
 
 
-@dramatiq.actor(
+@define_traced_actor(
     actor_name=TaskNames.REMOVE_YESTERDAYS_PLANNED_TESTS_ON_GOVUK_ALERTS,
     queue_name=QueueNames.PERIODIC,
     periodic=cron("0 0 * * *"),
@@ -117,7 +125,7 @@ def remove_yesterdays_planned_tests_on_govuk_alerts():
     current_app.logger.info("Enqueued publish GOV UK Alerts for nightly rebuild: %s", publish_task.asdict())
 
 
-@dramatiq.actor(
+@define_traced_actor(
     actor_name=TaskNames.DELETE_OLD_RECORDS_FROM_EVENTS_TABLE,
     queue_name=QueueNames.PERIODIC,
     periodic=cron("0 3 * * *"),
@@ -140,7 +148,7 @@ def delete_old_records_from_events_table():
     db.session.commit()
 
 
-@dramatiq.actor(
+@define_traced_actor(
     actor_name=TaskNames.VALIDATE_FUNCTIONAL_TEST_ACCOUNT_EMAILS,
     queue_name=QueueNames.PERIODIC,
     periodic=cron("0 0 1 * *"),
@@ -176,7 +184,7 @@ def validate_functional_test_account_emails():
         )
 
 
-@dramatiq.actor(
+@define_traced_actor(
     actor_name=TaskNames.QUEUE_AFTER_ALERT_ACTIVITIES, queue_name=QueueNames.PERIODIC, periodic=cron("*/1 * * * *")
 )
 def queue_after_alert_activities():

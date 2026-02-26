@@ -52,6 +52,8 @@ notification_provider_clients = NotificationProviderClients()
 api_user = LocalProxy(lambda: g.api_user)
 authenticated_service = LocalProxy(lambda: g.authenticated_service)
 
+_tracer = trace.get_tracer(__name__)
+
 _celery_tasks = {}
 
 
@@ -358,13 +360,14 @@ def setup_dramatiq(app):
         AppContextMiddleware(app),
         PeriodiqMiddleware(skip_delay=300),
         ActorQueuePrefixMiddleware(prefix=app.config["QUEUE_PREFIX"]),
-        # This is mostly the default_middleware - except we remove Prometheus, AgeLimit, and Retries
+        # This is mostly the default_middleware - except we remove Prometheus and AgeLimit
         # ...the latter of which would re-queue messages onto the queue, but actually we want SQS
         # and its visibility timeout to do that for a single message, and redrive into a DLQ after a period.
         # i.e. let the infrastructure do the work there and not process here.
         TimeLimit(),
         ShutdownNotifications(),
         Callbacks(),
+        # Retries(min_backoff=1000, max_backoff=900000, max_retries=96)
     ]
     sqs_broker = SQSBroker(
         middleware=middleware,
@@ -374,3 +377,12 @@ def setup_dramatiq(app):
     for actor in dramatiq.actors:
         # Re-register the actors so they reference our new broker
         actor.register(broker=sqs_broker)
+
+
+def define_traced_actor(**kwargs):
+    """The same as flask_dramatiq's @actor decorator, but it also automatically starts a trace."""
+
+    def inner(fn):
+        return dramatiq.actor(_tracer.start_as_current_span(kwargs["actor_name"])(fn), **kwargs)
+
+    return inner

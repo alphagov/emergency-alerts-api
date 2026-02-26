@@ -4,7 +4,7 @@ from emergency_alerts_utils.tasks import QueueNames, TaskNames
 from emergency_alerts_utils.xml.common import HEADLINE
 from flask import current_app
 
-from app import cbc_proxy_client, dramatiq
+from app import cbc_proxy_client, define_traced_actor
 
 # from app.clients.cbc_proxy import CBCProxyRetryableException
 from app.dao.broadcast_message_dao import (
@@ -96,7 +96,7 @@ def _check_event_makes_sense_in_sequence(broadcast_event, provider):
                 )
 
 
-@dramatiq.actor(actor_name=TaskNames.SEND_BROADCAST_EVENT, queue_name=QueueNames.HIGH_PRIORITY)
+@define_traced_actor(actor_name=TaskNames.SEND_BROADCAST_EVENT, queue_name=QueueNames.HIGH_PRIORITY)
 def send_broadcast_event(broadcast_event_id):
     try:
         broadcast_event = dao_get_broadcast_event_by_id(broadcast_event_id)
@@ -129,7 +129,7 @@ def send_broadcast_event(broadcast_event_id):
         raise
 
 
-@dramatiq.actor(
+@define_traced_actor(
     actor_name=TaskNames.SEND_BROADCAST_PROVIDER_MESSAGE,
     queue_name=QueueNames.HIGH_PRIORITY,
 )
@@ -227,13 +227,13 @@ def send_broadcast_provider_message(self, broadcast_event_id, provider):
         raise
 
 
-@dramatiq.actor(actor_name=TaskNames.TRIGGER_LINK_TEST, queue_name=QueueNames.BROADCASTS)
+@define_traced_actor(actor_name=TaskNames.TRIGGER_LINK_TEST, queue_name=QueueNames.BROADCASTS)
 def trigger_link_test(provider):
     current_app.logger.info("trigger_link_test", extra={"python_module": __name__, "target_provider": provider})
     cbc_proxy_client.get_proxy(provider).send_link_test()
 
 
-@dramatiq.actor(actor_name=TaskNames.TRIGGER_LINK_TEST_PRIMARY_TO_A, queue_name=QueueNames.BROADCASTS)
+@define_traced_actor(actor_name=TaskNames.TRIGGER_LINK_TEST_PRIMARY_TO_A, queue_name=QueueNames.BROADCASTS)
 def trigger_link_test_primary_to_A(provider):
     current_app.logger.info(
         "trigger_link_test_primary_to_A", extra={"python_module": __name__, "target_provider": provider}
@@ -241,7 +241,7 @@ def trigger_link_test_primary_to_A(provider):
     cbc_proxy_client.get_proxy(provider).send_link_test_primary_to_A()
 
 
-@dramatiq.actor(actor_name=TaskNames.TRIGGER_LINK_TEST_PRIMARY_TO_B, queue_name=QueueNames.BROADCASTS)
+@define_traced_actor(actor_name=TaskNames.TRIGGER_LINK_TEST_PRIMARY_TO_B, queue_name=QueueNames.BROADCASTS)
 def trigger_link_test_primary_to_B(provider):
     current_app.logger.info(
         "trigger_link_test_primary_to_B", extra={"python_module": __name__, "target_provider": provider}
@@ -249,7 +249,7 @@ def trigger_link_test_primary_to_B(provider):
     cbc_proxy_client.get_proxy(provider).send_link_test_primary_to_B()
 
 
-@dramatiq.actor(actor_name=TaskNames.TRIGGER_LINK_TEST_SECONDARY_TO_A, queue_name=QueueNames.BROADCASTS)
+@define_traced_actor(actor_name=TaskNames.TRIGGER_LINK_TEST_SECONDARY_TO_A, queue_name=QueueNames.BROADCASTS)
 def trigger_link_test_secondary_to_A(provider):
     current_app.logger.info(
         "trigger_link_test_secondary_to_A", extra={"python_module": __name__, "target_provider": provider}
@@ -257,7 +257,7 @@ def trigger_link_test_secondary_to_A(provider):
     cbc_proxy_client.get_proxy(provider).send_link_test_secondary_to_A()
 
 
-@dramatiq.actor(actor_name=TaskNames.TRIGGER_LINK_TEST_SECONDARY_TO_B, queue_name=QueueNames.BROADCASTS)
+@define_traced_actor(actor_name=TaskNames.TRIGGER_LINK_TEST_SECONDARY_TO_B, queue_name=QueueNames.BROADCASTS)
 def trigger_link_test_secondary_to_B(provider):
     current_app.logger.info(
         "trigger_link_test_secondary_to_B", extra={"python_module": __name__, "target_provider": provider}
