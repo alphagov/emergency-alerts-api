@@ -95,11 +95,10 @@ def trigger_link_tests():
             "trigger_link_tests", extra={"python_module": __name__, "target_queue": QueueNames.BROADCASTS}
         )
         for cbc_name in current_app.config["ENABLED_CBCS"]:
-            # trigger_link_test.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
-            trigger_link_test_primary_to_A.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
-            trigger_link_test_primary_to_B.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
-            trigger_link_test_secondary_to_A.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
-            trigger_link_test_secondary_to_B.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
+            trigger_link_test_primary_to_A.send(provider=cbc_name)
+            trigger_link_test_primary_to_B.send(provider=cbc_name)
+            trigger_link_test_secondary_to_A.send(provider=cbc_name)
+            trigger_link_test_secondary_to_B.send(provider=cbc_name)
 
 
 def auto_expire_broadcast_messages():
