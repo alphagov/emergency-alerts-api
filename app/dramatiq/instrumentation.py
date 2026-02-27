@@ -32,47 +32,7 @@ class SqsBrokerInstrumentor(BaseInstrumentor):
             schema_url="https://opentelemetry.io/schemas/1.11.0",
         )
 
-        # iterator (receieve_messages)
-        original_consumer_iterator = SQSConsumer.__next__
-
-        @functools.wraps(original_consumer_iterator)
-        def instrumented_consumer_iterator(self: SQSConsumer):
-            queue_name = self.queue.url.split("/")[-1]
-
-            # Unfortunately this captures the message being received from SQS, but within the message
-            # is a trace context which will be used when dramatiq starts processing the message
-            # ...which means this span doesn't get linked into the 'bigger picture' trace of send
-            # message -> (receive message) -> do stuff -> delete message.
-
-            # We'd probably need to hack on the Dramatiq instrumentation to embed the trace context here
-            # into the _SQSMessage object and then get that to add a link(?) when it resets the trace
-            # context to that embedded in the message originally.
-
-            with tracer.start_as_current_span(
-                f"dramatiq_sqs.__next__: {queue_name}",
-                kind=SpanKind.CONSUMER,
-                # Ensure we're a root trace for this
-                context=trace.set_span_in_context(trace.INVALID_SPAN),
-            ):
-                future_message: _SQSMessage = original_consumer_iterator(self)
-
-                if future_message is not None:
-                    try:
-                        with tracer.start_as_current_span(
-                            "SQS.ReceiveMessage: Result",
-                            kind=SpanKind.CONSUMER,
-                        ) as span:
-                            # The Dramatiq instrumentation uses the term message_id for Dramatiq's own message IDs
-                            span.set_attribute("message_id", future_message.message_id)
-
-                            sqs_message_id = future_message._sqs_message.message_id
-                            span.set_attribute("messaging.message.id", sqs_message_id)
-                    except Exception:
-                        pass
-
-                return future_message
-
-        SQSConsumer.__next__ = instrumented_consumer_iterator
+        # (We don't instrument __next__ - it gets called an insane amount)
 
         # ack (delete)
         original_ack = SQSConsumer.ack
@@ -115,10 +75,6 @@ class SqsBrokerInstrumentor(BaseInstrumentor):
         Actor.send_with_options = instrumented_actor_send_with_options
 
     def _uninstrument(self, **kwargs):
-        consumer_iterator = SQSConsumer.__next__
-        if hasattr(consumer_iterator, "__wrapped__"):
-            SQSConsumer.__next__ = consumer_iterator.__wrapped__
-
         ack = SQSConsumer.__next__
         if hasattr(ack, "__wrapped__"):
             SQSConsumer.__next__ = ack.__wrapped__
