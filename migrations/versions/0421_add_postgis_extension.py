@@ -13,16 +13,12 @@ down_revision = "0420_add_default_template_areas"
 
 
 def upgrade():
-    op.execute(
-        """
+    op.execute("""
         CREATE EXTENSION IF NOT EXISTS postgis
-        """
-    )
+        """)
 
 
 def downgrade():
-    op.execute(
-        """
+    op.execute("""
         DROP EXTENSION IF EXISTS postgis
-        """
-    )
+        """)

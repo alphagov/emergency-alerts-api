@@ -13,20 +13,16 @@ down_revision = "0419_add_area_col"
 
 
 def upgrade():
-    op.execute(
-        """
+    op.execute("""
         UPDATE templates
         SET areas = '{}'
         WHERE areas IS NULL;
-    """
-    )
-    op.execute(
-        """
+    """)
+    op.execute("""
         UPDATE templates_history
         SET areas = '{}'
         WHERE areas IS NULL;
-    """
-    )
+    """)
 
 
 def downgrade():
