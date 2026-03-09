@@ -543,6 +543,8 @@ python-dateutil==2.9.0.post0
     #   celery
     #   freezegun
     #   moto
+pytokens==0.4.1
+    # via black
 pyyaml==6.0.3
     # via responses
 requests==2.32.5
@@ -603,7 +605,7 @@ wcwidth==0.2.14
     # via prompt-toolkit
 webcolors==25.10.0
     # via jsonschema
-werkzeug==3.1.5
+werkzeug==3.1.6
     # via
     #   -r requirements.in
     #   flask
