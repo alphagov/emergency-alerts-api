@@ -14,12 +14,12 @@ repos:
   - id: flake8
     name: flake8 (python)
 - repo: https://github.com/PyCQA/isort
-  rev: 7.0.0
+  rev: 8.0.1
   hooks:
     - id: isort
       name: isort (python)
 - repo: https://github.com/psf/black
-  rev: 26.1.0
+  rev: 26.3.0
   hooks:
     - id: black
       name: black (python)
