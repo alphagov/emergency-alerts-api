@@ -23,6 +23,7 @@ GENERAL_TOKEN_ERROR_MESSAGE = "Invalid token: make sure your API token matches t
 
 class AuthError(Exception):
     def __init__(self, message, code, service_id=None, api_key_id=None):
+        super().__init__(message, code, service_id, api_key_id)
         self.message = {"token": [message]}
         self.short_message = message
         self.code = code
