@@ -13,15 +13,13 @@ down_revision = "0383_webauthn_cred_logged_in_at"
 
 
 def upgrade():
-    op.execute(
-        """
+    op.execute("""
             INSERT INTO letter_branding_to_organisation
             (organisation_id, letter_branding_id)
             (SELECT id , '2cd354bb-6b85-eda3-c0ad-6b613150459f'
             FROM organisation WHERE organisation_type IN ('nhs_central', 'nhs_local', 'nhs_gp'))
             ON CONFLICT DO NOTHING;
-            """
-    )
+            """)
 
 
 def downgrade():

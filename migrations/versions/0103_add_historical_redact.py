@@ -17,8 +17,7 @@ from sqlalchemy.dialects import postgresql
 
 
 def upgrade():
-    op.execute(
-        """
+    op.execute("""
         INSERT INTO template_redacted
         (
             template_id,
@@ -35,10 +34,7 @@ def upgrade():
             templates
         LEFT JOIN template_redacted on template_redacted.template_id = templates.id
         WHERE template_redacted.template_id IS NULL
-        """.format(
-            notify_user=current_app.config["NOTIFY_USER_ID"]
-        )
-    )
+        """.format(notify_user=current_app.config["NOTIFY_USER_ID"]))
 
 
 def downgrade():
