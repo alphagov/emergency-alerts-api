@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from app import db
 from app.models import PublishTaskProgress
@@ -17,6 +17,18 @@ def dao_get_all_in_progress_publish_tasks():
     return PublishTaskProgress.query.filter_by(finished_at=None).all()
 
 
+def dao_get_all_publish_tasks_older_than(days_older_than):
+    return (
+        db.session.query(
+            PublishTaskProgress.id,
+        )
+        .filter(
+            PublishTaskProgress.created_at <= datetime.now() - timedelta(days=days_older_than),
+        )
+        .all()
+    )
+
+
 def dao_get_publish_task(id):
     return PublishTaskProgress.query.filter_by(id=id).first()
 
@@ -33,3 +45,16 @@ def dao_finish_publish(id):
     )
     db.session.commit()
     return dao_get_publish_task(id)
+
+
+def dao_delete_publish_by_id(publish_task_id):
+    PublishTaskProgress.query.filter_by(id=publish_task_id).delete()
+    db.session.commit()
+
+
+def dao_purge_old_publish_tasks(days_older_than=1):
+    print(f"Purging publish tasks older than {days_older_than} days")
+    publish_task_ids = dao_get_all_publish_tasks_older_than(days_older_than)
+    for publish_task_id in publish_task_ids:
+        dao_delete_publish_by_id(publish_task_id)
+    return len(publish_task_ids)

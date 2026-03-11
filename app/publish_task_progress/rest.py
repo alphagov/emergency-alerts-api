@@ -7,6 +7,7 @@ from app.dao.publish_task_progress_dao import (
     dao_finish_publish,
     dao_get_all_in_progress_publish_tasks,
     dao_get_publish_task,
+    dao_purge_old_publish_tasks,
     dao_update_publish,
 )
 from app.errors import register_errors
@@ -87,3 +88,16 @@ def has_publish_failed(now, task, failed_publish_interval=5.0):
         # If `last_activity_at` hasn't been set, the publish may have started and
         # no activity yet, so we check `started_at` timestamp
         return now - task.started_at.timestamp() > failed_publish_interval
+
+
+@publish_task_progress_blueprint.route("/purge/<int:older_than>", methods=["DELETE"])
+def purge_publish_tasks(days_older_than):
+    try:
+        count = dao_purge_old_publish_tasks(days_older_than)
+    except Exception as e:
+        return jsonify(result="error", message=f"Unable to purge old publish tasks: {e}"), 500
+
+    return (
+        jsonify({"message": f"Purged {count} publish tasks created more than {days_older_than} days ago"}),
+        200,
+    )
