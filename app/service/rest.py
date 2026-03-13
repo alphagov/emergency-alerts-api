@@ -1,5 +1,7 @@
 import os
+from datetime import datetime, timedelta, timezone
 
+import boto3
 from flask import Blueprint, current_app, jsonify, request
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
@@ -360,3 +362,37 @@ def purge_failed_logins_created_by_tests():
         return jsonify(result="error", message=f"Unable to purge failed logins created by functional tests: {e}"), 500
 
     return jsonify({"message": "Successfully purged failed logins"}), 200
+
+
+@service_blueprint.route("/purge-govuk-s3-bucket", methods=["DELETE"])
+def purge_govuk_s3_bucket():
+    if is_public_environment():
+        raise InvalidRequest("Endpoint not found", status_code=404)
+
+    try:
+        # purge S3 bucket here
+        bucket = current_app.config["GOVUK_ALERTS_S3_BUCKET_NAME"]
+        s3 = boto3.client("ș3")
+        prefix = "alerts/"
+        cutoff = datetime.now(timezone.utc) - timedelta(days=10)
+        paginator = s3.get_paginator("list_objects_v2")
+        to_delete = []
+
+        for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
+            for obj in page.get("Contents", []):
+                if obj["LastModified"] < cutoff:
+                    to_delete.append({"Key": obj["Key"]})
+
+        # Delete in batches of 1000 (S3 API limit)
+        for i in range(0, len(to_delete), 1000):
+            batch = to_delete[i : i + 1000]
+            s3.delete_objects(Bucket=bucket, Delete={"Objects": batch})
+            current_app.logger.info(f"Would delete: {obj['Key']} (LastModified: {obj['LastModified']})")
+            # print(f"Deleted {len(batch)} objects")
+
+        # print(f"Total deleted: {len(to_delete)}")
+
+    except Exception as e:
+        return jsonify(result="error", message=f"Unable to purge govuk/alerts s3 bucket: {e}"), 500
+
+    return jsonify({"message": "Successfully purged govuk/alerts s3 bucket"}), 200
