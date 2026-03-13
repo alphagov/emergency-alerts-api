@@ -101,6 +101,7 @@ def register_blueprint(application):
     from app.authentication.auth import (
         requires_admin_auth,
         requires_govuk_alerts_auth,
+        requires_govuk_alerts_publish_auth,
         requires_no_auth,
     )
     from app.broadcast_message.rest import broadcast_message_blueprint
@@ -198,7 +199,7 @@ def register_blueprint(application):
     common_passwords_blueprint.before_request(requires_admin_auth)
     application.register_blueprint(common_passwords_blueprint)
 
-    publish_task_progress_blueprint.before_request(requires_govuk_alerts_auth)
+    publish_task_progress_blueprint.before_request(requires_govuk_alerts_publish_auth)
     application.register_blueprint(publish_task_progress_blueprint)
 
 
