@@ -52,6 +52,13 @@ def requires_govuk_alerts_auth():
     requires_internal_auth(current_app.config.get("GOVUK_ALERTS_CLIENT_ID"))
 
 
+def requires_govuk_alerts_publish_auth():
+    # This separate authentication required ensures the routes
+    # use different keys for authentication
+    print()
+    requires_internal_auth(current_app.config.get("GOVUK_ALERTS_PUBLISH_CLIENT_ID"))
+
+
 def requires_admin_auth():
     requires_internal_auth(current_app.config.get("ADMIN_CLIENT_ID"))
 
