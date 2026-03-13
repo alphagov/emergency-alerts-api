@@ -94,8 +94,8 @@ def has_publish_failed(now, task, failed_publish_interval=5.0):
 def purge_publish_tasks(days_older_than):
     try:
         count = dao_purge_old_publish_tasks(days_older_than)
-    except Exception as e:
-        return jsonify(result="error", message=f"Unable to purge old publish tasks: {e}"), 500
+    except Exception:
+        return jsonify(result="error", message="Unable to purge old publish tasks"), 500
 
     return (
         jsonify({"message": f"Purged {count} publish tasks created more than {days_older_than} days ago"}),
