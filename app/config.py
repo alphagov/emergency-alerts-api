@@ -183,6 +183,8 @@ class Config(object):
 
     MAX_THROTTLE_PERIOD = 60
 
+    GOVUK_ALERTS_S3_BUCKET_NAME = os.getenv("GOVUK_ALERTS_S3_BUCKET_NAME")
+
 
 class Hosted(Config):
     HOST = "hosted"
@@ -344,7 +346,6 @@ class Test(Config):
     ADMIN_EXTERNAL_URL = f"https://{TENANT}admin.{SUBDOMAIN}emergency-alerts.service.gov.uk"
     REPORTS_SLACK_WEBHOOK_URL = "https://hooks.slack.com/somewhere"
     CBC_PROXY_ENABLED = True
-    GOVUK_ALERTS_S3_BUCKET_NAME = os.getenv("GOVUK_ALERTS_S3_BUCKET_NAME")
 
 
 configs = {

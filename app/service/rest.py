@@ -386,9 +386,9 @@ def purge_govuk_s3_bucket():
         # Delete in batches of 1000 (S3 API limit)
         for i in range(0, len(to_delete), 1000):
             batch = to_delete[i : i + 1000]
-            s3.delete_objects(Bucket=bucket, Delete={"Objects": batch})
-            current_app.logger.info(f"Would delete: {obj['Key']} (LastModified: {obj['LastModified']})")
+            # s3.delete_objects(Bucket=bucket, Delete={"Objects": batch})
             # print(f"Deleted {len(batch)} objects")
+            current_app.logger.info(f"Would delete {len(batch)} objects")
 
         # print(f"Total deleted: {len(to_delete)}")
 
