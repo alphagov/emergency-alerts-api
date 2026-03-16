@@ -584,7 +584,7 @@ six==1.17.0
     #   rfc3339-validator
 soupsieve==2.8
     # via beautifulsoup4
-sqlalchemy==2.0.48
+sqlalchemy==1.4.41
     # via
     #   -r requirements.in
     #   alembic

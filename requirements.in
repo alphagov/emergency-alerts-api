@@ -23,7 +23,7 @@ notifications-python-client==10.0.1
 psycopg2-binary==2.9.11
 pwdpy==1.0.1
 PyJWT==2.12.0
-SQLAlchemy==2.0.48
+SQLAlchemy==1.4.41
 urllib3==2.6.3
 Werkzeug==3.1.6
 
