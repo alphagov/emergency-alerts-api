@@ -20,6 +20,9 @@ publish_task_progress_blueprint = Blueprint(
 
 register_errors(publish_task_progress_blueprint)
 
+accepted_publish_types = ["publish-all", "publish-dynamic"]
+accepted_publish_status = ["failed", "ongoing"]
+
 
 @publish_task_progress_blueprint.route("add-publish", methods=["POST"])
 def add_publish_task():
@@ -58,21 +61,19 @@ def get_publish_tasks():
     now = time()
     tasks = dao_get_all_in_progress_publish_tasks()
 
-    result = {
-        "failed": {"publish-all": [], "publish-dynamic": []},
-        "ongoing": {"publish-all": [], "publish-dynamic": []},
-    }
+    result = {}
 
     for task in tasks:
         status = "failed" if has_publish_failed(now, task) else "ongoing"
         task_data = parse_task_id(task.id)
         publish_type = task_data.get("publish_type")
 
-        if publish_type not in result[status]:
+        if (status not in accepted_publish_status) or (publish_type not in accepted_publish_types):
             continue
 
+        if status not in result.keys():
+            result[status] = {publish_type: []}
         result[status][publish_type].append(task.id)
-
     return jsonify(result)
 
 
