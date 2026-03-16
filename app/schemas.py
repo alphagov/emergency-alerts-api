@@ -105,19 +105,19 @@ class UserSchema(BaseSchema):
         )
 
     @validates("name")
-    def validate_name(self, value):
+    def validate_name(self, value, *, field_name=None, data=None, **kwargs):
         if not value:
             raise ValidationError("Invalid name")
 
     @validates("email_address")
-    def validate_email_address(self, value):
+    def validate_email_address(self, value, *, field_name=None, data=None, **kwargs):
         try:
             validate_email_address(value)
         except InvalidEmailError as e:
             raise ValidationError(str(e))
 
     @validates("mobile_number")
-    def validate_mobile_number(self, value):
+    def validate_mobile_number(self, value, *, field_name=None, data=None, **kwargs):
         try:
             if value is not None:
                 validate_phone_number(value, international=True)
@@ -146,19 +146,19 @@ class UserUpdateAttributeSchema(BaseSchema):
         )
 
     @validates("name")
-    def validate_name(self, value):
+    def validate_name(self, value, *, field_name=None, data=None, **kwargs):
         if not value:
             raise ValidationError("Invalid name")
 
     @validates("email_address")
-    def validate_email_address(self, value):
+    def validate_email_address(self, value, *, field_name=None, data=None, **kwargs):
         try:
             validate_email_address(value)
         except InvalidEmailError as e:
             raise ValidationError(str(e))
 
     @validates("mobile_number")
-    def validate_mobile_number(self, value):
+    def validate_mobile_number(self, value, *, field_name=None, data=None, **kwargs):
         try:
             if value is not None and value != "":
                 validate_phone_number(value, international=True)
@@ -189,11 +189,12 @@ class ServiceSchema(BaseSchema, UUIDsAsStringsMixin):
     permissions = fields.Method("serialize_service_permissions", "deserialize_service_permissions")
     organisation = field_for(models.Service, "organisation")
     go_live_at = field_for(models.Service, "go_live_at", format=DATETIME_FORMAT_NO_TIMEZONE)
-    allowed_broadcast_provider = fields.List(fields.String, dump_only=True, serialize="_get_allowed_broadcast_provider")
+    allowed_broadcast_provider = fields.Method("_get_allowed_broadcast_provider", dump_only=True)
+
     broadcast_channel = fields.Method(dump_only=True, serialize="_get_broadcast_channel")
 
     def _get_allowed_broadcast_provider(self, service):
-        return service.allowed_broadcast_provider
+        return list(service.allowed_broadcast_provider)
 
     def _get_broadcast_channel(self, service):
         return service.broadcast_channel
@@ -228,7 +229,7 @@ class ServiceSchema(BaseSchema, UUIDsAsStringsMixin):
         )
 
     @validates("permissions")
-    def validate_permissions(self, value):
+    def validate_permissions(self, value, *, field_name=None, data=None, **kwargs):
         permissions = [v.permission for v in value]
         for p in permissions:
             if p not in models.SERVICE_PERMISSION_TYPES:
@@ -385,7 +386,7 @@ class InvitedUserSchema(BaseSchema):
         model = models.InvitedUser
 
     @validates("email_address")
-    def validate_to(self, value):
+    def validate_to(self, value, *, field_name=None, data=None, **kwargs):
         try:
             validate_email_address(value)
         except InvalidEmailError as e:
@@ -405,7 +406,7 @@ class EmailDataSchema(ma.Schema):
         self.partial_email = partial_email
 
     @validates("email")
-    def validate_email(self, value):
+    def validate_email(self, value, *, field_name=None, data=None, **kwargs):
         if self.partial_email:
             return
         try:
