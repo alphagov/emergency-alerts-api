@@ -217,7 +217,7 @@ class Hosted(Config):
     ENVIRONMENT = os.getenv("ENVIRONMENT")
     ENVIRONMENT_PREFIX = ENVIRONMENT if ENVIRONMENT != "development" else "dev"
     AWS_REGION = os.environ.get("AWS_REGION", "eu-west-2")
-    QUEUE_PREFIX = f"{ENVIRONMENT_PREFIX}-{TENANT_PREFIX}"
+    QUEUE_PREFIX = f"{ENVIRONMENT_PREFIX}-{TENANT_PREFIX}dramatiq-"
 
 
 class Test(Config):
