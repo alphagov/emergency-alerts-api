@@ -6,7 +6,6 @@ from dramatiq.actor import Actor
 from dramatiq_sqs.broker import SQSConsumer, _SQSMessage
 from opentelemetry import trace
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
-from opentelemetry.trace import SpanKind
 
 logger = logging.getLogger("periodiq")
 
@@ -42,7 +41,6 @@ class SqsBrokerInstrumentor(BaseInstrumentor):
 
             with tracer.start_as_current_span(
                 "dramatiq_sqs.ack",
-                kind=SpanKind.INTERNAL,
             ) as span:
                 try:
                     span.set_attribute("messaging.message.id", message._sqs_message.message_id)
@@ -65,7 +63,6 @@ class SqsBrokerInstrumentor(BaseInstrumentor):
         def instrumented_actor_send_with_options(self, *, args=(), kwargs=None, delay=None, **options):
             with tracer.start_as_current_span(
                 f"dramatiq.actor.{self.actor_name}.send",
-                kind=SpanKind.INTERNAL,
             ) as span:
                 span.set_attribute("dramatiq.actor.args", str(args))
                 span.set_attribute("dramatiq.actor.kwargs", str(kwargs))

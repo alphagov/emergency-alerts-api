@@ -6,7 +6,6 @@ import periodiq
 from dramatiq import Actor
 from opentelemetry import trace
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
-from opentelemetry.trace import SpanKind
 from pendulum import DateTime
 
 logger = logging.getLogger("periodiq")
@@ -43,7 +42,6 @@ class PeriodiqInstrumentor(BaseInstrumentor):
             for actor in actors:
                 with tracer.start_as_current_span(
                     f"periodiq: {actor.actor_name}",
-                    kind=SpanKind.PRODUCER,
                 ) as span:
                     span.set_attribute("eas.cron.schedule", str(actor.options.get("periodic")))
 
