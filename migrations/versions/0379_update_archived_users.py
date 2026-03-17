@@ -32,9 +32,7 @@ def upgrade():
     #   Get the date they were archived by extracting it from their archived email address
     #   Get their original email address by extracting it from the un-redacted archived email address.
     results = conn.execute(
-        text(
-            textwrap.dedent(
-                """
+        text(textwrap.dedent("""
                 SELECT
                     users.id as user_id,
                     events.id AS event_id,
@@ -49,9 +47,7 @@ def upgrade():
                     AND NOT users.email_address LIKE CONCAT('_archived_%@', :notify_email_domain)
                 ORDER BY
                     users.id;
-                """  # noqa: W605
-            )
-        ),
+                """)),  # noqa: W605
         notify_email_domain=current_app.config["NOTIFY_EMAIL_DOMAIN"],
     )
 
@@ -68,9 +64,7 @@ def upgrade():
     print(f"Updating {len(users_to_update)} users.")
     if users_to_update:
         conn.execute(
-            text(
-                textwrap.dedent(
-                    """
+            text(textwrap.dedent("""
                     UPDATE users
                     SET
                         name = 'Archived user',
@@ -78,9 +72,7 @@ def upgrade():
                         updated_at = now()
                     WHERE
                         id = :user_id
-                    """
-                )
-            ),
+                    """)),
             users_to_update,
         )
 
@@ -95,18 +87,14 @@ def upgrade():
     print(f"Updating {len(events_to_update)} events.")
     if events_to_update:
         conn.execute(
-            text(
-                textwrap.dedent(
-                    """
+            text(textwrap.dedent("""
                     UPDATE events
                     SET
                         data = events.data::jsonb || jsonb_build_object('user_email_address', :original_email_address)
                     WHERE
                         id = :event_id
                         AND events.data->>'user_email_address' IS NULL
-                    """
-                )
-            ),
+                    """)),
             events_to_update,
         )
 
