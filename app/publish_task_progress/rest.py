@@ -71,8 +71,15 @@ def get_publish_tasks():
         if (status not in accepted_publish_status) or (publish_type not in accepted_publish_types):
             continue
 
-        if status not in result.keys():
-            result[status] = {publish_type: []}
+        # Check if "ongoing" or "failed" keys already in dict, if not add them
+        if status not in result:
+            result[status] = {}
+
+        # Check if publish_type already in dict, for relevant status
+        # If not, add this
+        if publish_type not in result[status]:
+            result[status][publish_type] = []
+
         result[status][publish_type].append(task.id)
     return jsonify(result)
 
