@@ -8,6 +8,7 @@ Create Date: 2026-03-06 10:51:00
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects import postgresql
 
 revision = "0422_add_publish_progress_table"
 down_revision = "0421_add_postgis_extension"
@@ -16,7 +17,8 @@ down_revision = "0421_add_postgis_extension"
 def upgrade():
     op.create_table(
         "publish_task_progress",
-        sa.Column("id", sa.String(), nullable=False),
+        sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column("task_id", sa.String(), nullable=False),
         sa.Column("last_published_file", sa.String(), nullable=True),
         sa.Column("started_at", sa.DateTime(), nullable=False),
         sa.Column("last_activity_at", sa.DateTime(), nullable=True),
@@ -29,6 +31,12 @@ def upgrade():
         "publish_task_progress",
         ["id"],
         unique=True,
+    )
+    op.create_index(
+        op.f("ix_task_id"),
+        "publish_task_progress",
+        ["task_id"],
+        unique=False,
     )
     op.create_index(
         op.f("ix_last_activity_at"),

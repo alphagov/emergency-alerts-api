@@ -27,12 +27,6 @@ accepted_publish_status = ["failed", "ongoing"]
 @publish_task_progress_blueprint.route("add-publish", methods=["POST"])
 def add_publish_task():
     task_id = request.get_json().get("task_id")
-
-    # If task exists already, return existing tasks and this will be
-    # updated as same publish type
-    if task := dao_get_publish_task(task_id):
-        return jsonify(task.serialize())
-
     task = dao_create_publish_task(task_id)
     return jsonify(task.serialize())
 
@@ -40,25 +34,25 @@ def add_publish_task():
 @publish_task_progress_blueprint.route("/update-publish", methods=["POST"])
 def update_publish_task():
     data = request.get_json()
-    task_id = data.get("task_id")
+    id = data.get("id")
     file = data.get("file")
-    task = dao_update_publish(task_id, file)
+    task = dao_update_publish(id, file)
     return jsonify(task.serialize())
 
 
 @publish_task_progress_blueprint.route("/get-publish", methods=["POST"])
 def get_publish_progress():
     data = request.get_json()
-    task_id = data.get("task_id")
-    task = dao_get_publish_task(task_id)
+    id = data.get("id")
+    task = dao_get_publish_task(id)
     return jsonify(task.serialize())
 
 
 @publish_task_progress_blueprint.route("/finish-publish", methods=["POST"])
 def finish_publish():
     data = request.get_json()
-    task_id = data.get("task_id")
-    task = dao_finish_publish(task_id)
+    id = data.get("id")
+    task = dao_finish_publish(id)
     return jsonify(task.serialize())
 
 
@@ -71,7 +65,7 @@ def get_publish_tasks():
 
     for task in tasks:
         status = "failed" if has_publish_failed(now, task) else "ongoing"
-        task_data = parse_task_id(task.id)
+        task_data = parse_task_id(task.task_id)
         publish_type = task_data.get("publish_type")
 
         if (status not in accepted_publish_status) or (publish_type not in accepted_publish_types):
@@ -86,7 +80,7 @@ def get_publish_tasks():
         if publish_type not in result[status]:
             result[status][publish_type] = []
 
-        result[status][publish_type].append(task.id)
+        result[status][publish_type].append(task.task_id)
     return jsonify(result)
 
 
@@ -104,8 +98,10 @@ def has_publish_failed(now, task, failed_publish_interval=5.0):
         return now - task.started_at.timestamp() > failed_publish_interval
 
 
-@publish_task_progress_blueprint.route("/purge/<int:older_than>", methods=["DELETE"])
-def purge_publish_tasks(days_older_than):
+@publish_task_progress_blueprint.route("/purge/", methods=["DELETE"])
+def purge_publish_tasks():
+    data = request.get_json()
+    days_older_than = data.get("days_older_than")
     try:
         count = dao_purge_old_publish_tasks(days_older_than)
     except Exception:
