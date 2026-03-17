@@ -27,6 +27,12 @@ accepted_publish_status = ["failed", "ongoing"]
 @publish_task_progress_blueprint.route("add-publish", methods=["POST"])
 def add_publish_task():
     task_id = request.get_json().get("task_id")
+
+    # If task exists already, return existing tasks and this will be
+    # updated as same publish type
+    if task := dao_get_publish_task(task_id):
+        return jsonify(task.serialize())
+
     task = dao_create_publish_task(task_id)
     return jsonify(task.serialize())
 
