@@ -38,6 +38,7 @@ from app.models import (
 )
 from tests import (
     create_admin_authorization_header,
+    create_govuk_publish_authorization_header,
     create_service_authorization_header,
 )
 from tests.app.db import (
@@ -404,6 +405,49 @@ def admin_request(client):
             return json_resp
 
     return AdminRequest
+
+
+@pytest.fixture
+def govuk_publish_request(client):
+    class GovukPublishRequest:
+        app = client.application
+
+        @staticmethod
+        def get(endpoint, _expected_status=200, **endpoint_kwargs):
+            resp = client.get(
+                url_for(endpoint, **(endpoint_kwargs or {})), headers=[create_govuk_publish_authorization_header()]
+            )
+            json_resp = resp.json
+            assert resp.status_code == _expected_status
+            return json_resp
+
+        @staticmethod
+        def post(endpoint, _data=None, _expected_status=200, **endpoint_kwargs):
+            resp = client.post(
+                url_for(endpoint, **(endpoint_kwargs or {})),
+                data=json.dumps(_data),
+                headers=[("Content-Type", "application/json"), create_govuk_publish_authorization_header()],
+            )
+            if resp.get_data():
+                json_resp = resp.json
+            else:
+                json_resp = None
+            assert resp.status_code == _expected_status
+            return json_resp
+
+        @staticmethod
+        def delete(endpoint, _expected_status=204, **endpoint_kwargs):
+            resp = client.delete(
+                url_for(endpoint, **(endpoint_kwargs or {})), headers=[create_govuk_publish_authorization_header()]
+            )
+            if resp.get_data():
+                json_resp = resp.json
+            else:
+                json_resp = None
+            assert resp.status_code == _expected_status, json_resp
+            return json_resp
+
+    return GovukPublishRequest
 
 
 @pytest.fixture
