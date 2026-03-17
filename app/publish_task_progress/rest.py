@@ -89,7 +89,7 @@ def parse_task_id(task_id):
     return {"publish_type": publish_type, "publish_origin": publish_origin, "timestamp": timestamp}
 
 
-def has_publish_failed(now, task, failed_publish_interval=5.0):
+def has_publish_failed(now, task, failed_publish_interval=10.0):
     if task.last_activity_at:
         return now - task.last_activity_at.timestamp() > failed_publish_interval
     else:
