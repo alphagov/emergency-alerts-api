@@ -5,9 +5,7 @@ from app.models import PublishTaskProgress
 
 
 def dao_create_publish_task(task_id):
-    data = PublishTaskProgress(
-        task_id=task_id,
-    )
+    data = PublishTaskProgress(task_id=task_id)
     db.session.add(data)
     db.session.commit()
     return PublishTaskProgress.query.filter_by(task_id=task_id).first()
@@ -18,15 +16,14 @@ def dao_get_all_in_progress_publish_tasks():
 
 
 def dao_get_all_publish_tasks_older_than(days_older_than):
-    return (
+    rows = (
         db.session.query(
             PublishTaskProgress.id,
         )
-        .filter(
-            PublishTaskProgress.started_at <= datetime.now() - timedelta(days=days_older_than),
-        )
+        .filter(PublishTaskProgress.started_at <= datetime.now() - timedelta(days=days_older_than))
         .all()
     )
+    return [str(row[0]) for row in rows]
 
 
 def dao_get_publish_task(id):
