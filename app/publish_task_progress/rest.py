@@ -98,10 +98,8 @@ def has_publish_failed(now, task, failed_publish_interval=5.0):
         return now - task.started_at.timestamp() > failed_publish_interval
 
 
-@publish_task_progress_blueprint.route("/purge/", methods=["DELETE"])
-def purge_publish_tasks():
-    data = request.get_json()
-    days_older_than = data.get("days_older_than")
+@publish_task_progress_blueprint.route("/purge/<int:days_older_than>", methods=["DELETE"])
+def purge_publish_tasks(days_older_than=1):
     try:
         count = dao_purge_old_publish_tasks(days_older_than)
     except Exception:
