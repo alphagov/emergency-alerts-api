@@ -90,12 +90,7 @@ def parse_task_id(task_id):
 
 
 def has_publish_failed(now, task, failed_publish_interval=10.0):
-    if task.last_activity_at:
-        return now - task.last_activity_at.timestamp() > failed_publish_interval
-    else:
-        # If `last_activity_at` hasn't been set, the publish may have started and
-        # no activity yet, so we check `started_at` timestamp
-        return now - task.started_at.timestamp() > failed_publish_interval
+    return now - task.last_activity_at.timestamp() > failed_publish_interval
 
 
 @publish_task_progress_blueprint.route("/purge/<int:days_older_than>", methods=["DELETE"])
