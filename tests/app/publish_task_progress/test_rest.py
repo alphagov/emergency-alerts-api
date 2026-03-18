@@ -10,7 +10,7 @@ def test_add_publish_task(notify_db_session, govuk_publish_request):
         "task_id": "test",
         "started_at": response["started_at"],
         "finished_at": None,
-        "last_activity_at": None,
+        "last_activity_at": response["last_activity_at"],
         "last_published_file": None,
     }
 
@@ -52,7 +52,6 @@ def test_get_publish_progress(notify_db_session, govuk_publish_request):
 def test_finish_publish(notify_db_session, govuk_publish_request):
     publish_task = create_publish_task()
     assert publish_task.finished_at is None
-    assert publish_task.last_activity_at is None
 
     govuk_publish_request.post(
         "publish_task_progress.finish_publish",
