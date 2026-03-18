@@ -1,3 +1,4 @@
+import functools
 import os
 import random
 import string
@@ -384,6 +385,12 @@ def define_traced_actor(**kwargs):
     """The same as flask_dramatiq's @actor decorator, but it also automatically starts a trace."""
 
     def inner(fn):
-        return dramatiq.actor(_tracer.start_as_current_span(kwargs["actor_name"])(fn), **kwargs)
+        @functools.wraps(fn)
+        def instrumented_fn(*fn_args, **fn_kwargs):
+            with _tracer.start_as_current_span(kwargs["actor_name"]):
+                with _tracer.start_as_current_span("inner"):
+                    return fn(*fn_args, **fn_kwargs)
+
+        return dramatiq.actor(instrumented_fn, **kwargs)
 
     return inner
