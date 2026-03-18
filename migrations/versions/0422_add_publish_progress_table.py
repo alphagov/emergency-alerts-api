@@ -39,12 +39,6 @@ def upgrade():
         unique=False,
     )
     op.create_index(
-        op.f("ix_last_activity_at"),
-        "publish_task_progress",
-        ["last_activity_at"],
-        unique=False,
-    )
-    op.create_index(
         op.f("ix_finished_at"),
         "publish_task_progress",
         ["finished_at"],
