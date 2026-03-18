@@ -1,4 +1,3 @@
-import functools
 import os
 import random
 import string
@@ -379,18 +378,3 @@ def setup_dramatiq(app):
     for actor in dramatiq.actors:
         # Re-register the actors so they reference our new broker
         actor.register(broker=sqs_broker)
-
-
-def define_traced_actor(**kwargs):
-    """The same as flask_dramatiq's @actor decorator, but it also automatically starts a trace."""
-
-    def inner(fn):
-        @functools.wraps(fn)
-        def instrumented_fn(*fn_args, **fn_kwargs):
-            with _tracer.start_as_current_span(kwargs["actor_name"]):
-                with _tracer.start_as_current_span("inner"):
-                    return fn(*fn_args, **fn_kwargs)
-
-        return dramatiq.actor(instrumented_fn, **kwargs)
-
-    return inner
