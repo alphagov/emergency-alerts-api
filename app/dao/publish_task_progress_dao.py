@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
+from flask import current_app
+
 from app import db
 from app.models import PublishTaskProgress
 
@@ -54,7 +56,7 @@ def dao_delete_publish_by_id(id):
 
 
 def dao_purge_old_publish_tasks(days_older_than=1):
-    print(f"Purging publish tasks older than {days_older_than} days")
+    current_app.logger.info(f"Purging publish tasks older than {days_older_than} days")
     publish_task_ids = dao_get_all_publish_tasks_older_than(days_older_than)
     for publish_id in publish_task_ids:
         dao_delete_publish_by_id(publish_id)
