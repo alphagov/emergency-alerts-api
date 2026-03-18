@@ -1402,7 +1402,9 @@ class PublishTaskProgress(db.Model):
     task_id = db.Column(db.String, index=True, unique=False, nullable=False)
     last_published_file = db.Column(db.String, nullable=True)
     started_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
-    last_activity_at = db.Column(db.DateTime, nullable=True, onupdate=datetime.datetime.utcnow)
+    last_activity_at = db.Column(
+        db.DateTime, nullable=True, onupdate=datetime.datetime.utcnow, default=datetime.datetime.utcnow
+    )
     finished_at = db.Column(db.DateTime, nullable=True)
 
     def serialize(self):
