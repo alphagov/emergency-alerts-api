@@ -19,16 +19,14 @@ def upgrade():
         "INSERT INTO rates(id, valid_from, rate, notification_type) "
         f"VALUES('{uuid.uuid4()}', '2022-03-31 23:00:00', 0.0161, 'sms')"
     )
-    op.execute(
-        """
+    op.execute("""
         UPDATE ft_billing
         SET rate = 0.0161
         WHERE
         notification_type = 'sms' AND
         bst_date >= '2022-04-01' AND
         bst_date < '2022-05-01'
-        """
-    )
+        """)
 
 
 def downgrade():

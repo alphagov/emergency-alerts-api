@@ -13,14 +13,12 @@ down_revision = "0384_add_nhs_to_letter_pools"
 
 
 def upgrade():
-    op.execute(
-        """
+    op.execute("""
             INSERT INTO letter_branding_to_organisation
             (organisation_id, letter_branding_id)
             (SELECT id, letter_branding_id FROM organisation WHERE letter_branding_id IS NOT NULL)
             ON CONFLICT DO NOTHING;
-            """
-    )
+            """)
 
 
 def downgrade():

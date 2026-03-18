@@ -13,8 +13,7 @@ down_revision = "0367_add_reach"
 
 
 def upgrade():
-    op.execute(
-        """
+    op.execute("""
         UPDATE
             organisation
         SET
@@ -23,8 +22,7 @@ def upgrade():
             organisation_type IN ('nhs_central', 'nhs_local', 'nhs_gp')
         AND
             email_branding_id IS NULL
-    """
-    )
+    """)
     # ### end Alembic commands ###
 
 
