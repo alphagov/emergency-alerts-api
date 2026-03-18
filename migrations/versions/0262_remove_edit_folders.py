@@ -17,8 +17,7 @@ def upgrade():
 
 
 def downgrade():
-    op.execute(
-        """
+    op.execute("""
            INSERT INTO
                service_permissions (service_id, permission, created_at)
            SELECT
@@ -34,7 +33,4 @@ def downgrade():
                        service_id = services.id and
                        permission = '{permission}'
                )
-       """.format(
-            permission="edit_folders"
-        )
-    )
+       """.format(permission="edit_folders"))

@@ -17,13 +17,11 @@ from sqlalchemy.dialects import postgresql
 
 
 def upgrade():
-    op.execute(
-        """
+    op.execute("""
         INSERT INTO dvla_organisation VALUES
         ('003', 'Department for Work and Pensions'),
         ('004', 'Government Equalities Office')
-    """
-    )
+    """)
 
 
 def downgrade():

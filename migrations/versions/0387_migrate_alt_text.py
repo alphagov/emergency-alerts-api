@@ -17,45 +17,33 @@ down_revision = "0386_email_branding_alt_text"
 def upgrade():
     conn = op.get_bind()
     # there are some old email_branding rows with empty string. Keep them as null.
-    conn.execute(
-        sa.text(
-            """
+    conn.execute(sa.text("""
             UPDATE
                 email_branding
             SET
                 text = null
             WHERE
                 text = '';
-            """
-        )
-    )
+            """))
     # if text is null, we need alt_text, so infer it from the branding name instead
-    conn.execute(
-        sa.text(
-            """
+    conn.execute(sa.text("""
             UPDATE
                 email_branding
             SET
                 alt_text = name
             WHERE
                 text is null;
-            """
-        )
-    )
+            """))
     # any rows with alt_text and text, remove alt_text.
     # i don't expect any rows to be set like this yet, but lets just ensure the constraint creation wont fail
-    conn.execute(
-        sa.text(
-            """
+    conn.execute(sa.text("""
             UPDATE
                 email_branding
             SET
                 alt_text = null
             WHERE
                 text is not null;
-            """
-        )
-    )
+            """))
     op.create_check_constraint(
         "ck_email_branding_one_of_alt_text_or_text_is_null",
         "email_branding",

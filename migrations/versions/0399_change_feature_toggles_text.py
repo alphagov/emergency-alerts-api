@@ -14,21 +14,17 @@ down_revision = "0398_add_failed_logins_table"
 
 def upgrade():
     op.execute("DELETE FROM feature_toggles where name = 'service_is_not_live'")
-    op.execute(
-        "INSERT INTO feature_toggles \
+    op.execute("INSERT INTO feature_toggles \
             (name, is_enabled, display_html) \
         VALUES \
             ('service_is_not_live', false, \
-                'This environment is not production. You cannot send alerts out to the public.')"
-    )
+                'This environment is not production. You cannot send alerts out to the public.')")
 
 
 def downgrade():
     op.execute("DELETE FROM feature_toggles where name = 'service_is_not_live'")
-    op.execute(
-        "INSERT INTO feature_toggles \
+    op.execute("INSERT INTO feature_toggles \
             (name, is_enabled, display_html) \
         VALUES \
             ('service_is_not_live', false, \
-                'This is not live. You cannot send alerts out to the public.')"
-    )
+                'This is not live. You cannot send alerts out to the public.')")
