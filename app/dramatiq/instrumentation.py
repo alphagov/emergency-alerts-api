@@ -5,10 +5,10 @@ from typing import Collection
 from dramatiq.actor import Actor
 from dramatiq.worker import _WorkerThread
 from dramatiq_sqs.broker import SQSConsumer, _SQSMessage
-from opentelemetry import context, trace
+from opentelemetry import trace
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
 from opentelemetry.propagate import extract, inject
-from opentelemetry.trace import SpanKind, StatusCode, Tracer
+from opentelemetry.trace import StatusCode, Tracer
 
 logger = logging.getLogger("dramatiq")
 
@@ -81,7 +81,6 @@ class DramatiqInstrumentor(BaseInstrumentor):
         def instrumented_message_with_options(actor_self, *, args=(), kwargs=None, **options):
             with self.tracer.start_as_current_span(
                 f"dramatiq.actor.{actor_self.actor_name}.message_with_options",
-                kind=SpanKind.SERVER,
             ) as span:
                 span.set_attribute("dramatiq.actor.name", actor_self.actor_name)
                 span.set_attribute("dramatiq.actor.queue_name", actor_self.queue_name)
@@ -124,7 +123,6 @@ class DramatiqInstrumentor(BaseInstrumentor):
 
             with self.tracer.start_as_current_span(
                 span_name,
-                kind=SpanKind.CLIENT,
                 context=trace_context,
             ) as span:
                 span.set_attribute("dramatiq.message_id", message.message_id)
