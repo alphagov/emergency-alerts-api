@@ -15,6 +15,10 @@ def dao_get_all_in_progress_publish_tasks():
     return PublishTaskProgress.query.filter_by(finished_at=None).all()
 
 
+def dao_get_all_publish_tasks():
+    return PublishTaskProgress.query.all()
+
+
 def dao_get_all_publish_tasks_older_than(days_older_than):
     rows = (
         db.session.query(
@@ -54,4 +58,4 @@ def dao_purge_old_publish_tasks(days_older_than=1):
     publish_task_ids = dao_get_all_publish_tasks_older_than(days_older_than)
     for publish_id in publish_task_ids:
         dao_delete_publish_by_id(publish_id)
-    return len(publish_task_ids)
+    return len(publish_task_ids)  # Returns number of tasks deleted
