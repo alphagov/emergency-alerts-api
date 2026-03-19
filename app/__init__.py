@@ -3,11 +3,12 @@ import random
 import string
 import time
 import uuid
+from base64 import b64decode
 from time import monotonic
 
 import boto3
 from dramatiq.middleware import Callbacks, ShutdownNotifications, TimeLimit
-from dramatiq_sqs.broker import SQSBroker, SQSConsumer
+from dramatiq_sqs.broker import SQSBroker, SQSConsumer, _SQSMessage
 from emergency_alerts_utils import logging, request_helper
 from emergency_alerts_utils.clients.encryption.encryption_client import (
     Encryption,
@@ -352,6 +353,39 @@ class EasSqsConsumer(SQSConsumer):
         # This defaults to the worker timeout (usually 1s), which is a bit pointless
         # as we'd want the SQS request to last as long as possible to reduce charges
         self.wait_time_seconds = 20
+
+    def __next__(self):
+        """
+        The overridden method does not provide a way to adjust the params to the SQS receive call.
+        Namely, we'd rather have the attributes/metadata about messages which can be used by our
+        retry middleware (e.g. ApproximateReceiveCount) and logged.
+        """
+
+        kw = {
+            "MaxNumberOfMessages": self.prefetch,
+            "WaitTimeSeconds": self.wait_time_seconds,
+            "MessageSystemAttributeNames": "All",  # The only part of this method that's changed
+        }
+        if self.visibility_timeout is not None:
+            kw["VisibilityTimeout"] = self.visibility_timeout
+
+        try:
+            return self.messages.popleft()
+        except IndexError:
+            if self.message_refc < self.prefetch:
+                for sqs_message in self.queue.receive_messages(**kw):
+                    try:
+                        encoded_message = b64decode(sqs_message.body)
+                        dramatiq_message = dramatiq.Message.decode(encoded_message)
+                        self.messages.append(_SQSMessage(sqs_message, dramatiq_message))
+                        self.message_refc += 1
+                    except Exception:  # pragma: no cover
+                        self.logger.exception("Failed to decode message: %r", sqs_message.body)
+
+            try:
+                return self.messages.popleft()
+            except IndexError:
+                return None
 
 
 class EasSqsBroker(SQSBroker):
