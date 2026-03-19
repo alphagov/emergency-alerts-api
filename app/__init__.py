@@ -7,7 +7,7 @@ from time import monotonic
 
 import boto3
 from dramatiq.middleware import Callbacks, ShutdownNotifications, TimeLimit
-from dramatiq_sqs import SQSBroker
+from dramatiq_sqs.broker import SQSBroker, SQSConsumer
 from emergency_alerts_utils import logging, request_helper
 from emergency_alerts_utils.clients.encryption.encryption_client import (
     Encryption,
@@ -345,6 +345,21 @@ def setup_sqlalchemy_events(app):
                 current_app.logger.exception("Exception caught for checkout event.")
 
 
+class EasSqsConsumer(SQSConsumer):
+    def __init__(self, queue, prefetch, timeout, *, visibility_timeout=None):
+        super().__init__(queue, prefetch, timeout, visibility_timeout=visibility_timeout)
+
+        # This defaults to the worker timeout (usually 1s), which is a bit pointless
+        # as we'd want the SQS request to last as long as possible to reduce charges
+        self.wait_time_seconds = 20
+
+
+class EasSqsBroker(SQSBroker):
+    @property
+    def consumer_class(self):
+        return EasSqsConsumer
+
+
 def setup_dramatiq(app):
     # flask_dramatiq provides its own @dramatiq.actor decorator
     # This has the excellent property of lazily registering so we don't actually need dramatiq
@@ -369,7 +384,7 @@ def setup_dramatiq(app):
         Callbacks(),
         # Retries(min_backoff=1000, max_backoff=900000, max_retries=96)
     ]
-    sqs_broker = SQSBroker(
+    sqs_broker = EasSqsBroker(
         middleware=middleware,
         visibility_timeout=None,  # Use the queue's default
     )
