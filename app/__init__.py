@@ -387,6 +387,26 @@ class EasSqsConsumer(SQSConsumer):
             except IndexError:
                 return None
 
+    def nack(self, message: _SQSMessage):
+        """
+        The default SQSConsumer behaviour for a nack is to ...ack.
+        That just throws the message away as if it succeeded and breaks the Retries middleware.
+        Instead we should let SQS redeliver it by changing the visibility timeout.
+
+        (For those not aware, nack is only called if something calls message.fail() - such as a
+        retry middleware. An actor raising an exception won't nack out of the box automatically.)
+
+        After a while SQS could DLQ it if configured, or a middleware could suppress the nack and let it ack.
+        """
+        # message._sqs_message is https://docs.aws.amazon.com/boto3/latest/reference/services/sqs/message/#SQS.Message
+        self.logger.warning("nack-ing SQS message ID: %s", message._sqs_message.message_id)
+        self.message_refc -= 1
+
+        try:
+            message._sqs_message.change_visibility(VisibilityTimeout=10)
+        except Exception:
+            self.logger.exception("Error when shortening SQS visibility (is it about to be redelivered anyway?)")
+
 
 class EasSqsBroker(SQSBroker):
     @property
