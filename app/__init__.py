@@ -46,7 +46,9 @@ db = SQLAlchemy()
 migrate = Migrate()
 ma = Marshmallow()
 # We override the broker when init-ing
-dramatiq = Dramatiq(broker_cls="dramatiq.brokers.stub:StubBroker", middleware=[PeriodiqMiddleware()])
+dramatiq = Dramatiq(
+    broker_cls="dramatiq.brokers.stub:StubBroker", middleware=[PeriodiqMiddleware(), SqsRetryMiddleware()]
+)
 encryption = Encryption()
 zendesk_client = ZendeskClient()
 slack_client = SlackClient()

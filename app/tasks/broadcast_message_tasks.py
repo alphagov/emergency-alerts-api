@@ -132,6 +132,7 @@ def send_broadcast_event(broadcast_event_id):
 @dramatiq.actor(
     actor_name=TaskNames.SEND_BROADCAST_PROVIDER_MESSAGE,
     queue_name=QueueNames.HIGH_PRIORITY,
+    allow_retry=True,
 )
 def send_broadcast_provider_message(broadcast_event_id, provider):
     if not current_app.config["CBC_PROXY_ENABLED"]:
@@ -224,7 +225,7 @@ def send_broadcast_provider_message(broadcast_event_id, provider):
                 "exception": str(e),
             },
         )
-        raise
+        raise e
 
 
 @dramatiq.actor(actor_name=TaskNames.TRIGGER_LINK_TEST, queue_name=QueueNames.BROADCASTS)
