@@ -7,6 +7,7 @@ from base64 import b64decode
 from time import monotonic
 
 import boto3
+from dramatiq.message import Message
 from dramatiq.middleware import Callbacks, ShutdownNotifications, TimeLimit
 from dramatiq_sqs.broker import SQSBroker, SQSConsumer, _SQSMessage
 from emergency_alerts_utils import logging, request_helper
@@ -364,7 +365,7 @@ class EasSqsConsumer(SQSConsumer):
         kw = {
             "MaxNumberOfMessages": self.prefetch,
             "WaitTimeSeconds": self.wait_time_seconds,
-            "MessageSystemAttributeNames": "All",  # The only part of this method that's changed
+            "MessageSystemAttributeNames": ["All"],  # The only part of this method that's changed
         }
         if self.visibility_timeout is not None:
             kw["VisibilityTimeout"] = self.visibility_timeout
@@ -376,7 +377,7 @@ class EasSqsConsumer(SQSConsumer):
                 for sqs_message in self.queue.receive_messages(**kw):
                     try:
                         encoded_message = b64decode(sqs_message.body)
-                        dramatiq_message = dramatiq.Message.decode(encoded_message)
+                        dramatiq_message = Message.decode(encoded_message)
                         self.messages.append(_SQSMessage(sqs_message, dramatiq_message))
                         self.message_refc += 1
                     except Exception:  # pragma: no cover
