@@ -131,7 +131,7 @@ def delete_old_records_from_events_table():
         f"Deleted {deleted_count} events older than {delete_events_before}.",
         extra={
             "python_module": __name__,
-            "celery_task": "delete-old-records-from-events-table",
+            "task": "delete-old-records-from-events-table",
             "target_queue": QueueNames.PERIODIC,
         },
     )
@@ -169,7 +169,7 @@ def validate_functional_test_account_emails():
             f"Functional test account emails validated on {datetime.now(timezone.utc).date}",
             extra={
                 "python_module": __name__,
-                "celery_task": "validate-functional-test-account-emails",
+                "task": "validate-functional-test-account-emails",
                 "target_queue": QueueNames.PERIODIC,
             },
         )

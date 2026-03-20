@@ -59,10 +59,6 @@ notification_provider_clients = NotificationProviderClients()
 api_user = LocalProxy(lambda: g.api_user)
 authenticated_service = LocalProxy(lambda: g.authenticated_service)
 
-_tracer = trace.get_tracer(__name__)
-
-_celery_tasks = {}
-
 
 def create_app(application):
     from app.config import configs
@@ -332,14 +328,6 @@ def setup_sqlalchemy_events(app):
                         "method": request.method,
                         "host": request.host,
                         "url_rule": request.url_rule.rule if request.url_rule else "No endpoint",
-                    }
-                # celery apps
-                elif _celery_tasks:
-                    task = _celery_tasks[next(iter(_celery_tasks))]
-                    connection_record.info["request_data"] = {
-                        "method": f"celery task {task.name}",
-                        "host": current_app.config["EAS_APP_NAME"],
-                        "url_rule": task.request.id,
                     }
                 # anything else. migrations possibly, or flask cli commands.
                 else:
