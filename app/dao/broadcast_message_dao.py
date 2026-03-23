@@ -176,6 +176,39 @@ def dao_get_all_broadcast_messages():
     )
 
 
+def dao_get_filtered_broadcast_messages():
+    return (
+        db.session.query(
+            BroadcastMessage.id,
+            BroadcastMessage.reference,
+            ServiceBroadcastSettings.channel,
+            BroadcastMessage.content,
+            BroadcastMessage.areas,
+            BroadcastMessage.status,
+            BroadcastMessage.starts_at,
+            BroadcastMessage.finishes_at,
+            BroadcastMessage.approved_at,
+            BroadcastMessage.cancelled_at,
+            BroadcastMessage.extra_content,
+        )
+        .join(ServiceBroadcastSettings, ServiceBroadcastSettings.service_id == BroadcastMessage.service_id)
+        .filter(
+            case(
+                (
+                    ServiceBroadcastSettings.channel.in_(ServiceBroadcastSettings.PUBLIC_CHANNEL),
+                    BroadcastMessage.starts_at >= datetime(2021, 5, 25, 0, 0, 0),
+                ),
+                else_=BroadcastMessage.starts_at >= datetime.now(timezone.utc) - timedelta(hours=48),
+            ),
+            BroadcastMessage.stubbed == False,  # noqa
+            BroadcastMessage.status.in_(BroadcastStatusType.LIVE_STATUSES),
+            BroadcastMessage.exclude == False,  # noqa
+        )
+        .order_by(desc(BroadcastMessage.starts_at))
+        .all()
+    )
+
+
 def dao_get_all_pre_broadcast_messages():
     return (
         db.session.query(
