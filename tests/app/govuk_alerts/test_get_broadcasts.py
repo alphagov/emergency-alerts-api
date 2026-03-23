@@ -68,7 +68,7 @@ def test_get_filtered_broadcasts_returns_non_public_broadcasts_and_200(admin_req
     assert json_response["alerts"][0]["id"] == str(broadcast_message_2.id)
     assert json_response["alerts"][0]["starts_at"] == newer_alert_date.isoformat().replace("+00:00", "Z")
     assert json_response["alerts"][0]["finishes_at"] is None
-    assert broadcast_message_1 not in json.dumps(json_response)
+    assert str(broadcast_message_1.id) not in json.dumps(json_response)
 
 
 def test_get_all_broadcasts_returns_all_broadcasts_and_200(
