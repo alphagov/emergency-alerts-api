@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from emergency_alerts_utils.api_key import KEY_TYPE_NORMAL
 
-from app import db
+from app import create_uuid, db
 from app.dao.invited_org_user_dao import save_invited_org_user
 from app.dao.invited_user_dao import save_invited_user
 from app.dao.organisation_dao import dao_create_organisation
@@ -35,6 +35,7 @@ from app.models import (
     InvitedUser,
     Organisation,
     Permission,
+    PublishTaskProgress,
     Service,
     ServiceCallbackApi,
     ServiceInboundApi,
@@ -499,3 +500,21 @@ def create_broadcast_message_edit_reason(broadcast_message_id, service_id, edit_
     db.session.add(broadcast_message_edit_reason)
     db.session.commit()
     return broadcast_message_edit_reason
+
+
+def create_publish_task(
+    id=None, task_id="test-task-id", last_published_file=None, started_at=None, last_activity_at=None, finished_at=None
+):
+    if not id:
+        id = create_uuid()
+    publish_task = PublishTaskProgress(
+        id=id,
+        task_id=task_id,
+        last_activity_at=last_activity_at,
+        last_published_file=last_published_file,
+        started_at=started_at,
+        finished_at=finished_at,
+    )
+    db.session.add(publish_task)
+    db.session.commit()
+    return publish_task
