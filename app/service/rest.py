@@ -372,10 +372,13 @@ def purge_govuk_s3_bucket():
     try:
         # purge S3 bucket here
         bucket = current_app.config["GOVUK_ALERTS_S3_BUCKET_NAME"]
+        print(f"****** Purging S3 bucket: {bucket} ******")
         s3 = boto3.client("s3")
+        print(f"S3 client: {s3}")
         prefix = "alerts/"
         cutoff = datetime.now(timezone.utc) - timedelta(days=10)
         paginator = s3.get_paginator("list_objects_v2")
+        print(f"Paginator: {paginator}")
         to_delete = []
 
         for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
