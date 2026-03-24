@@ -22,6 +22,7 @@ from app.dao.users_dao import (
     save_model_user,
 )
 from app.models import BroadcastMessage, BroadcastStatusType, Event
+from app.publish_task_progress.rest import purge_publish_tasks
 from app.status.healthcheck import (
     get_db_version,
     post_app_version_to_cloudwatch,
@@ -112,6 +113,11 @@ def auto_expire_broadcast_messages():
     periodic=cron("0 0 * * *"),
 )
 def remove_yesterdays_planned_tests_on_govuk_alerts():
+    # Before removing yesterdays planned tests and triggering republish
+    # of gov.uk/alerts, the publish tasks from older than 1 day ago are
+    # purged from the `publish_task_progress` table
+    purge_publish_tasks(days_older_than=1)
+
     publish_task = publish_govuk_alerts.send()
     current_app.logger.info("Enqueued publish GOV UK Alerts for nightly rebuild: %s", publish_task.asdict())
 

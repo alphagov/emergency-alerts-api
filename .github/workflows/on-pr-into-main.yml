@@ -55,6 +55,8 @@ jobs:
           export ENCRYPTION_DANGEROUS_SALT='dev-notify-salt'
           export ENCRYPTION_SECRET_KEY='dev-notify-secret-key'
           export ADMIN_CLIENT_SECRET='dev-notify-secret-key'
+          export GOVUK_CLIENT_SECRET='dev-govuk-secret'
+          export GOVUK_ALERTS_PUBLISH_CLIENT_SECRET='dev-govuk-publish-secret'
           export FLASK_APP=application.py
           export TEST_RDS_HOST=localhost
           export TEST_RDS_USER=postgres
