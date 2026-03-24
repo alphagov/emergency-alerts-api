@@ -1716,8 +1716,6 @@ def test_purge_govuk_bucket_calls_s3_delete_objects(mock_boto3, admin_request):
         },
     )
 
-    pass
-
 
 @patch("app.service.rest.boto3")
 def test_purge_govuk_bucket_does_not_call_s3_delete_objects_when_no_old_objects(mock_boto3, admin_request):
