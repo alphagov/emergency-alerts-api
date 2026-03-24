@@ -483,7 +483,6 @@ packaging==25.0
     # via
     #   black
     #   kombu
-    #   marshmallow
     #   opentelemetry-instrumentation
     #   opentelemetry-instrumentation-falcon
     #   opentelemetry-instrumentation-flask
@@ -522,7 +521,7 @@ pyflakes==3.4.0
     # via flake8
 pygments==2.19.2
     # via pytest
-pyjwt==2.12.0
+pyjwt==2.12.1
     # via
     #   -r requirements.in
     #   notifications-python-client
@@ -533,9 +532,9 @@ pytest==9.0.2
     #   pytest-env
     #   pytest-mock
     #   pytest-xdist
-pytest-cov==7.0.0
+pytest-cov==7.1.0
     # via -r requirements.in
-pytest-env==1.5.1
+pytest-env==1.6.0
     # via -r requirements.in
 pytest-mock==3.15.1
     # via -r requirements.in
@@ -585,7 +584,7 @@ six==1.17.0
     #   rfc3339-validator
 soupsieve==2.8
     # via beautifulsoup4
-sqlalchemy==1.4.41
+sqlalchemy==1.4.54
     # via
     #   -r requirements.in
     #   alembic
