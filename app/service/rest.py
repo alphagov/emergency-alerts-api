@@ -377,10 +377,16 @@ def purge_govuk_s3_bucket():
         paginator = s3.get_paginator("list_objects_v2")
         to_delete = []
 
+        current_app.logger.info(f"Check bucket {bucket}/alerts/ for items older than {cutoff}")
+
         for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
             for obj in page.get("Contents", []):
                 if obj["LastModified"] < cutoff:
                     to_delete.append({"Key": obj["Key"]})
+
+        current_app.logger.info(
+            f"Bucket {bucket}/alerts/ has {len(to_delete)} objects older than {cutoff}. Deleting..."
+        )
 
         # Delete in batches of 1000 (S3 delete_objects limit)
         for i in range(0, len(to_delete), 1000):
@@ -388,7 +394,7 @@ def purge_govuk_s3_bucket():
             s3.delete_objects(Bucket=bucket, Delete={"Objects": batch})
             current_app.logger.info(f"Deleted {len(batch)} objects")
 
-        current_app.logger.info(f"Total deleted: {len(to_delete)}")
+        current_app.logger.info(f"{len(to_delete)} objects deleted from {bucket}/alerts/")
 
     except Exception as e:
         return jsonify(result="error", message=f"Unable to purge govuk/alerts s3 bucket: {e}"), 500
