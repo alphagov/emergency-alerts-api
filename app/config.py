@@ -347,6 +347,8 @@ class Test(Config):
     REPORTS_SLACK_WEBHOOK_URL = "https://hooks.slack.com/somewhere"
     CBC_PROXY_ENABLED = True
 
+    GOVUK_ALERTS_S3_BUCKET_NAME = "test-govuk-alerts-bucket"
+
 
 configs = {
     "local": Config,

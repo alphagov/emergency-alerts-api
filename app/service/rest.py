@@ -364,8 +364,8 @@ def purge_failed_logins_created_by_tests():
     return jsonify({"message": "Successfully purged failed logins"}), 200
 
 
-@service_blueprint.route("/purge-govuk-s3-bucket", methods=["DELETE"])
-def purge_govuk_s3_bucket():
+@service_blueprint.route("/purge-govuk-s3-bucket/<int:older_than>", methods=["DELETE"])
+def purge_govuk_s3_bucket(older_than):
     if is_public_environment():
         raise InvalidRequest("Endpoint not found", status_code=404)
 
@@ -373,7 +373,7 @@ def purge_govuk_s3_bucket():
         bucket = current_app.config["GOVUK_ALERTS_S3_BUCKET_NAME"]
         s3 = boto3.client("s3")
         prefix = "alerts/"
-        cutoff = datetime.now(timezone.utc) - timedelta(days=10)
+        cutoff = datetime.now(timezone.utc) - timedelta(days=older_than)
         paginator = s3.get_paginator("list_objects_v2")
         to_delete = []
 

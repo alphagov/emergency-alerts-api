@@ -1,6 +1,7 @@
 import json
 import uuid
 from datetime import datetime, timedelta, timezone
+from unittest.mock import MagicMock, patch
 
 import pytest
 from flask import current_app, url_for
@@ -25,6 +26,7 @@ from app.models import (
     ServicePermission,
     User,
 )
+from app.service.rest import purge_govuk_s3_bucket
 from tests import create_admin_authorization_header
 from tests.app.db import (
     create_api_key,
@@ -1683,3 +1685,58 @@ def test_set_as_broadcast_service_revokes_api_keys(
 
     # This key is from a different service
     assert api_key_3.expiry_date is None
+
+
+@patch("app.service.rest.boto3")
+def test_purge_govuk_bucket_calls_s3_delete_objects(mock_boto3, admin_request):
+    mock_s3 = MagicMock()
+    mock_boto3.client.return_value = mock_s3
+
+    # Fake paginator returning two old objects
+    last_modified = datetime.now(timezone.utc) - timedelta(days=10)
+    mock_s3.get_paginator.return_value.paginate.return_value = [
+        {
+            "Contents": [
+                {"Key": "alerts/file1.json", "LastModified": last_modified},
+                {"Key": "alerts/file2.json", "LastModified": last_modified},
+            ]
+        }
+    ]
+
+    with current_app.app_context():
+        purge_govuk_s3_bucket(older_than=3)
+
+    mock_s3.delete_objects.assert_called_once_with(
+        Bucket=current_app.config["GOVUK_ALERTS_S3_BUCKET_NAME"],
+        Delete={
+            "Objects": [
+                {"Key": "alerts/file1.json"},
+                {"Key": "alerts/file2.json"},
+            ]
+        },
+    )
+
+    pass
+
+
+@patch("app.service.rest.boto3")
+def test_purge_govuk_bucket_does_not_call_s3_delete_objects_when_no_old_objects(mock_boto3, admin_request):
+    mock_s3 = MagicMock()
+    mock_boto3.client.return_value = mock_s3
+
+    # mock_s3.get_paginator.return_value.paginate.return_value = [{"Contents": []}]
+    # Fake paginator returning two recent objects
+    last_modified = datetime.now(timezone.utc) - timedelta(days=1)
+    mock_s3.get_paginator.return_value.paginate.return_value = [
+        {
+            "Contents": [
+                {"Key": "alerts/file1.json", "LastModified": last_modified},
+                {"Key": "alerts/file2.json", "LastModified": last_modified},
+            ]
+        }
+    ]
+
+    with current_app.app_context():
+        purge_govuk_s3_bucket(older_than=3)
+
+    mock_s3.delete_objects.assert_not_called()
