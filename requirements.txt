@@ -622,7 +622,7 @@ wcwidth==0.2.14
     # via prompt-toolkit
 webcolors==25.10.0
     # via jsonschema
-werkzeug==3.1.6
+werkzeug==3.1.7
     # via
     #   -r requirements.in
     #   flask
