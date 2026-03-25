@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
+import pytest
 from flask import current_app, json
 
 from app.models import BROADCAST_TYPE
@@ -7,7 +8,22 @@ from tests import create_internal_authorization_header
 from tests.app.db import create_broadcast_message, create_template
 
 
-def test_get_filtered_broadcasts_returns_list_of_public_broadcasts_and_200(client, sample_broadcast_service):
+@pytest.mark.parametrize("channel", ["severe", "government"])
+def test_get_filtered_broadcasts_returns_list_of_public_broadcasts_and_200(
+    channel, admin_request, client, sample_broadcast_service
+):
+    # Set up channel
+    data = {
+        "broadcast_channel": channel,
+        "service_mode": "live",
+        "provider_restriction": ["ee", "o2", "three", "vodafone"],
+    }
+    admin_request.post(
+        "service.set_as_broadcast_service",
+        service_id=sample_broadcast_service.id,
+        _data=data,
+    )
+
     template_1 = create_template(sample_broadcast_service, BROADCAST_TYPE)
 
     broadcast_message_1 = create_broadcast_message(
@@ -35,10 +51,13 @@ def test_get_filtered_broadcasts_returns_list_of_public_broadcasts_and_200(clien
     assert json_response["alerts"][1]["starts_at"] == "2021-06-15T12:00:00.000000Z"
 
 
-def test_get_filtered_broadcasts_returns_non_public_broadcasts_and_200(admin_request, client, sample_broadcast_service):
-    # Set up service as operator channel
+@pytest.mark.parametrize("channel", ["operator", "test"])
+def test_get_filtered_broadcasts_returns_non_public_broadcasts_and_200(
+    channel, admin_request, client, sample_broadcast_service
+):
+    # Set up channel
     data = {
-        "broadcast_channel": "operator",
+        "broadcast_channel": channel,
         "service_mode": "live",
         "provider_restriction": ["ee", "o2", "three", "vodafone"],
     }
