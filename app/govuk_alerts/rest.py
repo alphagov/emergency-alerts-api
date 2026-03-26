@@ -2,6 +2,7 @@ from flask import Blueprint, current_app, jsonify
 
 from app.dao.broadcast_message_dao import (
     dao_get_all_broadcast_messages,
+    dao_get_filtered_broadcast_messages,
     dao_mark_all_as_govuk_acknowledged,
 )
 from app.errors import register_errors
@@ -18,6 +19,30 @@ register_errors(govuk_alerts_blueprint)
 
 @govuk_alerts_blueprint.route("")
 def get_broadcasts():
+    broadcasts = dao_get_filtered_broadcast_messages()
+    broadcasts_dict = {
+        "alerts": [
+            {
+                "id": broadcast.id,
+                "reference": broadcast.reference,
+                "channel": broadcast.channel,
+                "content": broadcast.content,
+                "areas": broadcast.areas,
+                "status": broadcast.status,
+                "starts_at": get_dt_string_or_none(broadcast.starts_at),
+                "finishes_at": get_dt_string_or_none(broadcast.finishes_at),
+                "approved_at": get_dt_string_or_none(broadcast.approved_at),
+                "cancelled_at": get_dt_string_or_none(broadcast.cancelled_at),
+                "extra_content": broadcast.extra_content,
+            }
+            for broadcast in broadcasts
+        ]
+    }
+    return jsonify(broadcasts_dict), 200
+
+
+@govuk_alerts_blueprint.route("/all")
+def get_all_broadcasts():
     broadcasts = dao_get_all_broadcast_messages()
     broadcasts_dict = {
         "alerts": [

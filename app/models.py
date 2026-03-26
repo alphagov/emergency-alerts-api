@@ -1239,6 +1239,8 @@ class ServiceBroadcastSettings(db.Model):
 
     __tablename__ = "service_broadcast_settings"
 
+    PUBLIC_CHANNEL = ["severe", "government"]
+
     service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"), primary_key=True, nullable=False)
     service = db.relationship(Service, backref=db.backref("service_broadcast_settings", uselist=False))
     channel = db.Column(db.String(255), db.ForeignKey("broadcast_channel_types.name"), nullable=False)
