@@ -10,5 +10,5 @@ import app.tasks.scheduled_tasks  # noqa
 import app.tasks.stub_tasks  # noqa
 
 # By importing app we will have init-ed the flask_dramatiq package
-# ...and then we can steal its broker here to present to the worker process.
+# ...and then we can steal its broker here for the worker process to import and make use of.
 broker = app.dramatiq.broker

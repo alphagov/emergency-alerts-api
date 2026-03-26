@@ -3,19 +3,16 @@ import random
 import string
 import time
 import uuid
-from base64 import b64decode
 from time import monotonic
 
 import boto3
-from dramatiq.message import Message
-from dramatiq.middleware import Callbacks, ShutdownNotifications, TimeLimit
-from dramatiq_sqs.broker import SQSBroker, SQSConsumer, _SQSMessage
 from emergency_alerts_utils import logging, request_helper
 from emergency_alerts_utils.clients.encryption.encryption_client import (
     Encryption,
 )
 from emergency_alerts_utils.clients.slack.slack_client import SlackClient
 from emergency_alerts_utils.clients.zendesk.zendesk_client import ZendeskClient
+from emergency_alerts_utils.dramatiq import EasSqsFlaskDramatiq
 from flask import (
     Response,
     current_app,
@@ -25,30 +22,22 @@ from flask import (
     make_response,
     request,
 )
-from flask_dramatiq import AppContextMiddleware, Dramatiq
 from flask_marshmallow import Marshmallow
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from opentelemetry import trace
-from periodiq import PeriodiqMiddleware
 from sqlalchemy import event
 from werkzeug.exceptions import HTTPException as WerkzeugHTTPException
 from werkzeug.local import LocalProxy
 
 from app.clients import NotificationProviderClients
 from app.clients.cbc_proxy import CBCProxyClient
-from app.dramatiq.middleware import (
-    ActorQueuePrefixMiddleware,
-    SqsRetryMiddleware,
-)
 
 db = SQLAlchemy()
 migrate = Migrate()
 ma = Marshmallow()
 # We override the broker when init-ing
-dramatiq = Dramatiq(
-    broker_cls="dramatiq.brokers.stub:StubBroker", middleware=[PeriodiqMiddleware(), SqsRetryMiddleware()]
-)
+dramatiq = EasSqsFlaskDramatiq()
 encryption = Encryption()
 zendesk_client = ZendeskClient()
 slack_client = SlackClient()
@@ -89,6 +78,7 @@ def create_app(application):
     logging.init_app(application)
     encryption.init_app(application)
     cbc_proxy_client.init_app(application)
+    dramatiq.init_app(application, application.config["QUEUE_PREFIX"])
 
     register_blueprint(application)
     register_v2_blueprints(application)
@@ -100,8 +90,6 @@ def create_app(application):
 
     # set up sqlalchemy events
     setup_sqlalchemy_events(application)
-
-    setup_dramatiq(application)
 
     return application
 
@@ -343,104 +331,3 @@ def setup_sqlalchemy_events(app):
                     }
             except Exception:
                 current_app.logger.exception("Exception caught for checkout event.")
-
-
-class EasSqsConsumer(SQSConsumer):
-    def __init__(self, queue, prefetch, timeout, *, visibility_timeout=None):
-        super().__init__(queue, prefetch, timeout, visibility_timeout=visibility_timeout)
-
-        # This defaults to the worker timeout (usually 1s), which is a bit pointless
-        # as we'd want the SQS request to last as long as possible to reduce charges
-        self.wait_time_seconds = 20
-
-    def __next__(self):
-        """
-        The overridden method does not provide a way to adjust the params to the SQS receive call.
-        Namely, we'd rather have the attributes/metadata about messages which can be used by our
-        retry middleware (e.g. ApproximateReceiveCount) and logged.
-        """
-
-        kw = {
-            "MaxNumberOfMessages": self.prefetch,
-            "WaitTimeSeconds": self.wait_time_seconds,
-            "MessageSystemAttributeNames": ["All"],  # The only part of this method that's changed
-        }
-        if self.visibility_timeout is not None:
-            kw["VisibilityTimeout"] = self.visibility_timeout
-
-        try:
-            return self.messages.popleft()
-        except IndexError:
-            if self.message_refc < self.prefetch:
-                for sqs_message in self.queue.receive_messages(**kw):
-                    try:
-                        encoded_message = b64decode(sqs_message.body)
-                        dramatiq_message = Message.decode(encoded_message)
-                        self.messages.append(_SQSMessage(sqs_message, dramatiq_message))
-                        self.message_refc += 1
-                    except Exception:  # pragma: no cover
-                        self.logger.exception("Failed to decode message: %r", sqs_message.body)
-
-            try:
-                return self.messages.popleft()
-            except IndexError:
-                return None
-
-    def nack(self, message: _SQSMessage):
-        """
-        The default SQSConsumer behaviour for a nack is to ...ack.
-        That just throws the message away as if it succeeded and breaks the Retries middleware.
-        Instead we should let SQS redeliver it by changing the visibility timeout.
-
-        (For those not aware, nack is only called if something calls message.fail() - such as a
-        retry middleware. An actor raising an exception won't nack out of the box automatically.)
-
-        So we don't get stuck in a loop, SQS could DLQ it if configured or a middleware could
-        suppress the nack and let it ack.
-        """
-        # message._sqs_message is https://docs.aws.amazon.com/boto3/latest/reference/services/sqs/message/#SQS.Message
-        self.logger.warning("nack-ing SQS message ID: %s", message._sqs_message.message_id)
-        self.message_refc -= 1
-
-        try:
-            message._sqs_message.change_visibility(VisibilityTimeout=10)
-        except Exception:
-            self.logger.exception("Error when shortening SQS visibility (is it about to be redelivered anyway?)")
-
-
-class EasSqsBroker(SQSBroker):
-    @property
-    def consumer_class(self):
-        return EasSqsConsumer
-
-
-def setup_dramatiq(app):
-    # flask_dramatiq provides its own @dramatiq.actor decorator
-    # This has the excellent property of lazily registering so we don't actually need dramatiq
-    # configured during module import. Awesome. And auto-injecting the Flask context.
-    # Except asking flask_dramatiq to init doesn't give you control of the dramatiq Broker class
-    # to the extent needed - only the `url` kwarg. The SQS broker doesn't use that :(
-
-    # So we cheat here: let flask_dramatiq do its thing and then replace the stub broker instance
-    # inside to what we want.
-    dramatiq.init_app(app)
-
-    middleware = [
-        AppContextMiddleware(app),
-        PeriodiqMiddleware(skip_delay=300),
-        ActorQueuePrefixMiddleware(prefix=app.config["QUEUE_PREFIX"]),
-        SqsRetryMiddleware(),
-        # This is mostly the default_middleware - except we remove Prometheus and AgeLimit
-        TimeLimit(),
-        ShutdownNotifications(),
-        Callbacks(),
-    ]
-    sqs_broker = EasSqsBroker(
-        middleware=middleware,
-        visibility_timeout=None,  # Use the queue's default
-    )
-
-    dramatiq.broker = sqs_broker
-    for actor in dramatiq.actors:
-        # Re-register the actors so they reference our new broker
-        actor.register(broker=sqs_broker)
