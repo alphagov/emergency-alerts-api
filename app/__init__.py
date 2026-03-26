@@ -36,7 +36,6 @@ from app.clients.cbc_proxy import CBCProxyClient
 db = SQLAlchemy()
 migrate = Migrate()
 ma = Marshmallow()
-# We override the broker when init-ing
 dramatiq = EasSqsFlaskDramatiq()
 encryption = Encryption()
 zendesk_client = ZendeskClient()
