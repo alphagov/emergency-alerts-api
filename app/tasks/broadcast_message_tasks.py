@@ -5,8 +5,7 @@ from emergency_alerts_utils.xml.common import HEADLINE
 from flask import current_app
 
 from app import cbc_proxy_client, dramatiq
-
-# from app.clients.cbc_proxy import CBCProxyRetryableException
+from app.clients.cbc_proxy import CBCProxyRetryableException
 from app.dao.broadcast_message_dao import (
     create_broadcast_provider_message,
     dao_get_broadcast_event_by_id,
@@ -133,6 +132,7 @@ def send_broadcast_event(broadcast_event_id):
     actor_name=TaskNames.SEND_BROADCAST_PROVIDER_MESSAGE,
     queue_name=QueueNames.HIGH_PRIORITY,
     allow_retry=True,
+    retry_for=CBCProxyRetryableException,
 )
 def send_broadcast_provider_message(broadcast_event_id, provider):
     if not current_app.config["CBC_PROXY_ENABLED"]:
@@ -225,7 +225,7 @@ def send_broadcast_provider_message(broadcast_event_id, provider):
                 "exception": str(e),
             },
         )
-        raise e
+        raise
 
 
 @dramatiq.actor(actor_name=TaskNames.TRIGGER_LINK_TEST, queue_name=QueueNames.BROADCASTS)
