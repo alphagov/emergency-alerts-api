@@ -2,7 +2,6 @@ from datetime import datetime
 from unittest.mock import ANY, Mock, call
 
 import pytest
-from emergency_alerts_utils.tasks import QueueNames, TaskNames
 from freezegun import freeze_time
 
 from app.clients.cbc_proxy import CBCProxyRetryableException
@@ -34,19 +33,19 @@ def test_send_broadcast_event_queues_up_for_active_providers(mocker, notify_api,
     broadcast_message = create_broadcast_message(template, status=BroadcastStatusType.BROADCASTING)
     event = create_broadcast_event(broadcast_message)
 
-    mocker.patch("app.celery.broadcast_message_tasks.notify_celery.send_task")
+    mocker.patch("app.tasks.broadcast_message_tasks.publish_govuk_alerts.send")
 
     mock_send_broadcast_provider_message = mocker.patch(
-        "app.celery.broadcast_message_tasks.send_broadcast_provider_message",
+        "app.tasks.broadcast_message_tasks.send_broadcast_provider_message.send",
     )
 
     set_service_broadcast_providers(sample_broadcast_service, ["ee", "vodafone"])
     with set_config(notify_api, "ENABLED_CBCS", {"ee", "vodafone"}):
         send_broadcast_event(event.id)
 
-    args = mock_send_broadcast_provider_message.apply_async.call_args_list
-    assert call(kwargs={"broadcast_event_id": event.id, "provider": "ee"}, queue="high-priority-tasks") in args
-    assert call(kwargs={"broadcast_event_id": event.id, "provider": "vodafone"}, queue="high-priority-tasks") in args
+    args = mock_send_broadcast_provider_message.call_args_list
+    assert call(broadcast_event_id=event.id, provider="ee") in args
+    assert call(broadcast_event_id=event.id, provider="vodafone") in args
 
 
 @pytest.mark.parametrize(
@@ -63,17 +62,15 @@ def test_send_broadcast_event_calls_publish_govuk_alerts_task(
     broadcast_message = create_broadcast_message(template, status=message_status)
     event = create_broadcast_event(broadcast_message)
     mocker.patch(
-        "app.celery.broadcast_message_tasks.send_broadcast_provider_message",
+        "app.tasks.broadcast_message_tasks.send_broadcast_provider_message",
     )
 
-    mock = mocker.patch("app.celery.broadcast_message_tasks.notify_celery.send_task")
+    mock = mocker.patch("app.tasks.broadcast_message_tasks.publish_govuk_alerts.send")
 
     with set_config(notify_api, "ENABLED_CBCS", {"ee", "vodafone"}):
         send_broadcast_event(event.id)
 
-    mock.assert_called_once_with(
-        name=TaskNames.PUBLISH_GOVUK_ALERTS, queue=QueueNames.GOVUK_ALERTS, kwargs={"broadcast_event_id": event.id}
-    )
+    mock.assert_called_once_with(broadcast_event_id=event.id)
 
 
 def test_send_broadcast_event_only_sends_to_one_provider_if_set_on_service(
@@ -84,16 +81,17 @@ def test_send_broadcast_event_only_sends_to_one_provider_if_set_on_service(
     broadcast_message = create_broadcast_message(template, status=BroadcastStatusType.BROADCASTING)
     event = create_broadcast_event(broadcast_message)
 
+    mocker.patch("app.tasks.broadcast_message_tasks.publish_govuk_alerts.send")
+
     mock_send_broadcast_provider_message = mocker.patch(
-        "app.celery.broadcast_message_tasks.send_broadcast_provider_message",
+        "app.tasks.broadcast_message_tasks.send_broadcast_provider_message.send",
     )
-    mocker.patch("app.celery.broadcast_message_tasks.notify_celery.send_task")
 
     with set_config(notify_api, "ENABLED_CBCS", {"ee", "vodafone"}):
         send_broadcast_event(event.id)
 
-    assert mock_send_broadcast_provider_message.apply_async.call_args_list == [
-        call(kwargs={"broadcast_event_id": event.id, "provider": "vodafone"}, queue="high-priority-tasks")
+    assert mock_send_broadcast_provider_message.call_args_list == [
+        call(broadcast_event_id=event.id, provider="vodafone")
     ]
 
 
@@ -105,16 +103,16 @@ def test_send_broadcast_event_does_nothing_if_provider_set_on_service_isnt_enabl
     broadcast_message = create_broadcast_message(template, status=BroadcastStatusType.BROADCASTING)
     event = create_broadcast_event(broadcast_message)
 
-    mocker.patch("app.celery.broadcast_message_tasks.notify_celery.send_task")
+    mocker.patch("app.tasks.broadcast_message_tasks.publish_govuk_alerts.send")
 
     mock_send_broadcast_provider_message = mocker.patch(
-        "app.celery.broadcast_message_tasks.send_broadcast_provider_message",
+        "app.tasks.broadcast_message_tasks.send_broadcast_provider_message.send",
     )
 
     with set_config(notify_api, "ENABLED_CBCS", {"ee", "vodafone"}):
         send_broadcast_event(event.id)
 
-    assert mock_send_broadcast_provider_message.apply_async.called is False
+    assert mock_send_broadcast_provider_message.called is False
 
 
 @freeze_time("2020-08-01 12:00")
@@ -457,12 +455,13 @@ def test_send_broadcast_provider_message_errors(mocker, sample_broadcast_service
         f"app.clients.cbc_proxy.CBCProxy{provider_capitalised}.create_and_send_broadcast",
         side_effect=CBCProxyRetryableException("oh no"),
     )
-    mock_retry = mocker.patch(
-        "app.celery.broadcast_message_tasks.send_broadcast_provider_message.retry",
-        side_effect=CBCProxyRetryableException,
-    )
 
-    with pytest.raises():
+    # The retry logic here is based around the idea we should bubble exceptions where appropriate
+    # and that the actor is registered for retry (for SqsRetryMiddleware to handle)
+    assert send_broadcast_provider_message.kw.get("allow_retry")
+    assert send_broadcast_provider_message.kw.get("retry_for") == CBCProxyRetryableException
+
+    with pytest.raises(CBCProxyRetryableException):
         send_broadcast_provider_message(provider=provider, broadcast_event_id=str(event.id))
 
     mock_create_broadcast.assert_called_once_with(
@@ -483,7 +482,6 @@ def test_send_broadcast_provider_message_errors(mocker, sample_broadcast_service
         expires=event.transmitted_finishes_at_as_cap_datetime_string,
         channel="severe",
     )
-    mock_retry.assert_called_once_with(exc=mock_create_broadcast.side_effect, countdown=ANY)
     broadcast_provider_message = event.get_provider_message(provider)
     assert broadcast_provider_message.status == BroadcastProviderMessageStatus.SENDING
 
@@ -687,7 +685,7 @@ def test_send_broadcast_provider_message_raises_if_message_is_stubbed(
 
 def test_send_broadcast_provider_message_does_nothing_if_cbc_proxy_disabled(mocker, notify_api, sample_template):
     mock_proxy_client_getter = mocker.patch(
-        "app.celery.broadcast_message_tasks.cbc_proxy_client",
+        "app.tasks.broadcast_message_tasks.cbc_proxy_client",
     )
     mock_client = Mock()
     mock_proxy_client_getter.get_proxy.return_value = mock_client

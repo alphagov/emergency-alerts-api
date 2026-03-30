@@ -13,7 +13,10 @@ from app.notify_api_flask_app import NotifyApiFlaskApp
 
 
 @pytest.fixture(scope="session")
-def notify_api():
+def notify_api(session_mocker):
+    # Don't instantiate the SQS components
+    session_mocker.patch("app.EasSqsFlaskDramatiq.init_app", return_value=None)
+
     app = NotifyApiFlaskApp("test")
     create_app(app)
 

@@ -293,7 +293,7 @@ def test_same_broadcast_cant_be_cancelled_twice(
     is_approved,
     expected_cancel_tasks,
 ):
-    mock_send_broadcast_event_task = mocker.patch("app.celery.broadcast_message_tasks.send_broadcast_event.apply_async")
+    mock_send_broadcast_event_task = mocker.patch("app.tasks.broadcast_message_tasks.send_broadcast_event.send")
     auth_header = create_service_authorization_header(service_id=sample_broadcast_service.id)
 
     # create a broadcast
