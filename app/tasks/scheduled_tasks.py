@@ -44,7 +44,7 @@ def run_health_check():
         post_db_version_to_cloudwatch(get_db_version())
 
         time_stamp = int(time.time())
-        with open("celery-beat-healthcheck", mode="w") as file:
+        with open("/eas/emergency-alerts-api/celery-beat-healthcheck", mode="w") as file:
             file.write(str(time_stamp))
         current_app.logger.info(f"file.write successful - celery health check timestamp: {time_stamp}")
     except Exception:
