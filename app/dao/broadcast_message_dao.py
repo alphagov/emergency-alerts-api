@@ -361,8 +361,6 @@ def _get_broadcast_messages(days_older_than, service_id):
         )
         .all()
     )
-    for row in messages:
-        print(f"************** {row} ****************")
     return [str(row[0]) for row in messages]
 
 
