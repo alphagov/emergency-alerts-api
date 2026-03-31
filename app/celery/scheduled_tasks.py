@@ -29,6 +29,7 @@ from app.dao.users_dao import (
     save_model_user,
 )
 from app.models import BroadcastMessage, BroadcastStatusType, Event
+from app.publish_task_progress.rest import purge_publish_tasks
 from app.status.healthcheck import (
     get_db_version,
     post_app_version_to_cloudwatch,
@@ -109,6 +110,11 @@ def auto_expire_broadcast_messages():
 
 @notify_celery.task(name=TaskNames.REMOVE_YESTERDAYS_PLANNED_TESTS_ON_GOVUK_ALERTS)
 def remove_yesterdays_planned_tests_on_govuk_alerts():
+    # Before removing yesterdays planned tests and triggering republish
+    # of gov.uk/alerts, the publish tasks from older than 1 day ago are
+    # purged from the `publish_task_progress` table
+    purge_publish_tasks(days_older_than=1)
+
     current_app.logger.info(
         "remove_yesterdays_planned_tests_on_govuk_alerts",
         extra={

@@ -1239,6 +1239,8 @@ class ServiceBroadcastSettings(db.Model):
 
     __tablename__ = "service_broadcast_settings"
 
+    PUBLIC_CHANNEL = ["severe", "government"]
+
     service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"), primary_key=True, nullable=False)
     service = db.relationship(Service, backref=db.backref("service_broadcast_settings", uselist=False))
     channel = db.Column(db.String(255), db.ForeignKey("broadcast_channel_types.name"), nullable=False)
@@ -1389,4 +1391,30 @@ class CommonPasswords(db.Model):
     def serialize(self):
         return {
             "password": self.password,
+        }
+
+
+class PublishTaskProgress(db.Model):
+    """
+    This table is used to the progress of gov.uk/alerts Publish tasks.
+    """
+
+    __tablename__ = "publish_task_progress"
+    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    task_id = db.Column(db.String, index=True, unique=False, nullable=False)
+    last_published_file = db.Column(db.String, nullable=True)
+    started_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
+    last_activity_at = db.Column(
+        db.DateTime, nullable=True, onupdate=datetime.datetime.utcnow, default=datetime.datetime.utcnow
+    )
+    finished_at = db.Column(db.DateTime, nullable=True)
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "task_id": self.task_id,
+            "last_published_file": self.last_published_file,
+            "started_at": self.started_at,
+            "last_activity_at": self.last_activity_at,
+            "finished_at": self.finished_at,
         }
