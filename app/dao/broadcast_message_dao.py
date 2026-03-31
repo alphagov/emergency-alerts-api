@@ -370,6 +370,7 @@ def dao_get_messages_older_than(days, service_id):
     messages = (
         db.session.query(
             BroadcastMessage.id,
+            BroadcastMessage.starts_at,
         )
         .filter(
             BroadcastMessage.service_id == service_id,
@@ -378,7 +379,7 @@ def dao_get_messages_older_than(days, service_id):
         )
         .all()
     )
-    return [str(row[0]) for row in messages]
+    return [(str(row[0]), row[1]) for row in messages]
 
 
 def _get_broadcast_event_ids(message_id):

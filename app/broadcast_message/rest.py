@@ -3,6 +3,7 @@ from collections import Counter
 import boto3
 import iso8601
 from emergency_alerts_utils.template import BroadcastMessageTemplate
+from emergency_alerts_utils.timezones import utc_string_to_aware_gmt_datetime
 from flask import Blueprint, current_app, jsonify, request
 
 from app.broadcast_message import utils as broadcast_utils
@@ -372,8 +373,6 @@ def purge_broadcast_messages(service_id, older_than):
         raise InvalidRequest("Endpoint not found", status_code=404)
 
     try:
-        # count = dao_purge_old_broadcast_messages(service=service_id, days_older_than=older_than)
-
         bucket = current_app.config["GOVUK_ALERTS_S3_BUCKET_NAME"]
         s3 = boto3.client("s3")
 
@@ -381,9 +380,15 @@ def purge_broadcast_messages(service_id, older_than):
         messages = dao_get_messages_older_than(older_than, service_id)
         if messages:
             for message in messages:
+                # delete database records associated with this message
                 counter += dao_delete_records_for_broadcast(service_id, message.id)
-
-        s3.delete_object(Bucket=bucket, Key="obj")
+                # delete S3 objects associated with the start date of this message
+                key = _create_s3_prefix(message.starts_at)
+                s3_list = s3.list_objects_v2(Bucket=bucket, Prefix=key)
+                objects = [{"Key": obj["Key"]} for obj in s3_list.get("Contents", [])]
+                if objects:
+                    s3_result = s3.delete_objects(Bucket=bucket, Delete={"Objects": objects})
+                    counter["s3_objects"] += len(s3_result.get("Deleted", []))
 
     except Exception as e:
         return jsonify(result="error", message=f"Unable to purge old alert items: {e}"), 500
@@ -391,9 +396,22 @@ def purge_broadcast_messages(service_id, older_than):
     return (
         jsonify(
             {
-                "message": f"Purged {counter['msgs']} BroadcastMessage items and {counter['events']} "
-                f"BroadcastEvent items, created more than {older_than} days ago"
+                "message": f"Purged {counter['msgs']} BroadcastMessage items, {counter['events']} "
+                f"BroadcastEvent items and {counter['s3_objects']} S3 objects, "
+                f"created more than {older_than} days ago"
             }
         ),
         200,
     )
+
+
+def _create_s3_prefix(starts_at):
+    """
+    * non-zero padded day
+    * lower case month abbreviation
+    * full year
+
+    e.g. 3-jun-2021
+    """
+    dt = utc_string_to_aware_gmt_datetime(starts_at)
+    return f"alerts/{dt:%-d}-{dt:%b}-{dt:%Y}".lower()
