@@ -1,3 +1,6 @@
+from collections import Counter
+
+import boto3
 import iso8601
 from emergency_alerts_utils.template import BroadcastMessageTemplate
 from flask import Blueprint, current_app, jsonify, request
@@ -10,12 +13,13 @@ from app.broadcast_message.broadcast_message_schema import (
     update_broadcast_message_status_schema,
 )
 from app.dao.broadcast_message_dao import (
+    dao_delete_records_for_broadcast,
     dao_get_broadcast_message_by_id_and_service_id,
     dao_get_broadcast_message_by_id_and_service_id_with_user,
     dao_get_broadcast_messages_for_service,
     dao_get_broadcast_messages_for_service_with_user,
     dao_get_broadcast_provider_messages_by_broadcast_message_id,
-    dao_purge_old_broadcast_messages,
+    dao_get_messages_older_than,
 )
 from app.dao.broadcast_message_edit_reasons import (
     dao_create_broadcast_message_edit_reason,
@@ -368,14 +372,26 @@ def purge_broadcast_messages(service_id, older_than):
         raise InvalidRequest("Endpoint not found", status_code=404)
 
     try:
-        count = dao_purge_old_broadcast_messages(service=service_id, days_older_than=older_than)
+        # count = dao_purge_old_broadcast_messages(service=service_id, days_older_than=older_than)
+
+        bucket = current_app.config["GOVUK_ALERTS_S3_BUCKET_NAME"]
+        s3 = boto3.client("s3")
+
+        counter = Counter()
+        messages = dao_get_messages_older_than(older_than, service_id)
+        if messages:
+            for message in messages:
+                counter += dao_delete_records_for_broadcast(service_id, message.id)
+
+        s3.delete_object(Bucket=bucket, Key="obj")
+
     except Exception as e:
         return jsonify(result="error", message=f"Unable to purge old alert items: {e}"), 500
 
     return (
         jsonify(
             {
-                "message": f"Purged {count['msgs']} BroadcastMessage items and {count['events']} "
+                "message": f"Purged {counter['msgs']} BroadcastMessage items and {counter['events']} "
                 f"BroadcastEvent items, created more than {older_than} days ago"
             }
         ),

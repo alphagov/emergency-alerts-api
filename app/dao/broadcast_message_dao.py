@@ -1,4 +1,5 @@
 import uuid
+from collections import Counter
 from datetime import datetime, timedelta, timezone
 
 from flask import current_app
@@ -259,34 +260,50 @@ def dao_purge_old_broadcast_messages(service, days_older_than=30, dry_run=False)
         raise ValueError("Unable to find service ID")
 
     print(f"Purging alerts for service {service_id}")
-    message_ids = _get_broadcast_messages(days_older_than, service_id)
+    message_ids = dao_get_messages_older_than(days_older_than, service_id)
 
-    counter = {"msgs": 0, "events": 0, "provider_msgs": 0, "msg_numbers": 0}
+    counter = Counter()
+
     for message_id in message_ids:
-        try:
-            broadcast_event_ids = _get_broadcast_event_ids(message_id)
-            broadcast_provider_message_ids = _broadcast_provider_message_ids(broadcast_event_ids)
+        counter += dao_delete_records_for_broadcast(service_id, message_id, dry_run=dry_run)
 
-            if len(broadcast_provider_message_ids):
-                counter["msg_numbers"] += _delete_broadcast_provider_message_numbers(
-                    broadcast_provider_message_ids, dry_run=dry_run
-                )
-                counter["provider_msgs"] += _delete_broadcast_provider_messages(
-                    broadcast_provider_message_ids, dry_run=dry_run
-                )
+    return counter
 
-            if len(broadcast_event_ids):
-                counter["events"] += _delete_broadcast_events(broadcast_event_ids, dry_run=dry_run)
 
-            counter["msgs"] += _delete_broadcast_message(message_id, dry_run=dry_run)
+def dao_delete_records_for_broadcast(service, message_id, dry_run=False):
+    if service is None:
+        raise ValueError("Service ID is required")
 
-            if not dry_run:
-                db.session.commit()
+    service_id = _resolve_service_id(service)
+    if service_id is None:
+        raise ValueError("Unable to find service ID")
 
-        except Exception as e:
-            if not dry_run:
-                db.session.rollback()
-            raise e
+    counter = Counter()
+
+    try:
+        broadcast_event_ids = _get_broadcast_event_ids(message_id)
+        broadcast_provider_message_ids = _broadcast_provider_message_ids(broadcast_event_ids)
+
+        if len(broadcast_provider_message_ids):
+            counter["msg_numbers"] += _delete_broadcast_provider_message_numbers(
+                broadcast_provider_message_ids, dry_run=dry_run
+            )
+            counter["provider_msgs"] += _delete_broadcast_provider_messages(
+                broadcast_provider_message_ids, dry_run=dry_run
+            )
+
+        if len(broadcast_event_ids):
+            counter["events"] += _delete_broadcast_events(broadcast_event_ids, dry_run=dry_run)
+
+        counter["msgs"] += _delete_broadcast_message(message_id, dry_run=dry_run)
+
+        if not dry_run:
+            db.session.commit()
+
+    except Exception as e:
+        if not dry_run:
+            db.session.rollback()
+        raise e
 
     return counter
 
@@ -349,14 +366,14 @@ def _resolve_service_id(service):
     return None
 
 
-def _get_broadcast_messages(days_older_than, service_id):
+def dao_get_messages_older_than(days, service_id):
     messages = (
         db.session.query(
             BroadcastMessage.id,
         )
         .filter(
             BroadcastMessage.service_id == service_id,
-            BroadcastMessage.created_at <= datetime.now() - timedelta(days=days_older_than),
+            BroadcastMessage.created_at <= datetime.now() - timedelta(days=days),
             BroadcastMessage.status.in_(BroadcastStatusType.PRE_BROADCAST_STATUSES + BroadcastStatusType.LIVE_STATUSES),
         )
         .all()
