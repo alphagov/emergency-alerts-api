@@ -164,7 +164,7 @@ markupsafe==3.0.3
     #   jinja2
     #   mako
     #   werkzeug
-marshmallow==4.2.4
+marshmallow==4.3.0
     # via
     #   -r requirements.in
     #   flask-marshmallow
@@ -525,7 +525,7 @@ pyjwt==2.12.1
     # via
     #   -r requirements.in
     #   notifications-python-client
-pytest==9.0.2
+pytest==9.0.3
     # via
     #   -r requirements.in
     #   pytest-cov
