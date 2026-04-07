@@ -41,7 +41,7 @@ botocore==1.41.6
     #   s3transfer
 cachetools==7.0.5
     # via -r requirements.in
-celery[sqs]==5.6.2
+celery[sqs]==5.6.3
     # via -r requirements.in
 certifi==2025.11.12
     # via requests
@@ -70,7 +70,7 @@ click-repl==0.3.0
     # via celery
 coverage[toml]==7.12.0
     # via pytest-cov
-cryptography==46.0.5
+cryptography==46.0.6
     # via
     #   -r requirements.in
     #   moto
@@ -164,12 +164,12 @@ markupsafe==3.0.3
     #   jinja2
     #   mako
     #   werkzeug
-marshmallow==4.2.2
+marshmallow==4.2.4
     # via
     #   -r requirements.in
     #   flask-marshmallow
     #   marshmallow-sqlalchemy
-marshmallow-sqlalchemy==1.4.2
+marshmallow-sqlalchemy==1.5.0
     # via -r requirements.in
 mccabe==0.7.0
     # via flake8
@@ -622,7 +622,7 @@ wcwidth==0.2.14
     # via prompt-toolkit
 webcolors==25.10.0
     # via jsonschema
-werkzeug==3.1.7
+werkzeug==3.1.8
     # via
     #   -r requirements.in
     #   flask
