@@ -53,7 +53,7 @@ click-datetime==0.4.0
     # via -r requirements.in
 coverage[toml]==7.12.0
     # via pytest-cov
-cryptography==46.0.5
+cryptography==46.0.7
     # via
     #   -r requirements.in
     #   moto
@@ -145,7 +145,7 @@ jsonschema[format]==4.26.0
     # via -r requirements.in
 jsonschema-specifications==2025.9.1
     # via jsonschema
-lxml==6.0.2
+lxml==6.0.3
     # via -r requirements.in
 mako==1.3.10
     # via alembic
@@ -155,12 +155,12 @@ markupsafe==3.0.3
     #   jinja2
     #   mako
     #   werkzeug
-marshmallow==4.2.2
+marshmallow==4.3.0
     # via
     #   -r requirements.in
     #   flask-marshmallow
     #   marshmallow-sqlalchemy
-marshmallow-sqlalchemy==1.4.2
+marshmallow-sqlalchemy==1.5.0
     # via -r requirements.in
 mccabe==0.7.0
     # via flake8
@@ -516,7 +516,7 @@ pyjwt==2.12.1
     # via
     #   -r requirements.in
     #   notifications-python-client
-pytest==9.0.2
+pytest==9.0.3
     # via
     #   -r requirements.in
     #   pytest-cov
@@ -548,7 +548,7 @@ referencing==0.37.0
     # via
     #   jsonschema
     #   jsonschema-specifications
-requests==2.32.5
+requests==2.33.0
     # via
     #   moto
     #   notifications-python-client
@@ -602,7 +602,7 @@ urllib3==2.6.3
     #   responses
 webcolors==25.10.0
     # via jsonschema
-werkzeug==3.1.7
+werkzeug==3.1.8
     # via
     #   -r requirements.in
     #   flask
