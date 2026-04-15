@@ -1,3 +1,4 @@
+import re
 from collections import Counter
 
 import boto3
@@ -378,16 +379,36 @@ def purge_broadcast_messages(service_id, older_than):
 
         counter = Counter()
         messages = dao_get_messages_older_than(older_than, service_id)
+
+        print("**********************************")
+        print(messages)
+        print("**********************************")
+
+        # create a new list of tuples (id, key) where the key is generated
+        # from the starts_at date, and takes the form
+        # 2-jun-2025
+        # 2-jun-2025-1
+        # 2-jun-2025-2 etc for multiple messages with the same starts_at date
+        messages = _convert_start_date_to_s3_key(messages)
+
+        print("**********************************")
+        print(messages)
+        print("**********************************")
+
         if messages:
             for message in messages:
                 # delete database records associated with this message
                 counter += dao_delete_records_for_broadcast(service_id, message.id)
-                # delete S3 objects associated with the start date of this message
-                key = _create_s3_prefix(message.starts_at)
-                s3_list = s3.list_objects_v2(Bucket=bucket, Prefix=key)
+
+                # delete S3 objects associated with the key
+                s3_list = s3.list_objects_v2(Bucket=bucket, Prefix=message.key)
                 objects = [{"Key": obj["Key"]} for obj in s3_list.get("Contents", [])]
+
                 if objects:
-                    s3_result = s3.delete_objects(Bucket=bucket, Delete={"Objects": objects})
+                    pattern = re.compile(rf"^{re.escape(message.key)}(?!\d)")
+                    matches = [obj for obj in objects if pattern.match(obj["Key"])]
+
+                    s3_result = s3.delete_objects(Bucket=bucket, Delete={"Objects": matches})
                     counter["s3_objects"] += len(s3_result.get("Deleted", []))
 
     except Exception as e:
@@ -415,3 +436,8 @@ def _create_s3_prefix(starts_at):
     """
     dt = utc_string_to_aware_gmt_datetime(starts_at)
     return f"alerts/{dt:%-d}-{dt:%b}-{dt:%Y}".lower()
+
+
+def _convert_start_date_to_s3_key(messages):
+    sorted_messages = sorted(messages, key=lambda x: x.starts_at)
+    return sorted_messages
