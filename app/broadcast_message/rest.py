@@ -1,10 +1,10 @@
 import re
-from collections import Counter
+from collections import Counter, defaultdict
+from datetime import datetime
 
 import boto3
 import iso8601
 from emergency_alerts_utils.template import BroadcastMessageTemplate
-from emergency_alerts_utils.timezones import utc_string_to_aware_gmt_datetime
 from flask import Blueprint, current_app, jsonify, request
 
 from app.broadcast_message import utils as broadcast_utils
@@ -21,7 +21,7 @@ from app.dao.broadcast_message_dao import (
     dao_get_broadcast_messages_for_service,
     dao_get_broadcast_messages_for_service_with_user,
     dao_get_broadcast_provider_messages_by_broadcast_message_id,
-    dao_get_messages_older_than,
+    dao_get_public_messages_older_than,
 )
 from app.dao.broadcast_message_edit_reasons import (
     dao_create_broadcast_message_edit_reason,
@@ -378,18 +378,13 @@ def purge_broadcast_messages(service_id, older_than):
         s3 = boto3.client("s3")
 
         counter = Counter()
-        messages = dao_get_messages_older_than(older_than, service_id)
+        messages = dao_get_public_messages_older_than(older_than, service_id)
 
         print("**********************************")
         print(messages)
         print("**********************************")
 
-        # create a new list of tuples (id, key) where the key is generated
-        # from the starts_at date, and takes the form
-        # 2-jun-2025
-        # 2-jun-2025-1
-        # 2-jun-2025-2 etc for multiple messages with the same starts_at date
-        messages = _convert_start_date_to_s3_key(messages)
+        messages = _generate_s3_keys(messages)
 
         print("**********************************")
         print(messages)
@@ -397,19 +392,25 @@ def purge_broadcast_messages(service_id, older_than):
 
         if messages:
             for message in messages:
-                # delete database records associated with this message
-                counter += dao_delete_records_for_broadcast(service_id, message.id)
-
                 # delete S3 objects associated with the key
                 s3_list = s3.list_objects_v2(Bucket=bucket, Prefix=message.key)
                 objects = [{"Key": obj["Key"]} for obj in s3_list.get("Contents", [])]
 
                 if objects:
+
+                    print("**********************************")
+                    print(objects)
+                    print("**********************************")
+
+                    # match a pattern like "2-jun-2026-2" but not "2-jun-2026-2859304345"
                     pattern = re.compile(rf"^{re.escape(message.key)}(?!\d)")
                     matches = [obj for obj in objects if pattern.match(obj["Key"])]
 
                     s3_result = s3.delete_objects(Bucket=bucket, Delete={"Objects": matches})
                     counter["s3_objects"] += len(s3_result.get("Deleted", []))
+
+                # delete database records associated with this message
+                counter += dao_delete_records_for_broadcast(service_id, message.id)
 
     except Exception as e:
         return jsonify(result="error", message=f"Unable to purge old alert items: {e}"), 500
@@ -426,18 +427,19 @@ def purge_broadcast_messages(service_id, older_than):
     )
 
 
-def _create_s3_prefix(starts_at):
-    """
-    * non-zero padded day
-    * lower case month abbreviation
-    * full year
-
-    e.g. 3-jun-2021
-    """
-    dt = utc_string_to_aware_gmt_datetime(starts_at)
-    return f"alerts/{dt:%-d}-{dt:%b}-{dt:%Y}".lower()
-
-
-def _convert_start_date_to_s3_key(messages):
-    sorted_messages = sorted(messages, key=lambda x: x.starts_at)
-    return sorted_messages
+def _generate_s3_keys(messages):
+    # create a new list of tuples (id, prefix) where the prefix is generated
+    # from the starts_at date, and takes the form
+    # 2-jun-2025
+    # 2-jun-2025-1
+    # 2-jun-2025-2 etc for multiple messages with the same starts_at date
+    date_counts = defaultdict(int)
+    result = []
+    for msg_id, timestamp in messages:
+        date_part = datetime.fromisoformat(timestamp)
+        base_prefix = date_part.strftime("%d-%b-%Y").lower()
+        count = date_counts[base_prefix]
+        prefix = base_prefix if count == 0 else f"{base_prefix}-{count}"
+        date_counts[base_prefix] += 1
+        result.append((msg_id, prefix))
+    return result
