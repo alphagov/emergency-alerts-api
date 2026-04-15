@@ -421,24 +421,6 @@ def _resolve_service_id(service):
     return None
 
 
-def dao_get_messages_older_than(days, service_id):
-    messages = (
-        db.session.query(
-            BroadcastMessage.id,
-            BroadcastMessage.starts_at,
-        )
-        .join(ServiceBroadcastSettings, ServiceBroadcastSettings.service_id == BroadcastMessage.service_id)
-        .filter(
-            BroadcastMessage.service_id == service_id,
-            BroadcastMessage.created_at <= datetime.now() - timedelta(days=days),
-            BroadcastMessage.status.in_(BroadcastStatusType.PRE_BROADCAST_STATUSES + BroadcastStatusType.LIVE_STATUSES),
-        )
-        .order_by(desc(BroadcastMessage.starts_at))
-        .all()
-    )
-    return [(str(row[0]), row[1]) for row in messages]
-
-
 def _get_broadcast_messages(days_older_than, service_id):
     messages = (
         db.session.query(
