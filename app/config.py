@@ -45,9 +45,12 @@ class Config(object):
     # secrets that internal apps, such as the admin app or document download, must use to authenticate with the API
     ADMIN_CLIENT_ID = "notify-admin"
     GOVUK_ALERTS_CLIENT_ID = "govuk-alerts"
+    # Different client as this is strictly for publish blueprint & endpoints
+    GOVUK_ALERTS_PUBLISH_CLIENT_ID = "govuk-alerts-publish"
     INTERNAL_CLIENT_API_KEYS = {
         ADMIN_CLIENT_ID: [os.environ.get("ADMIN_CLIENT_SECRET")],
-        GOVUK_ALERTS_CLIENT_ID: [os.environ.get("GOVUK_CLIENT_SECRET", "govuk-alerts-secret-key")],
+        GOVUK_ALERTS_CLIENT_ID: [os.environ.get("GOVUK_CLIENT_SECRET")],
+        GOVUK_ALERTS_PUBLISH_CLIENT_ID: [os.environ.get("GOVUK_ALERTS_PUBLISH_CLIENT_SECRET")],
     }
     SECRET_KEY = os.environ.get("SECRET_KEY")
     DANGEROUS_SALT = os.environ.get("DANGEROUS_SALT")
