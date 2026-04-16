@@ -410,7 +410,7 @@ def purge_broadcast_messages(service_id, older_than):
                     counter["s3_objects"] += len(s3_result.get("Deleted", []))
 
                 # delete database records associated with this message
-                counter += dao_delete_records_for_broadcast(service_id, message.id)
+                counter["msgs"] += dao_delete_records_for_broadcast(service_id, message.id)
 
     except Exception as e:
         return jsonify(result="error", message=f"Unable to purge old alert items: {e}"), 500
