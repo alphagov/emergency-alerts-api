@@ -1,6 +1,5 @@
 import re
 from collections import Counter, defaultdict
-from datetime import datetime
 
 import boto3
 import iso8601
@@ -385,7 +384,7 @@ def purge_broadcast_messages(service_id, older_than):
                 s3_list = s3.list_objects_v2(Bucket=bucket, Prefix=message.key)
                 objects = [{"Key": obj["Key"]} for obj in s3_list.get("Contents", [])]
                 if objects:
-                    # match a pattern like "2-jun-2026-2" but not "2-jun-2026-2859304345"
+                    # match a pattern like "2-jun-2026-2" but not "2-jun-2026-something"
                     pattern = re.compile(rf"^{re.escape(message.key)}(?!\d)")
                     matches = [obj for obj in objects if pattern.match(obj["Key"])]
                     s3_result = s3.delete_objects(Bucket=bucket, Delete={"Objects": matches})
@@ -417,8 +416,7 @@ def _generate_s3_keys(messages):
     date_counts = defaultdict(int)
     result = []
     for msg_id, timestamp in messages:
-        date_part = datetime.fromisoformat(timestamp)
-        base_prefix = date_part.strftime("%d-%b-%Y").lower()
+        base_prefix = timestamp.strftime("%d-%b-%Y").lower()
         count = date_counts[base_prefix]
         prefix = base_prefix if count == 0 else f"{base_prefix}-{count}"
         date_counts[base_prefix] += 1
