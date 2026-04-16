@@ -384,8 +384,15 @@ def purge_broadcast_messages(service_id, older_than):
                 s3_list = s3.list_objects_v2(Bucket=bucket, Prefix=message.key)
                 objects = [{"Key": obj["Key"]} for obj in s3_list.get("Contents", [])]
                 if objects:
-                    # match a pattern like "2-jun-2026-2" but not "2-jun-2026-something"
-                    pattern = re.compile(rf"^{re.escape(message.key)}(?!\d)")
+                    # The pattern matches:
+                    # - 1-apr-2026 (exact key)
+                    # - 1-apr-2026-20260401140329.cap.xml (its cap file)
+                    # - But not 1-apr-2026-1 or 1-apr-2026-2-20260401140454.cap.xml
+                    # And for key 1-apr-2026-2:
+                    # - 1-apr-2026-2 (exact key)
+                    # - 1-apr-2026-2-20260401140454.cap.xml (its cap file)
+                    # - But not 1-apr-2026-20260401140329.cap.xml
+                    pattern = re.compile(rf"^{re.escape(message.key)}(-\d{{14}}\.cap\.xml)?$")
                     matches = [obj for obj in objects if pattern.match(obj["Key"])]
                     s3_result = s3.delete_objects(Bucket=bucket, Delete={"Objects": matches})
                     counter["s3_objects"] += len(s3_result.get("Deleted", []))
