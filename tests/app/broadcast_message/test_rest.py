@@ -4,6 +4,7 @@ import uuid
 import pytest
 from freezegun import freeze_time
 
+from app.broadcast_message.rest import _generate_s3_keys
 from app.dao.broadcast_message_dao import (
     dao_get_broadcast_message_by_id_and_service_id,
 )
@@ -835,3 +836,37 @@ def test_purge_broadcast_messages(admin_request, sample_broadcast_service, mocke
         r" and (\d+) S3 objects, created more than 100 days ago"
     )
     assert re.match(pattern, response["message"])
+
+
+def test_generate_s3_keys_from_list_of_id_timestamp_tuples():
+    messages = [
+        ("msg-01", "2026-04-15T08:00:00"),
+        ("msg-02", "2026-04-15T11:30:00"),
+        ("msg-03", "2026-04-15T21:00:00"),
+        ("msg-04", "2026-04-14T07:15:00"),
+        ("msg-05", "2026-04-13T06:00:00"),
+        ("msg-06", "2026-04-13T15:15:00"),
+        ("msg-07", "2026-04-13T19:00:00"),
+        ("msg-08", "2026-04-12T08:30:00"),
+        ("msg-09", "2026-04-12T11:00:00"),
+        ("msg-10", "2026-04-12T14:45:00"),
+        ("msg-11", "2026-04-12T18:00:00"),
+        ("msg-12", "2026-04-12T22:30:00"),
+    ]
+
+    expected = [
+        ("msg-01", "15-apr-2026"),
+        ("msg-02", "15-apr-2026-1"),
+        ("msg-03", "15-apr-2026-2"),
+        ("msg-04", "14-apr-2026"),
+        ("msg-05", "13-apr-2026"),
+        ("msg-06", "13-apr-2026-1"),
+        ("msg-07", "13-apr-2026-2"),
+        ("msg-08", "12-apr-2026"),
+        ("msg-09", "12-apr-2026-1"),
+        ("msg-10", "12-apr-2026-2"),
+        ("msg-11", "12-apr-2026-3"),
+        ("msg-12", "12-apr-2026-4"),
+    ]
+
+    assert _generate_s3_keys(messages) == expected
