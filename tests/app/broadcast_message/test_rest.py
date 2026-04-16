@@ -1,5 +1,6 @@
 import re
 import uuid
+from datetime import datetime
 
 import pytest
 from freezegun import freeze_time
@@ -840,18 +841,18 @@ def test_purge_broadcast_messages(admin_request, sample_broadcast_service, mocke
 
 def test_generate_s3_keys_from_list_of_id_timestamp_tuples():
     messages = [
-        ("msg-01", "2026-04-15T08:00:00"),
-        ("msg-02", "2026-04-15T11:30:00"),
-        ("msg-03", "2026-04-15T21:00:00"),
-        ("msg-04", "2026-04-14T07:15:00"),
-        ("msg-05", "2026-04-13T06:00:00"),
-        ("msg-06", "2026-04-13T15:15:00"),
-        ("msg-07", "2026-04-13T19:00:00"),
-        ("msg-08", "2026-04-12T08:30:00"),
-        ("msg-09", "2026-04-12T11:00:00"),
-        ("msg-10", "2026-04-12T14:45:00"),
-        ("msg-11", "2026-04-12T18:00:00"),
-        ("msg-12", "2026-04-12T22:30:00"),
+        ("msg-01", datetime(2026, 4, 15, 8, 0, 0)),
+        ("msg-02", datetime(2026, 4, 15, 11, 30, 0)),
+        ("msg-03", datetime(2026, 4, 15, 21, 0, 0)),
+        ("msg-04", datetime(2026, 4, 14, 7, 15, 0)),
+        ("msg-05", datetime(2026, 4, 13, 6, 0, 0)),
+        ("msg-06", datetime(2026, 4, 13, 15, 15, 0)),
+        ("msg-07", datetime(2026, 4, 13, 19, 0, 0)),
+        ("msg-08", datetime(2026, 4, 12, 8, 30, 0)),
+        ("msg-09", datetime(2026, 4, 12, 11, 0, 0)),
+        ("msg-10", datetime(2026, 4, 12, 14, 45, 0)),
+        ("msg-11", datetime(2026, 4, 12, 18, 0, 0)),
+        ("msg-12", datetime(2026, 4, 12, 22, 30, 0)),
     ]
 
     expected = [
