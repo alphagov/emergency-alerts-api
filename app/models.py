@@ -1175,14 +1175,39 @@ class BroadcastProvider:
 
 ALL_BROADCAST_PROVIDERS = BroadcastProvider.PROVIDERS
 
+BROADCAST_PROVIDER_STATUS_TECHNICAL_FAILURE = "technical-failure"  # Couldn't send (cbc proxy 5xx/4xx)
+BROADCAST_PROVIDER_STATUS_SENDING = "sending"  # Sent to cbc, awaiting response
+BROADCAST_PROVIDER_STATUS_ACK = "returned-ack"  # Received ack response
+BROADCAST_PROVIDER_STATUS_ERR = "returned-error"  # Received error response
 
-class BroadcastProviderMessageStatus:
-    TECHNICAL_FAILURE = "technical-failure"  # Couldn’t send (cbc proxy 5xx/4xx)
-    SENDING = "sending"  # Sent to cbc, awaiting response
-    ACK = "returned-ack"  # Received ack response
-    ERR = "returned-error"  # Received error response
+ALL_BROADCAST_PROVIDER_STATUSES = [
+    BROADCAST_PROVIDER_STATUS_TECHNICAL_FAILURE,
+    BROADCAST_PROVIDER_STATUS_SENDING,
+    BROADCAST_PROVIDER_STATUS_ACK,
+    BROADCAST_PROVIDER_STATUS_ERR,
+]
 
-    STATES = [TECHNICAL_FAILURE, SENDING, ACK, ERR]
+
+class BroadcastProviderMessageStatus(db.Model):
+    """
+    Represents a status update to a parent BroadcastProviderMessage, from which timings between
+    events and retry attempts can be interpreted between rows.
+    """
+
+    __tablename__ = "broadcast_provider_message_status"
+
+    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+
+    broadcast_provider_message_id = db.Column(UUID(as_uuid=True), db.ForeignKey("broadcast_provider_message.id"))
+    broadcast_provider_message = db.relationship("BroadcastProviderMessage", back_populates="statuses")
+
+    created_at = db.Column(db.DateTime, nullable=False, default=utc_now)
+
+    status = db.Column(
+        db.Enum(*ALL_BROADCAST_PROVIDER_STATUSES, name="broadcast_provider_message_status_types"), nullable=False
+    )
+    # Only set for errors:
+    error_detail = db.Column(JSONB(none_as_null=True), nullable=True)
 
 
 class BroadcastProviderMessage(db.Model):
@@ -1200,10 +1225,9 @@ class BroadcastProviderMessage(db.Model):
     # 'ee', 'three', 'vodafone', etc
     provider = db.Column(db.String)
 
-    status = db.Column(db.String)
+    created_at = db.Column(db.DateTime, nullable=False, default=utc_now)
 
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
-    updated_at = db.Column(db.DateTime, nullable=True, onupdate=datetime.datetime.utcnow)
+    statuses = db.relationship("BroadcastProviderMessageStatus", back_populates="broadcast_provider_message")
 
     UniqueConstraint(broadcast_event_id, provider)
 
