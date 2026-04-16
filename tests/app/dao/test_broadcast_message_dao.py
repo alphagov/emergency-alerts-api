@@ -9,6 +9,7 @@ from app.dao.broadcast_message_dao import (
     dao_get_all_pre_broadcast_messages,
     dao_get_broadcast_message_by_id_and_service_id_with_user,
     dao_get_broadcast_messages_for_service_with_user,
+    dao_get_public_messages_older_than,
     dao_purge_old_broadcast_messages,
     get_earlier_events_for_broadcast_event,
 )
@@ -628,3 +629,35 @@ def test_dao_get_broadcast_messages_for_service_with_user(
     assert broadcast_messages_service_1[0][1] == sample_user.name
     assert broadcast_messages_service_2[1][1] == sample_user_2.name
     assert broadcast_messages_service_2[0][2:5] == (None, None, None)
+
+
+@freeze_time("2025-06-20 12:00:00")
+def test_dao_get_public_messages_older_than(
+    sample_broadcast_service, sample_broadcast_service_2, sample_broadcast_service_3
+):
+    template_severe = create_template(sample_broadcast_service, BROADCAST_TYPE)
+    template_government = create_template(sample_broadcast_service_2, BROADCAST_TYPE)
+    template_operator = create_template(sample_broadcast_service_3, BROADCAST_TYPE)
+
+    _ = create_broadcast_message(template_severe, starts_at=datetime(2025, 6, 15, 12, 0, 0), status="completed")
+    _ = create_broadcast_message(template_government, starts_at=datetime(2025, 6, 15, 14, 0, 0), status="completed")
+    _ = create_broadcast_message(
+        template_operator, starts_at=datetime(2025, 6, 15, 16, 0, 0), status="completed"
+    )  # excluded: operator channel not public
+    _ = create_broadcast_message(template_severe, starts_at=datetime(2025, 6, 16, 10, 0, 0), status="completed")
+    _ = create_broadcast_message(
+        template_operator, starts_at=datetime(2025, 6, 16, 22, 0, 0), status="completed"
+    )  # excluded: operator channel not public
+    _ = create_broadcast_message(
+        template_government, starts_at=datetime(2025, 6, 18, 12, 0, 0), status="completed"
+    )  # excluded: not old enough
+    _ = create_broadcast_message(
+        template_severe, starts_at=datetime(2025, 6, 19, 12, 0, 0), status="completed"
+    )  # excluded: not old enough
+
+    broadcast_messages = dao_get_public_messages_older_than(3)
+    assert len(broadcast_messages) == 3
+
+
+def test_dao_delete_records_for_broadcast():
+    pass

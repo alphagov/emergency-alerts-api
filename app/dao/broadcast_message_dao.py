@@ -268,7 +268,7 @@ def dao_get_all_finished_broadcast_messages_with_outstanding_actions() -> list[B
     )
 
 
-def dao_get_public_messages_older_than(days, service_id):
+def dao_get_public_messages_older_than(days):
     messages = (
         db.session.query(
             BroadcastMessage.id,
@@ -276,8 +276,7 @@ def dao_get_public_messages_older_than(days, service_id):
         )
         .join(ServiceBroadcastSettings, ServiceBroadcastSettings.service_id == BroadcastMessage.service_id)
         .filter(
-            BroadcastMessage.service_id == service_id,
-            BroadcastMessage.created_at <= datetime.now() - timedelta(days=days),
+            BroadcastMessage.starts_at <= datetime.now() - timedelta(days=days),
             BroadcastMessage.status.in_(BroadcastStatusType.LIVE_STATUSES),
             ServiceBroadcastSettings.channel.in_(ServiceBroadcastSettings.PUBLIC_CHANNEL),
         )
