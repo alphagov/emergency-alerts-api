@@ -4,6 +4,7 @@ from freezegun import freeze_time
 
 from app.dao.broadcast_message_dao import (
     create_broadcast_provider_message,
+    dao_delete_records_for_broadcast,
     dao_get_all_broadcast_messages,
     dao_get_all_finished_broadcast_messages_with_outstanding_actions,
     dao_get_all_pre_broadcast_messages,
@@ -659,5 +660,40 @@ def test_dao_get_public_messages_older_than(
     assert len(broadcast_messages) == 3
 
 
-def test_dao_delete_records_for_broadcast():
-    pass
+def test_dao_delete_records_for_broadcast(sample_broadcast_service, sample_broadcast_service_2):
+    template_severe = create_template(sample_broadcast_service, BROADCAST_TYPE)
+    bm1 = create_broadcast_message(template_severe, starts_at=datetime(2025, 6, 15, 12, 0, 0), status="completed")
+    be1 = create_broadcast_event(
+        bm1,
+        sent_at=bm1.starts_at + timedelta(hours=1),
+        message_type=BroadcastEventMessageType.ALERT,
+        transmitted_content={"body": "Some content"},
+    )
+    _ = create_broadcast_provider_message(be1, "ee")
+    _ = create_broadcast_provider_message(be1, "o2")
+
+    template_government = create_template(sample_broadcast_service_2, BROADCAST_TYPE)
+    bm2 = create_broadcast_message(template_government, starts_at=datetime(2025, 6, 16, 12, 0, 0), status="completed")
+    be2 = create_broadcast_event(
+        bm2,
+        sent_at=bm2.starts_at + timedelta(hours=2),
+        message_type=BroadcastEventMessageType.ALERT,
+        transmitted_content={"body": "Some content"},
+    )
+    _ = create_broadcast_provider_message(be2, "ee")
+    _ = create_broadcast_provider_message(be2, "o2")
+    _ = create_broadcast_provider_message(be2, "three")
+    _ = create_broadcast_provider_message(be2, "vodafone")
+
+    counter = dao_delete_records_for_broadcast(template_severe.service_id, bm1.id)
+
+    assert counter["msgs"] == 1
+    assert counter["events"] == 1
+    assert counter["provider_msgs"] == 2
+
+    counter = dao_delete_records_for_broadcast(template_government.service_id, bm2.id)
+
+    assert counter["msgs"] == 1
+    assert counter["events"] == 1
+    assert counter["provider_msgs"] == 4
+    assert counter["msg_numbers"] == 1
