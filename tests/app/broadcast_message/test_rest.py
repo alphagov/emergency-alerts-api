@@ -830,4 +830,8 @@ def test_purge_broadcast_messages(admin_request, sample_broadcast_service, mocke
 
     print(response["message"])
 
-    assert re.match(r"Purged (\d+) BroadcastMessage items, (.*)", response["message"])
+    pattern = (
+        r"Purged (\d+) BroadcastMessage items, (\d+) BroadcastEvent items"
+        r" and (\d+) S3 objects, created more than 100 days ago"
+    )
+    assert re.match(pattern, response["message"])

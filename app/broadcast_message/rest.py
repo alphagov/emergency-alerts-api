@@ -376,39 +376,20 @@ def purge_broadcast_messages(service_id, older_than):
     try:
         bucket = current_app.config["GOVUK_ALERTS_S3_BUCKET_NAME"]
         s3 = boto3.client("s3")
-
         counter = Counter()
         messages = dao_get_public_messages_older_than(older_than, service_id)
-
-        print("**********************************")
-        print(messages)
-        print("**********************************")
-
         messages = _generate_s3_keys(messages)
-
-        print("**********************************")
-        print(messages)
-        print("**********************************")
-
         if messages:
             for message in messages:
                 # delete S3 objects associated with the key
                 s3_list = s3.list_objects_v2(Bucket=bucket, Prefix=message.key)
                 objects = [{"Key": obj["Key"]} for obj in s3_list.get("Contents", [])]
-
                 if objects:
-
-                    print("**********************************")
-                    print(objects)
-                    print("**********************************")
-
                     # match a pattern like "2-jun-2026-2" but not "2-jun-2026-2859304345"
                     pattern = re.compile(rf"^{re.escape(message.key)}(?!\d)")
                     matches = [obj for obj in objects if pattern.match(obj["Key"])]
-
                     s3_result = s3.delete_objects(Bucket=bucket, Delete={"Objects": matches})
                     counter["s3_objects"] += len(s3_result.get("Deleted", []))
-
                 # delete database records associated with this message
                 counter["msgs"] += dao_delete_records_for_broadcast(service_id, message.id)
 

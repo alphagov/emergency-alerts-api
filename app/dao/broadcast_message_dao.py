@@ -268,6 +268,25 @@ def dao_get_all_finished_broadcast_messages_with_outstanding_actions() -> list[B
     )
 
 
+def dao_get_public_messages_older_than(days, service_id):
+    messages = (
+        db.session.query(
+            BroadcastMessage.id,
+            BroadcastMessage.starts_at,
+        )
+        .join(ServiceBroadcastSettings, ServiceBroadcastSettings.service_id == BroadcastMessage.service_id)
+        .filter(
+            BroadcastMessage.service_id == service_id,
+            BroadcastMessage.created_at <= datetime.now() - timedelta(days=days),
+            BroadcastMessage.status.in_(BroadcastStatusType.LIVE_STATUSES),
+            ServiceBroadcastSettings.channel.in_(ServiceBroadcastSettings.PUBLIC_CHANNEL),
+        )
+        .order_by(asc(BroadcastMessage.starts_at))
+        .all()
+    )
+    return [(str(row[0]), row[1]) for row in messages]
+
+
 def dao_mark_all_as_govuk_acknowledged():
     """
     Find all BroadcastMessages, within active live services, that don't have the
@@ -295,7 +314,7 @@ def dao_purge_old_broadcast_messages(service, days_older_than=30, dry_run=False)
     print(f"Purging alerts for service {service_id}")
     message_ids = _get_broadcast_messages(days_older_than, service_id)
 
-    counter = {"msgs": 0, "events": 0, "provider_msgs": 0, "msg_numbers": 0}
+    counter = Counter()
     for message_id in message_ids:
         try:
             broadcast_event_ids = _get_broadcast_event_ids(message_id)
@@ -334,7 +353,6 @@ def dao_delete_records_for_broadcast(service, message_id, dry_run=False):
         raise ValueError("Unable to find service ID")
 
     counter = Counter()
-
     try:
         broadcast_event_ids = _get_broadcast_event_ids(message_id)
         broadcast_provider_message_ids = _broadcast_provider_message_ids(broadcast_event_ids)
@@ -434,25 +452,6 @@ def _get_broadcast_messages(days_older_than, service_id):
         .all()
     )
     return [str(row[0]) for row in messages]
-
-
-def dao_get_public_messages_older_than(days, service_id):
-    messages = (
-        db.session.query(
-            BroadcastMessage.id,
-            BroadcastMessage.starts_at,
-        )
-        .join(ServiceBroadcastSettings, ServiceBroadcastSettings.service_id == BroadcastMessage.service_id)
-        .filter(
-            BroadcastMessage.service_id == service_id,
-            BroadcastMessage.created_at <= datetime.now() - timedelta(days=days),
-            BroadcastMessage.status.in_(BroadcastStatusType.LIVE_STATUSES),
-            ServiceBroadcastSettings.channel.in_(ServiceBroadcastSettings.PUBLIC_CHANNEL),
-        )
-        .order_by(asc(BroadcastMessage.starts_at))
-        .all()
-    )
-    return [(str(row[0]), row[1]) for row in messages]
 
 
 def _get_broadcast_event_ids(message_id):
