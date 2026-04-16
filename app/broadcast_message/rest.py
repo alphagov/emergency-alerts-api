@@ -377,7 +377,7 @@ def purge_broadcast_messages(service_id, older_than):
         bucket = current_app.config["GOVUK_ALERTS_S3_BUCKET_NAME"]
         s3 = boto3.client("s3")
         counter = Counter()
-        messages = dao_get_public_messages_older_than(older_than, service_id)
+        messages = dao_get_public_messages_older_than(older_than)
         messages = _generate_s3_keys(messages)
         if messages:
             for message in messages:
