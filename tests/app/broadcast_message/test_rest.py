@@ -830,4 +830,4 @@ def test_purge_broadcast_messages(admin_request, sample_broadcast_service, mocke
 
     print(response["message"])
 
-    assert re.match(r"Purged (\d+) BroadcastMessage items (.*)", response["message"])
+    assert re.match(r"Purged (\d+) BroadcastMessage items, (.*)", response["message"])
