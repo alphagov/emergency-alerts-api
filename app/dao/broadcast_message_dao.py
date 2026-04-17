@@ -276,7 +276,8 @@ def dao_get_public_messages_older_than(days):
         )
         .join(ServiceBroadcastSettings, ServiceBroadcastSettings.service_id == BroadcastMessage.service_id)
         .filter(
-            BroadcastMessage.starts_at <= datetime.now() - timedelta(days=days),
+            BroadcastMessage.starts_at
+            <= datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=3),
             BroadcastMessage.status.in_(BroadcastStatusType.LIVE_STATUSES),
             ServiceBroadcastSettings.channel.in_(ServiceBroadcastSettings.PUBLIC_CHANNEL),
         )
