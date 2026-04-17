@@ -89,7 +89,7 @@ def downgrade():
                     broadcast_provider_message_id,
                     status
                 FROM broadcast_provider_message_status
-                ORDER BY broadcast_provider_message_id, created_at DESC
+                ORDER BY broadcast_provider_message_id, id DESC
             ) s
             WHERE bpm.id = s.broadcast_provider_message_id;
     """
