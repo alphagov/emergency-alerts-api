@@ -459,7 +459,9 @@ def test_send_broadcast_provider_message_sends_cancel_with_references(
         ["vodafone", "Vodafone"],
     ],
 )
-def test_send_broadcast_provider_message_errors(mocker, sample_broadcast_service, provider, provider_capitalised):
+def test_send_broadcast_provider_message_error_statuses_are_saved(
+    mocker, sample_broadcast_service, provider, provider_capitalised
+):
     template = create_template(sample_broadcast_service, BROADCAST_TYPE)
 
     broadcast_message = create_broadcast_message(
@@ -506,9 +508,12 @@ def test_send_broadcast_provider_message_errors(mocker, sample_broadcast_service
     )
     mock_retry.assert_called_once_with(exc=mock_create_broadcast.side_effect, countdown=ANY)
     broadcast_provider_message = event.get_provider_message(provider)
-    assert len(broadcast_provider_message.statuses) == 1
+
+    assert len(broadcast_provider_message.statuses) == 2
     assert broadcast_provider_message.statuses[0].status == BROADCAST_PROVIDER_STATUS_SENDING
-    assert broadcast_provider_message.get_latest_status_entry() == broadcast_provider_message.statuses[0]
+    assert broadcast_provider_message.statuses[1].status == BROADCAST_PROVIDER_STATUS_ERR
+    assert broadcast_provider_message.statuses[1].error_detail == {"exception": "CBCProxyRetryableException('oh no')"}
+    assert broadcast_provider_message.get_latest_status_entry() == broadcast_provider_message.statuses[1]
 
 
 @pytest.mark.parametrize(

@@ -13,6 +13,7 @@ from app.dao.broadcast_message_dao import (
 )
 from app.models import (
     BROADCAST_PROVIDER_STATUS_ACK,
+    BROADCAST_PROVIDER_STATUS_ERR,
     BROADCAST_PROVIDER_STATUS_SENDING,
     BroadcastEvent,
     BroadcastEventMessageType,
@@ -169,6 +170,8 @@ def send_broadcast_provider_message(self, broadcast_event_id, provider):
         )
         return
 
+    broadcast_provider_message = None
+
     try:
         broadcast_event = dao_get_broadcast_event_by_id(broadcast_event_id)
 
@@ -241,13 +244,23 @@ def send_broadcast_provider_message(self, broadcast_event_id, provider):
 
         add_broadcast_provider_message_status(broadcast_provider_message, status=BROADCAST_PROVIDER_STATUS_ACK)
     except Exception as e:
+        exception_detail = getattr(e, "message", repr(e))
+
         current_app.logger.exception(
             f"Failed to send provider message (event {broadcast_event_id}, provider {provider})",
             extra={
                 "python_module": __name__,
-                "exception": str(e),
+                "exception": exception_detail,
             },
         )
+
+        if broadcast_provider_message is not None:
+            add_broadcast_provider_message_status(
+                broadcast_provider_message,
+                status=BROADCAST_PROVIDER_STATUS_ERR,
+                error_detail={"exception": exception_detail},
+            )
+
         raise
 
 

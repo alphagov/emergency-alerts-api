@@ -365,13 +365,16 @@ def create_broadcast_provider_message(broadcast_event: BroadcastEvent, provider:
 
 
 @autocommit
-def add_broadcast_provider_message_status(broadcast_provider_message: BroadcastProviderMessage, *, status: str):
+def add_broadcast_provider_message_status(
+    broadcast_provider_message: BroadcastProviderMessage, *, status: str, error_detail=None
+):
     """
     Assumes broadcast_provider_message is in the database session already
     """
     new_status = BroadcastProviderMessageStatus(
         broadcast_provider_message=broadcast_provider_message,
         status=status,
+        error_detail=error_detail,
     )
     broadcast_provider_message.statuses.append(new_status)
 
