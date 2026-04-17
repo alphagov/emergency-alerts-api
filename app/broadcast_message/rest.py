@@ -372,13 +372,15 @@ def purge_broadcast_messages(service_id, older_than):
     if is_public_environment():
         raise InvalidRequest("Endpoint not found", status_code=404)
 
-    result_message = ""
+    result_message = (
+        "Purged {0} BroadcastMessage items, {1} BroadcastEvent items and {2} S3 objects, created more than {3} days ago"
+    )
+
     try:
         bucket = current_app.config["GOVUK_ALERTS_S3_BUCKET_NAME"]
         s3 = boto3.client("s3")
         counter = Counter()
-        messages = dao_get_public_messages_older_than(older_than)
-        messages = _generate_s3_keys(messages)
+        messages = _generate_s3_keys(dao_get_public_messages_older_than(older_than))
 
         current_app.logger.info(
             "purge_broadcast_messages",
@@ -392,10 +394,6 @@ def purge_broadcast_messages(service_id, older_than):
 
         if messages:
             for message in messages:
-
-                print(message[0])
-                print(message[1])
-
                 # delete S3 objects associated with the key
                 s3_list = s3.list_objects_v2(Bucket=bucket, Prefix=f"/alerts/{message[1]}")
                 objects = [{"Key": obj["Key"]} for obj in s3_list.get("Contents", [])]
@@ -415,18 +413,19 @@ def purge_broadcast_messages(service_id, older_than):
                 # delete database records associated with this message
                 counter += dao_delete_records_for_broadcast(service_id, message[0])
 
-                result_message = (
-                    f"Purged {counter['msgs']} BroadcastMessage items, {counter['events']} "
-                    f"BroadcastEvent items and {counter['s3_objects']} S3 objects, "
-                    f"created more than {older_than} days ago"
+                current_app.logger.info(
+                    result_message.format(counter["msgs"], counter["events"], counter["s3_objects"], older_than)
                 )
-
-                current_app.logger.info(result_message)
 
     except Exception as e:
         return jsonify(result="error", message=f"Unable to purge old alert items: {e}"), 500
 
-    return jsonify({"message": result_message}), 200
+    return (
+        jsonify(
+            {"message": result_message.format(counter["msgs"], counter["events"], counter["s3_objects"], older_than)}
+        ),
+        200,
+    )
 
 
 def _generate_s3_keys(messages):
