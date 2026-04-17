@@ -97,6 +97,7 @@ def downgrade():
 
     op.drop_table("broadcast_provider_message_status")
     op.execute("drop sequence broadcast_provider_message_status_seq")
+    op.execute("drop type broadcast_provider_message_status_types")
 
     # This table was never used for anything, so no need to put data in it...
     op.create_table(
