@@ -46,8 +46,9 @@ def upgrade():
     )
 
     # In the 'old' world broadcast_provider_message has a status that gets overwritten
-    # We'll use its created_at date to create a pending status row, and then it's updated_at
+    # We'll use its created_at date to create a sending status row, and then it's updated_at
     # to create a relevant status row of what it is now.
+    # (For messages that failed, they'll have only a sending with a null updated_at)
     op.execute(
         """
         INSERT INTO broadcast_provider_message_status
