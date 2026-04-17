@@ -1242,6 +1242,9 @@ class BroadcastProviderMessage(db.Model):
 
     message_number = association_proxy("broadcast_provider_message_number", "broadcast_provider_message_number")
 
+    def get_latest_status_entry(self) -> BroadcastProviderMessageStatus | None:
+        return self.statuses[-1] if len(self.statuses) > 0 else None
+
 
 class BroadcastProviderMessageNumber(db.Model):
     """

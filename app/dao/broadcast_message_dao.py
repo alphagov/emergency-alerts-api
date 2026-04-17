@@ -8,6 +8,7 @@ from sqlalchemy.orm import aliased
 from app import db
 from app.dao.dao_utils import autocommit
 from app.models import (
+    BROADCAST_PROVIDER_STATUS_SENDING,
     BroadcastEvent,
     BroadcastMessage,
     BroadcastProvider,
@@ -341,13 +342,15 @@ def get_earlier_events_for_broadcast_event(broadcast_event_id):
 
 
 @autocommit
-def create_broadcast_provider_message(broadcast_event, provider):
+def create_broadcast_provider_message(broadcast_event: BroadcastEvent, provider: str):
+    broadcast_provider_message_status = BroadcastProviderMessageStatus(status=BROADCAST_PROVIDER_STATUS_SENDING)
+
     broadcast_provider_message_id = uuid.uuid4()
     provider_message = BroadcastProviderMessage(
         id=broadcast_provider_message_id,
         broadcast_event=broadcast_event,
         provider=provider,
-        status=BroadcastProviderMessageStatus.SENDING,
+        statuses=[broadcast_provider_message_status],
     )
     db.session.add(provider_message)
     db.session.commit()
@@ -362,8 +365,15 @@ def create_broadcast_provider_message(broadcast_event, provider):
 
 
 @autocommit
-def update_broadcast_provider_message_status(broadcast_provider_message, *, status):
-    broadcast_provider_message.status = status
+def add_broadcast_provider_message_status(broadcast_provider_message: BroadcastProviderMessage, *, status: str):
+    """
+    Assumes broadcast_provider_message is in the database session already
+    """
+    new_status = BroadcastProviderMessageStatus(
+        broadcast_provider_message=broadcast_provider_message,
+        status=status,
+    )
+    broadcast_provider_message.statuses.append(new_status)
 
 
 def _resolve_service_id(service):

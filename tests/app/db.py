@@ -27,6 +27,7 @@ from app.models import (
     BroadcastProvider,
     BroadcastProviderMessage,
     BroadcastProviderMessageNumber,
+    BroadcastProviderMessageStatus,
     BroadcastStatusType,
     Domain,
     FailedLogin,
@@ -394,12 +395,14 @@ def create_broadcast_event(
 
 
 def create_broadcast_provider_message(broadcast_event, provider, status="sending"):
+    broadcast_provider_message_status = BroadcastProviderMessageStatus(status=status)
+
     broadcast_provider_message_id = uuid.uuid4()
     provider_message = BroadcastProviderMessage(
         id=broadcast_provider_message_id,
         broadcast_event=broadcast_event,
         provider=provider,
-        status=status,
+        statuses=[broadcast_provider_message_status],
     )
     db.session.add(provider_message)
     db.session.commit()
