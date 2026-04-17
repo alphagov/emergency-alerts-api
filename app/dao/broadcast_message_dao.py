@@ -139,10 +139,10 @@ def dao_get_broadcast_messages_for_service_with_user(service_id):
 
 def dao_get_broadcast_provider_messages_by_broadcast_message_id(broadcast_message_id):
     return (
-        db.session.query(
-            BroadcastProviderMessage.id,
-            BroadcastProviderMessage.provider,
-            BroadcastProviderMessage.status,
+        db.session.query(BroadcastProviderMessage)
+        .join(
+            BroadcastProviderMessageStatus,
+            BroadcastProviderMessageStatus.broadcast_provider_message_id == BroadcastProviderMessage.id,
         )
         .join(BroadcastEvent, BroadcastEvent.id == BroadcastProviderMessage.broadcast_event_id)
         .filter(BroadcastEvent.broadcast_message_id == broadcast_message_id)
@@ -444,11 +444,16 @@ def _delete_broadcast_provider_message_numbers(broadcast_provider_message_ids, d
 
 
 def _delete_broadcast_provider_messages(broadcast_provider_message_ids, dry_run=False):
+    statuses = db.session.query(BroadcastProviderMessageStatus).filter(
+        BroadcastProviderMessageStatus.broadcast_provider_message_id.in_(broadcast_provider_message_ids)
+    )
+
     bpm = db.session.query(BroadcastProviderMessage).filter(
         BroadcastProviderMessage.id.in_(broadcast_provider_message_ids)
     )
     item_count = len(bpm.all())
     if not dry_run:
+        statuses.delete(synchronize_session=False)
         bpm.delete(synchronize_session=False)
     return item_count
 
