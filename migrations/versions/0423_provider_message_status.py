@@ -1,6 +1,6 @@
 """
 
-Revision ID: 0423_add_broadcast_provider_message_status
+Revision ID: 0423_provider_message_status
 Revises: 0422_add_publish_progress_table
 Create Date: 2026-04-16 12:27:04.628384
 
@@ -10,7 +10,7 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
-revision = "0423_add_broadcast_provider_message_status"
+revision = "0423_provider_message_status"
 down_revision = "0422_add_publish_progress_table"
 
 
@@ -46,15 +46,15 @@ def upgrade():
         """
         INSERT INTO broadcast_provider_message_status
             (broadcast_provider_message_id, status, created_at)
-        SELECT gen_random_uuid(), id, 'pending', created_at
+        SELECT id, 'sending', created_at
         FROM broadcast_provider_message
     """
     )
     op.execute(
         """
         INSERT INTO broadcast_provider_message_status
-            (broadcast_provider_message_id, status, updated_at)
-        SELECT gen_random_uuid(), id, status, created_at
+            (broadcast_provider_message_id, status, created_at)
+        SELECT id, status::broadcast_provider_message_status_types, updated_at
         FROM broadcast_provider_message
     """
     )
@@ -76,12 +76,12 @@ def downgrade():
     op.execute(
         """
             UPDATE broadcast_provider_message bpm
-            SET status = s.status
+            SET status = s.status::varchar
             FROM (
                 SELECT DISTINCT ON (broadcast_provider_message_id)
                     broadcast_provider_message_id,
                     status
-                FROM source_table
+                FROM broadcast_provider_message_status
                 ORDER BY broadcast_provider_message_id, created_at DESC
             ) s
             WHERE bpm.id = s.broadcast_provider_message_id;
