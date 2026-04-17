@@ -62,6 +62,7 @@ def upgrade():
             (broadcast_provider_message_id, status, created_at)
         SELECT id, status::broadcast_provider_message_status_types, updated_at
         FROM broadcast_provider_message
+        WHERE updated_at IS NOT NULL
     """
     )
 
