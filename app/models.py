@@ -1196,7 +1196,11 @@ class BroadcastProviderMessageStatus(db.Model):
 
     __tablename__ = "broadcast_provider_message_status"
 
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    # We use a sequence instead of UUID as we need something to order, and datetime
+    # may not have the accuracy (and in unit tests with frozen time is awkward)
+    sequence = Sequence("broadcast_provider_message_status_seq")
+
+    id = db.Column(db.Integer, sequence, server_default=sequence.next_value(), primary_key=True)
 
     broadcast_provider_message_id = db.Column(UUID(as_uuid=True), db.ForeignKey("broadcast_provider_message.id"))
     broadcast_provider_message = db.relationship("BroadcastProviderMessage", back_populates="statuses")
@@ -1227,7 +1231,12 @@ class BroadcastProviderMessage(db.Model):
 
     created_at = db.Column(db.DateTime, nullable=False, default=utc_now)
 
-    statuses = db.relationship("BroadcastProviderMessageStatus", back_populates="broadcast_provider_message")
+    statuses = db.relationship(
+        "BroadcastProviderMessageStatus",
+        back_populates="broadcast_provider_message",
+        # Newest ones at the end
+        order_by="asc(BroadcastProviderMessageStatus.id)",
+    )
 
     UniqueConstraint(broadcast_event_id, provider)
 

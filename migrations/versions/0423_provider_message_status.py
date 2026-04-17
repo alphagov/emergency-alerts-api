@@ -15,9 +15,15 @@ down_revision = "0422_add_publish_progress_table"
 
 
 def upgrade():
+    op.execute("create sequence broadcast_provider_message_status_seq")
     op.create_table(
         "broadcast_provider_message_status",
-        sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
+        sa.Column(
+            "id",
+            sa.Integer(),
+            server_default=sa.text("nextval('broadcast_provider_message_status_seq')"),
+            nullable=False,
+        ),
         sa.Column("broadcast_provider_message_id", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column(
@@ -89,6 +95,7 @@ def downgrade():
     )
 
     op.drop_table("broadcast_provider_message_status")
+    op.execute("drop sequence broadcast_provider_message_status_seq")
 
     # This table was never used for anything, so no need to put data in it...
     op.create_table(
