@@ -379,9 +379,15 @@ def purge_broadcast_messages(service_id, older_than):
         messages = dao_get_public_messages_older_than(older_than)
         messages = _generate_s3_keys(messages)
 
-        print(bucket)
-
-        print(messages)
+        current_app.logger.info(
+            "purge_broadcast_messages",
+            extra={
+                "python_module": __name__,
+                "service_id": service_id,
+                "bucket": bucket,
+                "messages": messages,
+            },
+        )
 
         if messages:
             for message in messages:
@@ -408,19 +414,18 @@ def purge_broadcast_messages(service_id, older_than):
                 # delete database records associated with this message
                 counter += dao_delete_records_for_broadcast(service_id, message[0])
 
+                result_message = (
+                    f"Purged {counter['msgs']} BroadcastMessage items, {counter['events']} "
+                    f"BroadcastEvent items and {counter['s3_objects']} S3 objects, "
+                    f"created more than {older_than} days ago"
+                )
+
+                current_app.logger.info(result_message)
+
     except Exception as e:
         return jsonify(result="error", message=f"Unable to purge old alert items: {e}"), 500
 
-    return (
-        jsonify(
-            {
-                "message": f"Purged {counter['msgs']} BroadcastMessage items, {counter['events']} "
-                f"BroadcastEvent items and {counter['s3_objects']} S3 objects, "
-                f"created more than {older_than} days ago"
-            }
-        ),
-        200,
-    )
+    return jsonify({"message": result_message}), 200
 
 
 def _generate_s3_keys(messages):
