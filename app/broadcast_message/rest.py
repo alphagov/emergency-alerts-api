@@ -372,6 +372,7 @@ def purge_broadcast_messages(service_id, older_than):
     if is_public_environment():
         raise InvalidRequest("Endpoint not found", status_code=404)
 
+    result_message = ""
     try:
         bucket = current_app.config["GOVUK_ALERTS_S3_BUCKET_NAME"]
         s3 = boto3.client("s3")
