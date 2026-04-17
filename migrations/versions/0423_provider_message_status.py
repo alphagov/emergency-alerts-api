@@ -49,23 +49,19 @@ def upgrade():
     # We'll use its created_at date to create a sending status row, and then it's updated_at
     # to create a relevant status row of what it is now.
     # (For messages that failed, they'll have only a sending with a null updated_at)
-    op.execute(
-        """
+    op.execute("""
         INSERT INTO broadcast_provider_message_status
             (broadcast_provider_message_id, status, created_at)
         SELECT id, 'sending', created_at
         FROM broadcast_provider_message
-    """
-    )
-    op.execute(
-        """
+    """)
+    op.execute("""
         INSERT INTO broadcast_provider_message_status
             (broadcast_provider_message_id, status, created_at)
         SELECT id, status::broadcast_provider_message_status_types, updated_at
         FROM broadcast_provider_message
         WHERE updated_at IS NOT NULL
-    """
-    )
+    """)
 
     op.drop_table("broadcast_provider_message_status_type")
     op.drop_column("broadcast_provider_message", "updated_at")
@@ -81,8 +77,7 @@ def downgrade():
 
     op.execute("UPDATE broadcast_provider_message SET updated_at = created_at")
     # Get the latest status and use that to backfill the old column
-    op.execute(
-        """
+    op.execute("""
             UPDATE broadcast_provider_message bpm
             SET status = s.status::varchar
             FROM (
@@ -93,8 +88,7 @@ def downgrade():
                 ORDER BY broadcast_provider_message_id, id DESC
             ) s
             WHERE bpm.id = s.broadcast_provider_message_id;
-    """
-    )
+    """)
 
     op.drop_table("broadcast_provider_message_status")
     op.execute("drop sequence broadcast_provider_message_status_seq")
