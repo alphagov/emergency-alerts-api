@@ -13,8 +13,7 @@ from app.broadcast_message.broadcast_message_schema import (
     update_broadcast_message_schema,
     update_broadcast_message_status_schema,
 )
-from app.dao.broadcast_message_dao import (
-    dao_delete_records_for_broadcast,
+from app.dao.broadcast_message_dao import (  # dao_delete_records_for_broadcast,
     dao_get_broadcast_message_by_id_and_service_id,
     dao_get_broadcast_message_by_id_and_service_id_with_user,
     dao_get_broadcast_messages_for_service,
@@ -396,7 +395,11 @@ def purge_broadcast_messages(service_id, older_than):
             for message in messages:
                 # delete S3 objects associated with the key
                 s3_list = s3.list_objects_v2(Bucket=bucket, Prefix=f"/alerts/{message[1]}")
+
                 objects = [{"Key": obj["Key"]} for obj in s3_list.get("Contents", [])]
+
+                current_app.logger.info(f"s3 objects matching prefix {message[1]}", extra={"objects": objects})
+
                 if objects:
                     # The pattern matches:
                     # - 1-apr-2026 (exact key)
@@ -408,14 +411,19 @@ def purge_broadcast_messages(service_id, older_than):
                     # - But not 1-apr-2026-20260401140329.cap.xml
                     pattern = re.compile(rf"^{re.escape(message[1])}(-\d{{14}}\.cap\.xml)?$")
                     matches = [obj for obj in objects if pattern.match(obj["Key"])]
+
+                    current_app.logger.info("objects to be deleted on this iteration", extra={"matches": matches})
+
                     s3_result = s3.delete_objects(Bucket=bucket, Delete={"Objects": matches})
                     counter["s3_objects"] += len(s3_result.get("Deleted", []))
+
                 current_app.logger.info(
                     result_message.format(counter["msgs"], counter["events"], counter["s3_objects"], older_than)
                 )
 
                 # delete database records associated with this message
-                counter += dao_delete_records_for_broadcast(service_id, message[0])
+                # COMMENT OUT FOR TESTING
+                # counter += dao_delete_records_for_broadcast(service_id, message[0])
 
             current_app.logger.info(
                 result_message.format(counter["msgs"], counter["events"], counter["s3_objects"], older_than)
