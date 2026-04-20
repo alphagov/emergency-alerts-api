@@ -395,7 +395,7 @@ def purge_broadcast_messages(service_id, older_than):
         if messages:
             for message in messages:
                 # delete S3 objects associated with the key
-                s3_list = s3.list_objects_v2(Bucket=bucket, Prefix=f"/alerts/{message[1]}")
+                s3_list = s3.list_objects_v2(Bucket=bucket, Prefix=f"alerts/{message[1]}")
 
                 objects = [{"Key": obj["Key"]} for obj in s3_list.get("Contents", [])]
 
