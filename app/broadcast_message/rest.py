@@ -387,6 +387,7 @@ def purge_broadcast_messages(service_id, older_than):
                 "python_module": __name__,
                 "service_id": service_id,
                 "bucket": bucket,
+                "older_than": older_than,
                 "messages": messages,
             },
         )
