@@ -857,17 +857,17 @@ def test_generate_s3_keys_from_list_of_id_timestamp_tuples():
 
     expected = [
         ("msg-01", "15-apr-2026"),
-        ("msg-02", "15-apr-2026-1"),
-        ("msg-03", "15-apr-2026-2"),
+        ("msg-02", "15-apr-2026-2"),
+        ("msg-03", "15-apr-2026-3"),
         ("msg-04", "14-apr-2026"),
         ("msg-05", "13-apr-2026"),
-        ("msg-06", "13-apr-2026-1"),
-        ("msg-07", "13-apr-2026-2"),
+        ("msg-06", "13-apr-2026-2"),
+        ("msg-07", "13-apr-2026-3"),
         ("msg-08", "12-apr-2026"),
-        ("msg-09", "12-apr-2026-1"),
-        ("msg-10", "12-apr-2026-2"),
-        ("msg-11", "12-apr-2026-3"),
-        ("msg-12", "12-apr-2026-4"),
+        ("msg-09", "12-apr-2026-2"),
+        ("msg-10", "12-apr-2026-3"),
+        ("msg-11", "12-apr-2026-4"),
+        ("msg-12", "12-apr-2026-5"),
     ]
 
     assert _generate_s3_keys(messages) == expected

@@ -401,7 +401,7 @@ def purge_broadcast_messages(service_id, older_than):
                     # The pattern matches:
                     # - 1-apr-2026 (exact key)
                     # - 1-apr-2026-20260401140329.cap.xml (its cap file)
-                    # - But not 1-apr-2026-1 or 1-apr-2026-2-20260401140454.cap.xml
+                    # - But not 1-apr-2026-2 or 1-apr-2026-20260401140454.cap.xml
                     # And for key 1-apr-2026-2:
                     # - 1-apr-2026-2 (exact key)
                     # - 1-apr-2026-2-20260401140454.cap.xml (its cap file)
@@ -410,12 +410,16 @@ def purge_broadcast_messages(service_id, older_than):
                     matches = [obj for obj in objects if pattern.match(obj["Key"])]
                     s3_result = s3.delete_objects(Bucket=bucket, Delete={"Objects": matches})
                     counter["s3_objects"] += len(s3_result.get("Deleted", []))
-                # delete database records associated with this message
-                counter += dao_delete_records_for_broadcast(service_id, message[0])
-
                 current_app.logger.info(
                     result_message.format(counter["msgs"], counter["events"], counter["s3_objects"], older_than)
                 )
+
+                # delete database records associated with this message
+                counter += dao_delete_records_for_broadcast(service_id, message[0])
+
+            current_app.logger.info(
+                result_message.format(counter["msgs"], counter["events"], counter["s3_objects"], older_than)
+            )
 
     except Exception as e:
         return jsonify(result="error", message=f"Unable to purge old alert items: {e}"), 500
@@ -432,14 +436,14 @@ def _generate_s3_keys(messages):
     # create a new list of tuples (id, prefix) where the prefix is generated
     # from the starts_at date, and takes the form
     # 2-jun-2025
-    # 2-jun-2025-1
-    # 2-jun-2025-2 etc for multiple messages with the same starts_at date
+    # 2-jun-2025-2
+    # 2-jun-2025-3 etc for multiple messages with the same starts_at date
     date_counts = defaultdict(int)
     result = []
     for msg_id, timestamp in messages:
         base_prefix = timestamp.strftime("%d-%b-%Y").lower()
         count = date_counts[base_prefix]
-        prefix = base_prefix if count == 0 else f"{base_prefix}-{count}"
+        prefix = base_prefix if count == 0 else f"{base_prefix}-{count + 1}"
         date_counts[base_prefix] += 1
         result.append((msg_id, prefix))
     return result
