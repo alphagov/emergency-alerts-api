@@ -410,7 +410,7 @@ def purge_broadcast_messages(service_id, older_than):
                     # - 1-apr-2026-2 (exact key)
                     # - 1-apr-2026-2-20260401140454.cap.xml (its cap file)
                     # - But not 1-apr-2026-20260401140329.cap.xml
-                    pattern = re.compile(rf"^{re.escape(message[1])}(-\d{{14}}\.cap\.xml)?$")
+                    pattern = re.compile(rf"^{re.escape("alerts/" + message[1])}(-\d{{14}}\.cap\.xml)?$")
                     matches = [obj for obj in objects if pattern.match(obj["Key"])]
 
                     current_app.logger.info("objects to be deleted on this iteration", extra={"matches": matches})
