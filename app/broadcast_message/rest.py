@@ -395,9 +395,15 @@ def purge_broadcast_messages(service_id, older_than):
         if messages:
             for message in messages:
                 # delete S3 objects associated with the key
-                s3_list = s3.list_objects_v2(Bucket=bucket, Prefix=f"alerts/{message[1]}")
+                # s3_list = s3.list_objects_v2(Bucket=bucket, Prefix=f"alerts/{message[1]}")
 
-                objects = [{"Key": obj["Key"]} for obj in s3_list.get("Contents", [])]
+                versions = s3.list_object_versions(Bucket=bucket, Prefix=f"alerts/{message[1]}")
+                objects = [
+                    {"Key": v["Key"], "VersionId": v["VersionId"]}
+                    for v in versions.get("Versions", []) + versions.get("DeleteMarkers", [])
+                ]
+
+                # objects = [{"Key": obj["Key"]} for obj in s3_list.get("Contents", [])]
 
                 current_app.logger.info(f"s3 objects matching prefix {message[1]}", extra={"objects": objects})
 
@@ -417,6 +423,18 @@ def purge_broadcast_messages(service_id, older_than):
 
                     s3_result = s3.delete_objects(Bucket=bucket, Delete={"Objects": matches})
                     counter["s3_objects"] += len(s3_result.get("Deleted", []))
+
+                    errors = s3_result.get("Errors", [])
+                    if errors:
+                        current_app.logger.info(
+                            "s3 deletion errors",
+                            extra={
+                                "errors": errors,
+                                "bucket": bucket,
+                                "prefix": f"alerts/{message[1]}",
+                            },
+                        )
+                        counter["s3_deletion_errors"] += len(s3_result.get("Errors", []))
 
                 current_app.logger.info(
                     result_message.format(counter["msgs"], counter["events"], counter["s3_objects"], older_than)
