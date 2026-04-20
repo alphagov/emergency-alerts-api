@@ -47,7 +47,7 @@ run-celery: ## Run celery
 
 .PHONY: run-celery-api
 run-celery-api: ## Run Celery workers for tasks executed by the API; high-priority ones first, then lower-priority ones
-	. environment.sh && celery \
+	. environment.sh && opentelemetry-instrument celery \
 		-A run_celery.notify_celery worker \
 		-Q high-priority-tasks \
 		--pidfile=/tmp/api_celery_worker_hp.pid \
@@ -56,7 +56,7 @@ run-celery-api: ## Run Celery workers for tasks executed by the API; high-priori
 		--autoscale=8,1 \
 		--hostname='$(SERVICE)_hp@%h' &
 
-	. environment.sh && celery \
+	. environment.sh && opentelemetry-instrument celery \
 		-A run_celery.notify_celery worker \
 		-Q broadcast-tasks \
 		--pidfile=/tmp/api_celery_worker.pid \
