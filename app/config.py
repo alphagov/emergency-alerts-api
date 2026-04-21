@@ -71,6 +71,11 @@ class Config(object):
         "arn:aws:lambda:eu-west-2:435684131547:function:mno-portal-development-log-upload-handler",
     )
 
+    MNO_EMAILS_EE = os.getenv("MNO_EMAILS_EE", "")
+    MNO_EMAILS_O2 = os.getenv("MNO_EMAILS_O2", "")
+    MNO_EMAILS_THREE = os.getenv("MNO_EMAILS_THREE", "")
+    MNO_EMAILS_VODAFONE = os.getenv("MNO_EMAILS_VODAFONE", "")
+
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_size": int(os.environ.get("SQLALCHEMY_POOL_SIZE", 5)),
         "pool_timeout": 30,
@@ -84,7 +89,7 @@ class Config(object):
     )
 
     if os.environ.get("MASTER_USERNAME"):
-        print("Using master credentials for db connection")
+        print("Using master credentials for db connection")  # noqa: T201
         SQLALCHEMY_DATABASE_URI = "postgresql://{user}:{password}@{host}:{port}/{database}".format(
             user=os.environ.get("MASTER_USERNAME", "root"),
             password=os.environ.get("MASTER_PASSWORD"),
@@ -93,7 +98,7 @@ class Config(object):
             database=os.environ.get("DATABASE", "emergency_alerts"),
         )
     else:
-        print("Using no credentials for db connection")
+        print("Using no credentials for db connection")  # noqa: T201
         SQLALCHEMY_DATABASE_URI = "postgresql://{user}@{host}:{port}/{database}".format(
             user=os.environ.get("RDS_USER", "root"),
             host=os.environ.get("RDS_HOST", "localhost"),
@@ -102,7 +107,7 @@ class Config(object):
         )
 
     if os.environ.get("SQLALCHEMY_LOCAL_OVERRIDE"):
-        print("Overriding db connection string for local running")
+        print("Overriding db connection string for local running")  # noqa: T201
         SQLALCHEMY_DATABASE_URI = os.environ.get("SQLALCHEMY_LOCAL_OVERRIDE")
 
     ZENDESK_API_KEY = os.environ.get("ZENDESK_API_KEY")
@@ -201,7 +206,9 @@ class Hosted(Config):
     SUBDOMAIN = (
         "dev."
         if os.environ.get("ENVIRONMENT") == "development"
-        else f"{os.environ.get('ENVIRONMENT')}." if os.environ.get("ENVIRONMENT") != "production" else ""
+        else f"{os.environ.get('ENVIRONMENT')}."
+        if os.environ.get("ENVIRONMENT") != "production"
+        else ""
     )
     ADMIN_BASE_URL = f"http://admin.{TENANT}ecs.local:6012"
     ADMIN_EXTERNAL_URL = f"https://{TENANT}admin.{SUBDOMAIN}emergency-alerts.service.gov.uk"
@@ -216,7 +223,7 @@ class Hosted(Config):
     DATABASE_STATEMENT_TIMEOUT_MS = 1200000
 
     if os.getenv("MASTER_USERNAME"):
-        print("Using master credentials for db connection")
+        print("Using master credentials for db connection")  # noqa: T201
         filtered_password = os.environ.get("MASTER_PASSWORD").replace("%", "%%")
         SQLALCHEMY_DATABASE_URI = "postgresql://{user}:{password}@{host}:{port}/{database}".format(
             user=os.environ.get("MASTER_USERNAME"),
@@ -354,7 +361,9 @@ class Test(Config):
     SUBDOMAIN = (
         "dev."
         if os.environ.get("ENVIRONMENT") == "development"
-        else f"{os.environ.get('ENVIRONMENT')}." if os.environ.get("ENVIRONMENT") != "production" else ""
+        else f"{os.environ.get('ENVIRONMENT')}."
+        if os.environ.get("ENVIRONMENT") != "production"
+        else ""
     )
     ADMIN_EXTERNAL_URL = f"https://{TENANT}admin.{SUBDOMAIN}emergency-alerts.service.gov.uk"
     REPORTS_SLACK_WEBHOOK_URL = "https://hooks.slack.com/somewhere"

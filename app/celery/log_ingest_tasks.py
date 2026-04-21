@@ -100,19 +100,30 @@ def _get_mno_details(broadcast_event):
 
 
 def _get_mno_contact_emails(provider_id):
-    """
-    Get contact emails for a specific MNO/provider from SSM
-    """
+    config_key_map = {
+        "ee": "MNO_EMAILS_EE",
+        "o2": "MNO_EMAILS_O2",
+        "three": "MNO_EMAILS_THREE",
+        "vodafone": "MNO_EMAILS_VODAFONE",
+    }
 
-    ssm = boto3.client("ssm", region_name="eu-west-2")
-
-    try:
-        response = ssm.get_parameter(Name=f"/operator-portal/mno-emails/{provider_id.lower()}", WithDecryption=True)
-        emails = response["Parameter"]["Value"].split(",")
-        return [email.strip() for email in emails]
-    except ssm.exceptions.ParameterNotFound:
-        current_app.logger.warning(f"No contact emails configured in SSM for provider {provider_id}")
+    config_key = config_key_map.get(provider_id.lower())
+    if not config_key:
+        current_app.logger.warning(
+            "Unknown provider when fetching contact emails",
+            extra={"provider_id": provider_id},
+        )
         return []
+
+    raw_value = current_app.config.get(config_key, "")
+    if not raw_value.strip():
+        current_app.logger.warning(
+            "No contact emails configured for provider",
+            extra={"provider_id": provider_id, "config_key": config_key},
+        )
+        return []
+
+    return [email.strip() for email in raw_value.split(",") if email.strip()]
 
 
 def _invoke_log_upload_lambda(lambda_name, payload):
