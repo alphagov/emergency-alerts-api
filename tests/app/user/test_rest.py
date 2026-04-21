@@ -1415,3 +1415,24 @@ def test_fetch_user_by_email_or_none_returns_None_if_email_not_in_users(admin_re
         "user.fetch_user_by_email_or_none", _data={"email": "test@digital.cabinet-office.gov.uk"}
     )
     assert json_resp["data"] is None
+
+
+def test_purge_users_created_by_tests(mocker, sample_service, admin_request, notify_db_session):
+    # This test creates user with same email format as tests user then asserts that purge function
+    # removes user and values for user in associated tables
+    mock_get_users_by_partial_email = mocker.patch("app.service.rest.get_users_by_partial_email")
+    mock_delete_user_verify_codes = mocker.patch("app.service.rest.delete_user_verify_codes")
+    mock_delete_permissions_for_user = mocker.patch("app.service.rest.delete_permissions_for_user")
+    mock_delete_model_user = mocker.patch("app.service.rest.delete_model_user")
+
+    test_user = create_user(email="emergency-alerts-tests+fake-user@digital.cabinet-office.gov.uk")
+    notify_db_session.commit()
+
+    mock_get_users_by_partial_email.return_value = [test_user]
+
+    admin_request.delete("service.purge_users_created_by_tests", _expected_status=200)
+
+    mock_get_users_by_partial_email.assert_called_once_with("emergency-alerts-tests+fake-")
+    mock_delete_user_verify_codes.assert_called_once_with(user=test_user)
+    mock_delete_permissions_for_user.assert_called_once_with(user=test_user)
+    mock_delete_model_user.assert_called_once_with(user=test_user)

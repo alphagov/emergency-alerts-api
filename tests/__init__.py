@@ -31,6 +31,11 @@ def create_admin_authorization_header():
     return create_internal_authorization_header(client_id)
 
 
+def create_govuk_publish_authorization_header():
+    client_id = current_app.config["GOVUK_ALERTS_PUBLISH_CLIENT_ID"]
+    return create_internal_authorization_header(client_id)
+
+
 def create_internal_authorization_header(client_id):
     secret = current_app.config["INTERNAL_CLIENT_API_KEYS"][client_id][0]
     token = create_jwt_token(secret=secret, client_id=client_id)

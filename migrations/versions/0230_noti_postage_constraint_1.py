@@ -13,8 +13,7 @@ down_revision = "0229_new_letter_rates"
 
 
 def upgrade():
-    op.execute(
-        """
+    op.execute("""
         ALTER TABLE notifications ADD CONSTRAINT "chk_notifications_postage_null"
         CHECK (
             CASE WHEN notification_type = 'letter' THEN
@@ -24,8 +23,7 @@ def upgrade():
             END
         )
         NOT VALID
-    """
-    )
+    """)
 
 
 def downgrade():

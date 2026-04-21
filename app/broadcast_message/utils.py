@@ -87,8 +87,7 @@ def _create_p1_zendesk_alert(broadcast_message):
     if broadcast_message.stubbed:
         return
 
-    message = inspect.cleandoc(
-        f"""
+    message = inspect.cleandoc(f"""
         Broadcast Sent
 
         https://www.notifications.service.gov.uk/services/{broadcast_message.service_id}/current-alerts/{broadcast_message.id}
@@ -96,8 +95,7 @@ def _create_p1_zendesk_alert(broadcast_message):
         Sent on channel {broadcast_message.service.broadcast_channel} to {broadcast_message.areas["names"]}.
 
         Content starts "{broadcast_message.content[:100]}".
-    """
-    )
+    """)
 
     ticket = EASSupportTicket(
         subject="Live broadcast sent",

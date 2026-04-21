@@ -18,8 +18,7 @@ BRANDING_TABLES = ("email_branding", "letter_branding")
 
 def upgrade():
     for branding in BRANDING_TABLES:
-        op.execute(
-            """
+        op.execute("""
             UPDATE
                 organisation
             SET
@@ -35,21 +34,14 @@ def upgrade():
                     WHERE
                         domain.organisation_id = organisation.id
                 )
-        """.format(
-                branding=branding
-            )
-        )
+        """.format(branding=branding))
 
 
 def downgrade():
     for branding in BRANDING_TABLES:
-        op.execute(
-            """
+        op.execute("""
             UPDATE
                 organisation
             SET
                 {branding}_id = null
-        """.format(
-                branding=branding
-            )
-        )
+        """.format(branding=branding))
