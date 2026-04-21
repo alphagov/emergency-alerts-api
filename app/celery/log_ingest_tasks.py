@@ -107,12 +107,26 @@ def _get_mno_contact_emails(provider_id):
     ssm = boto3.client("ssm", region_name="eu-west-2")
 
     try:
-        response = ssm.get_parameter(Name=f"/operator-portal/mno-emails/{provider_id.lower()}", WithDecryption=True)
+        response = ssm.get_parameter(
+            Name=f"/operator-portal/mno-emails/{provider_id.lower()}",
+            WithDecryption=True,
+        )
         emails = response["Parameter"]["Value"].split(",")
-        return [email.strip() for email in emails]
+        return [email.strip() for email in emails if email.strip()]
+
     except ssm.exceptions.ParameterNotFound:
-        current_app.logger.warning(f"No contact emails configured in SSM for provider {provider_id}")
+        current_app.logger.warning(
+            "No contact emails configured in SSM for provider",
+            extra={"provider_id": provider_id},
+        )
         return []
+
+    except botocore.exceptions.ClientError:
+        current_app.logger.exception(
+            "Failed retrieving MNO emails from SSM",
+            extra={"provider_id": provider_id},
+        )
+        raise
 
 
 def _invoke_log_upload_lambda(lambda_name, payload):
