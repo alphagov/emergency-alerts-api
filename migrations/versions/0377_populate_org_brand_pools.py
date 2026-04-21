@@ -15,9 +15,7 @@ down_revision = "0376_email_branding_pools"
 
 
 def upgrade():
-    op.execute(
-        textwrap.dedent(
-            """
+    op.execute(textwrap.dedent("""
             INSERT INTO email_branding_to_organisation
             (organisation_id, email_branding_id)
             (SELECT organisation_id, email_branding_id FROM services
@@ -27,9 +25,7 @@ def upgrade():
             AND organisation_id IS NOT NULL
             AND count_as_live = true)
             ON CONFLICT DO NOTHING;
-            """
-        ).strip()
-    )
+            """).strip())
 
 
 def downgrade():

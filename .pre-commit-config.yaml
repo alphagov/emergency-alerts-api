@@ -2,29 +2,32 @@ exclude: ^migrations
 
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.4.0
+  rev: v6.0.0
   hooks:
   - id: trailing-whitespace
   - id: end-of-file-fixer
   - id: check-yaml
   - id: debug-statements
-- repo: https://github.com/PyCQA/flake8
-  rev: 7.1.1
-  hooks:
-  - id: flake8
-    name: flake8 (python)
-- repo: https://github.com/PyCQA/isort
-  rev: 5.12.0
-  hooks:
-    - id: isort
-      name: isort (python)
-- repo: https://github.com/psf/black
-  rev: 25.1.0
-  hooks:
-    - id: black
-      name: black (python)
 - repo: local
   hooks:
+    - id: black
+      name: black
+      entry: black
+      language: system
+      types: [python]
+
+    - id: flake8
+      name: flake8
+      entry: flake8
+      language: system
+      types: [python]
+
+    - id: isort
+      name: isort
+      entry: isort
+      language: system
+      types: [python]
+
     - id: check-requirements
       name: check-requirements
       entry: ./scripts/check-requirements.sh

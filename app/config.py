@@ -45,9 +45,12 @@ class Config(object):
     # secrets that internal apps, such as the admin app or document download, must use to authenticate with the API
     ADMIN_CLIENT_ID = "notify-admin"
     GOVUK_ALERTS_CLIENT_ID = "govuk-alerts"
+    # Different client as this is strictly for publish blueprint & endpoints
+    GOVUK_ALERTS_PUBLISH_CLIENT_ID = "govuk-alerts-publish"
     INTERNAL_CLIENT_API_KEYS = {
         ADMIN_CLIENT_ID: [os.environ.get("ADMIN_CLIENT_SECRET")],
-        GOVUK_ALERTS_CLIENT_ID: [os.environ.get("GOVUK_CLIENT_SECRET", "govuk-alerts-secret-key")],
+        GOVUK_ALERTS_CLIENT_ID: [os.environ.get("GOVUK_CLIENT_SECRET")],
+        GOVUK_ALERTS_PUBLISH_CLIENT_ID: [os.environ.get("GOVUK_ALERTS_PUBLISH_CLIENT_SECRET")],
     }
     SECRET_KEY = os.environ.get("SECRET_KEY")
     DANGEROUS_SALT = os.environ.get("DANGEROUS_SALT")
@@ -188,6 +191,8 @@ class Config(object):
 
     MAX_THROTTLE_PERIOD = 60
 
+    GOVUK_ALERTS_S3_BUCKET_NAME = os.getenv("GOVUK_ALERTS_S3_BUCKET_NAME")
+
 
 class Hosted(Config):
     HOST = "hosted"
@@ -262,7 +267,7 @@ class Hosted(Config):
         },
         TaskNames.TRIGGER_LINK_TESTS: {
             "task": TaskNames.TRIGGER_LINK_TESTS,
-            "schedule": crontab(minute="*/15"),
+            "schedule": crontab(minute="*/3"),
             "options": {"queue": QueueNames.PERIODIC},
         },
         TaskNames.DELETE_VERIFY_CODES: {
@@ -354,6 +359,8 @@ class Test(Config):
     ADMIN_EXTERNAL_URL = f"https://{TENANT}admin.{SUBDOMAIN}emergency-alerts.service.gov.uk"
     REPORTS_SLACK_WEBHOOK_URL = "https://hooks.slack.com/somewhere"
     CBC_PROXY_ENABLED = True
+
+    GOVUK_ALERTS_S3_BUCKET_NAME = "test-govuk-alerts-bucket"
 
     LOG_UPLOAD_LAMBDA_ARN = os.getenv(
         "LOG_UPLOAD_LAMBDA_ARN",

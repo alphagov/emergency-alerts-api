@@ -18,16 +18,14 @@ organisation_id = "38e4bf69-93b0-445d-acee-53ea53fe02df"
 def upgrade():
     conn = op.get_bind()
     conn.execute(
-        text(
-            """
+        text("""
             UPDATE
                 organisation
             SET
                 name = 'Emergency Alerts'
             WHERE
                 id = :id
-        """
-        ),
+        """),
         {"id": organisation_id},
     )
 
