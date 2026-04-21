@@ -101,13 +101,18 @@ def _get_mno_details(broadcast_event):
 
 def _get_mno_contact_emails(provider_id):
     """
-    Get contact emails for a specific MNO/provider
-    This process is changing!
+    Get contact emails for a specific MNO/provider from SSM
     """
-    # TODO: Implement MNO contact information after testing is completed.
 
-    # Placeholder example:
-    return ["alec.ashmore@digital.cabinet-office.gov.uk", "simon.sorrell@digital.cabinet-office.gov.uk"]
+    ssm = boto3.client("ssm", region_name="eu-west-2")
+
+    try:
+        response = ssm.get_parameter(Name=f"/operator-portal/mno-emails/{provider_id.lower()}", WithDecryption=True)
+        emails = response["Parameter"]["Value"].split(",")
+        return [email.strip() for email in emails]
+    except ssm.exceptions.ParameterNotFound:
+        current_app.logger.warning(f"No contact emails configured in SSM for provider {provider_id}")
+        return []
 
 
 def _invoke_log_upload_lambda(lambda_name, payload):
