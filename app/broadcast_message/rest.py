@@ -13,7 +13,8 @@ from app.broadcast_message.broadcast_message_schema import (
     update_broadcast_message_schema,
     update_broadcast_message_status_schema,
 )
-from app.dao.broadcast_message_dao import (  # dao_delete_records_for_broadcast,
+from app.dao.broadcast_message_dao import (
+    dao_delete_records_for_broadcast,
     dao_get_broadcast_message_by_id_and_service_id,
     dao_get_broadcast_message_by_id_and_service_id_with_user,
     dao_get_broadcast_messages_for_service,
@@ -395,17 +396,11 @@ def purge_broadcast_messages(service_id, older_than):
         if messages:
             for message in messages:
                 # delete S3 objects associated with the key
-                # s3_list = s3.list_objects_v2(Bucket=bucket, Prefix=f"alerts/{message[1]}")
-
                 versions = s3.list_object_versions(Bucket=bucket, Prefix=f"alerts/{message[1]}")
                 objects = [
                     {"Key": v["Key"], "VersionId": v["VersionId"]}
                     for v in versions.get("Versions", []) + versions.get("DeleteMarkers", [])
                 ]
-
-                # objects = [{"Key": obj["Key"]} for obj in s3_list.get("Contents", [])]
-
-                current_app.logger.info(f"s3 objects matching prefix {message[1]}", extra={"objects": objects})
 
                 if objects:
                     # The pattern matches:
@@ -436,13 +431,8 @@ def purge_broadcast_messages(service_id, older_than):
                         )
                         counter["s3_deletion_errors"] += len(s3_result.get("Errors", []))
 
-                current_app.logger.info(
-                    result_message.format(counter["msgs"], counter["events"], counter["s3_objects"], older_than)
-                )
-
                 # delete database records associated with this message
-                # COMMENT OUT FOR TESTING
-                # counter += dao_delete_records_for_broadcast(service_id, message[0])
+                counter += dao_delete_records_for_broadcast(service_id, message[0])
 
             current_app.logger.info(
                 result_message.format(counter["msgs"], counter["events"], counter["s3_objects"], older_than)
