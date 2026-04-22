@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from time import sleep
 
 from emergency_alerts_utils.tasks import QueueNames, TaskNames
 from emergency_alerts_utils.xml.common import HEADLINE
@@ -147,6 +148,14 @@ def send_broadcast_provider_message(broadcast_event_id, provider):
         return
 
     try:
+        count = 1
+        while count < 60:
+            current_app.logger.info("Sleeping for 1s: %s/60", count)
+            sleep(1)
+            count += 1
+
+        current_app.logger.info("Sleep done, running actual task")
+
         broadcast_event = dao_get_broadcast_event_by_id(broadcast_event_id)
 
         _check_event_is_authorised_to_be_sent(broadcast_event, provider)
