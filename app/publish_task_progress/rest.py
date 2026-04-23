@@ -1,4 +1,4 @@
-from time import time
+from datetime import datetime, timezone
 
 from flask import Blueprint, jsonify, request
 
@@ -58,7 +58,7 @@ def finish_publish():
 
 @publish_task_progress_blueprint.route("/get-publish-tasks", methods=["GET"])
 def get_publish_tasks():
-    now = time()
+    now = datetime.now(timezone.utc).timestamp()
     tasks = dao_get_all_in_progress_publish_tasks()
 
     result = {}
