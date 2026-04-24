@@ -8,6 +8,7 @@ Create Date: 2026-04-23 13:45:00
 
 import sqlalchemy as sa
 from alembic import op
+from datetime import datetime, timezone
 
 revision = "0423_route_advisor_table"
 down_revision = "0422_add_publish_progress_table"
@@ -21,10 +22,14 @@ def upgrade():
         sa.Column("mno", sa.String(length=255), nullable=False),
         sa.PrimaryKeyConstraint("mno"),
         sa.Column("proxy", sa.String(length=255), nullable=True),
-        sa.Column("target", sa.String(length=255), nullable=True)
+        sa.Column("target", sa.String(length=255), nullable=True),
+        sa.Column("validated_at", sa.DateTime, nullable=False),
     )
     for provider in PROVIDER_TYPES:
-        op.execute(f"INSERT INTO route_advisor VALUES ('{provider}', 'primary', 'a')")
+        op.execute(
+            "INSERT INTO route_advisor "
+            f"VALUES ('{provider}', '{provider}-1-proxy', 'cbc_a', '{datetime.now(timezone.utc)}')"
+        )
 
 
 def downgrade():
