@@ -3,7 +3,6 @@ import os
 import boto3
 import pytest
 from flask import json
-from moto import mock_aws
 
 from tests.app.db import create_organisation, create_service
 from tests.conftest import set_config
@@ -12,11 +11,8 @@ aws_region = os.environ.get("AWS_REGION", "eu-west-2")
 
 
 @pytest.mark.parametrize("path", ["/", "/_api_status"])
-# Celery won't be called via the HTTP path (it's via a health check scheduled task)
-# but we can assert the CLoudWatch logic respects using the SERVICE param anyway
-@pytest.mark.parametrize("service", ["api", "celery"])
-@mock_aws
-def test_get_status_all_ok(client, notify_db_session, notify_api, service, path):
+def test_get_status_all_ok(mocked_aws, client, notify_db_session, notify_api, path):
+    service = "api"
     with set_config(notify_api, "SERVICE", service):
         response = client.get(path)
 

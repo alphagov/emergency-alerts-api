@@ -1,10 +1,10 @@
 from datetime import datetime, timezone
 
-from emergency_alerts_utils.celery import QueueNames, TaskNames
+from emergency_alerts_utils.tasks import QueueNames, TaskNames
 from emergency_alerts_utils.xml.common import HEADLINE
 from flask import current_app
 
-from app import cbc_proxy_client, notify_celery
+from app import cbc_proxy_client, dramatiq
 from app.clients.cbc_proxy import CBCProxyRetryableException
 from app.dao.broadcast_message_dao import (
     create_broadcast_provider_message,
@@ -16,6 +16,7 @@ from app.models import (
     BroadcastProvider,
     BroadcastProviderMessageStatus,
 )
+from app.tasks.stub_tasks import publish_govuk_alerts
 from app.utils import format_sequential_number, is_local_host
 
 
@@ -23,7 +24,7 @@ class BroadcastIntegrityError(Exception):
     pass
 
 
-def check_event_is_authorised_to_be_sent(broadcast_event, provider):
+def _check_event_is_authorised_to_be_sent(broadcast_event, provider):
     if not broadcast_event.service.active:
         raise BroadcastIntegrityError(
             f"Cannot send broadcast_event {broadcast_event.id} " + f"to provider {provider}: the service is suspended"
@@ -41,24 +42,13 @@ def check_event_is_authorised_to_be_sent(broadcast_event, provider):
         )
 
 
-def check_event_makes_sense_in_sequence(broadcast_event, provider):
+def _check_event_makes_sense_in_sequence(broadcast_event, provider):
     """
     If any previous event hasn't sent yet for that provider, then we shouldn't send the current event. Instead, fail and
     raise a zendesk ticket - so that a notify team member can assess the state of the previous messages, and if
     necessary, can replay the `send_broadcast_provider_message` task if the previous message has now been sent.
 
     Note: This is called before the new broadcast_provider_message is created.
-
-    # Help, I've come across this code following a pagerduty alert, what should I do?
-
-    1. Find the failing broadcast_provider_message associated with the previous event that caused this to trip.
-    2. If that provider message is still failing to send, fix the issue causing that. The task to send that previous
-       message might still be retrying in the background - look for logs related to that task.
-    3. If that provider message has sent succesfully, you might need to send this task off depending on context. This
-       might not always be true though, for example, it may not be necessary to send a cancel if the original alert has
-       already expired.
-    4. If you need to re-send this task off again, you'll need to run the following command on paas:
-       `send_broadcast_provider_message.apply_async(args=(broadcast_event_id, provider), queue=QueueNames.BROADCASTS)`
     """
     current_provider_message = broadcast_event.get_provider_message(provider)
     # if this is the first time a task is being executed, it won't have a provider message yet
@@ -105,16 +95,13 @@ def check_event_makes_sense_in_sequence(broadcast_event, provider):
                 )
 
 
-@notify_celery.task(name=TaskNames.SEND_BROADCAST_EVENT)
+@dramatiq.actor(actor_name=TaskNames.SEND_BROADCAST_EVENT, queue_name=QueueNames.HIGH_PRIORITY)
 def send_broadcast_event(broadcast_event_id):
     try:
         broadcast_event = dao_get_broadcast_event_by_id(broadcast_event_id)
 
-        notify_celery.send_task(
-            name=TaskNames.PUBLISH_GOVUK_ALERTS,
-            queue=QueueNames.GOVUK_ALERTS,
-            kwargs={"broadcast_event_id": broadcast_event_id},
-        )
+        publish_task = publish_govuk_alerts.send(broadcast_event_id=broadcast_event_id)
+        current_app.logger.info("Enqueued publish GOV UK Alerts: %s", publish_task.asdict())
 
         providers = broadcast_event.service.get_available_broadcast_providers()
         current_app.logger.info(
@@ -128,9 +115,7 @@ def send_broadcast_event(broadcast_event_id):
         )
 
         for provider in providers:
-            send_broadcast_provider_message.apply_async(
-                kwargs={"broadcast_event_id": broadcast_event_id, "provider": provider}, queue=QueueNames.HIGH_PRIORITY
-            )
+            send_broadcast_provider_message.send(broadcast_event_id=broadcast_event_id, provider=provider)
     except Exception as e:
         current_app.logger.exception(
             f"Failed to send broadcast (event id {broadcast_event_id})",
@@ -143,15 +128,13 @@ def send_broadcast_event(broadcast_event_id):
         raise
 
 
-@notify_celery.task(
-    bind=True,
-    name=TaskNames.SEND_BROADCAST_PROVIDER_MESSAGE,
-    autoretry_for=(CBCProxyRetryableException,),
-    retry_backoff=3,
-    retry_jitter=False,
-    max_retries=5,
+@dramatiq.actor(
+    actor_name=TaskNames.SEND_BROADCAST_PROVIDER_MESSAGE,
+    queue_name=QueueNames.HIGH_PRIORITY,
+    allow_retry=True,
+    retry_for=CBCProxyRetryableException,
 )
-def send_broadcast_provider_message(self, broadcast_event_id, provider):
+def send_broadcast_provider_message(broadcast_event_id, provider):
     if not current_app.config["CBC_PROXY_ENABLED"]:
         current_app.logger.info(
             "CBC Proxy disabled, unable to send broadcast_provider_message",
@@ -166,8 +149,8 @@ def send_broadcast_provider_message(self, broadcast_event_id, provider):
     try:
         broadcast_event = dao_get_broadcast_event_by_id(broadcast_event_id)
 
-        check_event_is_authorised_to_be_sent(broadcast_event, provider)
-        check_event_makes_sense_in_sequence(broadcast_event, provider)
+        _check_event_is_authorised_to_be_sent(broadcast_event, provider)
+        _check_event_makes_sense_in_sequence(broadcast_event, provider)
 
         # the broadcast_provider_message may already exist if we retried previously
         broadcast_provider_message = broadcast_event.get_provider_message(provider)
@@ -245,13 +228,13 @@ def send_broadcast_provider_message(self, broadcast_event_id, provider):
         raise
 
 
-@notify_celery.task(name=TaskNames.TRIGGER_LINK_TEST)
+@dramatiq.actor(actor_name=TaskNames.TRIGGER_LINK_TEST, queue_name=QueueNames.BROADCASTS)
 def trigger_link_test(provider):
     current_app.logger.info("trigger_link_test", extra={"python_module": __name__, "target_provider": provider})
     cbc_proxy_client.get_proxy(provider).send_link_test()
 
 
-@notify_celery.task(name="trigger-link-test-primary-to-A")
+@dramatiq.actor(actor_name=TaskNames.TRIGGER_LINK_TEST_PRIMARY_TO_A, queue_name=QueueNames.BROADCASTS)
 def trigger_link_test_primary_to_A(provider):
     current_app.logger.info(
         "trigger_link_test_primary_to_A", extra={"python_module": __name__, "target_provider": provider}
@@ -259,7 +242,7 @@ def trigger_link_test_primary_to_A(provider):
     cbc_proxy_client.get_proxy(provider).send_link_test_primary_to_A()
 
 
-@notify_celery.task(name="trigger-link-test-primary-to-B")
+@dramatiq.actor(actor_name=TaskNames.TRIGGER_LINK_TEST_PRIMARY_TO_B, queue_name=QueueNames.BROADCASTS)
 def trigger_link_test_primary_to_B(provider):
     current_app.logger.info(
         "trigger_link_test_primary_to_B", extra={"python_module": __name__, "target_provider": provider}
@@ -267,7 +250,7 @@ def trigger_link_test_primary_to_B(provider):
     cbc_proxy_client.get_proxy(provider).send_link_test_primary_to_B()
 
 
-@notify_celery.task(name="trigger-link-test-secondary-to-A")
+@dramatiq.actor(actor_name=TaskNames.TRIGGER_LINK_TEST_SECONDARY_TO_A, queue_name=QueueNames.BROADCASTS)
 def trigger_link_test_secondary_to_A(provider):
     current_app.logger.info(
         "trigger_link_test_secondary_to_A", extra={"python_module": __name__, "target_provider": provider}
@@ -275,7 +258,7 @@ def trigger_link_test_secondary_to_A(provider):
     cbc_proxy_client.get_proxy(provider).send_link_test_secondary_to_A()
 
 
-@notify_celery.task(name="trigger-link-test-secondary-to-B")
+@dramatiq.actor(actor_name=TaskNames.TRIGGER_LINK_TEST_SECONDARY_TO_B, queue_name=QueueNames.BROADCASTS)
 def trigger_link_test_secondary_to_B(provider):
     current_app.logger.info(
         "trigger_link_test_secondary_to_B", extra={"python_module": __name__, "target_provider": provider}

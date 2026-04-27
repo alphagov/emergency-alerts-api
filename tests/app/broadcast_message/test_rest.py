@@ -711,7 +711,7 @@ def test_update_broadcast_message_allows_service_user_and_platform_admin_to_canc
         canceller.platform_admin_capable = True
     else:
         sample_broadcast_service.users.append(canceller)
-    mock_task = mocker.patch("app.celery.broadcast_message_tasks.send_broadcast_event.apply_async")
+    mock_task = mocker.patch("app.tasks.broadcast_message_tasks.send_broadcast_event.send")
 
     response = admin_request.post(
         "broadcast_message.update_broadcast_message_status",
@@ -726,7 +726,7 @@ def test_update_broadcast_message_allows_service_user_and_platform_admin_to_canc
 
     cancel_id = str(cancel_event.id)
 
-    mock_task.assert_called_once_with(kwargs={"broadcast_event_id": cancel_id}, queue="high-priority-tasks")
+    mock_task.assert_called_once_with(broadcast_event_id=cancel_id)
     assert response["status"] == BroadcastStatusType.CANCELLED
     assert response["cancelled_at"] is not None
     assert response["cancelled_by_id"] == str(canceller.id)
@@ -760,7 +760,7 @@ def test_update_broadcast_message_status_rejects_approval_from_user_not_on_that_
     t = create_template(sample_broadcast_service, BROADCAST_TYPE)
     bm = create_broadcast_message(t, status=BroadcastStatusType.PENDING_APPROVAL)
     approver = create_user(email="approver@gov.uk")
-    mock_task = mocker.patch("app.celery.broadcast_message_tasks.send_broadcast_event.apply_async")
+    mock_task = mocker.patch("app.tasks.broadcast_message_tasks.send_broadcast_event.send")
 
     response = admin_request.post(
         "broadcast_message.update_broadcast_message_status",

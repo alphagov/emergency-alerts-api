@@ -1,9 +1,4 @@
 import os
-from typing import Literal
-
-from celery.schedules import crontab
-from emergency_alerts_utils.celery import QueueNames, TaskNames
-from kombu import Exchange, Queue
 
 
 class BroadcastProvider:
@@ -142,22 +137,11 @@ class Config(object):
     SECURITY_KEY_CHANGE_EMAIL_TEMPLATE_ID = "43d7b34a-45c5-4d37-96f8-2c3f48d4d0a5"
     NOTIFY_INTERNATIONAL_SMS_SENDER = "07984404008"
 
-    SERVICE: Literal["api", "celery"] = os.environ.get("SERVICE")
-    QUEUE_NAME = QueueNames.BROADCASTS if SERVICE == "api" else QueueNames.PERIODIC
-    TASK_IMPORTS = "broadcast_message_tasks" if SERVICE == "api" else "scheduled_tasks"
+    # What human-readable service this instance represents for versioning reporting
+    # (e.g. API, worker, etc - see start-api.sh)
+    SERVICE = os.environ.get("SERVICE")
 
-    CELERY = {
-        "broker_url": "filesystem://",
-        "broker_transport_options": {
-            "data_folder_in": "/tmp/.data/broker",
-            "data_folder_out": "/tmp/.data/broker/",
-        },
-        "timezone": "UTC",
-        "imports": [f"app.celery.{TASK_IMPORTS}"],
-        "task_queues": [Queue(QUEUE_NAME, Exchange("default"), routing_key=QUEUE_NAME)],
-        "worker_max_tasks_per_child": 2,
-    }
-    POST_ALERT_CHECK_INTERVAL_MINUTES = 1
+    QUEUE_PREFIX = ""  # Overidden in hosted for multitenancy
 
     FROM_NUMBER = "development"
 
@@ -238,85 +222,7 @@ class Hosted(Config):
     ENVIRONMENT = os.getenv("ENVIRONMENT")
     ENVIRONMENT_PREFIX = ENVIRONMENT if ENVIRONMENT != "development" else "dev"
     AWS_REGION = os.environ.get("AWS_REGION", "eu-west-2")
-    QUEUE_PREFIX = f"{ENVIRONMENT_PREFIX}-{TENANT_PREFIX}"
-    SQS_QUEUE_BASE_URL = os.getenv("SQS_QUEUE_BASE_URL")
-    SERVICE = os.environ.get("SERVICE")
-    QUEUE_NAME = QueueNames.BROADCASTS if SERVICE == "api" else QueueNames.PERIODIC
-    TASK_IMPORTS = "broadcast_message_tasks" if SERVICE == "api" else "scheduled_tasks"
-
-    BEAT_SCHEDULE = {
-        TaskNames.RUN_HEALTH_CHECK: {
-            "task": TaskNames.RUN_HEALTH_CHECK,
-            "schedule": crontab(minute="*/1"),
-            "options": {"queue": QueueNames.PERIODIC},
-        },
-        TaskNames.TRIGGER_GOVUK_HEALTHCHECK: {
-            "task": TaskNames.TRIGGER_GOVUK_HEALTHCHECK,
-            "schedule": crontab(minute="*/1"),
-            "options": {"queue": QueueNames.GOVUK_ALERTS},
-        },
-        TaskNames.TRIGGER_LINK_TESTS: {
-            "task": TaskNames.TRIGGER_LINK_TESTS,
-            "schedule": crontab(minute="*/3"),
-            "options": {"queue": QueueNames.PERIODIC},
-        },
-        TaskNames.DELETE_VERIFY_CODES: {
-            "task": TaskNames.DELETE_VERIFY_CODES,
-            "schedule": crontab(minute=10),
-            "options": {"queue": QueueNames.PERIODIC},
-        },
-        TaskNames.DELETE_INVITATIONS: {
-            "task": TaskNames.DELETE_INVITATIONS,
-            "schedule": crontab(minute=20),
-            "options": {"queue": QueueNames.PERIODIC},
-        },
-        TaskNames.REMOVE_YESTERDAYS_PLANNED_TESTS_ON_GOVUK_ALERTS: {
-            "task": TaskNames.REMOVE_YESTERDAYS_PLANNED_TESTS_ON_GOVUK_ALERTS,
-            "schedule": crontab(hour=00, minute=00),
-            "options": {"queue": QueueNames.PERIODIC},
-        },
-        TaskNames.DELETE_OLD_RECORDS_FROM_EVENTS_TABLE: {
-            "task": TaskNames.DELETE_OLD_RECORDS_FROM_EVENTS_TABLE,
-            "schedule": crontab(hour=3, minute=00),
-            "options": {"queue": QueueNames.PERIODIC},
-        },
-        TaskNames.VALIDATE_FUNCTIONAL_TEST_ACCOUNT_EMAILS: {
-            "task": TaskNames.VALIDATE_FUNCTIONAL_TEST_ACCOUNT_EMAILS,
-            "schedule": crontab(day_of_month="1"),
-            "options": {"queue": QueueNames.PERIODIC},
-        },
-        TaskNames.QUEUE_AFTER_ALERT_ACTIVITIES: {
-            "task": TaskNames.QUEUE_AFTER_ALERT_ACTIVITIES,
-            "schedule": crontab(minute=f"*/{Config.POST_ALERT_CHECK_INTERVAL_MINUTES}"),
-            "options": {"queue": QueueNames.PERIODIC},
-        },
-    }
-
-    PREDEFINED_SQS_QUEUES = {
-        "high-priority-tasks": {
-            "url": f"{SQS_QUEUE_BASE_URL}/{QUEUE_PREFIX}high-priority-tasks",
-        },
-        "broadcast-tasks": {
-            "url": f"{SQS_QUEUE_BASE_URL}/{QUEUE_PREFIX}broadcast-tasks",
-        },
-        "periodic-tasks": {"url": f"{SQS_QUEUE_BASE_URL}/{QUEUE_PREFIX}periodic-tasks"},
-        "govuk-alerts": {"url": f"{SQS_QUEUE_BASE_URL}/{QUEUE_PREFIX}govuk-alerts"},
-    }
-
-    CELERY = {
-        "broker_transport": "sqs",
-        "broker_transport_options": {
-            "region": AWS_REGION,
-            "predefined_queues": PREDEFINED_SQS_QUEUES,
-            "is_secure": True,
-            "task_acks_late": True,
-        },
-        "timezone": "UTC",
-        "imports": [f"app.celery.{TASK_IMPORTS}"],
-        "task_queues": [Queue(QUEUE_NAME, Exchange("default"), routing_key=QUEUE_NAME)],
-        "worker_max_tasks_per_child": 10,
-        "beat_schedule": BEAT_SCHEDULE,
-    }
+    QUEUE_PREFIX = f"{ENVIRONMENT_PREFIX}-{TENANT_PREFIX}dramatiq-"
 
 
 class Test(Config):
@@ -334,8 +240,6 @@ class Test(Config):
     )
     SQLALCHEMY_RECORD_QUERIES = False
     DATABASE_STATEMENT_TIMEOUT_MS = 1200000
-
-    CELERY = {**Config.CELERY, "broker_url": "you-forgot-to-mock-celery-in-your-tests://"}
 
     API_RATE_LIMIT_ENABLED = True
     API_HOST_NAME = "http://localhost:6011"

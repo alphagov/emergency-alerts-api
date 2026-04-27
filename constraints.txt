@@ -1,0 +1,1 @@
+setuptools<82 # 82+ removes pkg_resources, which is needed by periodiq
