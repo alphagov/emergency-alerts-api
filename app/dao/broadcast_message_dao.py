@@ -8,6 +8,7 @@ from sqlalchemy.orm import aliased
 from app import db
 from app.dao.dao_utils import autocommit
 from app.models import (
+    BROADCAST_PROVIDER_STATUS_SENDING,
     BroadcastEvent,
     BroadcastMessage,
     BroadcastProvider,
@@ -138,10 +139,10 @@ def dao_get_broadcast_messages_for_service_with_user(service_id):
 
 def dao_get_broadcast_provider_messages_by_broadcast_message_id(broadcast_message_id):
     return (
-        db.session.query(
-            BroadcastProviderMessage.id,
-            BroadcastProviderMessage.provider,
-            BroadcastProviderMessage.status,
+        db.session.query(BroadcastProviderMessage)
+        .join(
+            BroadcastProviderMessageStatus,
+            BroadcastProviderMessageStatus.broadcast_provider_message_id == BroadcastProviderMessage.id,
         )
         .join(BroadcastEvent, BroadcastEvent.id == BroadcastProviderMessage.broadcast_event_id)
         .filter(BroadcastEvent.broadcast_message_id == broadcast_message_id)
@@ -341,13 +342,15 @@ def get_earlier_events_for_broadcast_event(broadcast_event_id):
 
 
 @autocommit
-def create_broadcast_provider_message(broadcast_event, provider):
+def create_broadcast_provider_message(broadcast_event: BroadcastEvent, provider: str):
+    broadcast_provider_message_status = BroadcastProviderMessageStatus(status=BROADCAST_PROVIDER_STATUS_SENDING)
+
     broadcast_provider_message_id = uuid.uuid4()
     provider_message = BroadcastProviderMessage(
         id=broadcast_provider_message_id,
         broadcast_event=broadcast_event,
         provider=provider,
-        status=BroadcastProviderMessageStatus.SENDING,
+        statuses=[broadcast_provider_message_status],
     )
     db.session.add(provider_message)
     db.session.commit()
@@ -362,8 +365,18 @@ def create_broadcast_provider_message(broadcast_event, provider):
 
 
 @autocommit
-def update_broadcast_provider_message_status(broadcast_provider_message, *, status):
-    broadcast_provider_message.status = status
+def add_broadcast_provider_message_status(
+    broadcast_provider_message: BroadcastProviderMessage, *, status: str, error_detail=None
+):
+    """
+    Assumes broadcast_provider_message is in the database session already
+    """
+    new_status = BroadcastProviderMessageStatus(
+        broadcast_provider_message=broadcast_provider_message,
+        status=status,
+        error_detail=error_detail,
+    )
+    broadcast_provider_message.statuses.append(new_status)
 
 
 def _resolve_service_id(service):
@@ -431,11 +444,16 @@ def _delete_broadcast_provider_message_numbers(broadcast_provider_message_ids, d
 
 
 def _delete_broadcast_provider_messages(broadcast_provider_message_ids, dry_run=False):
+    statuses = db.session.query(BroadcastProviderMessageStatus).filter(
+        BroadcastProviderMessageStatus.broadcast_provider_message_id.in_(broadcast_provider_message_ids)
+    )
+
     bpm = db.session.query(BroadcastProviderMessage).filter(
         BroadcastProviderMessage.id.in_(broadcast_provider_message_ids)
     )
     item_count = len(bpm.all())
     if not dry_run:
+        statuses.delete(synchronize_session=False)
         bpm.delete(synchronize_session=False)
     return item_count
 

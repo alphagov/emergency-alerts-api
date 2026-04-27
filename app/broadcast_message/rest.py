@@ -110,7 +110,7 @@ def get_broadcast_provider_messages(service_id, broadcast_message_id):
             {
                 "id": message.id,
                 "provider": message.provider,
-                "status": message.status,
+                "status": message.get_latest_status_entry().status,
             }
             for message in messages
         ]
