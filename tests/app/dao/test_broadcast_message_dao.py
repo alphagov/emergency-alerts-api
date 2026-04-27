@@ -83,10 +83,10 @@ def test_create_broadcast_provider_message_creates_in_correct_state(sample_broad
 
     broadcast_provider_message = create_broadcast_provider_message(broadcast_event, "fake-provider")
 
-    assert broadcast_provider_message.status == "sending"
+    assert len(broadcast_provider_message.statuses) == 1
+    assert broadcast_provider_message.get_latest_status_entry().status == "sending"
     assert broadcast_provider_message.broadcast_event_id == broadcast_event.id
     assert broadcast_provider_message.created_at is not None
-    assert broadcast_provider_message.updated_at is None
 
 
 def test_dao_get_all_broadcast_messages(sample_broadcast_service):
