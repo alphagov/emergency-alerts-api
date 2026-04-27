@@ -1,7 +1,7 @@
 """
 
-Revision ID: 0423_route_advisor_table
-Revises: 0422_add_publish_progress_table
+Revision ID: 0424_route_advisor_table
+Revises: 0423_provider_message_status
 Create Date: 2026-04-23 13:45:00
 
 """
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 from alembic import op
 from datetime import datetime, timezone
 
-revision = "0423_route_advisor_table"
-down_revision = "0422_add_publish_progress_table"
+revision = "0424_route_advisor_table"
+down_revision = "0423_provider_message_status"
 
 PROVIDER_TYPES = ("ee", "o2", "three", "vodafone")
 
