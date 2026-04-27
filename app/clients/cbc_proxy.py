@@ -166,7 +166,8 @@ class CBCProxyClientBase(ABC):
             )
 
         mno = self.primary_lambda.split("-", 1)[0]
-        preferred = dao_get_route_for_mno(mno)
+        route = dao_get_route_for_mno(mno)
+        preferred = (route.proxy, route.target)
 
         if preferred:
             # Move the preferred route to the top of the list
@@ -446,12 +447,12 @@ def _update_route_advisor(lambda_name, cbc_target, result):
 
     if result:
         mno = lambda_name.split("-", 1)[0]
-        validity_interval = datetime.datetime.now(timezone.utc) - timedelta(seconds=30)
+        validity_interval = datetime.now(timezone.utc) - timedelta(seconds=30)
         current_route = dao_get_route_for_mno(mno)
 
         # If the route advisor has not been verified within the last 30 seconds, assume
         # the current successful route is the latest best known route
-        if current_route.verified_at < validity_interval:
+        if current_route.updated_at < validity_interval:
             current_app.logger.info(f"Updating route advisor for {mno}: {lambda_name} | {cbc_target}")
             current_app.logger.info(
                 f"Updating route advisor for {mno}",

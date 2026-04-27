@@ -23,7 +23,7 @@ def upgrade():
         sa.PrimaryKeyConstraint("mno"),
         sa.Column("proxy", sa.String(length=255), nullable=True),
         sa.Column("target", sa.String(length=255), nullable=True),
-        sa.Column("validated_at", sa.DateTime, nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
     )
     for provider in PROVIDER_TYPES:
         op.execute(

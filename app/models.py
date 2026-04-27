@@ -1430,12 +1430,12 @@ class RouteAdvisor(db.Model):
     mno = db.Column(db.String(255), primary_key=True)
     proxy = db.Column(db.String, nullable=False)
     target = db.Column(db.String, nullable=False)
-    validated_at = db.Column(db.DateTime, nullable=False, default=utc_now())
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utc_now())
 
     def serialize(self):
         return {
             "mno": self.mno,
             "proxy": self.proxy,
             "target": self.target,
-            "validated_at": self.validated_at,
+            "updated_at": self.updated_at,
         }
