@@ -8,12 +8,9 @@ Create Date: 2026-04-23 13:45:00
 
 import sqlalchemy as sa
 from alembic import op
-from datetime import datetime, timezone
 
 revision = "0424_route_advisor_table"
 down_revision = "0423_provider_message_status"
-
-PROVIDER_TYPES = ("ee", "o2", "three", "vodafone")
 
 
 def upgrade():
@@ -25,11 +22,6 @@ def upgrade():
         sa.Column("target", sa.String(length=255), nullable=True),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
     )
-    for provider in PROVIDER_TYPES:
-        op.execute(
-            "INSERT INTO route_advisor "
-            f"VALUES ('{provider}', '{provider}-1-proxy', 'cbc_a', '{datetime.now(timezone.utc)}')"
-        )
 
 
 def downgrade():
