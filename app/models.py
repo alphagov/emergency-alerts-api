@@ -1454,3 +1454,24 @@ class PublishTaskProgress(db.Model):
             "last_activity_at": self.last_activity_at,
             "finished_at": self.finished_at,
         }
+
+
+class RouteAdvisor(db.Model):
+    """
+    This table is used to store latest known live routes between our infrastructure and CBCs.
+    """
+
+    __tablename__ = "route_advisor"
+
+    mno = db.Column(db.String(255), primary_key=True)
+    proxy = db.Column(db.String, nullable=False)
+    target = db.Column(db.String, nullable=False)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utc_now())
+
+    def serialize(self):
+        return {
+            "mno": self.mno,
+            "proxy": self.proxy,
+            "target": self.target,
+            "updated_at": self.updated_at,
+        }

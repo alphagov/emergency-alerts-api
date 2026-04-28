@@ -2,6 +2,7 @@ import json
 import os
 import uuid
 from abc import ABC, abstractmethod
+from datetime import datetime, timedelta, timezone
 
 import boto3
 import botocore
@@ -148,30 +149,33 @@ class CBCProxyClientBase(ABC):
         pass
 
     def _invoke_lambdas_with_routing(self, payload):
-        payload["cbc_target"] = self.CBC_A
-        result = self._invoke_lambda(self.primary_lambda, payload, self.CBC_A)
-        if result:
-            return True
+        # Import here so that app/__init__.py has finished executing create_app,
+        # so app.db exists and has been imported by app.dao.__init__
+        from app.dao.route_advisor_dao import dao_get_route_for_mno
 
-        payload["cbc_target"] = self.CBC_B
-        result = self._invoke_lambda(self.primary_lambda, payload, self.CBC_B)
-        if result:
-            return True
+        routes = [
+            (self.primary_lambda, self.CBC_A),
+            (self.primary_lambda, self.CBC_B),
+        ]
+        if self.secondary_lambda:
+            routes.extend(
+                [
+                    (self.secondary_lambda, self.CBC_A),
+                    (self.secondary_lambda, self.CBC_B),
+                ]
+            )
 
-        if not self.secondary_lambda:
-            error_message = f"{self.primary_lambda} failed and no secondary lambda defined"
-            current_app.logger.info(error_message, extra={"python_module": __name__})
-            raise CBCProxyRetryableException(error_message)
+        mno = self.primary_lambda.split("-", 1)[0]
+        route = dao_get_route_for_mno(mno)
+        if route:
+            preferred = (route.proxy, route.target)
+            routes.remove(preferred)
+            routes.insert(0, preferred)
 
-        payload["cbc_target"] = self.CBC_A
-        result = self._invoke_lambda(self.secondary_lambda, payload, self.CBC_A)
-        if result:
-            return True
-
-        payload["cbc_target"] = self.CBC_B
-        result = self._invoke_lambda(self.secondary_lambda, payload, self.CBC_B)
-        if result:
-            return True
+        for route in routes:
+            result = self._invoke_lambda(route[0], payload, route[1])
+            if result:
+                return True
 
         error_message = f"{self.primary_lambda} and {self.secondary_lambda} lambdas failed"
         current_app.logger.info(error_message, extra={"python_module": __name__})
@@ -284,7 +288,8 @@ class CBCProxyOne2ManyClient(CBCProxyClientBase):
             "cbc_target": cbc_target,
         }
 
-        self._invoke_lambda(lambda_name=lambda_name, payload=payload, cbc_target=cbc_target)
+        result = self._invoke_lambda(lambda_name=lambda_name, payload=payload, cbc_target=cbc_target)
+        _update_route_advisor(lambda_name, cbc_target, result)
 
     def create_and_send_broadcast(
         self, identifier, headline, description, areas, sent, expires, channel, message_number=None
@@ -376,7 +381,8 @@ class CBCProxyVodafone(CBCProxyClientBase):
             "cbc_target": cbc_target,
         }
 
-        self._invoke_lambda(lambda_name=lambda_name, payload=payload, cbc_target=cbc_target)
+        result = self._invoke_lambda(lambda_name=lambda_name, payload=payload, cbc_target=cbc_target)
+        _update_route_advisor(lambda_name, cbc_target, result)
 
     def create_and_send_broadcast(
         self, identifier, message_number, headline, description, areas, sent, expires, channel
@@ -427,3 +433,31 @@ class CBCProxyVodafone(CBCProxyClientBase):
         message_number=None,
     ):
         pass
+
+
+def _update_route_advisor(lambda_name, cbc_target, result):
+    # Import here so that app/__init__.py has finished executing create_app,
+    # so app.db exists and has been imported by app.dao.__init__
+    from app.dao.route_advisor_dao import (
+        dao_get_route_for_mno,
+        dao_set_route_for_mno,
+    )
+
+    if result:
+        mno = lambda_name.split("-", 1)[0]
+        validity_interval = datetime.now(timezone.utc) - timedelta(seconds=30)
+        current_route = dao_get_route_for_mno(mno)
+
+        # If the route advisor has not been verified within the last 30 seconds, assume
+        # the current successful route is the latest best known route
+        if current_route is None or current_route.updated_at < validity_interval:
+            current_app.logger.info(f"Updating route advisor for {mno}: {lambda_name} | {cbc_target}")
+            current_app.logger.info(
+                f"Updating route advisor for {mno}",
+                extra={
+                    "proxy_lambda": lambda_name,
+                    "cbc_target": cbc_target,
+                    "python_module": __name__,
+                },
+            )
+            dao_set_route_for_mno(mno, lambda_name, cbc_target)
