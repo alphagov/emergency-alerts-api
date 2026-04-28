@@ -66,6 +66,16 @@ class Config(object):
     CBC_PROXY_ENABLED = True
     ENABLED_CBCS = {BroadcastProvider.EE, BroadcastProvider.THREE, BroadcastProvider.O2, BroadcastProvider.VODAFONE}
 
+    LOG_UPLOAD_LAMBDA_ARN = os.getenv(
+        "LOG_UPLOAD_LAMBDA_ARN",
+        "arn:aws:lambda:eu-west-2:435684131547:function:mno-portal-development-log-upload-handler",
+    )
+
+    MNO_EMAILS_EE = os.getenv("MNO_EMAILS_EE", "")
+    MNO_EMAILS_O2 = os.getenv("MNO_EMAILS_O2", "")
+    MNO_EMAILS_THREE = os.getenv("MNO_EMAILS_THREE", "")
+    MNO_EMAILS_VODAFONE = os.getenv("MNO_EMAILS_VODAFONE", "")
+
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_size": int(os.environ.get("SQLALCHEMY_POOL_SIZE", 5)),
         "pool_timeout": 30,
@@ -79,7 +89,7 @@ class Config(object):
     )
 
     if os.environ.get("MASTER_USERNAME"):
-        print("Using master credentials for db connection")
+        print("Using master credentials for db connection")  # noqa: T201
         SQLALCHEMY_DATABASE_URI = "postgresql://{user}:{password}@{host}:{port}/{database}".format(
             user=os.environ.get("MASTER_USERNAME", "root"),
             password=os.environ.get("MASTER_PASSWORD"),
@@ -88,7 +98,7 @@ class Config(object):
             database=os.environ.get("DATABASE", "emergency_alerts"),
         )
     else:
-        print("Using no credentials for db connection")
+        print("Using no credentials for db connection")  # noqa: T201
         SQLALCHEMY_DATABASE_URI = "postgresql://{user}@{host}:{port}/{database}".format(
             user=os.environ.get("RDS_USER", "root"),
             host=os.environ.get("RDS_HOST", "localhost"),
@@ -97,7 +107,7 @@ class Config(object):
         )
 
     if os.environ.get("SQLALCHEMY_LOCAL_OVERRIDE"):
-        print("Overriding db connection string for local running")
+        print("Overriding db connection string for local running")  # noqa: T201
         SQLALCHEMY_DATABASE_URI = os.environ.get("SQLALCHEMY_LOCAL_OVERRIDE")
 
     ZENDESK_API_KEY = os.environ.get("ZENDESK_API_KEY")
@@ -144,7 +154,7 @@ class Config(object):
 
     SERVICE: Literal["api", "celery"] = os.environ.get("SERVICE")
     QUEUE_NAME = QueueNames.BROADCASTS if SERVICE == "api" else QueueNames.PERIODIC
-    TASK_IMPORTS = "broadcast_message_tasks" if SERVICE == "api" else "scheduled_tasks"
+    TASK_IMPORTS = ["broadcast_message_tasks", "log_ingest_tasks"] if SERVICE == "api" else ["scheduled_tasks"]
 
     CELERY = {
         "broker_url": "filesystem://",
@@ -211,7 +221,7 @@ class Hosted(Config):
     DATABASE_STATEMENT_TIMEOUT_MS = 1200000
 
     if os.getenv("MASTER_USERNAME"):
-        print("Using master credentials for db connection")
+        print("Using master credentials for db connection")  # noqa: T201
         filtered_password = os.environ.get("MASTER_PASSWORD").replace("%", "%%")
         SQLALCHEMY_DATABASE_URI = "postgresql://{user}:{password}@{host}:{port}/{database}".format(
             user=os.environ.get("MASTER_USERNAME"),
@@ -234,6 +244,11 @@ class Hosted(Config):
     CBC_PROXY_ENABLED = True
     DEBUG = False
 
+    LOG_UPLOAD_LAMBDA_ARN = os.getenv(
+        "LOG_UPLOAD_LAMBDA_ARN",
+        "arn:aws:lambda:eu-west-2:435684131547:function:mno-portal-development-log-upload-handler",
+    )
+
     TENANT_PREFIX = f"{os.environ.get('TENANT')}-" if os.environ.get("TENANT") is not None else ""
     ENVIRONMENT = os.getenv("ENVIRONMENT")
     ENVIRONMENT_PREFIX = ENVIRONMENT if ENVIRONMENT != "development" else "dev"
@@ -242,7 +257,7 @@ class Hosted(Config):
     SQS_QUEUE_BASE_URL = os.getenv("SQS_QUEUE_BASE_URL")
     SERVICE = os.environ.get("SERVICE")
     QUEUE_NAME = QueueNames.BROADCASTS if SERVICE == "api" else QueueNames.PERIODIC
-    TASK_IMPORTS = "broadcast_message_tasks" if SERVICE == "api" else "scheduled_tasks"
+    TASK_IMPORTS = ["broadcast_message_tasks", "log_ingest_tasks"] if SERVICE == "api" else ["scheduled_tasks"]
 
     BEAT_SCHEDULE = {
         TaskNames.RUN_HEALTH_CHECK: {
@@ -312,7 +327,7 @@ class Hosted(Config):
             "task_acks_late": True,
         },
         "timezone": "UTC",
-        "imports": [f"app.celery.{TASK_IMPORTS}"],
+        "imports": [f"app.celery.{task}" for task in TASK_IMPORTS],
         "task_queues": [Queue(QUEUE_NAME, Exchange("default"), routing_key=QUEUE_NAME)],
         "worker_max_tasks_per_child": 10,
         "beat_schedule": BEAT_SCHEDULE,
@@ -351,6 +366,11 @@ class Test(Config):
     CBC_PROXY_ENABLED = True
 
     GOVUK_ALERTS_S3_BUCKET_NAME = "test-govuk-alerts-bucket"
+
+    LOG_UPLOAD_LAMBDA_ARN = os.getenv(
+        "LOG_UPLOAD_LAMBDA_ARN",
+        "arn:aws:lambda:eu-west-2:435684131547:function:mno-portal-development-log-upload-handler",
+    )
 
 
 configs = {
