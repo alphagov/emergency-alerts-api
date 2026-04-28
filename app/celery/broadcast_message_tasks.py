@@ -7,14 +7,18 @@ from flask import current_app
 from app import cbc_proxy_client, notify_celery
 from app.clients.cbc_proxy import CBCProxyRetryableException
 from app.dao.broadcast_message_dao import (
+    add_broadcast_provider_message_status,
     create_broadcast_provider_message,
     dao_get_broadcast_event_by_id,
-    update_broadcast_provider_message_status,
 )
 from app.models import (
+    BROADCAST_PROVIDER_STATUS_ACK,
+    BROADCAST_PROVIDER_STATUS_ERR,
+    BROADCAST_PROVIDER_STATUS_SENDING,
+    BroadcastEvent,
     BroadcastEventMessageType,
     BroadcastProvider,
-    BroadcastProviderMessageStatus,
+    BroadcastProviderMessage,
 )
 from app.utils import format_sequential_number, is_local_host
 
@@ -41,7 +45,7 @@ def check_event_is_authorised_to_be_sent(broadcast_event, provider):
         )
 
 
-def check_event_makes_sense_in_sequence(broadcast_event, provider):
+def check_event_makes_sense_in_sequence(broadcast_event: BroadcastEvent, provider: str):
     """
     If any previous event hasn't sent yet for that provider, then we shouldn't send the current event. Instead, fail and
     raise a zendesk ticket - so that a notify team member can assess the state of the previous messages, and if
@@ -60,13 +64,15 @@ def check_event_makes_sense_in_sequence(broadcast_event, provider):
     4. If you need to re-send this task off again, you'll need to run the following command on paas:
        `send_broadcast_provider_message.apply_async(args=(broadcast_event_id, provider), queue=QueueNames.BROADCASTS)`
     """
-    current_provider_message = broadcast_event.get_provider_message(provider)
+    current_provider_message: BroadcastProviderMessage | None = broadcast_event.get_provider_message(provider)
+    current_provider_status = current_provider_message.get_latest_status_entry() if current_provider_message else None
+
     # if this is the first time a task is being executed, it won't have a provider message yet
-    if current_provider_message and current_provider_message.status != BroadcastProviderMessageStatus.SENDING:
+    if current_provider_status and current_provider_status.status != BROADCAST_PROVIDER_STATUS_SENDING:
         raise BroadcastIntegrityError(
             f"Cannot send broadcast_event {broadcast_event.id} "
             + f"to provider {provider}: "
-            + f"It is in status {current_provider_message.status}"
+            + f"It is in status {current_provider_status.status}"
         )
 
     if broadcast_event.transmitted_finishes_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
@@ -82,7 +88,7 @@ def check_event_makes_sense_in_sequence(broadcast_event, provider):
     for prev_event in events:
         if prev_event.id != broadcast_event.id and prev_event.sent_at < broadcast_event.sent_at:
             # get the record from when that event was sent to the same provider
-            prev_provider_message = prev_event.get_provider_message(provider)
+            prev_provider_message: BroadcastProviderMessage | None = prev_event.get_provider_message(provider)
 
             # the previous message hasn't even got round to running `send_broadcast_provider_message` yet.
             if not prev_provider_message:
@@ -95,11 +101,12 @@ def check_event_makes_sense_in_sequence(broadcast_event, provider):
 
             # if there's a previous message that has started but not finished sending (whether it fatally errored or is
             # currently retrying)
-            if prev_provider_message.status != BroadcastProviderMessageStatus.ACK:
+            prev_provider_message_status = prev_provider_message.get_latest_status_entry()
+            if prev_provider_message_status.status != BROADCAST_PROVIDER_STATUS_ACK:
                 raise BroadcastIntegrityError(
                     f"Cannot send {broadcast_event.id}. Previous event {prev_event.id} "
                     + f"(type {prev_event.message_type}) has not finished sending to provider {provider} yet.\n"
-                    + f'It is currently in status "{prev_provider_message.status}".\n'
+                    + f'It is currently in status "{prev_provider_message_status.status}".\n'
                     + "You must ensure that the other event sends succesfully, then manually kick off this event "
                     + "again by re-running send_broadcast_provider_message for this event and provider."
                 )
@@ -162,6 +169,8 @@ def send_broadcast_provider_message(self, broadcast_event_id, provider):
             },
         )
         return
+
+    broadcast_provider_message = None
 
     try:
         broadcast_event = dao_get_broadcast_event_by_id(broadcast_event_id)
@@ -233,15 +242,25 @@ def send_broadcast_provider_message(self, broadcast_event_id, provider):
                     sent=broadcast_event.sent_at_as_cap_datetime_string,
                 )
 
-        update_broadcast_provider_message_status(broadcast_provider_message, status=BroadcastProviderMessageStatus.ACK)
+        add_broadcast_provider_message_status(broadcast_provider_message, status=BROADCAST_PROVIDER_STATUS_ACK)
     except Exception as e:
+        exception_detail = getattr(e, "message", repr(e))
+
         current_app.logger.exception(
             f"Failed to send provider message (event {broadcast_event_id}, provider {provider})",
             extra={
                 "python_module": __name__,
-                "exception": str(e),
+                "exception": exception_detail,
             },
         )
+
+        if broadcast_provider_message is not None:
+            add_broadcast_provider_message_status(
+                broadcast_provider_message,
+                status=BROADCAST_PROVIDER_STATUS_ERR,
+                error_detail={"exception": exception_detail},
+            )
+
         raise
 
 
