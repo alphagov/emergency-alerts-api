@@ -12,12 +12,11 @@ from app.models import BroadcastEvent
 @notify_celery.task(name=TaskNames.REQUEST_LOG_INGEST)
 def request_log_ingest_task(broadcast_event_id):
     """
-    Invokes the operator portal log upload Lambda to send invite emails to MNOs
+    Invokes the operator portal log upload Lambda to send invite emails to MNOs.
     """
     try:
         current_app.logger.info("Starting request_log_ingest_task", extra={"broadcast_event_id": broadcast_event_id})
 
-        # Get broadcast event details
         broadcast_event = BroadcastEvent.query.get(broadcast_event_id)
         if not broadcast_event:
             current_app.logger.error(
@@ -27,7 +26,6 @@ def request_log_ingest_task(broadcast_event_id):
 
         broadcast = broadcast_event.broadcast_message
 
-        # Build payload for Lambda
         payload = {
             "alert_reference": broadcast.reference,
             "environment": current_app.config.get("ENVIRONMENT"),
@@ -37,14 +35,15 @@ def request_log_ingest_task(broadcast_event_id):
             "broadcast_end": (
                 broadcast_event.transmitted_finishes_at.isoformat() if broadcast_event.transmitted_finishes_at else None
             ),
-            "mnos": _get_mno_details(broadcast_event),
+            "mnos": [
+                {"mno_id": provider.upper()} for provider in broadcast_event.service.get_available_broadcast_providers()
+            ],
         }
 
         current_app.logger.info(
             "Built Lambda payload", extra={"alert_reference": broadcast.reference, "payload": json.dumps(payload)}
         )
 
-        # Invoke the Lambda
         lambda_arn = current_app.config.get("LOG_UPLOAD_LAMBDA_ARN")
 
         current_app.logger.info(
@@ -81,49 +80,6 @@ def request_log_ingest_task(broadcast_event_id):
             },
         )
         raise
-
-
-def _get_mno_details(broadcast_event):
-    """
-    Build the MNOs list with their IDs and contact emails
-    """
-    mnos = []
-
-    # Get the providers from the service
-    providers = broadcast_event.service.get_available_broadcast_providers()
-
-    for provider in providers:
-        mno_info = {"mno_id": provider.upper(), "emails": _get_mno_contact_emails(provider)}
-        mnos.append(mno_info)
-
-    return mnos
-
-
-def _get_mno_contact_emails(provider_id):
-    config_key_map = {
-        "ee": "MNO_EMAILS_EE",
-        "o2": "MNO_EMAILS_O2",
-        "three": "MNO_EMAILS_THREE",
-        "vodafone": "MNO_EMAILS_VODAFONE",
-    }
-
-    config_key = config_key_map.get(provider_id.lower())
-    if not config_key:
-        current_app.logger.warning(
-            "Unknown provider when fetching contact emails",
-            extra={"provider_id": provider_id},
-        )
-        return []
-
-    raw_value = current_app.config.get(config_key, "")
-    if not raw_value.strip():
-        current_app.logger.warning(
-            "No contact emails configured for provider",
-            extra={"provider_id": provider_id, "config_key": config_key},
-        )
-        return []
-
-    return [email.strip() for email in raw_value.split(",") if email.strip()]
 
 
 def _invoke_log_upload_lambda(lambda_name, payload):
