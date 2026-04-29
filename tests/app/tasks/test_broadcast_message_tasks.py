@@ -7,9 +7,12 @@ from freezegun import freeze_time
 from app.clients.cbc_proxy import CBCProxyRetryableException
 from app.dao.broadcast_service_dao import set_service_broadcast_providers
 from app.models import (
+    BROADCAST_PROVIDER_STATUS_ACK,
+    BROADCAST_PROVIDER_STATUS_ERR,
+    BROADCAST_PROVIDER_STATUS_SENDING,
+    BROADCAST_PROVIDER_STATUS_TECHNICAL_FAILURE,
     BROADCAST_TYPE,
     BroadcastEventMessageType,
-    BroadcastProviderMessageStatus,
     BroadcastStatusType,
 )
 from app.tasks.broadcast_message_tasks import (
@@ -151,7 +154,10 @@ def test_send_broadcast_provider_message_sends_data_correctly(
     send_broadcast_provider_message(provider=provider, broadcast_event_id=str(event.id))
 
     broadcast_provider_message = event.get_provider_message(provider)
-    assert broadcast_provider_message.status == BroadcastProviderMessageStatus.ACK
+    assert len(broadcast_provider_message.statuses) == 2
+    assert broadcast_provider_message.statuses[0].status == BROADCAST_PROVIDER_STATUS_SENDING
+    assert broadcast_provider_message.statuses[1].status == BROADCAST_PROVIDER_STATUS_ACK
+    assert broadcast_provider_message.get_latest_status_entry().status == BROADCAST_PROVIDER_STATUS_ACK
 
     mock_create_broadcast.assert_called_once_with(
         identifier=str(broadcast_provider_message.id),
@@ -241,9 +247,13 @@ def test_send_broadcast_provider_message_works_if_we_retried_previously(mocker, 
     event = create_broadcast_event(broadcast_message)
 
     # an existing provider message already exists, and previously failed
-    create_broadcast_provider_message(
-        broadcast_event=event, provider="ee", status=BroadcastProviderMessageStatus.SENDING
-    )
+    create_broadcast_provider_message(broadcast_event=event, provider="ee", status=BROADCAST_PROVIDER_STATUS_SENDING)
+
+    broadcast_provider_message = event.get_provider_message("ee")
+
+    assert len(broadcast_provider_message.statuses) == 1
+    assert broadcast_provider_message.statuses[0].status == BROADCAST_PROVIDER_STATUS_SENDING
+    assert broadcast_provider_message.get_latest_status_entry() == broadcast_provider_message.statuses[0]
 
     mock_create_broadcast = mocker.patch(
         "app.clients.cbc_proxy.CBCProxyEE.create_and_send_broadcast",
@@ -256,8 +266,11 @@ def test_send_broadcast_provider_message_works_if_we_retried_previously(mocker, 
 
     broadcast_provider_message = event.get_provider_message("ee")
 
-    assert broadcast_provider_message.status == BroadcastProviderMessageStatus.ACK
-    assert broadcast_provider_message.updated_at is not None
+    assert len(broadcast_provider_message.statuses) == 2
+    assert broadcast_provider_message.statuses[0].status == BROADCAST_PROVIDER_STATUS_SENDING
+    assert broadcast_provider_message.statuses[0].created_at is not None
+    assert broadcast_provider_message.statuses[1].status == BROADCAST_PROVIDER_STATUS_ACK
+    assert broadcast_provider_message.get_latest_status_entry() == broadcast_provider_message.statuses[1]
 
     mock_create_broadcast.assert_called_once_with(
         identifier=str(broadcast_provider_message.id),
@@ -345,7 +358,8 @@ def test_send_broadcast_provider_message_sends_update_with_references(
     )
 
     alert_event = create_broadcast_event(broadcast_message, message_type=BroadcastEventMessageType.ALERT)
-    create_broadcast_provider_message(alert_event, provider, status=BroadcastProviderMessageStatus.ACK)
+    create_broadcast_provider_message(alert_event, provider, status=BROADCAST_PROVIDER_STATUS_ACK)
+
     update_event = create_broadcast_event(broadcast_message, message_type=BroadcastEventMessageType.UPDATE)
 
     mock_update_broadcast = mocker.patch(
@@ -355,7 +369,11 @@ def test_send_broadcast_provider_message_sends_update_with_references(
     send_broadcast_provider_message(provider=provider, broadcast_event_id=str(update_event.id))
 
     broadcast_provider_message = update_event.get_provider_message(provider)
-    assert broadcast_provider_message.status == BroadcastProviderMessageStatus.ACK
+
+    assert len(broadcast_provider_message.statuses) == 2
+    assert broadcast_provider_message.statuses[0].status == BROADCAST_PROVIDER_STATUS_SENDING
+    assert broadcast_provider_message.statuses[1].status == BROADCAST_PROVIDER_STATUS_ACK
+    assert broadcast_provider_message.get_latest_status_entry() == broadcast_provider_message.statuses[1]
 
     mock_update_broadcast.assert_called_once_with(
         identifier=str(broadcast_provider_message.id),
@@ -403,8 +421,8 @@ def test_send_broadcast_provider_message_sends_cancel_with_references(
     update_event = create_broadcast_event(broadcast_message, message_type=BroadcastEventMessageType.UPDATE)
     cancel_event = create_broadcast_event(broadcast_message, message_type=BroadcastEventMessageType.CANCEL)
 
-    create_broadcast_provider_message(alert_event, provider, status=BroadcastProviderMessageStatus.ACK)
-    create_broadcast_provider_message(update_event, provider, status=BroadcastProviderMessageStatus.ACK)
+    create_broadcast_provider_message(alert_event, provider, status=BROADCAST_PROVIDER_STATUS_ACK)
+    create_broadcast_provider_message(update_event, provider, status=BROADCAST_PROVIDER_STATUS_ACK)
 
     mock_cancel_broadcast = mocker.patch(
         f"app.clients.cbc_proxy.CBCProxy{provider_capitalised}.cancel_broadcast",
@@ -413,7 +431,10 @@ def test_send_broadcast_provider_message_sends_cancel_with_references(
     send_broadcast_provider_message(provider=provider, broadcast_event_id=str(cancel_event.id))
 
     broadcast_provider_message = cancel_event.get_provider_message(provider)
-    assert broadcast_provider_message.status == BroadcastProviderMessageStatus.ACK
+    assert len(broadcast_provider_message.statuses) == 2
+    assert broadcast_provider_message.statuses[0].status == BROADCAST_PROVIDER_STATUS_SENDING
+    assert broadcast_provider_message.statuses[1].status == BROADCAST_PROVIDER_STATUS_ACK
+    assert broadcast_provider_message.get_latest_status_entry() == broadcast_provider_message.statuses[1]
 
     mock_cancel_broadcast.assert_called_once_with(
         identifier=str(broadcast_provider_message.id),
@@ -435,7 +456,9 @@ def test_send_broadcast_provider_message_sends_cancel_with_references(
         ["vodafone", "Vodafone"],
     ],
 )
-def test_send_broadcast_provider_message_errors(mocker, sample_broadcast_service, provider, provider_capitalised):
+def test_send_broadcast_provider_message_error_statuses_are_saved(
+    mocker, sample_broadcast_service, provider, provider_capitalised
+):
     template = create_template(sample_broadcast_service, BROADCAST_TYPE)
 
     broadcast_message = create_broadcast_message(
@@ -483,7 +506,12 @@ def test_send_broadcast_provider_message_errors(mocker, sample_broadcast_service
         channel="severe",
     )
     broadcast_provider_message = event.get_provider_message(provider)
-    assert broadcast_provider_message.status == BroadcastProviderMessageStatus.SENDING
+
+    assert len(broadcast_provider_message.statuses) == 2
+    assert broadcast_provider_message.statuses[0].status == BROADCAST_PROVIDER_STATUS_SENDING
+    assert broadcast_provider_message.statuses[1].status == BROADCAST_PROVIDER_STATUS_ERR
+    assert broadcast_provider_message.statuses[1].error_detail == {"exception": "CBCProxyRetryableException('oh no')"}
+    assert broadcast_provider_message.get_latest_status_entry() == broadcast_provider_message.statuses[1]
 
 
 @pytest.mark.parametrize(
@@ -555,9 +583,9 @@ def test_send_broadcast_provider_message_raises_if_older_event_still_sending(sam
         sent_at=datetime(2021, 1, 1, 7, 0),
     )
 
-    create_broadcast_provider_message(past_succesful_event, provider="ee", status=BroadcastProviderMessageStatus.ACK)
+    create_broadcast_provider_message(past_succesful_event, provider="ee", status=BROADCAST_PROVIDER_STATUS_ACK)
     create_broadcast_provider_message(
-        past_still_sending_event, provider="ee", status=BroadcastProviderMessageStatus.SENDING
+        past_still_sending_event, provider="ee", status=BROADCAST_PROVIDER_STATUS_SENDING
     )  # noqa
 
     # we havent sent the previous update yet - it's still in sending - so don't try and send this one.
@@ -592,7 +620,7 @@ def test_send_broadcast_provider_message_raises_if_older_event_hasnt_started_sen
     )
 
     # no provider message for past_still_sending_event
-    create_broadcast_provider_message(past_succesful_event, provider="ee", status=BroadcastProviderMessageStatus.ACK)
+    create_broadcast_provider_message(past_succesful_event, provider="ee", status=BROADCAST_PROVIDER_STATUS_ACK)
 
     # we shouldn't send the update now, because a previous event is still stuck in sending
     with pytest.raises(BroadcastIntegrityError) as exc:
@@ -627,9 +655,9 @@ def test_check_event_makes_sense_in_sequence_doesnt_raise_if_newer_event_not_ack
 @pytest.mark.parametrize(
     "existing_message_status",
     [
-        BroadcastProviderMessageStatus.ACK,
-        BroadcastProviderMessageStatus.ERR,
-        BroadcastProviderMessageStatus.TECHNICAL_FAILURE,
+        BROADCAST_PROVIDER_STATUS_ACK,
+        BROADCAST_PROVIDER_STATUS_ERR,
+        BROADCAST_PROVIDER_STATUS_TECHNICAL_FAILURE,
     ],
 )
 def test_send_broadcast_provider_message_raises_if_current_event_already_has_provider_message_not_in_sending(
