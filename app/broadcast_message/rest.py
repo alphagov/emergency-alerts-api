@@ -112,7 +112,7 @@ def get_broadcast_provider_messages(service_id, broadcast_message_id):
                 "provider": message.provider,
                 "status": message.get_latest_status_entry().status,
             }
-            for message in messages
+            for message, _message_type in messages
         ]
     }
 
