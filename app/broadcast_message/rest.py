@@ -29,7 +29,11 @@ from app.dao.services_dao import dao_fetch_service_by_id
 from app.dao.templates_dao import dao_get_template_by_id_and_service_id
 from app.dao.users_dao import get_user_by_id
 from app.errors import InvalidRequest, register_errors
-from app.models import BroadcastMessage, BroadcastStatusType
+from app.models import (
+    BroadcastEventMessageType,
+    BroadcastMessage,
+    BroadcastStatusType,
+)
 from app.schema_validation import validate
 from app.utils import is_public_environment
 
@@ -99,6 +103,36 @@ def get_broadcast_message_by_id_and_service(service_id, broadcast_message_id):
         "updated_by": result[6] or None,
         "edit_reason": edit_reason,
     }
+
+
+@broadcast_message_blueprint.route("/<uuid:broadcast_message_id>/provider-statuses", methods=["GET"])
+def get_broadcast_provider_statuses(service_id, broadcast_message_id):
+    # Send and cancel
+    messages = dao_get_broadcast_provider_messages_by_broadcast_message_id(broadcast_message_id)
+
+    # Create a structure like:
+    # { "<mno>": { "alert": [{}], "cancel": [{}] } }
+
+    result = {}
+    for broadcast_provider_message, broadcast_event_message_type in messages:
+        result.setdefault(
+            broadcast_provider_message.provider,
+            {BroadcastEventMessageType.ALERT: [], BroadcastEventMessageType.CANCEL: []},
+        )
+
+        # This relationship has an order_by and thus should be in old to new order
+        statuses = [
+            {
+                "status": status_db.status,
+                "created_at": status_db.created_at,
+                "error_detail": status_db.error_detail,
+            }
+            for status_db in broadcast_provider_message.statuses
+        ]
+
+        result[broadcast_provider_message.provider][broadcast_event_message_type] = statuses
+
+    return jsonify(result)
 
 
 @broadcast_message_blueprint.route("/<uuid:broadcast_message_id>/provider-messages", methods=["GET"])

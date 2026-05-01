@@ -5,6 +5,7 @@ import pytest
 from freezegun import freeze_time
 
 from app.dao.broadcast_message_dao import (
+    add_broadcast_provider_message_status,
     dao_get_broadcast_message_by_id_and_service_id,
 )
 from app.dao.broadcast_message_history_dao import (
@@ -12,6 +13,8 @@ from app.dao.broadcast_message_history_dao import (
     dao_get_latest_broadcast_message_version_bybroadcast_message_id_and_service_id,
 )
 from app.models import (
+    BROADCAST_PROVIDER_STATUS_ACK,
+    BROADCAST_PROVIDER_STATUS_ERR,
     BROADCAST_TYPE,
     BroadcastEventMessageType,
     BroadcastStatusType,
@@ -82,6 +85,47 @@ def test_get_broadcast_message_with_user(mocker, admin_request, sample_broadcast
     assert response["areas"]["simple_polygons"] == [[[50.1, 1.2], [50.12, 1.2], [50.13, 1.2]]]
     assert response["created_by"] == sample_user.name
     assert response["rejected_by"] is None
+
+
+def test_get_broadcast_provider_statuses(admin_request, sample_broadcast_service):
+    mnos = ["ee", "o2", "three", "vodafone"]
+
+    bm = create_broadcast_message(
+        service=sample_broadcast_service,
+        content="emergency broadcast content",
+        areas={
+            "ids": ["place A", "region B"],
+            "simple_polygons": [[[50.1, 1.2], [50.12, 1.2], [50.13, 1.2]]],
+        },
+    )
+
+    sending_event = create_broadcast_event(broadcast_message=bm)
+    for mno in mnos:
+        # Implicitly creates sending status message_type
+        bpm = create_broadcast_provider_message(broadcast_event=sending_event, provider=mno)
+        add_broadcast_provider_message_status(bpm, status=BROADCAST_PROVIDER_STATUS_ACK)
+
+    cancel_event = create_broadcast_event(broadcast_message=bm, message_type="cancel")
+    for mno in mnos:
+        bpm = create_broadcast_provider_message(broadcast_event=cancel_event, provider=mno)
+        add_broadcast_provider_message_status(bpm, status=BROADCAST_PROVIDER_STATUS_ERR, error_detail={"test": True})
+
+    response = admin_request.get(
+        "broadcast_message.get_broadcast_provider_statuses",
+        service_id=sample_broadcast_service.id,
+        broadcast_message_id=bm.id,
+        _expected_status=200,
+    )
+
+    assert set(mnos) == response.keys()
+
+    for mno in mnos:
+        mno_statuses = response[mno]
+
+        assert mno_statuses["alert"][0]["status"] == "sending"
+        assert mno_statuses["alert"][1]["status"] == "returned-ack"
+        assert mno_statuses["cancel"][0]["status"] == "sending"
+        assert mno_statuses["cancel"][1]["status"] == "returned-error"
 
 
 def test_get_broadcast_provider_messages(admin_request, sample_broadcast_service):
