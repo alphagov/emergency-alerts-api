@@ -397,21 +397,29 @@ def purge_broadcast_messages(service_id, older_than):
             for message in messages:
                 # delete S3 objects associated with the key
                 versions = s3.list_object_versions(Bucket=bucket, Prefix=f"alerts/{message[1]}")
-                objects = [
-                    {"Key": v["Key"], "VersionId": v["VersionId"]}
-                    for v in versions.get("Versions", []) + versions.get("DeleteMarkers", [])
-                ]
+                capxml_versions = s3.list_object_versions(Bucket=bucket, Prefix=f"alerts/cap-xml/{message[1]}")
+                all_versions = (
+                    versions.get("Versions", [])
+                    + versions.get("DeleteMarkers", [])
+                    + capxml_versions.get("Versions", [])
+                    + capxml_versions.get("DeleteMarkers", [])
+                )
+                objects = [{"Key": v["Key"], "VersionId": v["VersionId"]} for v in all_versions]
 
                 if objects:
-                    # The pattern matches:
+                    # The pattern 1-apr-2026 matches:
                     # - 1-apr-2026 (exact key)
-                    # - 1-apr-2026-20260401140329.cap.xml (its cap file)
-                    # - But not 1-apr-2026-2 or 1-apr-2026-20260401140454.cap.xml
+                    # - 1-apr-2026.cy (the Welsh version)
+                    # - alerts/cap-xml/1-apr-2026-20260401140329.cap.xml (its cap file)
+                    # - But not 1-apr-2026-2 or alerts/cap-xml/1-apr-2026-2-20260401140454.cap.xml
                     # And for key 1-apr-2026-2:
                     # - 1-apr-2026-2 (exact key)
-                    # - 1-apr-2026-2-20260401140454.cap.xml (its cap file)
-                    # - But not 1-apr-2026-20260401140329.cap.xml
-                    pattern = re.compile(rf"^{re.escape("alerts/" + message[1])}(\.cy|-\d{{14}}\.cap\.xml)?$")
+                    # - 1-apr-2026-2.cy (the Welsh version)
+                    # - alerts/cap-xml/1-apr-2026-2-20260401140454.cap.xml (its cap file)
+                    # - But not alerts/cap-xml/1-apr-2026-20260401140329.cap.xml
+                    base = re.escape("alerts/" + message[1])
+                    capxml_base = re.escape("alerts/cap-xml/" + message[1])
+                    pattern = re.compile(rf"^(?:{base}(\.cy)?|{capxml_base}-\d{{14}}\.cap\.xml)$")
                     matches = [obj for obj in objects if pattern.match(obj["Key"])]
 
                     current_app.logger.info("objects to be deleted on this iteration", extra={"matches": matches})
