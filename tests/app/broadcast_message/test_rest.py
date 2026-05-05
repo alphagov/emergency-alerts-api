@@ -1,9 +1,11 @@
 import re
 import uuid
+from datetime import datetime
 
 import pytest
 from freezegun import freeze_time
 
+from app.broadcast_message.rest import _generate_s3_keys
 from app.dao.broadcast_message_dao import (
     dao_get_broadcast_message_by_id_and_service_id,
 )
@@ -830,4 +832,44 @@ def test_purge_broadcast_messages(admin_request, sample_broadcast_service, mocke
 
     print(response["message"])
 
-    assert re.match(r"Purged (\d+) BroadcastMessage items (.*)", response["message"])
+    pattern = (
+        r"Purged (\d+) BroadcastMessage items, (\d+) BroadcastEvent items"
+        r" and (\d+) S3 objects, created more than 100 days ago"
+    )
+    assert re.match(pattern, response["message"])
+
+
+def test_generate_s3_keys_from_list_of_id_timestamp_tuples():
+    messages = [
+        ("msg-01", datetime(2026, 4, 15, 8, 0, 0)),
+        ("msg-02", datetime(2026, 4, 15, 11, 30, 0)),
+        ("msg-03", datetime(2026, 4, 15, 21, 0, 0)),
+        ("msg-04", datetime(2026, 4, 14, 7, 15, 0)),
+        ("msg-05", datetime(2026, 4, 13, 6, 0, 0)),
+        ("msg-06", datetime(2026, 4, 13, 15, 15, 0)),
+        ("msg-07", datetime(2026, 4, 13, 19, 0, 0)),
+        ("msg-08", datetime(2026, 4, 12, 8, 30, 0)),
+        ("msg-09", datetime(2026, 4, 12, 11, 0, 0)),
+        ("msg-10", datetime(2026, 4, 12, 14, 45, 0)),
+        ("msg-11", datetime(2026, 4, 12, 18, 0, 0)),
+        ("msg-12", datetime(2026, 4, 12, 22, 30, 0)),
+    ]
+
+    # Note: The indexing of multiple message on the same day starts
+    #       at 2, so we don't see keys like "15-apr-2026-1"
+    expected = [
+        ("msg-01", "15-apr-2026"),
+        ("msg-02", "15-apr-2026-2"),
+        ("msg-03", "15-apr-2026-3"),
+        ("msg-04", "14-apr-2026"),
+        ("msg-05", "13-apr-2026"),
+        ("msg-06", "13-apr-2026-2"),
+        ("msg-07", "13-apr-2026-3"),
+        ("msg-08", "12-apr-2026"),
+        ("msg-09", "12-apr-2026-2"),
+        ("msg-10", "12-apr-2026-3"),
+        ("msg-11", "12-apr-2026-4"),
+        ("msg-12", "12-apr-2026-5"),
+    ]
+
+    assert _generate_s3_keys(messages) == expected
