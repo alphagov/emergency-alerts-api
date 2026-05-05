@@ -855,6 +855,8 @@ def test_generate_s3_keys_from_list_of_id_timestamp_tuples():
         ("msg-12", datetime(2026, 4, 12, 22, 30, 0)),
     ]
 
+    # Note: The indexing of multiple message on the same day starts
+    #       at 2, so we don't see keys like "15-apr-2026-1"
     expected = [
         ("msg-01", "15-apr-2026"),
         ("msg-02", "15-apr-2026-2"),
