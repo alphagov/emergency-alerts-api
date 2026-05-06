@@ -74,7 +74,7 @@ def cbc_proxy_vodafone(cbc_proxy_client):
         ("vodafone", CBCProxyVodafone),
     ],
 )
-def test_cbc_proxy_client_returns_correct_client(notify_db_session, provider_name, expected_provider_class):
+def test_cbc_proxy_client_returns_correct_client(provider_name, expected_provider_class):
     mock_lambda = Mock()
     cbc_proxy_client = CBCProxyClient()
     cbc_proxy_client._lambda_client = mock_lambda
@@ -115,7 +115,6 @@ def test_cbc_proxy_send_link_test(mocker, cbc_proxy_ee):
 )
 @pytest.mark.parametrize("cbc", ["ee", "three", "o2"])
 def test_cbc_proxy_one_2_many_create_and_send_invokes_function(
-    notify_db_session,
     mocker,
     cbc_proxy_client,
     description,
