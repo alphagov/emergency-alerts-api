@@ -30,7 +30,7 @@ def test_update_broadcast_message_status_stores_approved_by_and_approved_at_and_
     )
     approver = create_user(email="approver@gov.uk")
     sample_broadcast_service.users.append(approver)
-    mock_task = mocker.patch("app.celery.broadcast_message_tasks.send_broadcast_event.apply_async")
+    mock_task = mocker.patch("app.tasks.broadcast_message_tasks.send_broadcast_event.send")
 
     update_broadcast_message_status(broadcast_message, BroadcastStatusType.BROADCASTING, approver)
 
@@ -41,7 +41,7 @@ def test_update_broadcast_message_status_stores_approved_by_and_approved_at_and_
     assert len(broadcast_message.events) == 1
     alert_event = broadcast_message.events[0]
 
-    mock_task.assert_called_once_with(kwargs={"broadcast_event_id": str(alert_event.id)}, queue="high-priority-tasks")
+    mock_task.assert_called_once_with(broadcast_event_id=str(alert_event.id))
 
     assert alert_event.service_id == sample_broadcast_service.id
     assert alert_event.transmitted_areas == broadcast_message.areas
@@ -62,7 +62,7 @@ def test_update_broadcast_message_status_for_cancelling_broadcast_from_admin_int
     )
     canceller = sample_broadcast_service.created_by
 
-    mock_task = mocker.patch("app.celery.broadcast_message_tasks.send_broadcast_event.apply_async")
+    mock_task = mocker.patch("app.tasks.broadcast_message_tasks.send_broadcast_event.send")
 
     update_broadcast_message_status(
         broadcast_message, BroadcastStatusType.CANCELLED, updating_user=canceller, api_key_id=None
@@ -76,7 +76,7 @@ def test_update_broadcast_message_status_for_cancelling_broadcast_from_admin_int
     assert len(broadcast_message.events) == 1
     alert_event = broadcast_message.events[0]
 
-    mock_task.assert_called_once_with(kwargs={"broadcast_event_id": str(alert_event.id)}, queue="high-priority-tasks")
+    mock_task.assert_called_once_with(broadcast_event_id=str(alert_event.id))
 
     assert alert_event.service_id == sample_broadcast_service.id
     assert alert_event.message_type == BroadcastEventMessageType.CANCEL
@@ -93,7 +93,7 @@ def test_update_broadcast_message_status_for_cancelling_broadcast_from_API_call(
         status=BroadcastStatusType.BROADCASTING,
         areas={"ids": ["london"], "simple_polygons": [[[51.30, 0.7], [51.28, 0.8], [51.25, -0.7]]]},
     )
-    mock_task = mocker.patch("app.celery.broadcast_message_tasks.send_broadcast_event.apply_async")
+    mock_task = mocker.patch("app.tasks.broadcast_message_tasks.send_broadcast_event.send")
 
     update_broadcast_message_status(
         broadcast_message, BroadcastStatusType.CANCELLED, updating_user=None, api_key_id=api_key.id
@@ -107,7 +107,7 @@ def test_update_broadcast_message_status_for_cancelling_broadcast_from_API_call(
     assert len(broadcast_message.events) == 1
     alert_event = broadcast_message.events[0]
 
-    mock_task.assert_called_once_with(kwargs={"broadcast_event_id": str(alert_event.id)}, queue="high-priority-tasks")
+    mock_task.assert_called_once_with(broadcast_event_id=str(alert_event.id))
 
     assert alert_event.service_id == sample_broadcast_service.id
     assert alert_event.message_type == BroadcastEventMessageType.CANCEL
@@ -120,7 +120,7 @@ def test_update_broadcast_message_status_for_rejecting_broadcast_via_admin_inter
         status=BroadcastStatusType.PENDING_APPROVAL,
         areas={"ids": ["london"], "simple_polygons": [[[51.30, 0.7], [51.28, 0.8], [51.25, -0.7]]]},
     )
-    mock_task = mocker.patch("app.celery.broadcast_message_tasks.send_broadcast_event.apply_async")
+    mock_task = mocker.patch("app.tasks.broadcast_message_tasks.send_broadcast_event.send")
 
     update_broadcast_message_status(
         broadcast_message, BroadcastStatusType.REJECTED, updating_user=sample_broadcast_service.created_by
@@ -145,7 +145,7 @@ def test_update_broadcast_message_status_for_rejecting_broadcast_from_API_call(s
         status=BroadcastStatusType.PENDING_APPROVAL,
         areas={"ids": ["london"], "simple_polygons": [[[51.30, 0.7], [51.28, 0.8], [51.25, -0.7]]]},
     )
-    mock_task = mocker.patch("app.celery.broadcast_message_tasks.send_broadcast_event.apply_async")
+    mock_task = mocker.patch("app.tasks.broadcast_message_tasks.send_broadcast_event.send")
 
     update_broadcast_message_status(broadcast_message, BroadcastStatusType.REJECTED, api_key_id=api_key.id)
 
@@ -202,7 +202,7 @@ def test_update_broadcast_message_status_restricts_status_transitions_to_explici
     broadcast_message = create_broadcast_message(t, status=current_status)
     approver = create_user(email="approver@gov.uk")
     sample_broadcast_service.users.append(approver)
-    mock_task = mocker.patch("app.celery.broadcast_message_tasks.send_broadcast_event.apply_async")
+    mock_task = mocker.patch("app.tasks.broadcast_message_tasks.send_broadcast_event.send")
 
     with pytest.raises(expected_exception=InvalidRequest) as e:
         update_broadcast_message_status(broadcast_message, new_status, approver)
@@ -221,7 +221,7 @@ def test_update_broadcast_message_status_rejects_approval_from_submitter(
     )
     creator_and_approver = sample_broadcast_service.created_by
     creator_and_approver.platform_admin = is_platform_admin
-    mock_task = mocker.patch("app.celery.broadcast_message_tasks.send_broadcast_event.apply_async")
+    mock_task = mocker.patch("app.tasks.broadcast_message_tasks.send_broadcast_event.send")
 
     with pytest.raises(expected_exception=InvalidRequest) as e:
         update_broadcast_message_status(broadcast_message, BroadcastStatusType.BROADCASTING, creator_and_approver)
@@ -237,7 +237,7 @@ def test_update_broadcast_message_status_rejects_approval_of_broadcast_with_no_a
     broadcast = create_broadcast_message(template, status=BroadcastStatusType.PENDING_APPROVAL)
     approver = create_user(email="approver@gov.uk")
     sample_broadcast_service.users.append(approver)
-    mock_task = mocker.patch("app.celery.broadcast_message_tasks.send_broadcast_event.apply_async")
+    mock_task = mocker.patch("app.tasks.broadcast_message_tasks.send_broadcast_event.send")
 
     with pytest.raises(expected_exception=InvalidRequest) as e:
         update_broadcast_message_status(broadcast, BroadcastStatusType.BROADCASTING, approver)
@@ -257,7 +257,7 @@ def test_update_broadcast_message_status_allows_trial_mode_services_to_approve_o
         areas={"ids": ["london"], "simple_polygons": [[[51.30, 0.7], [51.28, 0.8], [51.25, -0.7]]]},
     )
     creator_and_approver = sample_broadcast_service.created_by
-    mock_task = mocker.patch("app.celery.broadcast_message_tasks.send_broadcast_event.apply_async")
+    mock_task = mocker.patch("app.tasks.broadcast_message_tasks.send_broadcast_event.send")
 
     update_broadcast_message_status(broadcast_message, BroadcastStatusType.BROADCASTING, creator_and_approver)
 
@@ -293,7 +293,7 @@ def test_update_broadcast_message_status_when_broadcast_message_is_stubbed_or_se
     )
     approver = create_user(email="approver@gov.uk")
     sample_broadcast_service.users.append(approver)
-    mock_task = mocker.patch("app.celery.broadcast_message_tasks.send_broadcast_event.apply_async")
+    mock_task = mocker.patch("app.tasks.broadcast_message_tasks.send_broadcast_event.send")
 
     sample_broadcast_service.restricted = service_restricted_before_approval
 
@@ -319,7 +319,7 @@ def test_update_broadcast_message_status_creates_event_with_correct_content_if_b
     )
     approver = create_user(email="approver@gov.uk")
     sample_broadcast_service.users.append(approver)
-    mock_task = mocker.patch("app.celery.broadcast_message_tasks.send_broadcast_event.apply_async")
+    mock_task = mocker.patch("app.tasks.broadcast_message_tasks.send_broadcast_event.send")
 
     update_broadcast_message_status(broadcast_message, BroadcastStatusType.BROADCASTING, approver)
 
@@ -328,7 +328,7 @@ def test_update_broadcast_message_status_creates_event_with_correct_content_if_b
     assert len(broadcast_message.events) == 1
     alert_event = broadcast_message.events[0]
 
-    mock_task.assert_called_once_with(kwargs={"broadcast_event_id": str(alert_event.id)}, queue="high-priority-tasks")
+    mock_task.assert_called_once_with(broadcast_event_id=str(alert_event.id))
 
     assert alert_event.transmitted_content == {"body": "tailor made emergency broadcast content"}
 
@@ -343,7 +343,7 @@ def test_update_broadcast_message_status_creates_zendesk_ticket(mocker, notify_a
     approver = create_user(email="approver@gov.uk")
     sample_broadcast_service.users.append(approver)
 
-    mocker.patch("app.celery.broadcast_message_tasks.send_broadcast_event.apply_async")
+    mocker.patch("app.tasks.broadcast_message_tasks.send_broadcast_event.send")
     mock_send_ticket_to_zendesk = mocker.patch(
         "app.broadcast_message.utils.zendesk_client.send_ticket_to_zendesk",
         autospec=True,
@@ -446,7 +446,7 @@ def test_update_broadcast_message_status_for_rejecting_broadcast_message_with_re
         status=BroadcastStatusType.PENDING_APPROVAL,
         areas={"ids": ["london"], "simple_polygons": [[[51.30, 0.7], [51.28, 0.8], [51.25, -0.7]]]},
     )
-    mock_task = mocker.patch("app.celery.broadcast_message_tasks.send_broadcast_event.apply_async")
+    mock_task = mocker.patch("app.tasks.broadcast_message_tasks.send_broadcast_event.send")
 
     update_broadcast_message_status(
         broadcast_message,
@@ -476,7 +476,7 @@ def test_update_broadcast_message_status_for_rejecting_broadcast_message_with_re
         status=BroadcastStatusType.PENDING_APPROVAL,
         areas={"ids": ["london"], "simple_polygons": [[[51.30, 0.7], [51.28, 0.8], [51.25, -0.7]]]},
     )
-    mock_task = mocker.patch("app.celery.broadcast_message_tasks.send_broadcast_event.apply_async")
+    mock_task = mocker.patch("app.tasks.broadcast_message_tasks.send_broadcast_event.send")
 
     update_broadcast_message_status(
         broadcast_message,

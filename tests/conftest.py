@@ -5,6 +5,7 @@ import pytest
 import sqlalchemy
 from alembic.command import upgrade
 from alembic.config import Config
+from moto import mock_aws
 from sqlalchemy import event
 
 from app import create_app, db
@@ -12,7 +13,10 @@ from app.notify_api_flask_app import NotifyApiFlaskApp
 
 
 @pytest.fixture(scope="session")
-def notify_api():
+def notify_api(session_mocker):
+    # Don't instantiate the SQS components
+    session_mocker.patch("app.EasSqsFlaskDramatiq.init_app", return_value=None)
+
     app = NotifyApiFlaskApp("test")
     create_app(app)
 
@@ -157,6 +161,25 @@ def os_environ():
     os.environ.clear()
     for k, v in old_env.items():
         os.environ[k] = v
+
+
+@pytest.fixture(scope="function")
+def mocked_aws(os_environ):
+    """
+    An alternative to the moto @mock_aws decorator - ensuring any environment variables
+    do not interfere with the AWS client instead of reaching moto.
+    """
+    os.environ["AWS_ACCESS_KEY_ID"] = "mocked"
+    os.environ["AWS_SECRET_ACCESS_KEY"] = "mocked"
+    os.environ["AWS_SECURITY_TOKEN"] = "mocked"
+    os.environ["AWS_SESSION_TOKEN"] = "mocked"
+    os.environ["AWS_DEFAULT_REGION"] = "eu-west-2"
+    # Commonly set in localenv
+    os.environ.pop("AWS_ENDPOINT_URL_CLOUDWATCH", None)
+    os.environ.pop("AWS_ENDPOINT_URL_SQS", None)
+
+    with mock_aws():
+        yield
 
 
 def pytest_generate_tests(metafunc):

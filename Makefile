@@ -21,11 +21,11 @@ legacy-bootstrap: generate-version-file ## Bootstrap, apply migrations and run t
 
 .PHONY: bootstrap
 bootstrap: generate-version-file ## Set up everything to run the app
-	pip3 install -r requirements_local_utils.txt
+	pip3 install -r requirements_local_utils.txt -c constraints.txt
 
 .PHONY: bootstrap-for-tests
 bootstrap-for-tests: generate-version-file ## Set up everything to run the tests
-	pip3 install -r requirements_github_utils.txt
+	pip3 install -r requirements_github_utils.txt -c constraints.txt
 
 .PHONY: run-flask
 run-flask: ## Run flask
@@ -34,43 +34,6 @@ run-flask: ## Run flask
 .PHONY: run-flask-debug
 run-flask-debug: ## Run flask in debug mode
 	. environment.sh && flask --debug run -p 6011
-
-.PHONY: run-celery
-run-celery: ## Run celery
-	. environment.sh && opentelemetry-instrument celery \
-		-A run_celery.notify_celery worker \
-		--pidfile=/tmp/api_celery_worker.pid \
-		--prefetch-multiplier=1 \
-		--loglevel=INFO \
-		--autoscale=8,1 \
-		--hostname='$(SERVICE)@%h' &
-
-.PHONY: run-celery-api
-run-celery-api: ## Run Celery workers for tasks executed by the API; high-priority ones first, then lower-priority ones
-	. environment.sh && opentelemetry-instrument celery \
-		-A run_celery.notify_celery worker \
-		-Q high-priority-tasks \
-		--pidfile=/tmp/api_celery_worker_hp.pid \
-		--prefetch-multiplier=1 \
-		--loglevel=INFO \
-		--autoscale=8,1 \
-		--hostname='$(SERVICE)_hp@%h' &
-
-	. environment.sh && opentelemetry-instrument celery \
-		-A run_celery.notify_celery worker \
-		-Q broadcast-tasks \
-		--pidfile=/tmp/api_celery_worker.pid \
-		--prefetch-multiplier=1 \
-		--loglevel=INFO \
-		--autoscale=8,1 \
-		--hostname='$(SERVICE)@%h' &
-
-.PHONY: run-celery-beat
-run-celery-beat: ## Run celery beat
-	. environment.sh && opentelemetry-instrument celery \
-		-A run_celery.notify_celery beat \
-		--pidfile=/tmp/celery_beat.pid \
-		--loglevel=INFO
 
 .PHONY: help
 help:
@@ -93,7 +56,7 @@ pytests: ## Run python tests only
 
 .PHONY: freeze-requirements
 freeze-requirements: ## create static requirements.txt
-	${PYTHON_EXECUTABLE_PREFIX}pip3 install --upgrade setuptools pip-tools
+	${PYTHON_EXECUTABLE_PREFIX}pip3 install -c constraints.txt setuptools pip-tools
 	${PYTHON_EXECUTABLE_PREFIX}pip-compile requirements.in
 
 .PHONY: fix-imports
