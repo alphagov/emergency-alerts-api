@@ -89,7 +89,7 @@ class Config(object):
     )
 
     if os.environ.get("MASTER_USERNAME"):
-        print("Using master credentials for db connection")  # noqa: T201
+        print("Using master credentials for db connection")
         SQLALCHEMY_DATABASE_URI = "postgresql://{user}:{password}@{host}:{port}/{database}".format(
             user=os.environ.get("MASTER_USERNAME", "root"),
             password=os.environ.get("MASTER_PASSWORD"),
@@ -98,7 +98,7 @@ class Config(object):
             database=os.environ.get("DATABASE", "emergency_alerts"),
         )
     else:
-        print("Using no credentials for db connection")  # noqa: T201
+        print("Using no credentials for db connection")
         SQLALCHEMY_DATABASE_URI = "postgresql://{user}@{host}:{port}/{database}".format(
             user=os.environ.get("RDS_USER", "root"),
             host=os.environ.get("RDS_HOST", "localhost"),
@@ -107,7 +107,7 @@ class Config(object):
         )
 
     if os.environ.get("SQLALCHEMY_LOCAL_OVERRIDE"):
-        print("Overriding db connection string for local running")  # noqa: T201
+        print("Overriding db connection string for local running")
         SQLALCHEMY_DATABASE_URI = os.environ.get("SQLALCHEMY_LOCAL_OVERRIDE")
 
     ZENDESK_API_KEY = os.environ.get("ZENDESK_API_KEY")
@@ -221,7 +221,7 @@ class Hosted(Config):
     DATABASE_STATEMENT_TIMEOUT_MS = 1200000
 
     if os.getenv("MASTER_USERNAME"):
-        print("Using master credentials for db connection")  # noqa: T201
+        print("Using master credentials for db connection")
         filtered_password = os.environ.get("MASTER_PASSWORD").replace("%", "%%")
         SQLALCHEMY_DATABASE_URI = "postgresql://{user}:{password}@{host}:{port}/{database}".format(
             user=os.environ.get("MASTER_USERNAME"),
@@ -367,10 +367,7 @@ class Test(Config):
 
     GOVUK_ALERTS_S3_BUCKET_NAME = "test-govuk-alerts-bucket"
 
-    LOG_UPLOAD_LAMBDA_ARN = os.getenv(
-        "LOG_UPLOAD_LAMBDA_ARN",
-        "arn:aws:lambda:eu-west-2:435684131547:function:mno-portal-development-log-upload-handler",
-    )
+    LOG_UPLOAD_LAMBDA_ARN = os.getenv("LOG_UPLOAD_LAMBDA_ARN", "")
 
 
 configs = {
