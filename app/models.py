@@ -1175,7 +1175,8 @@ class BroadcastProvider:
 
 ALL_BROADCAST_PROVIDERS = BroadcastProvider.PROVIDERS
 
-BROADCAST_PROVIDER_STATUS_TECHNICAL_FAILURE = "technical-failure"  # Couldn't send (cbc proxy 5xx/4xx)
+# These should be stable as they're used for display by admin:
+BROADCAST_PROVIDER_STATUS_TECHNICAL_FAILURE = "technical-failure"  # (Unused)
 BROADCAST_PROVIDER_STATUS_SENDING = "sending"  # Sent to cbc, awaiting response
 BROADCAST_PROVIDER_STATUS_ACK = "returned-ack"  # Received ack response
 BROADCAST_PROVIDER_STATUS_ERR = "returned-error"  # Received error response
