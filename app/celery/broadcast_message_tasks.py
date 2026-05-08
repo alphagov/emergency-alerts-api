@@ -254,7 +254,7 @@ def send_broadcast_provider_message(self, broadcast_event_id, provider):
             },
         )
 
-        if broadcast_provider_message is not None:
+        if broadcast_provider_message is not None and e is not CBCProxyRetryableException:
             add_broadcast_provider_message_status(
                 broadcast_provider_message,
                 status=BROADCAST_PROVIDER_STATUS_ERR,
