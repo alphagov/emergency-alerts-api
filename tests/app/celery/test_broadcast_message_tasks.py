@@ -486,6 +486,9 @@ def test_send_broadcast_provider_message_error_statuses_are_saved(
     )
 
     with pytest.raises(Retry):
+        # The error status is saved after the final celery retry:
+        # Simulate this by faking the retry count in the request context
+        send_broadcast_provider_message.push_request(retries=5)
         send_broadcast_provider_message(provider=provider, broadcast_event_id=str(event.id))
 
     mock_create_broadcast.assert_called_once_with(
