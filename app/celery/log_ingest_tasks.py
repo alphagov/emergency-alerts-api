@@ -6,11 +6,14 @@ from emergency_alerts_utils.celery import TaskNames
 from flask import current_app
 
 from app import notify_celery
+from app.dao.broadcast_message_dao import (
+    dao_get_broadcast_provider_messages_for_event,
+)
 from app.models import BroadcastEvent
 
 
-@notify_celery.task(name=TaskNames.REQUEST_LOG_INGEST)
-def request_log_ingest_task(broadcast_event_id):
+@notify_celery.task(name=TaskNames.REQUEST_LOG_INGEST, bind=True, max_retries=5, default_retry_delay=30)
+def request_log_ingest_task(self, broadcast_event_id):
     """
     Invokes the operator portal log upload Lambda to send invite emails to MNOs.
     """
@@ -24,10 +27,18 @@ def request_log_ingest_task(broadcast_event_id):
             )
             return False
 
-        broadcast = broadcast_event.broadcast_message
+        available_providers = broadcast_event.service.get_available_broadcast_providers()
+        provider_messages = dao_get_broadcast_provider_messages_for_event(broadcast_event_id)
+
+        if len(provider_messages) < len(available_providers):
+            current_app.logger.warning(
+                f"Only {len(provider_messages)}/{len(available_providers)} provider messages exist yet, retrying",
+                extra={"broadcast_event_id": broadcast_event_id},
+            )
+            raise self.retry()
 
         payload = {
-            "alert_reference": broadcast.reference,
+            "alert_reference": str(broadcast_event.id),
             "environment": current_app.config.get("ENVIRONMENT"),
             "broadcast_start": (
                 broadcast_event.transmitted_starts_at.isoformat() if broadcast_event.transmitted_starts_at else None
@@ -36,12 +47,16 @@ def request_log_ingest_task(broadcast_event_id):
                 broadcast_event.transmitted_finishes_at.isoformat() if broadcast_event.transmitted_finishes_at else None
             ),
             "mnos": [
-                {"mno_id": provider.upper()} for provider in broadcast_event.service.get_available_broadcast_providers()
+                {
+                    "mno_id": pm.provider.upper(),
+                    "provider_message_id": str(pm.id),
+                }
+                for pm in provider_messages
             ],
         }
 
         current_app.logger.info(
-            "Built Lambda payload", extra={"alert_reference": broadcast.reference, "payload": json.dumps(payload)}
+            "Built Lambda payload", extra={"alert_reference": str(broadcast_event.id), "payload": json.dumps(payload)}
         )
 
         lambda_arn = current_app.config.get("LOG_UPLOAD_LAMBDA_ARN")
@@ -59,15 +74,22 @@ def request_log_ingest_task(broadcast_event_id):
         if success:
             current_app.logger.info(
                 "Successfully invoked log upload Lambda",
-                extra={"broadcast_reference": broadcast.reference, "broadcast_event_id": broadcast_event_id},
+                extra={"broadcast_event_id": broadcast_event_id},
             )
         else:
             current_app.logger.error(
                 "Failed to invoke log upload Lambda",
-                extra={"broadcast_reference": broadcast.reference, "broadcast_event_id": broadcast_event_id},
+                extra={"broadcast_event_id": broadcast_event_id},
             )
 
         return success
+
+    except self.MaxRetriesExceededError:
+        current_app.logger.error(
+            f"Max retries exceeded waiting for provider messages for broadcast_event {broadcast_event_id}",
+            extra={"broadcast_event_id": broadcast_event_id},
+        )
+        return False
 
     except Exception as e:
         current_app.logger.exception(
