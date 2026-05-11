@@ -141,6 +141,7 @@ def _clean_database(_db):
             "service_callback_type",
             "broadcast_channel_types",
             "broadcast_provider_types",
+            "route_advisor",
         ]:
             _db.engine.execute(tbl.delete())
     _db.session.commit()

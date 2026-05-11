@@ -28,6 +28,21 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
+      - name: Use specified utils version in PR
+        env:
+          PR_DESCRIPTION: ${{ github.event.pull_request.body }}
+        # Match `utils:blah` and capture the blah
+        run: |
+          PR_UTILS_BRANCH=$(echo "$PR_DESCRIPTION" | grep -oP '`utils:\K[^`]+' || true)
+
+          if [[ -n $PR_UTILS_BRANCH ]]; then
+            echo "Going to use branch $PR_UTILS_BRANCH for utils"
+            sed -i "s|emergency-alerts-utils\.git|emergency-alerts-utils.git@$PR_UTILS_BRANCH|" requirements_github_utils.txt
+            cat requirements_github_utils.txt
+          else
+            echo "Leaving utils target as default"
+          fi
+
       - name: Verify Docker
         run: |
           docker --version || echo 'Could not find docker engine'
