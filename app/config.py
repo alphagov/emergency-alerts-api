@@ -224,6 +224,9 @@ class Hosted(Config):
     AWS_REGION = os.environ.get("AWS_REGION", "eu-west-2")
     QUEUE_PREFIX = f"{ENVIRONMENT_PREFIX}-{TENANT_PREFIX}dramatiq-"
 
+    HTTPS_PROXY = os.environ.get("HTTPS_PROXY")
+    NO_PROXY = os.environ.get("NO_PROXY")
+
 
 class Test(Config):
     NOTIFY_EMAIL_DOMAIN = "test.notify.com"

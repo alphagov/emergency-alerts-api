@@ -4,11 +4,16 @@
 ARG ECS_ACCOUNT_NUMBER
 ARG RESOURCE_PREFIX=eas-app
 ARG AWS_REGION=eu-west-2
+ARG HTTPS_PROXY=''
+ARG NO_PROXY=''
 ARG BASE_VERSION=latest
 ARG BASE_IMAGE=${ECS_ACCOUNT_NUMBER}.dkr.ecr.${AWS_REGION}.amazonaws.com/${RESOURCE_PREFIX}-base:${BASE_VERSION}
 FROM ${BASE_IMAGE}
 
 ARG APP_VERSION=unknown
+
+ENV HTTPS_PROXY=${HTTPS_PROXY}
+ENV NO_PROXY=${NO_PROXY}
 
 # This container expects to be given SERVICE_ACTION to determine what it actually does at runtime
 # So at this point we don't know what it's running - it's expected whoever gives SERVICE_ACTION
@@ -30,6 +35,12 @@ USER root
 
 RUN wget https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem -O /etc/ssl/certs/global-bundle.pem && \
     update-ca-certificates
+RUN cat >/etc/apt/apt.conf.d/proxy.conf <<EOF
+Acquire::https::Proxy "${HTTPS_PROXY}";
+Acquire::https::NoProxy "${NO_PROXY}";
+EOF
+
+RUN sed -i 's|http://|https://|g' /etc/apt/sources.list.d/ubuntu.sources
 RUN apt-get update
 RUN apt-get install lsb-release -y && \
     install -d /usr/share/postgresql-common/pgdg && \
