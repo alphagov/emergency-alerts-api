@@ -173,6 +173,7 @@ class CBCProxyClientBase(ABC):
             routes.insert(0, preferred)
 
         for route in routes:
+            payload["cbc_target"] = route[1]
             result = self._invoke_lambda(route[0], payload, route[1])
             if result:
                 return True
