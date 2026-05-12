@@ -139,10 +139,9 @@ def dao_get_broadcast_messages_for_service_with_user(service_id):
 
 def dao_get_broadcast_provider_messages_by_broadcast_message_id(broadcast_message_id):
     return (
-        db.session.query(BroadcastProviderMessage)
-        .join(
-            BroadcastProviderMessageStatus,
-            BroadcastProviderMessageStatus.broadcast_provider_message_id == BroadcastProviderMessage.id,
+        db.session.query(
+            BroadcastProviderMessage,
+            BroadcastEvent.message_type,
         )
         .join(BroadcastEvent, BroadcastEvent.id == BroadcastProviderMessage.broadcast_event_id)
         .filter(BroadcastEvent.broadcast_message_id == broadcast_message_id)
