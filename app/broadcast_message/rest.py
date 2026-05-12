@@ -396,15 +396,10 @@ def purge_broadcast_messages(service_id, older_than):
         if messages:
             for message in messages:
                 # delete S3 objects associated with the key
-                versions = s3.list_object_versions(Bucket=bucket, Prefix=f"alerts/{message[1]}")
-                capxml_versions = s3.list_object_versions(Bucket=bucket, Prefix=f"alerts/cap-xml/{message[1]}")
-                all_versions = (
-                    versions.get("Versions", [])
-                    + versions.get("DeleteMarkers", [])
-                    + capxml_versions.get("Versions", [])
-                    + capxml_versions.get("DeleteMarkers", [])
-                )
-                objects = [{"Key": v["Key"], "VersionId": v["VersionId"]} for v in all_versions]
+                objects_response = s3.list_objects_v2(Bucket=bucket, Prefix=f"alerts/{message[1]}")
+                capxml_response = s3.list_objects_v2(Bucket=bucket, Prefix=f"alerts/cap-xml/{message[1]}")
+                all_objects = objects_response.get("Contents", []) + capxml_response.get("Contents", [])
+                objects = [{"Key": v["Key"]} for v in all_objects]
 
                 if objects:
                     # The pattern 1-apr-2026 matches:
