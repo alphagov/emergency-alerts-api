@@ -6,14 +6,13 @@ import uuid
 from time import monotonic
 
 import boto3
-from celery import signals
 from emergency_alerts_utils import logging, request_helper
-from emergency_alerts_utils.celery import NotifyCelery
 from emergency_alerts_utils.clients.encryption.encryption_client import (
     Encryption,
 )
 from emergency_alerts_utils.clients.slack.slack_client import SlackClient
 from emergency_alerts_utils.clients.zendesk.zendesk_client import ZendeskClient
+from emergency_alerts_utils.dramatiq import EasSqsFlaskDramatiq
 from flask import (
     Response,
     current_app,
@@ -37,7 +36,7 @@ from app.clients.cbc_proxy import CBCProxyClient
 db = SQLAlchemy()
 migrate = Migrate()
 ma = Marshmallow()
-notify_celery = NotifyCelery()
+dramatiq = EasSqsFlaskDramatiq()
 encryption = Encryption()
 zendesk_client = ZendeskClient()
 slack_client = SlackClient()
@@ -47,8 +46,6 @@ notification_provider_clients = NotificationProviderClients()
 
 api_user = LocalProxy(lambda: g.api_user)
 authenticated_service = LocalProxy(lambda: g.authenticated_service)
-
-_celery_tasks = {}
 
 
 def create_app(application):
@@ -78,9 +75,9 @@ def create_app(application):
     ma.init_app(application)
     zendesk_client.init_app(application)
     logging.init_app(application)
-    notify_celery.init_app(application)
     encryption.init_app(application)
     cbc_proxy_client.init_app(application)
+    dramatiq.init_app(application, application.config["QUEUE_PREFIX"])
 
     register_blueprint(application)
     register_v2_blueprints(application)
@@ -324,14 +321,6 @@ def setup_sqlalchemy_events(app):
                         "host": request.host,
                         "url_rule": request.url_rule.rule if request.url_rule else "No endpoint",
                     }
-                # celery apps
-                elif _celery_tasks:
-                    task = _celery_tasks[next(iter(_celery_tasks))]
-                    connection_record.info["request_data"] = {
-                        "method": f"celery task {task.name}",
-                        "host": current_app.config["EAS_APP_NAME"],
-                        "url_rule": task.request.id,
-                    }
                 # anything else. migrations possibly, or flask cli commands.
                 else:
                     connection_record.info["request_data"] = {
@@ -341,62 +330,3 @@ def setup_sqlalchemy_events(app):
                     }
             except Exception:
                 current_app.logger.exception("Exception caught for checkout event.")
-
-
-@signals.task_prerun.connect
-def mark_task_active(*args, **kwargs):
-    task = kwargs.get("task", None)
-    if task is None:
-        return
-
-    _celery_tasks[task.request.id] = task
-
-    try:
-        current_app.logger.info(
-            f"[celery task_prerun] {task.name}",
-            extra={
-                "task_id": kwargs["task_id"],
-                "broadcast_event_id": kwargs["kwargs"].get("broadcast_event_id", None),
-                "provider": kwargs["kwargs"].get("provider", None),
-            },
-        )
-    except Exception as e:
-        current_app.logger.error(f"Error logging task_prerun: {e}")
-
-
-@signals.task_postrun.connect
-def clear_task_context(*args, **kwargs):
-    task = _celery_tasks.pop(kwargs["task_id"], None)
-    if task is None:
-        current_app.logger.warning(f"Task {kwargs['task_id']} not found.")
-        return
-
-    try:
-        current_app.logger.info(
-            f"[celery task_postrun] {task.name}",
-            extra={
-                "task_id": kwargs["task_id"],
-                "retval": kwargs["retval"],
-                "state": kwargs["state"],
-                "broadcast_event_id": kwargs["kwargs"].get("broadcast_event_id", None),
-                "provider": kwargs["kwargs"].get("provider", None),
-            },
-        )
-    except Exception as e:
-        current_app.logger.error(f"Error logging task_postrun: {e}")
-
-
-@signals.task_failure.connect
-def failure_handler(*args, **kwargs):
-    try:
-        current_app.logger.error(
-            f"[celery task_failure] {kwargs['task_id']}",
-            extra={
-                "task_id": kwargs["task_id"],
-                "exception": kwargs["exception"],
-                "traceback": kwargs["traceback"],
-                "exception_info": kwargs["einfo"],
-            },
-        )
-    except Exception as e:
-        current_app.logger.error(f"Error logging task_failure: {e}")

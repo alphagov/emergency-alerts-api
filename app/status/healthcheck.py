@@ -30,25 +30,6 @@ def show_api_status():
         )
 
 
-@status.route("/_celery_status", methods=["GET", "POST"])
-def show_celery_status():
-    if request.args.get("simple", None):
-        return jsonify(status="ok"), 200
-    else:
-        return (
-            jsonify(
-                # This is a placeholder health check
-                # This should be modified to check the celery queue for
-                # availability and correctness of function
-                status="ok",
-                git_commit=version.git_commit,
-                build_time=version.time,
-                app_version=version.app_version,
-            ),
-            200,
-        )
-
-
 @status.route("/_api_status/live-service-and-organisation-counts")
 def live_service_and_organisation_counts():
     return (

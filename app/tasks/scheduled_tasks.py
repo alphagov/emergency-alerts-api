@@ -1,19 +1,12 @@
 import time
 from datetime import datetime, timedelta, timezone
 
-from emergency_alerts_utils.celery import QueueNames, TaskNames
+from emergency_alerts_utils.tasks import QueueNames, TaskNames
 from flask import current_app
+from periodiq import cron
 from sqlalchemy.exc import SQLAlchemyError
 
-from app import db, notify_celery
-
-# from app.celery.broadcast_message_tasks import trigger_link_test
-from app.celery.broadcast_message_tasks import (
-    trigger_link_test_primary_to_A,
-    trigger_link_test_primary_to_B,
-    trigger_link_test_secondary_to_A,
-    trigger_link_test_secondary_to_B,
-)
+from app import db, dramatiq
 from app.dao.broadcast_message_dao import (
     dao_get_all_finished_broadcast_messages_with_outstanding_actions,
 )
@@ -35,9 +28,16 @@ from app.status.healthcheck import (
     post_app_version_to_cloudwatch,
     post_db_version_to_cloudwatch,
 )
+from app.tasks.broadcast_message_tasks import (
+    trigger_link_test_primary_to_A,
+    trigger_link_test_primary_to_B,
+    trigger_link_test_secondary_to_A,
+    trigger_link_test_secondary_to_B,
+)
+from app.tasks.stub_tasks import publish_govuk_alerts
 
 
-@notify_celery.task(name=TaskNames.RUN_HEALTH_CHECK)
+@dramatiq.actor(actor_name=TaskNames.RUN_HEALTH_CHECK, queue_name=QueueNames.PERIODIC, periodic=cron("*/1 * * * *"))
 def run_health_check():
     try:
         post_app_version_to_cloudwatch()
@@ -52,7 +52,7 @@ def run_health_check():
         raise
 
 
-@notify_celery.task(name=TaskNames.DELETE_VERIFY_CODES)
+@dramatiq.actor(actor_name=TaskNames.DELETE_VERIFY_CODES, queue_name=QueueNames.PERIODIC, periodic=cron("10 * * * *"))
 def delete_verify_codes():
     try:
         start = datetime.now(timezone.utc)
@@ -66,7 +66,7 @@ def delete_verify_codes():
         raise
 
 
-@notify_celery.task(name=TaskNames.DELETE_INVITATIONS)
+@dramatiq.actor(actor_name=TaskNames.DELETE_INVITATIONS, queue_name=QueueNames.PERIODIC, periodic=cron("20 * * * *"))
 def delete_invitations():
     try:
         start = datetime.now(timezone.utc)
@@ -81,18 +81,17 @@ def delete_invitations():
         raise
 
 
-@notify_celery.task(name=TaskNames.TRIGGER_LINK_TESTS)
+@dramatiq.actor(actor_name=TaskNames.TRIGGER_LINK_TESTS, queue_name=QueueNames.PERIODIC, periodic=cron("*/3 * * * *"))
 def trigger_link_tests():
     if current_app.config["CBC_PROXY_ENABLED"]:
         current_app.logger.info(
             "trigger_link_tests", extra={"python_module": __name__, "target_queue": QueueNames.BROADCASTS}
         )
         for cbc_name in current_app.config["ENABLED_CBCS"]:
-            # trigger_link_test.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
-            trigger_link_test_primary_to_A.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
-            trigger_link_test_primary_to_B.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
-            trigger_link_test_secondary_to_A.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
-            trigger_link_test_secondary_to_B.apply_async(kwargs={"provider": cbc_name}, queue=QueueNames.BROADCASTS)
+            trigger_link_test_primary_to_A.send(provider=cbc_name)
+            trigger_link_test_primary_to_B.send(provider=cbc_name)
+            trigger_link_test_secondary_to_A.send(provider=cbc_name)
+            trigger_link_test_secondary_to_B.send(provider=cbc_name)
 
 
 def auto_expire_broadcast_messages():
@@ -108,25 +107,26 @@ def auto_expire_broadcast_messages():
     db.session.commit()
 
 
-@notify_celery.task(name=TaskNames.REMOVE_YESTERDAYS_PLANNED_TESTS_ON_GOVUK_ALERTS)
+@dramatiq.actor(
+    actor_name=TaskNames.REMOVE_YESTERDAYS_PLANNED_TESTS_ON_GOVUK_ALERTS,
+    queue_name=QueueNames.PERIODIC,
+    periodic=cron("0 0 * * *"),
+)
 def remove_yesterdays_planned_tests_on_govuk_alerts():
     # Before removing yesterdays planned tests and triggering republish
     # of gov.uk/alerts, the publish tasks from older than 1 day ago are
     # purged from the `publish_task_progress` table
     purge_publish_tasks(days_older_than=1)
 
-    current_app.logger.info(
-        "remove_yesterdays_planned_tests_on_govuk_alerts",
-        extra={
-            "python_module": __name__,
-            "send_task": TaskNames.PUBLISH_GOVUK_ALERTS,
-            "target_queue": QueueNames.GOVUK_ALERTS,
-        },
-    )
-    notify_celery.send_task(name=TaskNames.PUBLISH_GOVUK_ALERTS, queue=QueueNames.GOVUK_ALERTS)
+    publish_task = publish_govuk_alerts.send()
+    current_app.logger.info("Enqueued publish GOV UK Alerts for nightly rebuild: %s", publish_task.asdict())
 
 
-@notify_celery.task(name=TaskNames.DELETE_OLD_RECORDS_FROM_EVENTS_TABLE)
+@dramatiq.actor(
+    actor_name=TaskNames.DELETE_OLD_RECORDS_FROM_EVENTS_TABLE,
+    queue_name=QueueNames.PERIODIC,
+    periodic=cron("0 3 * * *"),
+)
 def delete_old_records_from_events_table():
     delete_events_before = datetime.now(timezone.utc) - timedelta(weeks=52)
     event_query = Event.query.filter(Event.created_at < delete_events_before)
@@ -137,7 +137,7 @@ def delete_old_records_from_events_table():
         f"Deleted {deleted_count} events older than {delete_events_before}.",
         extra={
             "python_module": __name__,
-            "celery_task": "delete-old-records-from-events-table",
+            "task": "delete-old-records-from-events-table",
             "target_queue": QueueNames.PERIODIC,
         },
     )
@@ -145,7 +145,11 @@ def delete_old_records_from_events_table():
     db.session.commit()
 
 
-@notify_celery.task(name=TaskNames.VALIDATE_FUNCTIONAL_TEST_ACCOUNT_EMAILS)
+@dramatiq.actor(
+    actor_name=TaskNames.VALIDATE_FUNCTIONAL_TEST_ACCOUNT_EMAILS,
+    queue_name=QueueNames.PERIODIC,
+    periodic=cron("0 0 1 * *"),
+)
 def validate_functional_test_account_emails():
     try:
         user1 = get_user_by_email("emergency-alerts-tests+user1@digital.cabinet-office.gov.uk")
@@ -171,13 +175,15 @@ def validate_functional_test_account_emails():
             f"Functional test account emails validated on {datetime.now(timezone.utc).date}",
             extra={
                 "python_module": __name__,
-                "celery_task": "validate-functional-test-account-emails",
+                "task": "validate-functional-test-account-emails",
                 "target_queue": QueueNames.PERIODIC,
             },
         )
 
 
-@notify_celery.task(name=TaskNames.QUEUE_AFTER_ALERT_ACTIVITIES)
+@dramatiq.actor(
+    actor_name=TaskNames.QUEUE_AFTER_ALERT_ACTIVITIES, queue_name=QueueNames.PERIODIC, periodic=cron("*/1 * * * *")
+)
 def queue_after_alert_activities():
     """Check for any recently expired alerts and process any activities that are due on them"""
 
@@ -195,6 +201,7 @@ def queue_after_alert_activities():
             # This need not be idempotent as any regeneration is 'free', and we rely upon
             # GovUK calling us back to mark the action as 'done' instead of just assuming.
             current_app.logger.info("Requesting GovUK publish")
-            notify_celery.send_task(name=TaskNames.PUBLISH_GOVUK_ALERTS, queue=QueueNames.GOVUK_ALERTS)
+            publish_task = publish_govuk_alerts.send()
+            current_app.logger.info("Enqueued publish GOV UK Alerts: %s", publish_task.asdict())
 
         # Down the line we will look to request logs from MNOs
