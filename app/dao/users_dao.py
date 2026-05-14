@@ -175,7 +175,7 @@ def get_user_and_accounts(user_id):
 @autocommit
 def dao_archive_user(user):
     if not user_can_be_archived(user):
-        msg = "User can’t be removed from a service - check all services have other team members"
+        msg = "User can’t be archived - check all services the user belongs to have other active team members"
         raise InvalidRequest(msg, 400)
 
     permission_dao.remove_user_service_permissions_for_all_services(user)
