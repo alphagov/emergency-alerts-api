@@ -15,7 +15,7 @@ from app.dao.service_user_dao import (
 from app.dao.users_dao import get_user_by_id
 from app.models import (
     EMAIL_AUTH_TYPE,
-    MANAGE_SETTINGS,
+    MANAGE_API_KEYS,
     MANAGE_TEMPLATES,
     SMS_AUTH_TYPE,
     CommonPasswords,
@@ -440,18 +440,18 @@ def test_set_user_permissions(admin_request, sample_user, sample_service):
         "user.set_permissions",
         user_id=str(sample_user.id),
         service_id=str(sample_service.id),
-        _data={"permissions": [{"permission": MANAGE_SETTINGS}]},
+        _data={"permissions": [{"permission": MANAGE_TEMPLATES}]},
         _expected_status=204,
     )
 
-    permission = Permission.query.filter_by(permission=MANAGE_SETTINGS).first()
+    permission = Permission.query.filter_by(permission=MANAGE_TEMPLATES).first()
     assert permission.user == sample_user
     assert permission.service == sample_service
-    assert permission.permission == MANAGE_SETTINGS
+    assert permission.permission == MANAGE_TEMPLATES
 
 
 def test_set_user_permissions_multiple(admin_request, sample_user, sample_service):
-    data = {"permissions": [{"permission": MANAGE_SETTINGS}, {"permission": MANAGE_TEMPLATES}]}
+    data = {"permissions": [{"permission": MANAGE_API_KEYS}, {"permission": MANAGE_TEMPLATES}]}
     admin_request.post(
         "user.set_permissions",
         user_id=str(sample_user.id),
@@ -460,10 +460,10 @@ def test_set_user_permissions_multiple(admin_request, sample_user, sample_servic
         _expected_status=204,
     )
 
-    permission = Permission.query.filter_by(permission=MANAGE_SETTINGS).first()
+    permission = Permission.query.filter_by(permission=MANAGE_API_KEYS).first()
     assert permission.user == sample_user
     assert permission.service == sample_service
-    assert permission.permission == MANAGE_SETTINGS
+    assert permission.permission == MANAGE_API_KEYS
     permission = Permission.query.filter_by(permission=MANAGE_TEMPLATES).first()
     assert permission.user == sample_user
     assert permission.service == sample_service
@@ -471,7 +471,7 @@ def test_set_user_permissions_multiple(admin_request, sample_user, sample_servic
 
 
 def test_set_user_permissions_remove_old(admin_request, sample_user, sample_service):
-    data = {"permissions": [{"permission": MANAGE_SETTINGS}]}
+    data = {"permissions": [{"permission": MANAGE_API_KEYS}]}
 
     admin_request.post(
         "user.set_permissions",
@@ -483,7 +483,7 @@ def test_set_user_permissions_remove_old(admin_request, sample_user, sample_serv
 
     query = Permission.query.filter_by(user=sample_user)
     assert query.count() == 1
-    assert query.first().permission == MANAGE_SETTINGS
+    assert query.first().permission == MANAGE_API_KEYS
 
 
 def test_set_user_folder_permissions(admin_request, sample_user, sample_service):
