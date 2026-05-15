@@ -11,6 +11,7 @@ from app.dao.broadcast_service_dao import set_service_broadcast_providers
 from app.dao.organisation_dao import dao_add_service_to_organisation
 from app.dao.service_user_dao import dao_get_service_user
 from app.dao.services_dao import (
+    dao_add_email_to_service,
     dao_add_user_to_service,
     dao_remove_user_from_service,
 )
@@ -23,6 +24,7 @@ from app.models import (
     Service,
     ServiceBroadcastProviders,
     ServiceBroadcastSettings,
+    ServiceEmail,
     ServicePermission,
     User,
 )
@@ -143,6 +145,7 @@ def test_get_service_by_id(admin_request, sample_service):
         "broadcast_channel",
         "created_at",
         "created_by",
+        "email_addresses",
         "go_live_at",
         "go_live_user",
         "id",
@@ -694,6 +697,57 @@ def test_get_users_for_service_returns_404_when_service_does_not_exist(notify_ap
             result = json.loads(response.get_data(as_text=True))
             assert result["result"] == "error"
             assert result["message"] == "No result found"
+
+
+def test_get_email_by_service_no_email_contact(notify_api, sample_service):
+    with notify_api.test_request_context():
+        with notify_api.test_client() as client:
+            auth_header = create_admin_authorization_header()
+
+            resp = client.get(
+                "/service/{}/email-contacts".format(sample_service.id),
+                headers=[("Content-Type", "application/json"), auth_header],
+            )
+
+            assert resp.status_code == 200
+            result = resp.json
+            assert result["data"] == []
+
+
+def test_get_email_by_service_single_email_contact(notify_api, sample_service):
+    dao_add_email_to_service(sample_service, ServiceEmail(email_address="test@test.com"))
+    with notify_api.test_request_context():
+        with notify_api.test_client() as client:
+            auth_header = create_admin_authorization_header()
+
+            resp = client.get(
+                "/service/{}/email-contacts".format(sample_service.id),
+                headers=[("Content-Type", "application/json"), auth_header],
+            )
+
+            assert resp.status_code == 200
+            result = resp.json
+            assert len(result["data"]) == 1
+            assert result["data"][0]["email_address"] == "test@test.com"
+
+
+def test_get_email_by_service_multiple_email_contact(notify_api, sample_service):
+    dao_add_email_to_service(sample_service, ServiceEmail(email_address="test@test.com"))
+    dao_add_email_to_service(sample_service, ServiceEmail(email_address="test2@test.com"))
+    with notify_api.test_request_context():
+        with notify_api.test_client() as client:
+            auth_header = create_admin_authorization_header()
+
+            resp = client.get(
+                "/service/{}/email-contacts".format(sample_service.id),
+                headers=[("Content-Type", "application/json"), auth_header],
+            )
+
+            assert resp.status_code == 200
+            result = resp.json
+            assert len(result["data"]) == 2
+            assert result["data"][0]["email_address"] == "test2@test.com"
+            assert result["data"][1]["email_address"] == "test@test.com"
 
 
 def test_default_permissions_are_added_for_user_service(notify_api, notify_db_session, sample_service, sample_user):
