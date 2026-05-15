@@ -115,6 +115,12 @@ def get_broadcast_providers_for_service(service_id):
     return jsonify(data=data)
 
 
+@service_blueprint.route("/<uuid:service_id>/email-contacts", methods=["GET"])
+def get_email_contacts_for_service(service_id):
+    fetched = dao_fetch_service_by_id(service_id)
+    return jsonify(data=[x.serialize() for x in fetched.email_addresses])
+
+
 @service_blueprint.route("", methods=["POST"])
 def create_service():
     data = request.get_json()
