@@ -656,11 +656,10 @@ def test_check_event_makes_sense_in_sequence_doesnt_raise_if_newer_event_not_ack
     "existing_message_status",
     [
         BROADCAST_PROVIDER_STATUS_ACK,
-        BROADCAST_PROVIDER_STATUS_ERR,
         BROADCAST_PROVIDER_STATUS_TECHNICAL_FAILURE,
     ],
 )
-def test_send_broadcast_provider_message_raises_if_current_event_already_has_provider_message_not_in_sending(
+def test_send_broadcast_provider_message_raises_if_current_event_already_has_provider_message_final(
     sample_template, existing_message_status
 ):
     broadcast_message = create_broadcast_message(sample_template)
@@ -671,6 +670,27 @@ def test_send_broadcast_provider_message_raises_if_current_event_already_has_pro
         send_broadcast_provider_message(current_event.id, "ee")
 
     assert f"in status {existing_message_status}" in str(exc.value)
+
+
+@pytest.mark.parametrize(
+    "existing_message_status",
+    [
+        BROADCAST_PROVIDER_STATUS_SENDING,
+        BROADCAST_PROVIDER_STATUS_ERR,
+    ],
+)
+def test_send_broadcast_provider_message_doesnt_raise_for_sending_or_failed_statuses(
+    mocker, sample_template, existing_message_status
+):
+    mocker.patch(
+        "app.clients.cbc_proxy.CBCProxyEE.create_and_send_broadcast",
+    )
+
+    broadcast_message = create_broadcast_message(sample_template)
+    current_event = create_broadcast_event(broadcast_message, message_type="alert")
+    create_broadcast_provider_message(current_event, provider="ee", status=existing_message_status)
+
+    send_broadcast_provider_message(current_event.id, "ee")
 
 
 def test_send_broadcast_provider_message_raises_if_service_is_suspended(
