@@ -473,7 +473,6 @@ opentelemetry-util-http==0.54b1
 packaging==25.0
     # via
     #   black
-    #   marshmallow
     #   opentelemetry-instrumentation
     #   opentelemetry-instrumentation-falcon
     #   opentelemetry-instrumentation-flask
@@ -594,7 +593,7 @@ tzdata==2025.2
     #   pendulum
 uri-template==1.3.0
     # via jsonschema
-urllib3==2.6.3
+urllib3==2.7.0
     # via
     #   -r requirements.in
     #   botocore
