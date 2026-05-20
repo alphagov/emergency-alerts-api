@@ -57,8 +57,13 @@ def _check_event_makes_sense_in_sequence(broadcast_event: BroadcastEvent, provid
     current_provider_message: BroadcastProviderMessage | None = broadcast_event.get_provider_message(provider)
     current_provider_status = current_provider_message.get_latest_status_entry() if current_provider_message else None
 
-    # if this is the first time a task is being executed, it won't have a provider message yet
-    if current_provider_status and current_provider_status.status != BROADCAST_PROVIDER_STATUS_SENDING:
+    # If this is the first time a task is being executed, it won't have a provider message yet
+    # If the second time, then there'll should a sending status alongside another one. If it's
+    # failed we'll allow the retry.
+    if current_provider_status and current_provider_status.status not in {
+        BROADCAST_PROVIDER_STATUS_SENDING,
+        BROADCAST_PROVIDER_STATUS_ERR,
+    }:
         raise BroadcastIntegrityError(
             f"Cannot send broadcast_event {broadcast_event.id} "
             + f"to provider {provider}: "
