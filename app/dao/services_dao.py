@@ -211,6 +211,18 @@ def dao_remove_user_from_service(service, user):
         db.session.commit()
 
 
+def dao_add_email_to_service(service, email):
+    try:
+        service.email_addresses.append(email)
+        db.session.add(service)
+
+    except Exception as e:
+        db.session.rollback()
+        raise e
+    else:
+        db.session.commit()
+
+
 @autocommit
 def delete_service_and_all_associated_db_objects(service):
     def _delete(query):

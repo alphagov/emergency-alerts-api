@@ -292,6 +292,24 @@ class Organisation(db.Model):
         }
 
 
+class ServiceEmail(db.Model):
+    """
+    This table is used to store contact email addresses for services.
+    """
+
+    __tablename__ = "service_email"
+
+    service_id = db.Column(UUID(as_uuid=True), db.ForeignKey("services.id"), primary_key=True)
+    email_address = db.Column(db.String(255), primary_key=True)
+    service = db.relationship("Service", back_populates="email_addresses")
+
+    def serialize(self):
+        return {
+            "service_id": self.service_id,
+            "email_address": self.email_address,
+        }
+
+
 class Service(db.Model, Versioned):
     __tablename__ = "services"
 
@@ -321,6 +339,8 @@ class Service(db.Model, Versioned):
 
     allowed_broadcast_provider = association_proxy("service_broadcast_providers", "provider")
     broadcast_channel = association_proxy("service_broadcast_settings", "channel")
+
+    email_addresses = db.relationship("ServiceEmail", back_populates="service", cascade="all, delete-orphan")
 
     @classmethod
     def from_json(cls, data):
