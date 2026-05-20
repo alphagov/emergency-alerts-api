@@ -529,7 +529,7 @@ def test_add_existing_user_to_another_service_doesnot_change_old_permissions(not
 
     # adding the other_user to service_one should leave all other_user permissions on service_two intact
     permissions = []
-    for p in ["manage_users", "manage_settings", "manage_api_keys"]:
+    for p in ["manage_users", "manage_api_keys"]:
         permissions.append(Permission(permission=p))
 
     dao_add_user_to_service(service_one, other_user, permissions=permissions)
