@@ -205,7 +205,7 @@ def test_should_remove_user_from_service(notify_db_session):
 
 
 def test_removing_a_user_from_a_service_deletes_their_permissions(sample_user, sample_service):
-    assert len(Permission.query.all()) == 5
+    assert len(Permission.query.all()) == 4
 
     dao_remove_user_from_service(sample_service, sample_user)
 
@@ -508,7 +508,7 @@ def test_add_existing_user_to_another_service_doesnot_change_old_permissions(not
     dao_create_service(service_one, user)
     assert user.id == service_one.users[0].id
     test_user_permissions = Permission.query.filter_by(service=service_one, user=user).all()
-    assert len(test_user_permissions) == 5
+    assert len(test_user_permissions) == 4
 
     other_user = User(
         name="Other Test User",
@@ -522,7 +522,7 @@ def test_add_existing_user_to_another_service_doesnot_change_old_permissions(not
 
     assert other_user.id == service_two.users[0].id
     other_user_permissions = Permission.query.filter_by(service=service_two, user=other_user).all()
-    assert len(other_user_permissions) == 5
+    assert len(other_user_permissions) == 4
 
     other_user_service_one_permissions = Permission.query.filter_by(service=service_one, user=other_user).all()
     assert len(other_user_service_one_permissions) == 0
@@ -535,10 +535,10 @@ def test_add_existing_user_to_another_service_doesnot_change_old_permissions(not
     dao_add_user_to_service(service_one, other_user, permissions=permissions)
 
     other_user_service_one_permissions = Permission.query.filter_by(service=service_one, user=other_user).all()
-    assert len(other_user_service_one_permissions) == 3
+    assert len(other_user_service_one_permissions) == 2
 
     other_user_service_two_permissions = Permission.query.filter_by(service=service_two, user=other_user).all()
-    assert len(other_user_service_two_permissions) == 5
+    assert len(other_user_service_two_permissions) == 4
 
 
 def test_dao_fetch_active_users_for_service_returns_active_only(notify_db_session):

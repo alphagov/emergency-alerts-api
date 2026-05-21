@@ -337,7 +337,7 @@ def test_archive_user_when_user_cannot_be_archived(mocker, admin_request, sample
     mocker.patch("app.dao.users_dao.user_can_be_archived", return_value=False)
 
     json_resp = admin_request.post("user.archive_user", user_id=sample_user.id, _expected_status=400)
-    msg = "User can’t be removed from a service - check all services have another team member with manage_settings"
+    msg = "User can’t be archived - check all services the user belongs to have other active team members"
 
     assert json_resp["message"] == msg
 
