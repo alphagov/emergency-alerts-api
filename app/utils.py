@@ -57,7 +57,7 @@ def is_local_host():
 
 
 def is_local_stack():
-    return (not is_local_host() and os.environ.get("ENVIRONMENT") == "local",)
+    return not is_local_host() and os.environ.get("ENVIRONMENT") == "local"
 
 
 def is_cloud_host():
