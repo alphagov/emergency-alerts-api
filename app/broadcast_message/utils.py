@@ -8,6 +8,7 @@ from emergency_alerts_utils.xml.common import SENDER
 from flask import current_app
 
 from app import zendesk_client
+from app.clients.ses_client import SESClient
 from app.dao.dao_utils import dao_save_object
 from app.errors import InvalidRequest
 from app.models import (
@@ -143,3 +144,14 @@ def _create_broadcast_event(broadcast_message):
             f"Broadcast event not created. Stubbed status of broadcast message was {broadcast_message.stubbed}"
             f' but service was {"in trial mode" if service.restricted else "live"}'
         )
+
+
+def send_alert_summary_email(broadcast_message, client=None):
+    service = broadcast_message.service
+    service_emails = service.email_addresses
+    to_addresses = [se.email_address for se in service_emails]
+
+    subject = f"Pre-alert for message {broadcast_message}"
+
+    ses = SESClient(client=client)
+    ses.send_email(to_addresses, subject, body_html="hello")
