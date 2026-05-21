@@ -7,6 +7,7 @@ from freezegun import freeze_time
 
 from app.broadcast_message.rest import _generate_s3_keys
 from app.dao.broadcast_message_dao import (
+    add_broadcast_provider_message_status,
     dao_get_broadcast_message_by_id_and_service_id,
 )
 from app.dao.broadcast_message_history_dao import (
@@ -14,6 +15,8 @@ from app.dao.broadcast_message_history_dao import (
     dao_get_latest_broadcast_message_version_bybroadcast_message_id_and_service_id,
 )
 from app.models import (
+    BROADCAST_PROVIDER_STATUS_ACK,
+    BROADCAST_PROVIDER_STATUS_ERR,
     BROADCAST_TYPE,
     BroadcastEventMessageType,
     BroadcastStatusType,
@@ -84,6 +87,47 @@ def test_get_broadcast_message_with_user(mocker, admin_request, sample_broadcast
     assert response["areas"]["simple_polygons"] == [[[50.1, 1.2], [50.12, 1.2], [50.13, 1.2]]]
     assert response["created_by"] == sample_user.name
     assert response["rejected_by"] is None
+
+
+def test_get_broadcast_provider_statuses(admin_request, sample_broadcast_service):
+    mnos = ["ee", "o2", "three", "vodafone"]
+
+    bm = create_broadcast_message(
+        service=sample_broadcast_service,
+        content="emergency broadcast content",
+        areas={
+            "ids": ["place A", "region B"],
+            "simple_polygons": [[[50.1, 1.2], [50.12, 1.2], [50.13, 1.2]]],
+        },
+    )
+
+    sending_event = create_broadcast_event(broadcast_message=bm)
+    for mno in mnos:
+        # Implicitly creates sending status message_type
+        bpm = create_broadcast_provider_message(broadcast_event=sending_event, provider=mno)
+        add_broadcast_provider_message_status(bpm, status=BROADCAST_PROVIDER_STATUS_ACK)
+
+    cancel_event = create_broadcast_event(broadcast_message=bm, message_type="cancel")
+    for mno in mnos:
+        bpm = create_broadcast_provider_message(broadcast_event=cancel_event, provider=mno)
+        add_broadcast_provider_message_status(bpm, status=BROADCAST_PROVIDER_STATUS_ERR, error_detail={"test": True})
+
+    response = admin_request.get(
+        "broadcast_message.get_broadcast_provider_statuses",
+        service_id=sample_broadcast_service.id,
+        broadcast_message_id=bm.id,
+        _expected_status=200,
+    )
+
+    assert set(mnos) == response.keys()
+
+    for mno in mnos:
+        mno_statuses = response[mno]
+
+        assert mno_statuses["alert"][0]["status"] == "sending"
+        assert mno_statuses["alert"][1]["status"] == "returned-ack"
+        assert mno_statuses["cancel"][0]["status"] == "sending"
+        assert mno_statuses["cancel"][1]["status"] == "returned-error"
 
 
 def test_get_broadcast_provider_messages(admin_request, sample_broadcast_service):
@@ -713,7 +757,7 @@ def test_update_broadcast_message_allows_service_user_and_platform_admin_to_canc
         canceller.platform_admin_capable = True
     else:
         sample_broadcast_service.users.append(canceller)
-    mock_task = mocker.patch("app.celery.broadcast_message_tasks.send_broadcast_event.apply_async")
+    mock_task = mocker.patch("app.tasks.broadcast_message_tasks.send_broadcast_event.send")
 
     response = admin_request.post(
         "broadcast_message.update_broadcast_message_status",
@@ -728,7 +772,7 @@ def test_update_broadcast_message_allows_service_user_and_platform_admin_to_canc
 
     cancel_id = str(cancel_event.id)
 
-    mock_task.assert_called_once_with(kwargs={"broadcast_event_id": cancel_id}, queue="high-priority-tasks")
+    mock_task.assert_called_once_with(broadcast_event_id=cancel_id)
     assert response["status"] == BroadcastStatusType.CANCELLED
     assert response["cancelled_at"] is not None
     assert response["cancelled_by_id"] == str(canceller.id)
@@ -762,7 +806,7 @@ def test_update_broadcast_message_status_rejects_approval_from_user_not_on_that_
     t = create_template(sample_broadcast_service, BROADCAST_TYPE)
     bm = create_broadcast_message(t, status=BroadcastStatusType.PENDING_APPROVAL)
     approver = create_user(email="approver@gov.uk")
-    mock_task = mocker.patch("app.celery.broadcast_message_tasks.send_broadcast_event.apply_async")
+    mock_task = mocker.patch("app.tasks.broadcast_message_tasks.send_broadcast_event.send")
 
     response = admin_request.post(
         "broadcast_message.update_broadcast_message_status",
