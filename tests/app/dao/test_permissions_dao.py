@@ -1,4 +1,4 @@
-from app.dao.permissions_dao import permission_dao, default_service_permissions
+from app.dao.permissions_dao import default_service_permissions, permission_dao
 from tests.app.db import create_service
 
 

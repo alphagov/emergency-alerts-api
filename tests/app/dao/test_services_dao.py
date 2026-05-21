@@ -6,8 +6,8 @@ from sqlalchemy.orm.exc import NoResultFound
 
 from app import db
 from app.dao.organisation_dao import dao_add_service_to_organisation
-from app.dao.service_permissions_dao import dao_remove_service_permission
 from app.dao.permissions_dao import default_service_permissions
+from app.dao.service_permissions_dao import dao_remove_service_permission
 from app.dao.service_user_dao import (
     dao_get_service_user,
     dao_update_service_user,
@@ -542,7 +542,10 @@ def test_add_existing_user_to_another_service_doesnot_change_old_permissions(not
 
     other_user_service_one_permissions = Permission.query.filter_by(service=service_one, user=other_user).all()
     assert len(other_user_service_one_permissions) == 2
-    assert [permission.permission for permission in other_user_service_one_permissions] == [MANAGE_USERS, MANAGE_API_KEYS]
+    assert [permission.permission for permission in other_user_service_one_permissions] == [
+        MANAGE_USERS,
+        MANAGE_API_KEYS,
+    ]
 
     other_user_service_two_permissions = Permission.query.filter_by(service=service_two, user=other_user).all()
     assert len(other_user_service_two_permissions) == 4
