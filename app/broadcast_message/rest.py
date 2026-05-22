@@ -15,6 +15,7 @@ from app.dao.broadcast_message_dao import (
     dao_get_broadcast_messages_for_service,
     dao_get_broadcast_messages_for_service_with_user,
     dao_get_broadcast_provider_messages_by_broadcast_message_id,
+    dao_get_broadcast_provider_messages_by_broadcast_message_ids,
     dao_purge_old_broadcast_messages,
 )
 from app.dao.broadcast_message_edit_reasons import (
@@ -30,6 +31,7 @@ from app.dao.templates_dao import dao_get_template_by_id_and_service_id
 from app.dao.users_dao import get_user_by_id
 from app.errors import InvalidRequest, register_errors
 from app.models import (
+    BROADCAST_PROVIDER_STATUS_ERR,
     BroadcastEventMessageType,
     BroadcastMessage,
     BroadcastStatusType,
@@ -65,6 +67,25 @@ def get_broadcast_message(service_id, broadcast_message_id):
 
 @broadcast_message_blueprint.route("/messages", methods=["GET"])
 def get_broadcast_msgs_for_service(service_id):
+    broadcast_messages_db = dao_get_broadcast_messages_for_service_with_user(service_id)
+
+    # Performance optimisation: we likely only care about sending error statuses for alerts which
+    # are live - avoid querying for many many past alerts for such data.
+    broadcast_ids_for_sending_status = [
+        row[0].id for row in broadcast_messages_db if row[0].status == BroadcastStatusType.BROADCASTING
+    ]
+    broadcast_status_summary = dao_get_broadcast_provider_messages_by_broadcast_message_ids(
+        broadcast_message_ids=broadcast_ids_for_sending_status
+    )
+
+    failed_broadcast_ids = set()
+    for broadcast_id, broadcast_provider_message, message_type in broadcast_status_summary:
+        if message_type != BroadcastEventMessageType.ALERT:
+            continue
+
+        if broadcast_provider_message.get_latest_status_entry().status == BROADCAST_PROVIDER_STATUS_ERR:
+            failed_broadcast_ids.add(broadcast_id)
+
     broadcast_messages = [
         {
             **message.serialize(),
@@ -73,10 +94,9 @@ def get_broadcast_msgs_for_service(service_id):
             "approved_by": approved_by or None,
             "cancelled_by": cancelled_by or None,
             "submitted_by": submitted_by or None,
+            "sending_error": message.id in failed_broadcast_ids,
         }
-        for message, created_by, rejected_by, approved_by, cancelled_by, submitted_by in (
-            dao_get_broadcast_messages_for_service_with_user(service_id)
-        )
+        for message, created_by, rejected_by, approved_by, cancelled_by, submitted_by in broadcast_messages_db
     ]
     return jsonify(broadcast_messages=broadcast_messages)
 

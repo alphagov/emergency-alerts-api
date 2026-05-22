@@ -137,7 +137,9 @@ def dao_get_broadcast_messages_for_service_with_user(service_id):
     )
 
 
-def dao_get_broadcast_provider_messages_by_broadcast_message_ids(broadcast_message_ids):
+def dao_get_broadcast_provider_messages_by_broadcast_message_ids(
+    broadcast_message_ids,
+) -> tuple[uuid.UUID, BroadcastProviderMessage, str]:
     """
     Get the broadcast message ID against every BroadcastProviderMessage and message_type (alert or cancel)
     """
