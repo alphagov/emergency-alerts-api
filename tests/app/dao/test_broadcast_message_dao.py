@@ -3,12 +3,14 @@ from datetime import datetime, timedelta
 from freezegun import freeze_time
 
 from app.dao.broadcast_message_dao import (
+    add_broadcast_provider_message_status,
     create_broadcast_provider_message,
     dao_get_all_broadcast_messages,
     dao_get_all_finished_broadcast_messages_with_outstanding_actions,
     dao_get_all_pre_broadcast_messages,
     dao_get_broadcast_message_by_id_and_service_id_with_user,
     dao_get_broadcast_messages_for_service_with_user,
+    dao_get_broadcast_provider_messages_by_broadcast_message_ids,
     dao_purge_old_broadcast_messages,
     get_earlier_events_for_broadcast_event,
 )
@@ -16,6 +18,9 @@ from app.dao.broadcast_service_dao import (
     insert_or_update_service_broadcast_settings,
 )
 from app.models import (
+    BROADCAST_PROVIDER_STATUS_ACK,
+    BROADCAST_PROVIDER_STATUS_ERR,
+    BROADCAST_PROVIDER_STATUS_SENDING,
     BROADCAST_TYPE,
     BroadcastEventMessageType,
     BroadcastMessage,
@@ -165,6 +170,72 @@ def test_dao_get_all_broadcast_messages(sample_broadcast_service):
             None,
         ),
     ]
+
+
+def test_dao_get_broadcast_provider_messages_by_broadcast_message_ids(
+    sample_broadcast_service, sample_user, sample_broadcast_service_3, sample_user_2
+):
+    message_1 = create_broadcast_message(
+        service=sample_broadcast_service_3,
+        content="test",
+        stubbed=False,
+        status="broadcasting",
+        starts_at=datetime(2021, 6, 20, 12, 0, 0),
+    )
+    message_2 = create_broadcast_message(
+        service=sample_broadcast_service_3,
+        content="test",
+        stubbed=False,
+        status="broadcasting",
+        starts_at=datetime(2021, 6, 20, 12, 0, 0),
+    )
+
+    # Message 1 sent to two MNOs
+    sending_event = create_broadcast_event(broadcast_message=message_1)
+    bpm_send_test = create_broadcast_provider_message(broadcast_event=sending_event, provider="test")
+    add_broadcast_provider_message_status(bpm_send_test, status=BROADCAST_PROVIDER_STATUS_SENDING)
+    add_broadcast_provider_message_status(bpm_send_test, status=BROADCAST_PROVIDER_STATUS_ACK)
+    bpm_send_test2 = create_broadcast_provider_message(broadcast_event=sending_event, provider="test2")
+    add_broadcast_provider_message_status(bpm_send_test2, status=BROADCAST_PROVIDER_STATUS_SENDING)
+    add_broadcast_provider_message_status(bpm_send_test2, status=BROADCAST_PROVIDER_STATUS_ACK)
+
+    # Message 2 errored for one MNO when canceling
+    sending_event2 = create_broadcast_event(broadcast_message=message_2)
+    bpm2_send_test = create_broadcast_provider_message(broadcast_event=sending_event2, provider="test")
+    add_broadcast_provider_message_status(bpm2_send_test, status=BROADCAST_PROVIDER_STATUS_SENDING)
+    add_broadcast_provider_message_status(bpm2_send_test, status=BROADCAST_PROVIDER_STATUS_ACK)
+    sending_event2_cancel = create_broadcast_event(broadcast_message=message_2, message_type="cancel")
+    bpm2_send_cancel_error = create_broadcast_provider_message(broadcast_event=sending_event2_cancel, provider="test2")
+    add_broadcast_provider_message_status(bpm2_send_cancel_error, status=BROADCAST_PROVIDER_STATUS_SENDING)
+    add_broadcast_provider_message_status(bpm2_send_cancel_error, status=BROADCAST_PROVIDER_STATUS_ERR)
+
+    broadcast_provider_messages = dao_get_broadcast_provider_messages_by_broadcast_message_ids(
+        [message_1.id, message_2.id]
+    )
+
+    assert len(broadcast_provider_messages) == 4
+
+    for broadcast_id, broadcast_provider_message, message_type in broadcast_provider_messages:
+        if broadcast_id == message_1.id:
+            # Sent test for two providers
+            assert message_type == "alert"
+            assert broadcast_provider_message.get_latest_status_entry().status == BROADCAST_PROVIDER_STATUS_ACK
+            assert broadcast_provider_message.provider in {"test", "test2"}
+        elif broadcast_id == message_2.id:
+            # Sent and then failed cancel test
+            if broadcast_provider_message.get_latest_status_entry().status == BROADCAST_PROVIDER_STATUS_ACK:
+                assert message_type == "alert"
+                assert broadcast_provider_message.provider == "test"
+            elif broadcast_provider_message.get_latest_status_entry().status == BROADCAST_PROVIDER_STATUS_ERR:
+                assert message_type == "cancel"
+                assert broadcast_provider_message.provider == "test2"
+            else:
+                raise AssertionError("Unexpected status")
+        else:
+            # Um
+            raise AssertionError(
+                f"Broadcast ID doesn't apply to this test? {broadcast_id}: {str(broadcast_provider_message)}"
+            )
 
 
 @freeze_time("2024-12-12 12:12:12")
@@ -593,7 +664,7 @@ def test_dao_get_broadcast_message_by_id_and_service_id_with_user(sample_broadca
     assert broadcast_message[2:5] == (None, None, None)
 
 
-def test_dao_get_broadcast_messages_for_service_with_user(
+def test_dao_get_broadcast_messages_for_service_with_user_and_provider_status(
     sample_broadcast_service, sample_user, sample_broadcast_service_3, sample_user_2
 ):
     template_1 = create_template(sample_broadcast_service, "broadcast")
