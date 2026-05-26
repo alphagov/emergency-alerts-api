@@ -218,10 +218,12 @@ def _build_alert_summary_email_body(broadcast_message, data):
           </p>
 
           <p style="font-size:16px; color:#0b0c0c;">
-            <ul>The attachments include:
-              <li>areas.geojson - areas covered by this alert, in GEOjson format</li>
-              <li>areas.cap.xml - areas covered by this alert, in CAP XML format</li>
-              <li>areas.ibag.xml - areas covered by this alert, in IBAG XML format</li>
+            <strong>Attachments</strong>
+            <ul style="margin: 0 0 20px 20px; padding: 0; font-family: Arial, sans-serif;
+              font-size: 16px; line-height: 1.5;">
+              <li style="margin-bottom: 5px;">areas.geojson - areas covered by this alert, in GEOjson format</li>
+              <li style="margin-bottom: 5px;">areas.cap.xml - areas covered by this alert, in CAP XML format</li>
+              <li style="margin-bottom: 5px;">areas.ibag.xml - areas covered by this alert, in IBAG XML format</li>
             </ul>
           </p>
 
