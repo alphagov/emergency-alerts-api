@@ -1,5 +1,9 @@
 import logging
 import os
+from email import encoders
+from email.mime.base import MIMEBase
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 import boto3
 import botocore.exceptions
@@ -60,3 +64,43 @@ class SESClient:
         except botocore.exceptions.ClientError as e:
             logger.error(f"SES send_email failed: {e.response['Error']}")
             raise
+
+    def send_raw_email(self, subject, html_body, to_addresses, attachments=None):
+        """
+        Send an email with optional attachments using SES send_raw_email.
+        attachments: list of tuples -> [("file.txt", b"content"), ...]
+        """
+
+        msg = MIMEMultipart()
+        msg["Subject"] = subject
+        msg["From"] = self.sender
+        msg["To"] = ", ".join(to_addresses)
+
+        # Add HTML body
+        msg.attach(MIMEText(html_body, "html"))
+
+        # Add attachments
+        if attachments:
+            for filename, file_bytes, mime_type in attachments:
+                part = _build_mime_attachment(filename, file_bytes, mime_type)
+                msg.attach(part)
+
+        # Send via SES
+        try:
+            response = self.client.send_raw_email(RawMessage={"Data": msg.as_string()})
+
+            return response
+        except botocore.exceptions.ClientError as e:
+            logger.error(f"SES send_raw_email failed: {e.response['Error']}")
+            raise
+
+
+def _build_mime_attachment(filename, file_bytes, mime_type):
+    maintype, subtype = mime_type.split("/")
+
+    part = MIMEBase(maintype, subtype)
+    part.set_payload(file_bytes)
+    encoders.encode_base64(part)
+    part.add_header("Content-Disposition", "attachment", filename=filename)
+
+    return part
