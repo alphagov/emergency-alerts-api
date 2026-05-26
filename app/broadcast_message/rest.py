@@ -420,6 +420,8 @@ def purge_broadcast_messages(service_id, older_than):
 @broadcast_message_blueprint.route("/<uuid:broadcast_message_id>/alert-summary-email", methods=["POST"])
 def send_alert_summary_email(service_id, broadcast_message_id, client=None):
 
+    data = request.get_json()
+
     broadcast_message = dao_get_broadcast_message_by_id_and_service_id(broadcast_message_id, service_id)
 
     current_app.logger.info(
@@ -431,6 +433,6 @@ def send_alert_summary_email(service_id, broadcast_message_id, client=None):
         },
     )
 
-    broadcast_utils.send_alert_summary_email(broadcast_message, client=client)
+    broadcast_utils.send_alert_summary_email(broadcast_message, data, client=client)
 
     return jsonify(broadcast_message.serialize()), 200
