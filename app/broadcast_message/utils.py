@@ -172,6 +172,7 @@ def _build_alert_summary_email_body(broadcast_message, data):
     service_name = broadcast_message.service.name
     channel = broadcast_message.service.broadcast_channel
     count_of_phones = data.get("count_of_phones")
+    currentenv = current_app.config["ENVIRONMENT"]
 
     # Build HTML
     html = f"""
@@ -180,7 +181,7 @@ def _build_alert_summary_email_body(broadcast_message, data):
 
         <div style="background:#0b0c0c; padding:16px;">
           <h1 style="color:#ffffff; margin:0; font-size:24px; font-weight:700;">
-            GOV.UK Emergency Alerts
+            GOV.UK Emergency Alerts - {currentenv}
           </h1>
         </div>
 
@@ -193,6 +194,8 @@ def _build_alert_summary_email_body(broadcast_message, data):
           <p style="font-size:16px; color:#0b0c0c;">
             <br>An alert will be sent from the <strong>{service_name}</strong>
             service with the following details.</br>
+          </p>
+          <p style="font-size:16px; color:#0b0c0c;">
             <br>The broadcast channel will be <strong>{channel}</strong>.</br>
           </p>
 
