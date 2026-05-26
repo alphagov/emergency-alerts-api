@@ -17,6 +17,7 @@ from app.dao.broadcast_message_history_dao import (
 from app.models import (
     BROADCAST_PROVIDER_STATUS_ACK,
     BROADCAST_PROVIDER_STATUS_ERR,
+    BROADCAST_PROVIDER_STATUS_SENDING,
     BROADCAST_TYPE,
     BroadcastEventMessageType,
     BroadcastStatusType,
@@ -258,9 +259,17 @@ def test_get_broadcast_messages_for_service_with_user(
     t_2 = create_template(sample_broadcast_service_3, BROADCAST_TYPE)
 
     with freeze_time("2020-01-01 12:00"):
-        bm1 = create_broadcast_message(t)
+        bm1 = create_broadcast_message(t, status=BroadcastStatusType.BROADCASTING)
+        be1 = create_broadcast_event(broadcast_message=bm1)
+        bpm1 = create_broadcast_provider_message(broadcast_event=be1, provider="test")
+        add_broadcast_provider_message_status(bpm1, status=BROADCAST_PROVIDER_STATUS_SENDING)
+        add_broadcast_provider_message_status(bpm1, status=BROADCAST_PROVIDER_STATUS_ERR)
     with freeze_time("2020-01-01 13:00"):
-        bm2 = create_broadcast_message(t)
+        bm2 = create_broadcast_message(t, status=BroadcastStatusType.BROADCASTING)
+        be2 = create_broadcast_event(broadcast_message=bm1)
+        bpm2 = create_broadcast_provider_message(broadcast_event=be2, provider="test")
+        add_broadcast_provider_message_status(bpm2, status=BROADCAST_PROVIDER_STATUS_SENDING)
+        add_broadcast_provider_message_status(bpm2, status=BROADCAST_PROVIDER_STATUS_ACK)
     with freeze_time("2020-01-01 13:00"):
         bm3 = create_broadcast_message(t_2)
 
@@ -272,6 +281,8 @@ def test_get_broadcast_messages_for_service_with_user(
     assert response_service_1["broadcast_messages"][0]["id"] == str(bm1.id)
     assert response_service_1["broadcast_messages"][1]["id"] == str(bm2.id)
     assert response_service_1["broadcast_messages"][0]["created_by"] == sample_user.name
+    assert response_service_1["broadcast_messages"][0]["sending_error"] is True
+    assert response_service_1["broadcast_messages"][1]["sending_error"] is False
 
     # Getting all Broadcast messages from second sample service and making relevant assertions
     response_service_2 = admin_request.get(
@@ -281,6 +292,7 @@ def test_get_broadcast_messages_for_service_with_user(
     assert len(response_service_2["broadcast_messages"]) == 1
     assert response_service_2["broadcast_messages"][0]["created_by"] == sample_user_2.name
     assert response_service_2["broadcast_messages"][0]["id"] == str(bm3.id)
+    assert response_service_2["broadcast_messages"][0]["sending_error"] is False
 
 
 @freeze_time("2020-01-01")

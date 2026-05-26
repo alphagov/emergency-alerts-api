@@ -138,6 +138,29 @@ def dao_get_broadcast_messages_for_service_with_user(service_id):
     )
 
 
+def dao_get_broadcast_provider_messages_by_broadcast_message_ids(
+    broadcast_message_ids,
+) -> tuple[uuid.UUID, BroadcastProviderMessage, str]:
+    """
+    Get the broadcast message ID against every BroadcastProviderMessage and message_type (alert or cancel)
+    """
+    return (
+        db.session.query(
+            BroadcastMessage.id,
+            BroadcastProviderMessage,
+            BroadcastEvent.message_type,
+        )
+        .join(
+            BroadcastProviderMessageStatus,
+            BroadcastProviderMessageStatus.broadcast_provider_message_id == BroadcastProviderMessage.id,
+        )
+        .join(BroadcastEvent, BroadcastEvent.id == BroadcastProviderMessage.broadcast_event_id)
+        .join(BroadcastMessage, BroadcastMessage.id == BroadcastEvent.broadcast_message_id)
+        .filter(BroadcastEvent.broadcast_message_id.in_(broadcast_message_ids))
+        .all()
+    )
+
+
 def dao_get_broadcast_provider_messages_by_broadcast_message_id(broadcast_message_id):
     return (
         db.session.query(
