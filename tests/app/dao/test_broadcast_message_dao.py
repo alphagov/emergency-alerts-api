@@ -666,7 +666,7 @@ def test_dao_get_broadcast_message_by_id_and_service_id_with_user(sample_broadca
     assert broadcast_message[2:5] == (None, None, None)
 
 
-def test_dao_get_broadcast_messages_for_service_with_user_and_provider_status(
+def test_dao_get_broadcast_messages_for_service_with_user(
     sample_broadcast_service, sample_user, sample_broadcast_service_3, sample_user_2
 ):
     template_1 = create_template(sample_broadcast_service, "broadcast")
