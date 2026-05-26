@@ -1,4 +1,5 @@
 import inspect
+import json
 from datetime import datetime, timezone
 
 from emergency_alerts_utils.clients.zendesk.zendesk_client import (
@@ -146,12 +147,73 @@ def _create_broadcast_event(broadcast_message):
         )
 
 
-def send_alert_summary_email(broadcast_message, client=None):
+def send_alert_summary_email(broadcast_message, data, client=None):
     service = broadcast_message.service
     service_emails = service.email_addresses
     to_addresses = [se.email_address for se in service_emails]
-
-    subject = f"Pre-alert for message {broadcast_message}"
+    subject = f"{service.name} summary ({service.broadcast_channel} channel) - {broadcast_message.reference}"
+    body = _build_alert_summary_email_body(broadcast_message, data)
+    attachments = _build_alert_summary_email_attachments(data, broadcast_message.reference)
 
     ses = SESClient(client=client)
-    ses.send_email(to_addresses, subject, body_html="hello")
+    ses.send_raw_email(subject=subject, to_addresses=to_addresses, html_body=body, attachments=attachments)
+
+
+def _build_alert_summary_email_body(broadcast_message, data):
+    """
+    Generate an HTML summary email for a broadcast message.
+    """
+
+    reference = broadcast_message.reference
+    alert_message = broadcast_message.content
+    additional_info = broadcast_message.extra_content
+    duration_minutes = int(broadcast_message.duration.total_seconds() // 60)
+
+    count_of_phones = data.get("count_of_phones")
+
+    # Build HTML
+    html = f"""
+    <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.5;">
+            <h2>Emergency Alert Summary - {broadcast_message.service.broadcast_channel} channel</h2>
+
+            <p><strong>Reference:</strong><br>{reference}</p>
+
+            <p><strong>Alert Message:</strong><br>{alert_message}</p>
+
+            <p><strong>Phone Estimate:</strong><br>{count_of_phones}</p>
+
+    """
+
+    if additional_info:
+        html += f"""
+            <p><strong>Additional Info:</strong><br>{additional_info}</p>
+        """
+
+    html += f"""
+            <p><strong>Alert Duration:</strong><br>{duration_minutes} minutes</p>
+        </body>
+    </html>
+    """
+
+    return html
+
+
+def _build_alert_summary_email_attachments(data, reference):
+    """
+    Generate attachments for a broadcast message summary email.
+    """
+    geojson = data.get("geojson")
+    cap_xml = data.get("cap_xml")
+    ibag_xml = data.get("ibag_xml")
+
+    attachments = []
+
+    if geojson:
+        attachments.append((f"{reference}.geojson", json.dumps(geojson), "application/geo+json"))
+    if cap_xml:
+        attachments.append((f"{reference}.cap.xml", cap_xml, "application/xml"))
+    if ibag_xml:
+        attachments.append((f"{reference}.ibag.xml", ibag_xml, "application/xml"))
+
+    return attachments
