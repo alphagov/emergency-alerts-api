@@ -174,25 +174,51 @@ def _build_alert_summary_email_body(broadcast_message, data):
     # Build HTML
     html = f"""
     <html>
-        <body style="font-family: Arial, sans-serif; line-height: 1.5;">
-            <h2>Emergency Alert Summary - {broadcast_message.service.broadcast_channel} channel</h2>
+      <body style="margin:0; padding:0; font-family: Arial, Helvetica, sans-serif; background:#f3f2f1;">
 
-            <p><strong>Reference:</strong><br>{reference}</p>
+        <div style="background:#0b0c0c; padding:16px;">
+          <h1 style="color:#ffffff; margin:0; font-size:24px; font-weight:700;">
+            GOV.UK Emergency Alert Summary
+          </h1>
+        </div>
 
-            <p><strong>Alert Message:</strong><br>{alert_message}</p>
+        <div style="padding:24px; background:#ffffff;">
 
-            <p><strong>Phone Estimate:</strong><br>{count_of_phones}</p>
+          <h2 style="color:#0b0c0c; font-size:20px; margin-top:0;">
+            Emergency Alert Summary - {broadcast_message.service.broadcast_channel} channel
+          </h2>
 
+          <p style="font-size:16px; color:#0b0c0c;">
+            <strong>Reference:</strong><br>{reference}
+          </p>
+
+          <p style="font-size:16px; color:#0b0c0c;">
+            <strong>Alert Message:</strong><br>{alert_message}
+          </p>
+
+        <p style="font-size:16px; color:#0b0c0c;">
+            <strong>Phone Estimate:</strong><br>{count_of_phones}
+          </p>
     """
 
     if additional_info:
         html += f"""
-            <p><strong>Additional Info:</strong><br>{additional_info}</p>
+          <p style="font-size:16px; color:#0b0c0c;">
+            <strong>Additional Info:</strong><br>{additional_info}
+          </p>
         """
 
     html += f"""
-            <p><strong>Alert Duration:</strong><br>{duration_minutes} minutes</p>
-        </body>
+          <p style="font-size:16px; color:#0b0c0c;">
+            <strong>Alert Duration:</strong><br>{duration_minutes} minutes
+          </p>
+
+        </div>
+
+        <div style="padding:16px; text-align:center; font-size:14px; color:#505a5f;">
+          This is an automated summary of a GOV.UK alert.
+        </div>
+      </body>
     </html>
     """
 
