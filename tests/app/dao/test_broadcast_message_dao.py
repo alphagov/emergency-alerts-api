@@ -4,11 +4,13 @@ from freezegun import freeze_time
 
 from app.dao.broadcast_message_dao import (
     create_broadcast_provider_message,
+    dao_delete_records_for_broadcast,
     dao_get_all_broadcast_messages,
     dao_get_all_finished_broadcast_messages_with_outstanding_actions,
     dao_get_all_pre_broadcast_messages,
     dao_get_broadcast_message_by_id_and_service_id_with_user,
     dao_get_broadcast_messages_for_service_with_user,
+    dao_get_public_messages_older_than,
     dao_purge_old_broadcast_messages,
     get_earlier_events_for_broadcast_event,
 )
@@ -628,3 +630,70 @@ def test_dao_get_broadcast_messages_for_service_with_user(
     assert broadcast_messages_service_1[0][1] == sample_user.name
     assert broadcast_messages_service_2[1][1] == sample_user_2.name
     assert broadcast_messages_service_2[0][2:5] == (None, None, None)
+
+
+@freeze_time("2025-06-20 12:00:00")
+def test_dao_get_public_messages_older_than(
+    sample_broadcast_service, sample_broadcast_service_2, sample_broadcast_service_3
+):
+    template_severe = create_template(sample_broadcast_service, BROADCAST_TYPE)
+    template_government = create_template(sample_broadcast_service_2, BROADCAST_TYPE)
+    template_operator = create_template(sample_broadcast_service_3, BROADCAST_TYPE)
+
+    _ = create_broadcast_message(template_severe, starts_at=datetime(2025, 6, 15, 12, 0, 0), status="completed")
+    _ = create_broadcast_message(template_government, starts_at=datetime(2025, 6, 15, 14, 0, 0), status="completed")
+    _ = create_broadcast_message(
+        template_operator, starts_at=datetime(2025, 6, 15, 16, 0, 0), status="completed"
+    )  # excluded: operator channel not public
+    _ = create_broadcast_message(template_severe, starts_at=datetime(2025, 6, 16, 10, 0, 0), status="completed")
+    _ = create_broadcast_message(
+        template_operator, starts_at=datetime(2025, 6, 16, 22, 0, 0), status="completed"
+    )  # excluded: operator channel not public
+    _ = create_broadcast_message(
+        template_government, starts_at=datetime(2025, 6, 18, 12, 0, 0), status="completed"
+    )  # excluded: not old enough
+    _ = create_broadcast_message(
+        template_severe, starts_at=datetime(2025, 6, 19, 12, 0, 0), status="completed"
+    )  # excluded: not old enough
+
+    broadcast_messages = dao_get_public_messages_older_than(3)
+    assert len(broadcast_messages) == 3
+
+
+def test_dao_delete_records_for_broadcast(sample_broadcast_service, sample_broadcast_service_2):
+    template_severe = create_template(sample_broadcast_service, BROADCAST_TYPE)
+    bm1 = create_broadcast_message(template_severe, starts_at=datetime(2025, 6, 15, 12, 0, 0), status="completed")
+    be1 = create_broadcast_event(
+        bm1,
+        sent_at=bm1.starts_at + timedelta(hours=1),
+        message_type=BroadcastEventMessageType.ALERT,
+        transmitted_content={"body": "Some content"},
+    )
+    _ = create_broadcast_provider_message(be1, "ee")
+    _ = create_broadcast_provider_message(be1, "o2")
+
+    template_government = create_template(sample_broadcast_service_2, BROADCAST_TYPE)
+    bm2 = create_broadcast_message(template_government, starts_at=datetime(2025, 6, 16, 12, 0, 0), status="completed")
+    be2 = create_broadcast_event(
+        bm2,
+        sent_at=bm2.starts_at + timedelta(hours=2),
+        message_type=BroadcastEventMessageType.ALERT,
+        transmitted_content={"body": "Some content"},
+    )
+    _ = create_broadcast_provider_message(be2, "ee")
+    _ = create_broadcast_provider_message(be2, "o2")
+    _ = create_broadcast_provider_message(be2, "three")
+    _ = create_broadcast_provider_message(be2, "vodafone")
+
+    counter = dao_delete_records_for_broadcast(template_severe.service_id, bm1.id)
+
+    assert counter["msgs"] == 1
+    assert counter["events"] == 1
+    assert counter["provider_msgs"] == 2
+
+    counter = dao_delete_records_for_broadcast(template_government.service_id, bm2.id)
+
+    assert counter["msgs"] == 1
+    assert counter["events"] == 1
+    assert counter["provider_msgs"] == 4
+    assert counter["msg_numbers"] == 1
