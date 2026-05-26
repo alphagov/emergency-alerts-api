@@ -151,9 +151,9 @@ def send_alert_summary_email(broadcast_message, data, client=None):
     service = broadcast_message.service
     service_emails = service.email_addresses
     to_addresses = [se.email_address for se in service_emails]
-    subject = f"{service.name} summary ({service.broadcast_channel} channel) - {broadcast_message.reference}"
+    subject = f"{service.name} advance notice of broadcast"
     body = _build_alert_summary_email_body(broadcast_message, data)
-    attachments = _build_alert_summary_email_attachments(data, broadcast_message.reference)
+    attachments = _build_alert_summary_email_attachments(data)
 
     ses = SESClient(client=client)
     ses.send_raw_email(subject=subject, to_addresses=to_addresses, html_body=body, attachments=attachments)
@@ -164,11 +164,13 @@ def _build_alert_summary_email_body(broadcast_message, data):
     Generate an HTML summary email for a broadcast message.
     """
 
-    reference = broadcast_message.reference
     alert_message = broadcast_message.content
     additional_info = broadcast_message.extra_content
+    created_at = broadcast_message.created_at.replace(microsecond=0)
+    created_by = broadcast_message.created_by.id
     duration_minutes = int(broadcast_message.duration.total_seconds() // 60)
-
+    service_name = broadcast_message.service.name
+    channel = broadcast_message.service.broadcast_channel
     count_of_phones = data.get("count_of_phones")
 
     # Build HTML
@@ -189,13 +191,9 @@ def _build_alert_summary_email_body(broadcast_message, data):
           </h2>
 
           <p style="font-size:16px; color:#0b0c0c;">
-            <br>An alert will be sent for the <strong>{broadcast_message.service.name}</strong>
+            <br>An alert will be sent from the <strong>{service_name}</strong>
             service with the following details.</br>
-            <br>The broadcast channel is <strong>{broadcast_message.service.broadcast_channel}</strong>.</br>
-          </p>
-
-          <p style="font-size:16px; color:#0b0c0c;">
-            <strong>Reference</strong><br>{reference}
+            <br>The broadcast channel will be <strong>{channel}</strong>.</br>
           </p>
 
           <p style="font-size:16px; color:#0b0c0c;">
@@ -219,10 +217,23 @@ def _build_alert_summary_email_body(broadcast_message, data):
             <strong>Alert Duration</strong><br>{duration_minutes} minutes
           </p>
 
+          <p style="font-size:16px; color:#0b0c0c;">
+            <ul>The attachments include:
+              <li>areas.geojson - areas covered by this alert, in GEOjson format</li>
+              <li>areas.cap.xml - areas covered by this alert, in CAP XML format</li>
+              <li>areas.ibag.xml - areas covered by this alert, in IBAG XML format</li>
+            </ul>
+          </p>
+
+          <p style="font-size:16px; color:#0b0c0c;">
+            If you require assistance, or wish to unsubscribe from future advance notice notifications please contact
+            the <a href="mailto:emergency-alerts-support@digital.cabinet-office.gov.uk">Emergency Alerts Support</a>
+            team.
+          </p>
         </div>
 
         <div style="padding:16px; text-align:center; font-size:14px; color:#505a5f;">
-          Alert created by {broadcast_message.created_by.name} at {broadcast_message.created_at}.
+          Alert created by {created_by} at {created_at}.
         </div>
       </body>
     </html>
@@ -231,7 +242,7 @@ def _build_alert_summary_email_body(broadcast_message, data):
     return html
 
 
-def _build_alert_summary_email_attachments(data, reference):
+def _build_alert_summary_email_attachments(data):
     """
     Generate attachments for a broadcast message summary email.
     """
@@ -242,10 +253,10 @@ def _build_alert_summary_email_attachments(data, reference):
     attachments = []
 
     if geojson:
-        attachments.append((f"{reference}.geojson", json.dumps(geojson), "application/geo+json"))
+        attachments.append(("areas.geojson", json.dumps(geojson), "application/geo+json"))
     if cap_xml:
-        attachments.append((f"{reference}.cap.xml", cap_xml, "application/xml"))
+        attachments.append(("areas.cap.xml", cap_xml, "application/xml"))
     if ibag_xml:
-        attachments.append((f"{reference}.ibag.xml", ibag_xml, "application/xml"))
+        attachments.append(("areas.ibag.xml", ibag_xml, "application/xml"))
 
     return attachments
