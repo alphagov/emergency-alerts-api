@@ -186,24 +186,17 @@ def _build_alert_summary_email_body(broadcast_message, data):
         </div>
 
         <div style="padding:24px; background:#ffffff;">
-
           <h2 style="color:#0b0c0c; font-size:20px; margin-top:0;">
             Alert Summary
           </h2>
-
           <p style="font-size:16px; color:#0b0c0c;">
-            <br>An alert will be sent from the <strong>{service_name}</strong>
-            service with the following details.</br>
+            <br>An alert is going to be sent from the <strong>{service_name} - {currentenv}</strong>
+            service with the following details. The broadcast channel will be <strong>{channel}</strong>.</br>
           </p>
-          <p style="font-size:16px; color:#0b0c0c;">
-            <br>The broadcast channel will be <strong>{channel}</strong>.</br>
-          </p>
-
           <p style="font-size:16px; color:#0b0c0c;">
             <strong>Alert Message</strong><br>{alert_message}
           </p>
-
-        <p style="font-size:16px; color:#0b0c0c;">
+          <p style="font-size:16px; color:#0b0c0c;">
             <strong>Phone Estimate</strong><br>{count_of_phones}
           </p>
     """
@@ -224,7 +217,7 @@ def _build_alert_summary_email_body(broadcast_message, data):
             <strong>Attachments</strong>
             <ul style="margin: 0 0 20px 20px; padding: 0; font-family: Arial, sans-serif;
               font-size: 16px; line-height: 1.5;">
-              <li style="margin-bottom: 5px;">areas.geojson - areas covered by this alert, in GEOjson format</li>
+              <li style="margin-bottom: 5px;">areas.geojson - areas covered by this alert, in geoJSON format</li>
               <li style="margin-bottom: 5px;">areas.cap.xml - areas covered by this alert, in CAP XML format</li>
               <li style="margin-bottom: 5px;">areas.ibag.xml - areas covered by this alert, in IBAG XML format</li>
             </ul>
