@@ -85,11 +85,45 @@ def request_log_ingest_task(self, broadcast_event_id):
         return success
 
     except self.MaxRetriesExceededError:
-        current_app.logger.error(
-            f"Max retries exceeded waiting for provider messages for broadcast_event {broadcast_event_id}",
+        current_app.logger.warning(
+            f"Max retries exceeded waiting for provider messages for broadcast_event {broadcast_event_id}. "
+            f"Proceeding with available provider messages.",
             extra={"broadcast_event_id": broadcast_event_id},
         )
-        return False
+        provider_messages = dao_get_broadcast_provider_messages_for_event(broadcast_event_id)
+        if not provider_messages:
+            current_app.logger.error(
+                f"No provider messages found for broadcast_event {broadcast_event_id} after max retries. "
+                f"Cannot send log upload invitations.",
+                extra={"broadcast_event_id": broadcast_event_id},
+            )
+            return False
+
+        broadcast_event = BroadcastEvent.query.get(broadcast_event_id)
+        payload = {
+            "alert_reference": str(broadcast_event.id),
+            "environment": current_app.config.get("ENVIRONMENT"),
+            "broadcast_start": (
+                broadcast_event.transmitted_starts_at.isoformat() if broadcast_event.transmitted_starts_at else None
+            ),
+            "broadcast_end": (
+                broadcast_event.transmitted_finishes_at.isoformat() if broadcast_event.transmitted_finishes_at else None
+            ),
+            "mnos": [
+                {
+                    "mno_id": pm.provider.upper(),
+                    "provider_message_id": str(pm.id),
+                }
+                for pm in provider_messages
+            ],
+        }
+
+        lambda_arn = current_app.config.get("LOG_UPLOAD_LAMBDA_ARN")
+        if not lambda_arn:
+            current_app.logger.error("LOG_UPLOAD_LAMBDA_ARN not configured!")
+            return False
+
+        return _invoke_log_upload_lambda(lambda_arn, payload)
 
     except Exception as e:
         current_app.logger.exception(
