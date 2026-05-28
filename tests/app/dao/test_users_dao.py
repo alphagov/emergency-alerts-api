@@ -211,14 +211,14 @@ def test_dao_archive_user(sample_user, sample_organisation, fake_uuid):
     service_1 = create_service(service_name="Service 1")
     service_1_user = create_user(email="1@test.com")
     service_1.users = [sample_user, service_1_user]
-    create_permissions(sample_user, service_1, "manage_templates")
-    create_permissions(service_1_user, service_1, "manage_templates", "view_activity")
+    create_permissions(sample_user, service_1, "manage_settings")
+    create_permissions(service_1_user, service_1, "manage_settings", "view_activity")
 
     service_2 = create_service(service_name="Service 2")
     service_2_user = create_user(email="2@test.com")
     service_2.users = [sample_user, service_2_user]
     create_permissions(sample_user, service_2, "view_activity")
-    create_permissions(service_2_user, service_2, "manage_templates")
+    create_permissions(service_2_user, service_2, "manage_settings")
 
     # make sample_user an org member
     sample_organisation.users = [sample_user]
@@ -256,16 +256,16 @@ def test_user_can_be_archived_if_they_do_not_belong_to_any_active_services(sampl
     assert user_can_be_archived(sample_user)
 
 
-def test_user_can_be_archived_if_the_service_has_other_service_members(sample_service):
+def test_user_can_be_archived_if_the_other_service_members_have_the_manage_settings_permission(sample_service):
     user_1 = create_user(email="1@test.com")
     user_2 = create_user(email="2@test.com")
     user_3 = create_user(email="3@test.com")
 
     sample_service.users = [user_1, user_2, user_3]
 
-    create_permissions(user_1, sample_service, "manage_templates")
-    create_permissions(user_2, sample_service, "manage_templates", "view_activity")
-    create_permissions(user_3, sample_service, "manage_templates", "create_broadcasts", "reject_broadcasts")
+    create_permissions(user_1, sample_service, "manage_settings")
+    create_permissions(user_2, sample_service, "manage_settings", "view_activity")
+    create_permissions(user_3, sample_service, "manage_settings", "create_broadcasts", "reject_broadcasts")
 
     assert len(sample_service.users) == 3
     assert user_can_be_archived(user_1)
@@ -289,14 +289,18 @@ def test_user_cannot_be_archived_if_they_belong_to_a_service_with_no_other_activ
     assert not user_can_be_archived(active_user)
 
 
-def test_user_cannot_be_archived_if_no_other_team_members_in_service(
+def test_user_cannot_be_archived_if_the_other_service_members_do_not_have_the_manage_setting_permission(
     sample_service,
 ):
     active_user = create_user(email="1@test.com")
+    pending_user = create_user(email="2@test.com")
+    inactive_user = create_user(email="3@test.com")
 
-    sample_service.users = [active_user]
+    sample_service.users = [active_user, pending_user, inactive_user]
 
-    create_permissions(active_user, sample_service, "manage_templates")
+    create_permissions(active_user, sample_service, "manage_settings")
+    create_permissions(pending_user, sample_service, "view_activity")
+    create_permissions(inactive_user, sample_service, "create_broadcasts", "approve_broadcasts", "reject_broadcasts")
 
-    assert len(sample_service.users) == 1
+    assert len(sample_service.users) == 3
     assert not user_can_be_archived(active_user)

@@ -298,7 +298,7 @@ def sample_invited_org_user(sample_user, sample_organisation):
 @pytest.fixture(scope="function")
 def sample_user_service_permission(sample_user):
     service = create_service(user=sample_user, check_if_service_exists=True)
-    permission = "manage_templates"
+    permission = "manage_settings"
 
     data = {"user": sample_user, "service": service, "permission": permission}
     p_model = Permission.query.filter_by(user=sample_user, service=service, permission=permission).first()
