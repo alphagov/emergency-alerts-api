@@ -746,6 +746,7 @@ class InvitedOrganisationUser(db.Model):
 # Service Permissions
 MANAGE_USERS = "manage_users"
 MANAGE_TEMPLATES = "manage_templates"
+MANAGE_SETTINGS = "manage_settings"
 MANAGE_API_KEYS = "manage_api_keys"
 PLATFORM_ADMIN = "platform_admin"
 VIEW_ACTIVITY = "view_activity"
@@ -758,6 +759,7 @@ REJECT_BROADCASTS = "reject_broadcasts"
 PERMISSION_LIST = [
     MANAGE_USERS,
     MANAGE_TEMPLATES,
+    MANAGE_SETTINGS,
     MANAGE_API_KEYS,
     PLATFORM_ADMIN,
     VIEW_ACTIVITY,

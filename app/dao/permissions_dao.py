@@ -2,6 +2,7 @@ from app import db
 from app.dao import DAOClass
 from app.models import (
     MANAGE_API_KEYS,
+    MANAGE_SETTINGS,
     MANAGE_TEMPLATES,
     MANAGE_USERS,
     VIEW_ACTIVITY,
@@ -12,6 +13,7 @@ from app.models import (
 default_service_permissions = [
     MANAGE_USERS,
     MANAGE_TEMPLATES,
+    MANAGE_SETTINGS,
     MANAGE_API_KEYS,
     VIEW_ACTIVITY,
 ]

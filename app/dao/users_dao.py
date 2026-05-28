@@ -175,7 +175,7 @@ def get_user_and_accounts(user_id):
 @autocommit
 def dao_archive_user(user):
     if not user_can_be_archived(user):
-        msg = "User can’t be archived - check all services the user belongs to have other active team members"
+        msg = "User can’t be removed from a service - check all services have another team member with manage_settings"
         raise InvalidRequest(msg, 400)
 
     permission_dao.remove_user_service_permissions_for_all_services(user)
@@ -206,6 +206,10 @@ def user_can_be_archived(user):
         other_active_users = [x for x in service.users if x.state == "active" and x != user]
 
         if not other_active_users:
+            return False
+
+        if not any("manage_settings" in user.get_permissions(service.id) for user in other_active_users):
+            # no-one else has manage settings
             return False
 
     return True
