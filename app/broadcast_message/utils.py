@@ -169,10 +169,9 @@ def _build_alert_summary_email_body(broadcast_message, data):
     created_at = broadcast_message.created_at.replace(microsecond=0)
     created_by = broadcast_message.created_by.id
     duration_minutes = int(broadcast_message.duration.total_seconds() // 60)
-    service_name = broadcast_message.service.name
-    channel = broadcast_message.service.broadcast_channel
     count_of_phones = data.get("count_of_phones")
     currentenv = current_app.config["ENVIRONMENT"]
+    extra_content = data.get("extra_content")
 
     # Build HTML
     html = f"""
@@ -190,8 +189,7 @@ def _build_alert_summary_email_body(broadcast_message, data):
             Alert Summary
           </h2>
           <p style="font-size:16px; color:#0b0c0c;">
-            <br>An alert is going to be sent from the <strong>{service_name} - {currentenv}</strong>
-            service with the following details. The broadcast channel will be <strong>{channel}</strong>.</br>
+            <br>{extra_content}
           </p>
           <p style="font-size:16px; color:#0b0c0c;">
             <strong>Alert Message</strong><br>{alert_message}
