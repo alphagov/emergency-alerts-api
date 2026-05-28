@@ -30,31 +30,36 @@ def request_log_ingest_task(broadcast_event_id, attempt=0):
         available_providers = broadcast_event.service.get_available_broadcast_providers()
         provider_messages = dao_get_broadcast_provider_messages_for_event(broadcast_event_id)
 
-        if len(provider_messages) < len(available_providers):
-            if attempt < _MAX_ATTEMPTS:
-                current_app.logger.warning(
-                    f"Only {len(provider_messages)}/{len(available_providers)} provider messages exist yet, "
-                    f"retrying (attempt {attempt + 1}/{_MAX_ATTEMPTS})",
-                    extra={"broadcast_event_id": broadcast_event_id},
-                )
-                request_log_ingest_task.send_with_options(
-                    kwargs={"broadcast_event_id": broadcast_event_id, "attempt": attempt + 1},
-                    delay=_RETRY_DELAY_MS,
-                )
-                return
-            else:
-                current_app.logger.warning(
-                    f"Max retries exceeded waiting for provider messages for broadcast_event {broadcast_event_id}. "
-                    f"Proceeding with available provider messages.",
-                    extra={"broadcast_event_id": broadcast_event_id},
-                )
-                if not provider_messages:
-                    current_app.logger.error(
-                        f"No provider messages found for broadcast_event {broadcast_event_id} after max retries. "
-                        f"Cannot send log upload invitations.",
-                        extra={"broadcast_event_id": broadcast_event_id},
-                    )
-                    return
+        all_providers_ready = len(provider_messages) >= len(available_providers)
+        at_max_retries = attempt >= _MAX_ATTEMPTS
+
+        if not all_providers_ready and not at_max_retries:
+            current_app.logger.warning(
+                f"Only {len(provider_messages)}/{len(available_providers)} provider messages exist yet, "
+                f"retrying (attempt {attempt + 1}/{_MAX_ATTEMPTS})",
+                extra={"broadcast_event_id": broadcast_event_id},
+            )
+            request_log_ingest_task.send_with_options(
+                kwargs={"broadcast_event_id": broadcast_event_id, "attempt": attempt + 1},
+                delay=_RETRY_DELAY_MS,
+            )
+            return
+
+        if not provider_messages:
+            current_app.logger.error(
+                f"No provider messages found for broadcast_event {broadcast_event_id} after {attempt} attempts. "
+                f"Cannot send log upload invitations.",
+                extra={"broadcast_event_id": broadcast_event_id},
+            )
+            return
+
+        if not all_providers_ready:
+            current_app.logger.warning(
+                f"Max retries exceeded: only {len(provider_messages)}/{len(available_providers)} "
+                f"provider messages exist for broadcast_event {broadcast_event_id}. "
+                f"Proceeding with available provider messages.",
+                extra={"broadcast_event_id": broadcast_event_id},
+            )
 
         payload = {
             "alert_reference": str(broadcast_event.id),
