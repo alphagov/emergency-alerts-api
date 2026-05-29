@@ -20,7 +20,7 @@ def upgrade():
         sa.Column("id", sa.String(), nullable=False),
         sa.Column("geometry", Geometry("GEOMETRY", srid=4326), nullable=False),
         sa.Column("density", sa.Float(), nullable=False),
-        sa.PrimaryKeyConstraint('id')
+        sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
         "ix_populations_id",
