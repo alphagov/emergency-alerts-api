@@ -115,7 +115,7 @@ greenlet==3.5.0
     # via sqlalchemy
 grpcio==1.76.0
     # via opentelemetry-exporter-otlp-proto-grpc
-idna==3.11
+idna==3.15
     # via
     #   jsonschema
     #   requests

@@ -186,7 +186,7 @@ def sample_broadcast_service_2(broadcast_organisation, sample_user):
     if not service:
         service = Service(**data)
         dao_create_service(service, sample_user, service_permissions=[BROADCAST_TYPE])
-        insert_or_update_service_broadcast_settings(service, channel="severe")
+        insert_or_update_service_broadcast_settings(service, channel="government")
         dao_add_service_to_organisation(service, current_app.config["BROADCAST_ORGANISATION_ID"])
     else:
         if sample_user not in service.users:
@@ -209,7 +209,7 @@ def sample_broadcast_service_3(broadcast_organisation, sample_user_2):
     if not service:
         service = Service(**data)
         dao_create_service(service, sample_user_2, service_permissions=[BROADCAST_TYPE])
-        insert_or_update_service_broadcast_settings(service, channel="severe")
+        insert_or_update_service_broadcast_settings(service, channel="operator")
         dao_add_service_to_organisation(service, current_app.config["BROADCAST_ORGANISATION_ID"])
     else:
         if sample_user_2 not in service.users:

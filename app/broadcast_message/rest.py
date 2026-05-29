@@ -1,3 +1,7 @@
+import re
+from collections import Counter, defaultdict
+
+import boto3
 import iso8601
 from emergency_alerts_utils.template import BroadcastMessageTemplate
 from flask import Blueprint, current_app, jsonify, request
@@ -10,12 +14,14 @@ from app.broadcast_message.broadcast_message_schema import (
     update_broadcast_message_status_schema,
 )
 from app.dao.broadcast_message_dao import (
+    dao_delete_records_for_broadcast,
     dao_get_broadcast_message_by_id_and_service_id,
     dao_get_broadcast_message_by_id_and_service_id_with_user,
     dao_get_broadcast_messages_for_service,
     dao_get_broadcast_messages_for_service_with_user,
     dao_get_broadcast_provider_messages_by_broadcast_message_id,
-    dao_purge_old_broadcast_messages,
+    dao_get_broadcast_provider_messages_by_broadcast_message_ids,
+    dao_get_public_messages_older_than,
 )
 from app.dao.broadcast_message_edit_reasons import (
     dao_create_broadcast_message_edit_reason,
@@ -30,6 +36,7 @@ from app.dao.templates_dao import dao_get_template_by_id_and_service_id
 from app.dao.users_dao import get_user_by_id
 from app.errors import InvalidRequest, register_errors
 from app.models import (
+    BROADCAST_PROVIDER_STATUS_ERR,
     BroadcastEventMessageType,
     BroadcastMessage,
     BroadcastStatusType,
@@ -65,6 +72,25 @@ def get_broadcast_message(service_id, broadcast_message_id):
 
 @broadcast_message_blueprint.route("/messages", methods=["GET"])
 def get_broadcast_msgs_for_service(service_id):
+    broadcast_messages_db = dao_get_broadcast_messages_for_service_with_user(service_id)
+
+    # Performance optimisation: we likely only care about sending error statuses for alerts which
+    # are live - avoid querying for many many past alerts for such data.
+    broadcast_ids_for_sending_status = [
+        row[0].id for row in broadcast_messages_db if row[0].status == BroadcastStatusType.BROADCASTING
+    ]
+    broadcast_status_summary = dao_get_broadcast_provider_messages_by_broadcast_message_ids(
+        broadcast_message_ids=broadcast_ids_for_sending_status
+    )
+
+    failed_broadcast_ids = set()
+    for broadcast_id, broadcast_provider_message, message_type in broadcast_status_summary:
+        if message_type != BroadcastEventMessageType.ALERT:
+            continue
+
+        if broadcast_provider_message.get_latest_status_entry().status == BROADCAST_PROVIDER_STATUS_ERR:
+            failed_broadcast_ids.add(broadcast_id)
+
     broadcast_messages = [
         {
             **message.serialize(),
@@ -73,10 +99,9 @@ def get_broadcast_msgs_for_service(service_id):
             "approved_by": approved_by or None,
             "cancelled_by": cancelled_by or None,
             "submitted_by": submitted_by or None,
+            "sending_error": message.id in failed_broadcast_ids,
         }
-        for message, created_by, rejected_by, approved_by, cancelled_by, submitted_by in (
-            dao_get_broadcast_messages_for_service_with_user(service_id)
-        )
+        for message, created_by, rejected_by, approved_by, cancelled_by, submitted_by in broadcast_messages_db
     ]
     return jsonify(broadcast_messages=broadcast_messages)
 
@@ -401,17 +426,98 @@ def purge_broadcast_messages(service_id, older_than):
     if is_public_environment():
         raise InvalidRequest("Endpoint not found", status_code=404)
 
+    result_message = (
+        "Purged {0} BroadcastMessage items, {1} BroadcastEvent items and {2} S3 objects, created more than {3} days ago"
+    )
+
     try:
-        count = dao_purge_old_broadcast_messages(service=service_id, days_older_than=older_than)
+        bucket = current_app.config["GOVUK_ALERTS_S3_BUCKET_NAME"]
+        s3 = boto3.client("s3")
+        counter = Counter()
+        messages = _generate_s3_keys(dao_get_public_messages_older_than(older_than))
+
+        current_app.logger.info(
+            "purge_broadcast_messages",
+            extra={
+                "python_module": __name__,
+                "service_id": service_id,
+                "bucket": bucket,
+                "older_than": older_than,
+                "messages": messages,
+            },
+        )
+
+        if messages:
+            for message in messages:
+                # delete S3 objects associated with the key
+                objects_response = s3.list_objects_v2(Bucket=bucket, Prefix=f"alerts/{message[1]}")
+                capxml_response = s3.list_objects_v2(Bucket=bucket, Prefix=f"alerts/cap-xml/{message[1]}")
+                all_objects = objects_response.get("Contents", []) + capxml_response.get("Contents", [])
+                objects = [{"Key": v["Key"]} for v in all_objects]
+
+                if objects:
+                    # The pattern 1-apr-2026 matches:
+                    # - 1-apr-2026 (exact key)
+                    # - 1-apr-2026.cy (the Welsh version)
+                    # - alerts/cap-xml/1-apr-2026-20260401140329.cap.xml (its cap file)
+                    # - But not 1-apr-2026-2 or alerts/cap-xml/1-apr-2026-2-20260401140454.cap.xml
+                    # And for key 1-apr-2026-2:
+                    # - 1-apr-2026-2 (exact key)
+                    # - 1-apr-2026-2.cy (the Welsh version)
+                    # - alerts/cap-xml/1-apr-2026-2-20260401140454.cap.xml (its cap file)
+                    # - But not alerts/cap-xml/1-apr-2026-20260401140329.cap.xml
+                    base = re.escape("alerts/" + message[1])
+                    capxml_base = re.escape("alerts/cap-xml/" + message[1])
+                    pattern = re.compile(rf"^(?:{base}(\.cy)?|{capxml_base}-\d{{14}}\.cap\.xml)$")
+                    matches = [obj for obj in objects if pattern.match(obj["Key"])]
+
+                    current_app.logger.info("objects to be deleted on this iteration", extra={"matches": matches})
+
+                    s3_result = s3.delete_objects(Bucket=bucket, Delete={"Objects": matches})
+                    counter["s3_objects"] += len(s3_result.get("Deleted", []))
+
+                    errors = s3_result.get("Errors", [])
+                    if errors:
+                        current_app.logger.info(
+                            "s3 deletion errors",
+                            extra={
+                                "errors": errors,
+                                "bucket": bucket,
+                                "prefix": f"alerts/{message[1]}",
+                            },
+                        )
+                        counter["s3_deletion_errors"] += len(s3_result.get("Errors", []))
+
+                # delete database records associated with this message
+                counter += dao_delete_records_for_broadcast(service_id, message[0])
+
+            current_app.logger.info(
+                result_message.format(counter["msgs"], counter["events"], counter["s3_objects"], older_than)
+            )
+
     except Exception as e:
         return jsonify(result="error", message=f"Unable to purge old alert items: {e}"), 500
 
     return (
         jsonify(
-            {
-                "message": f"Purged {count['msgs']} BroadcastMessage items and {count['events']} "
-                f"BroadcastEvent items, created more than {older_than} days ago"
-            }
+            {"message": result_message.format(counter["msgs"], counter["events"], counter["s3_objects"], older_than)}
         ),
         200,
     )
+
+
+def _generate_s3_keys(messages):
+    # create a new list of tuples (id, prefix) where the prefix is generated
+    # from the starts_at date, and takes the form
+    # 2-jun-2025
+    # 2-jun-2025-2
+    # 2-jun-2025-3 etc for multiple messages with the same starts_at date
+    date_counts = defaultdict(int)
+    result = []
+    for msg_id, timestamp in messages:
+        base_prefix = timestamp.strftime("%d-%b-%Y").lower()
+        count = date_counts[base_prefix]
+        prefix = base_prefix if count == 0 else f"{base_prefix}-{count + 1}"
+        date_counts[base_prefix] += 1
+        result.append((msg_id, prefix))
+    return result
