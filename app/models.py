@@ -340,7 +340,9 @@ class Service(db.Model, Versioned):
     allowed_broadcast_provider = association_proxy("service_broadcast_providers", "provider")
     broadcast_channel = association_proxy("service_broadcast_settings", "channel")
 
-    email_addresses = db.relationship("ServiceEmail", back_populates="service", cascade="all, delete-orphan")
+    email_addresses = db.relationship(
+        "ServiceEmail", back_populates="service", cascade="all, delete-orphan", order_by="ServiceEmail.email_address"
+    )
 
     @classmethod
     def from_json(cls, data):
