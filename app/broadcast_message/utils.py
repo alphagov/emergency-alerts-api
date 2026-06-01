@@ -168,9 +168,9 @@ def _build_alert_summary_email_body(broadcast_message, data):
     additional_info = broadcast_message.extra_content
     created_at = broadcast_message.created_at.replace(microsecond=0)
     created_by = broadcast_message.created_by.id
-    duration_minutes = int(broadcast_message.duration.total_seconds() // 60)
     count_of_phones = data.get("count_of_phones")
     currentenv = current_app.config["ENVIRONMENT"]
+    duration = data.get("duration")
     extra_content = data.get("extra_content")
 
     # Build HTML
@@ -189,7 +189,7 @@ def _build_alert_summary_email_body(broadcast_message, data):
             Alert Summary
           </h2>
           <p style="font-size:16px; color:#0b0c0c;">
-            <br>{extra_content}
+            {extra_content}
           </p>
           <p style="font-size:16px; color:#0b0c0c;">
             <strong>Alert Message</strong><br>{alert_message}
@@ -208,7 +208,7 @@ def _build_alert_summary_email_body(broadcast_message, data):
 
     html += f"""
           <p style="font-size:16px; color:#0b0c0c;">
-            <strong>Alert Duration</strong><br>{duration_minutes} minutes
+            <strong>Alert Duration</strong><br>{duration}
           </p>
 
           <p style="font-size:16px; color:#0b0c0c;">
