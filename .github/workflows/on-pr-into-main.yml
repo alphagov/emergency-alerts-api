@@ -60,6 +60,8 @@ jobs:
           export POSTGRES_PASSWORD=root
           export POSTGRES_USER=postgres
           export POSTGRES_DB=postgres
+          export RDS_HOST=localhost
+          export RDS_PORT=5432
           docker compose -f docker-compose-tests.yml up --detach pg
 
       - name: Bootstrap Python app and run tests
