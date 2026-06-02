@@ -732,8 +732,11 @@ def test_get_email_by_service_single_email_contact(notify_api, sample_service):
 
 
 def test_get_email_by_service_multiple_email_contact(notify_api, sample_service):
-    dao_add_email_to_service(sample_service, ServiceEmail(email_address="test@test.com"))
-    dao_add_email_to_service(sample_service, ServiceEmail(email_address="test2@test.com"))
+    email1 = ServiceEmail(service_id=sample_service.id, email_address="test1@test.com")
+    email2 = ServiceEmail(service_id=sample_service.id, email_address="test2@test.com")
+    dao_add_email_to_service(sample_service, email1)
+    dao_add_email_to_service(sample_service, email2)
+
     with notify_api.test_request_context():
         with notify_api.test_client() as client:
             auth_header = create_admin_authorization_header()
@@ -746,8 +749,8 @@ def test_get_email_by_service_multiple_email_contact(notify_api, sample_service)
             assert resp.status_code == 200
             result = resp.json
             assert len(result["data"]) == 2
-            assert result["data"][0]["email_address"] == "test2@test.com"
-            assert result["data"][1]["email_address"] == "test@test.com"
+            assert result["data"][0]["email_address"] == "test1@test.com"
+            assert result["data"][1]["email_address"] == "test2@test.com"
 
 
 def test_default_permissions_are_added_for_user_service(notify_api, notify_db_session, sample_service, sample_user):
