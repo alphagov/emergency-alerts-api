@@ -16,7 +16,7 @@ _RETRY_DELAY_MS = 30_000
 
 
 @dramatiq.actor(actor_name=TaskNames.REQUEST_LOG_INGEST, queue_name=QueueNames.HIGH_PRIORITY)
-def request_log_ingest_task(broadcast_event_id, attempt=0):
+def request_log_ingest_task(broadcast_event_id, attempt=0, sent_provider_ids=None):
     try:
         current_app.logger.info("Starting request_log_ingest_task", extra={"broadcast_event_id": broadcast_event_id})
 
@@ -27,84 +27,72 @@ def request_log_ingest_task(broadcast_event_id, attempt=0):
             )
             return
 
+        sent_ids = set(sent_provider_ids or [])
         available_providers = broadcast_event.service.get_available_broadcast_providers()
         provider_messages = dao_get_broadcast_provider_messages_for_event(broadcast_event_id)
-
-        all_providers_ready = len(provider_messages) >= len(available_providers)
         at_max_retries = attempt >= _MAX_ATTEMPTS
 
-        if not all_providers_ready and not at_max_retries:
-            current_app.logger.warning(
-                f"Only {len(provider_messages)}/{len(available_providers)} provider messages exist yet, "
-                f"retrying (attempt {attempt + 1}/{_MAX_ATTEMPTS})",
-                extra={"broadcast_event_id": broadcast_event_id},
-            )
-            request_log_ingest_task.send_with_options(
-                kwargs={"broadcast_event_id": broadcast_event_id, "attempt": attempt + 1},
-                delay=_RETRY_DELAY_MS,
-            )
-            return
+        new_messages = [pm for pm in provider_messages if str(pm.id) not in sent_ids]
 
-        if not provider_messages:
-            current_app.logger.error(
-                f"No provider messages found for broadcast_event {broadcast_event_id} after {attempt} attempts. "
-                f"Cannot send log upload invitations.",
-                extra={"broadcast_event_id": broadcast_event_id},
-            )
-            return
+        if new_messages:
+            lambda_arn = current_app.config.get("LOG_UPLOAD_LAMBDA_ARN")
+            if not lambda_arn:
+                current_app.logger.error("LOG_UPLOAD_LAMBDA_ARN not configured!")
+                return
 
-        if not all_providers_ready:
-            current_app.logger.warning(
-                f"Max retries exceeded: only {len(provider_messages)}/{len(available_providers)} "
-                f"provider messages exist for broadcast_event {broadcast_event_id}. "
-                f"Proceeding with available provider messages.",
-                extra={"broadcast_event_id": broadcast_event_id},
-            )
-
-        payload = {
-            "alert_reference": str(broadcast_event.id),
-            "environment": current_app.config.get("ENVIRONMENT"),
-            "broadcast_start": (
-                broadcast_event.transmitted_starts_at.isoformat() if broadcast_event.transmitted_starts_at else None
-            ),
-            "broadcast_end": (
-                broadcast_event.transmitted_finishes_at.isoformat() if broadcast_event.transmitted_finishes_at else None
-            ),
-            "mnos": [
-                {
-                    "mno_id": pm.provider.upper(),
-                    "provider_message_id": str(pm.id),
-                }
-                for pm in provider_messages
-            ],
-        }
-
-        current_app.logger.info(
-            "Built Lambda payload", extra={"alert_reference": str(broadcast_event.id), "payload": json.dumps(payload)}
-        )
-
-        lambda_arn = current_app.config.get("LOG_UPLOAD_LAMBDA_ARN")
-
-        current_app.logger.info(
-            "About to invoke Lambda", extra={"lambda_arn": lambda_arn, "has_lambda_arn": lambda_arn is not None}
-        )
-
-        if not lambda_arn:
-            current_app.logger.error("LOG_UPLOAD_LAMBDA_ARN not configured!")
-            return
-
-        success = _invoke_log_upload_lambda(lambda_arn, payload)
-
-        if success:
+            payload = _build_payload(broadcast_event, new_messages)
             current_app.logger.info(
-                "Successfully invoked log upload Lambda",
-                extra={"broadcast_event_id": broadcast_event_id},
+                "Built Lambda payload",
+                extra={"alert_reference": str(broadcast_event.id), "payload": json.dumps(payload)},
             )
-        else:
-            current_app.logger.error(
-                "Failed to invoke log upload Lambda",
-                extra={"broadcast_event_id": broadcast_event_id},
-            )
+            current_app.logger.info("About to invoke Lambda", extra={"lambda_arn": lambda_arn, "has_lambda_arn": True})
+
+            if _invoke_log_upload_lambda(lambda_arn, payload):
+                sent_ids |= {str(pm.id) for pm in new_messages}
+                current_app.logger.info(
+                    "Successfully invoked log upload Lambda",
+                    extra={"broadcast_event_id": broadcast_event_id},
+                )
+            else:
+                current_app.logger.error(
+                    "Failed to invoke log upload Lambda",
+                    extra={"broadcast_event_id": broadcast_event_id},
+                )
+
+        providers_sent = {pm.provider for pm in provider_messages if str(pm.id) in sent_ids}
+        all_providers_done = providers_sent >= set(available_providers)
+
+        if all_providers_done:
+            return
+
+        if at_max_retries:
+            if not sent_ids:
+                current_app.logger.error(
+                    f"No provider messages sent for broadcast_event {broadcast_event_id} after {attempt} attempts. "
+                    f"Cannot send log upload invitations.",
+                    extra={"broadcast_event_id": broadcast_event_id},
+                )
+            else:
+                current_app.logger.warning(
+                    f"Max retries exceeded: only sent for {len(providers_sent)}/{len(available_providers)} "
+                    f"providers for broadcast_event {broadcast_event_id}.",
+                    extra={"broadcast_event_id": broadcast_event_id},
+                )
+            return
+
+        missing = set(available_providers) - providers_sent
+        current_app.logger.warning(
+            f"Providers {missing} not yet sent, retrying (attempt {attempt + 1}/{_MAX_ATTEMPTS})",
+            extra={"broadcast_event_id": broadcast_event_id},
+        )
+        request_log_ingest_task.send_with_options(
+            kwargs={
+                "broadcast_event_id": broadcast_event_id,
+                "attempt": attempt + 1,
+                "sent_provider_ids": list(sent_ids),
+            },
+            delay=_RETRY_DELAY_MS,
+        )
 
     except Exception as e:
         current_app.logger.exception(
@@ -117,6 +105,26 @@ def request_log_ingest_task(broadcast_event_id, attempt=0):
             },
         )
         raise
+
+
+def _build_payload(broadcast_event, provider_messages):
+    return {
+        "alert_reference": str(broadcast_event.id),
+        "environment": current_app.config.get("ENVIRONMENT"),
+        "broadcast_start": (
+            broadcast_event.transmitted_starts_at.isoformat() if broadcast_event.transmitted_starts_at else None
+        ),
+        "broadcast_end": (
+            broadcast_event.transmitted_finishes_at.isoformat() if broadcast_event.transmitted_finishes_at else None
+        ),
+        "mnos": [
+            {
+                "mno_id": pm.provider.upper(),
+                "provider_message_id": str(pm.id),
+            }
+            for pm in provider_messages
+        ],
+    }
 
 
 def _invoke_log_upload_lambda(lambda_name, payload):
