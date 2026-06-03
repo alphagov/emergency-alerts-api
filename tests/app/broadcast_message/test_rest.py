@@ -875,3 +875,55 @@ def test_purge_broadcast_messages(admin_request, sample_broadcast_service, mocke
     print(response["message"])
 
     assert re.match(r"Purged (\d+) BroadcastMessage items (.*)", response["message"])
+
+
+def test_send_alert_summary_email(admin_request, sample_broadcast_service, mocker):
+    t = create_template(sample_broadcast_service, BROADCAST_TYPE)
+    bm = create_broadcast_message(t, status=BroadcastStatusType.DRAFT)
+
+    mock_send = mocker.patch(
+        "app.broadcast_message.utils.SESClient.send_raw_email",
+        return_value={"ResponseMetadata": {"HTTPStatusCode": 200}},
+    )
+
+    geojson = '{"type": "Point", "coordinates": [0, 0]}'
+    somexml = "<a/>"
+
+    response = admin_request.post(
+        "broadcast_message.send_alert_summary_email",
+        _data={
+            "geojson": geojson,
+            "cap_xml": somexml,
+            "ibag_xml": somexml,
+            "count_of_phones": "less than 1 million",
+            "duration": "30 minutes",
+            "extra_content": "extra content",
+        },
+        service_id=t.service_id,
+        broadcast_message_id=bm.id,
+        _expected_status=200,
+    )
+
+    mock_send.assert_called_once()
+    assert response["ResponseMetadata"]["HTTPStatusCode"] == 200
+
+    # Extract and check the arguments/content passed to SES
+    args, kwargs = mock_send.call_args
+
+    assert kwargs["subject"] == f"{t.service.name} advance notice of broadcast"
+    assert "advance notice" in kwargs["html_body"]
+    assert "less than 1 million" in kwargs["html_body"]
+    assert "extra content" in kwargs["html_body"]
+    assert "30 minutes" in kwargs["html_body"]
+
+    # Check attachments
+    attachments = kwargs["attachments"]
+
+    assert isinstance(attachments, list)
+    assert len(attachments) == 3
+    assert attachments[0][0] == "areas.geojson"
+    assert attachments[0][2] == "application/geo+json"
+    assert attachments[1][0] == "areas.cap.xml"
+    assert attachments[1][2] == "application/xml"
+    assert attachments[2][0] == "areas.ibag.xml"
+    assert attachments[2][2] == "application/xml"

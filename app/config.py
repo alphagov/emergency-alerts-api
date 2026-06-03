@@ -248,6 +248,7 @@ class Test(Config):
     API_HOST_NAME = "http://localhost:6011"
 
     TENANT = f"{os.environ.get('TENANT')}." if os.environ.get("TENANT") is not None else ""
+    ENVIRONMENT = os.getenv("ENVIRONMENT")
     SUBDOMAIN = (
         "dev."
         if os.environ.get("ENVIRONMENT") == "development"
