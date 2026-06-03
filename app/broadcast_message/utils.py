@@ -147,7 +147,7 @@ def _create_broadcast_event(broadcast_message):
         )
 
 
-def send_alert_summary_email(broadcast_message, data, client=None):
+def send_alert_summary_email(broadcast_message, data):
     service = broadcast_message.service
     service_emails = service.email_addresses
     to_addresses = [se.email_address for se in service_emails]
@@ -155,8 +155,9 @@ def send_alert_summary_email(broadcast_message, data, client=None):
     body = _build_alert_summary_email_body(broadcast_message, data)
     attachments = _build_alert_summary_email_attachments(data)
 
-    ses = SESClient(client=client)
-    ses.send_raw_email(subject=subject, to_addresses=to_addresses, html_body=body, attachments=attachments)
+    ses = SESClient()
+    response = ses.send_raw_email(subject=subject, to_addresses=to_addresses, html_body=body, attachments=attachments)
+    return response
 
 
 def _build_alert_summary_email_body(broadcast_message, data):

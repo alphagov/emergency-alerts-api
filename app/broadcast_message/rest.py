@@ -418,7 +418,7 @@ def purge_broadcast_messages(service_id, older_than):
 
 
 @broadcast_message_blueprint.route("/<uuid:broadcast_message_id>/alert-summary-email", methods=["POST"])
-def send_alert_summary_email(service_id, broadcast_message_id, client=None):
+def send_alert_summary_email(service_id, broadcast_message_id):
 
     data = request.get_json()
 
@@ -433,6 +433,6 @@ def send_alert_summary_email(service_id, broadcast_message_id, client=None):
         },
     )
 
-    broadcast_utils.send_alert_summary_email(broadcast_message, data, client=client)
+    response = broadcast_utils.send_alert_summary_email(broadcast_message, data)
 
-    return jsonify(broadcast_message.serialize()), 200
+    return jsonify(response), 200
