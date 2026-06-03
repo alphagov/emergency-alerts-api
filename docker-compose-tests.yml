@@ -22,8 +22,6 @@ services:
       GOVUK_ALERTS_PUBLISH_CLIENT_SECRET: $GOVUK_ALERTS_PUBLISH_CLIENT_SECRET
       GOVUK_ALERTS_PUBLISH_CLIENT_ID: $GOVUK_ALERTS_PUBLISH_CLIENT_ID
       GOVUK_CLIENT_SECRET: $GOVUK_CLIENT_SECRET
-      RDS_HOST: $RDS_HOST
-      RDS_PORT: $RDS_PORT
     volumes:
       - ./postgres:/docker-entrypoint-initdb.d:ro
     networks:
