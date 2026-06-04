@@ -1,5 +1,6 @@
 from app import db
 
+
 def dao_estimate_population_for_polygon(polygon):
     query = f"""WITH proposed_polygon AS (
                 SELECT ST_GeomFromText('{polygon}', 4326) AS geom

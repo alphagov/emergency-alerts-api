@@ -1443,11 +1443,8 @@ class Populations(db.Model):
     density = db.Column(db.Float, nullable=False)
 
     def serialize(self):
-        return {
-            "id": self.id,
-            "geometry": self.geometry,
-            "density": self.density
-        }
+        return {"id": self.id, "geometry": self.geometry, "density": self.density}
+
 
 class PublishTaskProgress(db.Model):
     """
