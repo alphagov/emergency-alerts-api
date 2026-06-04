@@ -819,7 +819,6 @@ def test_add_existing_user_to_another_service_with_all_permissions(
             data = {
                 "permissions": [
                     {"permission": "manage_users"},
-                    {"permission": "manage_settings"},
                     {"permission": "manage_api_keys"},
                     {"permission": "manage_templates"},
                     {"permission": "view_activity"},
@@ -859,7 +858,6 @@ def test_add_existing_user_to_another_service_with_all_permissions(
             permissions = json_resp["data"]["permissions"][str(sample_service.id)]
             expected_permissions = [
                 "manage_users",
-                "manage_settings",
                 "manage_templates",
                 "manage_api_keys",
                 "view_activity",
@@ -932,7 +930,6 @@ def test_add_existing_user_to_another_service_with_manage_permissions(
             data = {
                 "permissions": [
                     {"permission": "manage_users"},
-                    {"permission": "manage_settings"},
                     {"permission": "manage_templates"},
                 ]
             }
@@ -958,7 +955,7 @@ def test_add_existing_user_to_another_service_with_manage_permissions(
             json_resp = resp.json
 
             permissions = json_resp["data"]["permissions"][str(sample_service.id)]
-            expected_permissions = ["manage_users", "manage_settings", "manage_templates"]
+            expected_permissions = ["manage_users", "manage_templates"]
             assert sorted(expected_permissions) == sorted(permissions)
 
 
@@ -1124,7 +1121,7 @@ def test_remove_user_from_service(client, sample_user_service_permission):
     dao_add_user_to_service(
         service,
         second_user,
-        permissions=[Permission(service_id=service.id, user_id=second_user.id, permission="manage_settings")],
+        permissions=[Permission(service_id=service.id, user_id=second_user.id, permission="manage_templates")],
     )
 
     endpoint = url_for("service.remove_user_from_service", service_id=str(service.id), user_id=str(second_user.id))
@@ -1648,7 +1645,7 @@ def test_set_training_service_as_broadcast_service_removes_user_permissions(
             )
         ],
     )
-    assert len(service_user.get_permissions(service_id=sample_training_service.id)) == 5
+    assert len(service_user.get_permissions(service_id=sample_training_service.id)) == 4
     assert len(sample_invited_user.get_permissions()) == 3
 
     admin_request.post(
@@ -1686,7 +1683,7 @@ def test_change_service_broadcast_providers_does_not_remove_user_permissions(
             )
         ],
     )
-    assert len(service_user.get_permissions(service_id=sample_service.id)) == 5
+    assert len(service_user.get_permissions(service_id=sample_service.id)) == 4
     assert len(sample_invited_user.get_permissions()) == 3
 
     admin_request.post(
@@ -1699,7 +1696,6 @@ def test_change_service_broadcast_providers_does_not_remove_user_permissions(
     assert service_user.get_permissions(service_id=sample_service.id) == [
         "manage_users",
         "manage_templates",
-        "manage_settings",
         "manage_api_keys",
         "view_activity",
     ]

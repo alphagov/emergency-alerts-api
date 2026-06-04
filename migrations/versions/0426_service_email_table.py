@@ -1,8 +1,8 @@
 """
 
-Revision ID: 0425_service_email_table
-Revises: 0424_route_advisor_table
-Create Date: 2026-05-13 11:40:00
+Revision ID: 0426_service_email_table
+Revises: 0425_remove_permission
+Create Date: 2026-06-03 11:40:00
 
 """
 
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision = "0425_service_email_table"
-down_revision = "0424_route_advisor_table"
+revision = "0426_service_email_table"
+down_revision = "0425_remove_permission"
 
 
 def upgrade():

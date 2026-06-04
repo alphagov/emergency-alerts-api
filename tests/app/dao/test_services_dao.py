@@ -6,6 +6,7 @@ from sqlalchemy.orm.exc import NoResultFound
 
 from app import db
 from app.dao.organisation_dao import dao_add_service_to_organisation
+from app.dao.permissions_dao import default_service_permissions
 from app.dao.service_permissions_dao import dao_remove_service_permission
 from app.dao.service_user_dao import (
     dao_get_service_user,
@@ -28,6 +29,8 @@ from app.dao.users_dao import create_user_code, save_model_user
 from app.models import (
     BROADCAST_TYPE,
     EMAIL_AUTH_TYPE,
+    MANAGE_API_KEYS,
+    MANAGE_USERS,
     ApiKey,
     InvitedUser,
     Organisation,
@@ -205,7 +208,8 @@ def test_should_remove_user_from_service(notify_db_session):
 
 
 def test_removing_a_user_from_a_service_deletes_their_permissions(sample_user, sample_service):
-    assert len(Permission.query.all()) == 5
+    assert [permission.permission for permission in Permission.query.all()] == default_service_permissions
+    assert len(Permission.query.all()) == 4
 
     dao_remove_user_from_service(sample_service, sample_user)
 
@@ -508,7 +512,8 @@ def test_add_existing_user_to_another_service_doesnot_change_old_permissions(not
     dao_create_service(service_one, user)
     assert user.id == service_one.users[0].id
     test_user_permissions = Permission.query.filter_by(service=service_one, user=user).all()
-    assert len(test_user_permissions) == 5
+    assert len(test_user_permissions) == 4
+    assert [permission.permission for permission in test_user_permissions] == default_service_permissions
 
     other_user = User(
         name="Other Test User",
@@ -522,23 +527,29 @@ def test_add_existing_user_to_another_service_doesnot_change_old_permissions(not
 
     assert other_user.id == service_two.users[0].id
     other_user_permissions = Permission.query.filter_by(service=service_two, user=other_user).all()
-    assert len(other_user_permissions) == 5
+    assert len(other_user_permissions) == 4
+    assert [permission.permission for permission in other_user_permissions] == default_service_permissions
 
     other_user_service_one_permissions = Permission.query.filter_by(service=service_one, user=other_user).all()
     assert len(other_user_service_one_permissions) == 0
 
     # adding the other_user to service_one should leave all other_user permissions on service_two intact
     permissions = []
-    for p in ["manage_users", "manage_settings", "manage_api_keys"]:
+    for p in ["manage_users", "manage_api_keys"]:
         permissions.append(Permission(permission=p))
 
     dao_add_user_to_service(service_one, other_user, permissions=permissions)
 
     other_user_service_one_permissions = Permission.query.filter_by(service=service_one, user=other_user).all()
-    assert len(other_user_service_one_permissions) == 3
+    assert len(other_user_service_one_permissions) == 2
+    assert [permission.permission for permission in other_user_service_one_permissions] == [
+        MANAGE_USERS,
+        MANAGE_API_KEYS,
+    ]
 
     other_user_service_two_permissions = Permission.query.filter_by(service=service_two, user=other_user).all()
-    assert len(other_user_service_two_permissions) == 5
+    assert len(other_user_service_two_permissions) == 4
+    assert [permission.permission for permission in other_user_service_two_permissions] == default_service_permissions
 
 
 def test_dao_fetch_active_users_for_service_returns_active_only(notify_db_session):

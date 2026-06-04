@@ -143,7 +143,7 @@ def make_invitation(user, service, age=None, email_address="test@test.com"):
         service=service,
         status="pending",
         created_at=datetime.now(timezone.utc) - (age or timedelta(hours=0)),
-        permissions="manage_settings",
+        permissions="manage_templates",
         folder_permissions=[str(uuid.uuid4())],
     )
     db.session.add(verify_code)
