@@ -11,7 +11,7 @@ from app.dao.broadcast_service_dao import set_service_broadcast_providers
 from app.dao.organisation_dao import dao_add_service_to_organisation
 from app.dao.service_user_dao import dao_get_service_user
 from app.dao.services_dao import (
-    dao_add_email_to_service,
+    dao_add_alert_notification_address_to_service,
     dao_add_user_to_service,
     dao_remove_user_from_service,
 )
@@ -715,7 +715,7 @@ def test_get_email_by_service_no_email_contact(notify_api, sample_service):
 
 
 def test_get_email_by_service_single_email_contact(notify_api, sample_service):
-    dao_add_email_to_service(sample_service, ServiceEmail(email_address="test@test.com"))
+    dao_add_alert_notification_address_to_service(sample_service, ServiceEmail(email_address="test@test.com"))
     with notify_api.test_request_context():
         with notify_api.test_client() as client:
             auth_header = create_admin_authorization_header()
@@ -734,8 +734,8 @@ def test_get_email_by_service_single_email_contact(notify_api, sample_service):
 def test_get_email_by_service_multiple_email_contact(notify_api, sample_service):
     email1 = ServiceEmail(service_id=sample_service.id, email_address="test1@test.com")
     email2 = ServiceEmail(service_id=sample_service.id, email_address="test2@test.com")
-    dao_add_email_to_service(sample_service, email1)
-    dao_add_email_to_service(sample_service, email2)
+    dao_add_alert_notification_address_to_service(sample_service, email1)
+    dao_add_alert_notification_address_to_service(sample_service, email2)
 
     with notify_api.test_request_context():
         with notify_api.test_client() as client:
