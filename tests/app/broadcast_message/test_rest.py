@@ -971,6 +971,11 @@ def test_send_alert_summary_email(admin_request, sample_broadcast_service, mocke
     assert "alert summary" in kwargs["html_body"]
     assert "30 minutes" in kwargs["html_body"]
 
+    assert "advance notice" in kwargs["text_body"]
+    assert "less than 1 million" in kwargs["text_body"]
+    assert "alert summary" in kwargs["text_body"]
+    assert "30 minutes" in kwargs["text_body"]
+
     # Check attachments
     attachments = kwargs["attachments"]
 
@@ -982,3 +987,47 @@ def test_send_alert_summary_email(admin_request, sample_broadcast_service, mocke
     assert attachments[1][2] == "application/xml"
     assert attachments[2][0] == "areas.ibag.xml"
     assert attachments[2][2] == "application/xml"
+
+
+@pytest.mark.parametrize(
+    "data, expected_errors",
+    [
+        (
+            {},
+            [
+                {"error": "ValidationError", "message": "created_by is a required property"},
+                {"error": "ValidationError", "message": "geojson is a required property"},
+                {"error": "ValidationError", "message": "alert_summary is a required property"},
+                {"error": "ValidationError", "message": "count_of_phones is a required property"},
+                {"error": "ValidationError", "message": "duration is a required property"},
+            ],
+        ),
+        (
+            {
+                "geojson": "test",
+                "alert_summary": "",
+                "count_of_phones": "more than 1 million",
+                "duration": "30 minutes",
+                "created_by": str(uuid.uuid4()),
+                "foo": "something else",
+            },
+            [
+                {"error": "ValidationError", "message": "alert_summary  should be non-empty"},
+                {"error": "ValidationError", "message": "Additional properties are not allowed (foo was unexpected)"},
+            ],
+        ),
+    ],
+)
+def test_send_alert_summary_email_invalid_schema(admin_request, sample_broadcast_service, data, expected_errors):
+    t = create_template(sample_broadcast_service, BROADCAST_TYPE)
+    bm = create_broadcast_message(t, status=BroadcastStatusType.DRAFT)
+
+    response = admin_request.post(
+        "broadcast_message.send_alert_summary_email",
+        _data=data,
+        service_id=t.service_id,
+        broadcast_message_id=bm.id,
+        _expected_status=400,
+    )
+
+    assert response["errors"] == expected_errors
