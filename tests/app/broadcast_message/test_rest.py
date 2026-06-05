@@ -951,7 +951,8 @@ def test_send_alert_summary_email(admin_request, sample_broadcast_service, mocke
             "ibag_xml": somexml,
             "count_of_phones": "less than 1 million",
             "duration": "30 minutes",
-            "extra_content": "extra content",
+            "alert_summary": "alert summary",
+            "created_by": str(t.created_by_id),
         },
         service_id=t.service_id,
         broadcast_message_id=bm.id,
@@ -967,7 +968,7 @@ def test_send_alert_summary_email(admin_request, sample_broadcast_service, mocke
     assert kwargs["subject"] == f"{t.service.name} advance notice of broadcast"
     assert "advance notice" in kwargs["html_body"]
     assert "less than 1 million" in kwargs["html_body"]
-    assert "extra content" in kwargs["html_body"]
+    assert "alert summary" in kwargs["html_body"]
     assert "30 minutes" in kwargs["html_body"]
 
     # Check attachments
