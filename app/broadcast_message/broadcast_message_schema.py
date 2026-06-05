@@ -68,3 +68,21 @@ return_broadcast_message_for_edit_schema = {
     "required": ["created_by", "edit_reason"],
     "additionalProperties": False,
 }
+
+send_alert_summary_email_schema = {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "description": "POST send alert summary email schema",
+    "type": "object",
+    "title": "Send alert summary email",
+    "properties": {
+        "geojson": {"type": "object"},
+        "cap_xml": {"type": "string"},
+        "ibag_xml": {"type": "string"},
+        "alert_summary": {"type": "string", "minLength": 1},
+        "count_of_phones": {"type": "string"},
+        "duration": {"type": "string"},
+        "created_by": uuid,
+    },
+    "required": ["created_by", "geojson", "alert_summary", "count_of_phones", "duration"],
+    "additionalProperties": False,
+}

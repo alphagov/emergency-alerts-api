@@ -10,6 +10,7 @@ from app.broadcast_message import utils as broadcast_utils
 from app.broadcast_message.broadcast_message_schema import (
     create_broadcast_message_schema,
     return_broadcast_message_for_edit_schema,
+    send_alert_summary_email_schema,
     update_broadcast_message_schema,
     update_broadcast_message_status_schema,
 )
@@ -527,6 +528,7 @@ def _generate_s3_keys(messages):
 def send_alert_summary_email(service_id, broadcast_message_id):
 
     data = request.get_json()
+    validate(data, send_alert_summary_email_schema)
 
     broadcast_message = dao_get_broadcast_message_by_id_and_service_id(broadcast_message_id, service_id)
 
