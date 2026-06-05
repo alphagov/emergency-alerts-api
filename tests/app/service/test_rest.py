@@ -145,7 +145,7 @@ def test_get_service_by_id(admin_request, sample_service):
         "broadcast_channel",
         "created_at",
         "created_by",
-        "email_addresses",
+        "alert_notification_addresses",
         "go_live_at",
         "go_live_user",
         "id",

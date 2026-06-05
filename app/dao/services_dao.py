@@ -211,9 +211,9 @@ def dao_remove_user_from_service(service, user):
         db.session.commit()
 
 
-def dao_add_email_to_service(service, email):
+def dao_add_alert_notification_address_to_service(service, email):
     try:
-        service.email_addresses.append(email)
+        service.alert_notification_addresses.append(email)
         db.session.add(service)
 
     except Exception as e:
