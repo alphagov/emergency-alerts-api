@@ -1,0 +1,58 @@
+<html>
+  <body style="margin:0; padding:0; font-family: Arial, Helvetica, sans-serif; background:#f3f2f1;">
+
+    <div style="background:#0b0c0c; padding:16px;">
+      <h1 style="color:#ffffff; margin:0; font-size:24px; font-weight:700;">
+        GOV.UK Emergency Alerts - {{ env }}
+      </h1>
+    </div>
+
+    <div style="padding:24px; background:#ffffff;">
+      <h2 style="color:#0b0c0c; font-size:20px; margin-top:0;">
+        Alert Summary
+      </h2>
+      <p style="font-size:16px; color:#0b0c0c;">
+        {{ data.alert_summary }}
+      </p>
+
+      <p style="font-size:16px; color:#0b0c0c;">
+        <strong>Alert Message</strong><br>{{ broadcast_message.content }}
+      </p>
+
+      <p style="font-size:16px; color:#0b0c0c;">
+        <strong>Phone Estimate</strong><br>{{ data.count_of_phones }}
+      </p>
+
+      {% if broadcast_message.extra_content %}
+      <p style="font-size:16px; color:#0b0c0c;">
+        <strong>Additional Info</strong><br>{{ broadcast_message.extra_content }}
+      </p>
+      {% endif %}
+
+      <p style="font-size:16px; color:#0b0c0c;">
+        <strong>Alert Duration</strong><br>{{ data.duration }}
+      </p>
+
+      <p style="font-size:16px; color:#0b0c0c;">
+        <strong>Attachments</strong>
+        <ul style="margin: 0 0 20px 20px; padding: 0; font-family: Arial, sans-serif;
+          font-size: 16px; line-height: 1.5;">
+          <li style="margin-bottom: 5px;">areas.geojson - areas covered by this alert, in geoJSON format</li>
+          <li style="margin-bottom: 5px;">areas.cap.xml - areas covered by this alert, in CAP XML format</li>
+          <li style="margin-bottom: 5px;">areas.ibag.xml - areas covered by this alert, in IBAG XML format</li>
+        </ul>
+      </p>
+
+      <p style="font-size:16px; color:#0b0c0c;">
+        If you require assistance, or wish to unsubscribe from future advance notice notifications please contact
+        the <a href="mailto:emergency-alerts-support@digital.cabinet-office.gov.uk">Emergency Alerts Support</a>
+        team.
+      </p>
+    </div>
+
+    <div style="padding:16px; text-align:center; font-size:14px; color:#505a5f;">
+      Alert created by {{ broadcast_message.created_by.id }} at {{ broadcast_message.created_at.replace(microsecond=0) }}.
+    </div>
+
+  </body>
+</html>

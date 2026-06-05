@@ -1,0 +1,33 @@
+GOV.UK Emergency Alerts - {{ env }}
+
+Alert Summary
+----------------------------------------
+{{ data.alert_summary }}
+
+Alert Message
+----------------------------------------
+{{ broadcast_message.content }}
+
+Phone Estimate
+----------------------------------------
+{{ data.count_of_phones }}
+
+{% if broadcast_message.extra_content %}
+Additional Info
+----------------------------------------
+{{ broadcast_message.extra_content }}
+
+{% endif %}
+Alert Duration
+----------------------------------------
+{{ data.duration }}
+
+Attachments
+----------------------------------------
+areas.geojson  - areas covered by this alert (geoJSON format)
+areas.cap.xml  - areas covered by this alert (CAP XML format)
+areas.ibag.xml - areas covered by this alert (IBAG XML format)
+
+If you require assistance, or wish to unsubscribe from future advance notice notifications, please contact the Emergency Alerts Support team at emergency-alerts-support@digital.cabinet-office.gov.uk
+
+Alert created by {{ broadcast_message.created_by.id }} at {{ broadcast_message.created_at.replace(microsecond=0) }}.

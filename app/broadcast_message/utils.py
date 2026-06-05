@@ -7,6 +7,7 @@ from emergency_alerts_utils.clients.zendesk.zendesk_client import (
 )
 from emergency_alerts_utils.xml.common import SENDER
 from flask import current_app
+from jinja2 import Environment, FileSystemLoader
 
 from app import zendesk_client
 from app.clients.ses_client import SESClient
@@ -152,8 +153,13 @@ def send_alert_summary_email(broadcast_message, data):
     alert_notification_addresses = service.alert_notification_addresses
     to_addresses = [se.email_address for se in alert_notification_addresses]
     subject = f"{service.name} advance notice of broadcast"
-    text_body, html_body = _build_alert_summary_email_bodies(broadcast_message, data)
-
+    text_body, html_body = _build_alert_summary_email_bodies(
+        {
+            "broadcast_message": broadcast_message,
+            "data": data,
+            "env": current_app.config["ENVIRONMENT"],
+        }
+    )
     attachments = _build_alert_summary_email_attachments(data)
 
     ses = SESClient()
@@ -163,135 +169,15 @@ def send_alert_summary_email(broadcast_message, data):
     return response
 
 
-def _build_alert_summary_email_bodies(broadcast_message, data):
-    """
-    Return (text_body, html_body) for alert summary emails.
-    """
+def _build_alert_summary_email_bodies(data):
+    env = Environment(loader=FileSystemLoader("app/broadcast_message/email_template"))
+    html_body = env.get_template("alert_summary.html").render(data)
+    text_body = env.get_template("alert_summary.txt").render(data)
 
-    alert_message = broadcast_message.content
-    additional_info = broadcast_message.extra_content
-    created_at = broadcast_message.created_at.replace(microsecond=0)
-    created_by = broadcast_message.created_by.id
-    count_of_phones = data.get("count_of_phones")
-    currentenv = current_app.config["ENVIRONMENT"]
-    duration = data.get("duration")
-    alert_summary = data.get("alert_summary")
-
-    # -------------------------
-    # PLAINTEXT BODY
-    # -------------------------
-    text_lines = []
-
-    text_lines.append(f"GOV.UK Emergency Alerts - {currentenv}")
-    text_lines.append("")
-    text_lines.append("Alert Summary")
-    text_lines.append("----------------------------------------")
-    text_lines.append(alert_summary or "")
-    text_lines.append("")
-
-    text_lines.append("Alert Message")
-    text_lines.append("----------------------------------------")
-    text_lines.append(alert_message or "")
-    text_lines.append("")
-
-    text_lines.append("Phone Estimate")
-    text_lines.append("----------------------------------------")
-    text_lines.append(str(count_of_phones))
-    text_lines.append("")
-
-    if additional_info:
-        text_lines.append("Additional Info")
-        text_lines.append("----------------------------------------")
-        text_lines.append(additional_info)
-        text_lines.append("")
-
-    text_lines.append("Alert Duration")
-    text_lines.append("----------------------------------------")
-    text_lines.append(str(duration))
-    text_lines.append("")
-
-    text_lines.append("Attachments")
-    text_lines.append("----------------------------------------")
-    text_lines.append("areas.geojson  - areas covered by this alert (geoJSON format)")
-    text_lines.append("areas.cap.xml  - areas covered by this alert (CAP XML format)")
-    text_lines.append("areas.ibag.xml - areas covered by this alert (IBAG XML format)")
-    text_lines.append("")
-
-    text_lines.append(
-        "If you require assistance, or wish to unsubscribe from future advance "
-        "notice notifications, please contact the Emergency Alerts Support team "
-        "at emergency-alerts-support@digital.cabinet-office.gov.uk"
-    )
-    text_lines.append("")
-
-    text_lines.append(f"Alert created by {created_by} at {created_at}.")
-    text_lines.append("")
-
-    text_body = "\r\n".join(text_lines)
-
-    # -------------------------
-    # HTML BODY (your existing version)
-    # -------------------------
-    html_body = f"""
-    <html>
-      <body style="margin:0; padding:0; font-family: Arial, Helvetica, sans-serif; background:#f3f2f1;">
-
-        <div style="background:#0b0c0c; padding:16px;">
-          <h1 style="color:#ffffff; margin:0; font-size:24px; font-weight:700;">
-            GOV.UK Emergency Alerts - {currentenv}
-          </h1>
-        </div>
-
-        <div style="padding:24px; background:#ffffff;">
-          <h2 style="color:#0b0c0c; font-size:20px; margin-top:0;">
-            Alert Summary
-          </h2>
-          <p style="font-size:16px; color:#0b0c0c;">
-            {alert_summary}
-          </p>
-          <p style="font-size:16px; color:#0b0c0c;">
-            <strong>Alert Message</strong><br>{alert_message}
-          </p>
-          <p style="font-size:16px; color:#0b0c0c;">
-            <strong>Phone Estimate</strong><br>{count_of_phones}
-          </p>
-    """
-
-    if additional_info:
-        html_body += f"""
-          <p style="font-size:16px; color:#0b0c0c;">
-            <strong>Additional Info</strong><br>{additional_info}
-          </p>
-        """
-
-    html_body += f"""
-          <p style="font-size:16px; color:#0b0c0c;">
-            <strong>Alert Duration</strong><br>{duration}
-          </p>
-
-          <p style="font-size:16px; color:#0b0c0c;">
-            <strong>Attachments</strong>
-            <ul style="margin: 0 0 20px 20px; padding: 0; font-family: Arial, sans-serif;
-              font-size: 16px; line-height: 1.5;">
-              <li style="margin-bottom: 5px;">areas.geojson - areas covered by this alert, in geoJSON format</li>
-              <li style="margin-bottom: 5px;">areas.cap.xml - areas covered by this alert, in CAP XML format</li>
-              <li style="margin-bottom: 5px;">areas.ibag.xml - areas covered by this alert, in IBAG XML format</li>
-            </ul>
-          </p>
-
-          <p style="font-size:16px; color:#0b0c0c;">
-            If you require assistance, or wish to unsubscribe from future advance notice notifications please contact
-            the <a href="mailto:emergency-alerts-support@digital.cabinet-office.gov.uk">Emergency Alerts Support</a>
-            team.
-          </p>
-        </div>
-
-        <div style="padding:16px; text-align:center; font-size:14px; color:#505a5f;">
-          Alert created by {created_by} at {created_at}.
-        </div>
-      </body>
-    </html>
-    """
+    # Normalize text_body to CRLF and ensure final CRLF
+    text_body = text_body.replace("\n", "\r\n")
+    if not text_body.endswith("\r\n"):
+        text_body += "\r\n"
 
     return text_body, html_body
 
