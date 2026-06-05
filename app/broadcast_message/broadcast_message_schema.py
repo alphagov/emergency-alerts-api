@@ -75,7 +75,7 @@ send_alert_summary_email_schema = {
     "type": "object",
     "title": "Send alert summary email",
     "properties": {
-        "geojson": {"type": "string"},
+        "geojson": {"type": "object"},
         "cap_xml": {"type": "string"},
         "ibag_xml": {"type": "string"},
         "alert_summary": {"type": "string", "minLength": 1},

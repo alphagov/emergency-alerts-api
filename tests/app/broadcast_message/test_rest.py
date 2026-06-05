@@ -1,3 +1,4 @@
+import json
 import re
 import uuid
 from datetime import datetime
@@ -940,7 +941,7 @@ def test_send_alert_summary_email(admin_request, sample_broadcast_service, mocke
         return_value={"ResponseMetadata": {"HTTPStatusCode": 200}},
     )
 
-    geojson = '{"type": "Point", "coordinates": [0, 0]}'
+    geojson = json.loads('{"type": "Point", "coordinates": [0, 0]}')
     somexml = "<a/>"
 
     response = admin_request.post(
@@ -1004,7 +1005,7 @@ def test_send_alert_summary_email(admin_request, sample_broadcast_service, mocke
         ),
         (
             {
-                "geojson": "test",
+                "geojson": json.loads('{"type": "Point", "coordinates": [0, 0]}'),
                 "alert_summary": "",
                 "count_of_phones": "more than 1 million",
                 "duration": "30 minutes",
