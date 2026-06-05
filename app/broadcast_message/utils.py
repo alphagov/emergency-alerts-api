@@ -149,20 +149,23 @@ def _create_broadcast_event(broadcast_message):
 
 def send_alert_summary_email(broadcast_message, data):
     service = broadcast_message.service
-    service_emails = service.email_addresses
-    to_addresses = [se.email_address for se in service_emails]
+    alert_notification_addresses = service.alert_notification_addresses
+    to_addresses = [se.email_address for se in alert_notification_addresses]
     subject = f"{service.name} advance notice of broadcast"
-    body = _build_alert_summary_email_body(broadcast_message, data)
+    text_body, html_body = _build_alert_summary_email_bodies(broadcast_message, data)
+
     attachments = _build_alert_summary_email_attachments(data)
 
     ses = SESClient()
-    response = ses.send_raw_email(subject=subject, to_addresses=to_addresses, html_body=body, attachments=attachments)
+    response = ses.send_raw_email(
+        subject=subject, to_addresses=to_addresses, text_body=text_body, html_body=html_body, attachments=attachments
+    )
     return response
 
 
-def _build_alert_summary_email_body(broadcast_message, data):
+def _build_alert_summary_email_bodies(broadcast_message, data):
     """
-    Generate an HTML summary email for a broadcast message.
+    Return (text_body, html_body) for alert summary emails.
     """
 
     alert_message = broadcast_message.content
@@ -172,10 +175,64 @@ def _build_alert_summary_email_body(broadcast_message, data):
     count_of_phones = data.get("count_of_phones")
     currentenv = current_app.config["ENVIRONMENT"]
     duration = data.get("duration")
-    extra_content = data.get("extra_content")
+    alert_summary = data.get("alert_summary")
 
-    # Build HTML
-    html = f"""
+    # -------------------------
+    # PLAINTEXT BODY
+    # -------------------------
+    text_lines = []
+
+    text_lines.append(f"GOV.UK Emergency Alerts - {currentenv}")
+    text_lines.append("")
+    text_lines.append("Alert Summary")
+    text_lines.append("----------------------------------------")
+    text_lines.append(alert_summary or "")
+    text_lines.append("")
+
+    text_lines.append("Alert Message")
+    text_lines.append("----------------------------------------")
+    text_lines.append(alert_message or "")
+    text_lines.append("")
+
+    text_lines.append("Phone Estimate")
+    text_lines.append("----------------------------------------")
+    text_lines.append(str(count_of_phones))
+    text_lines.append("")
+
+    if additional_info:
+        text_lines.append("Additional Info")
+        text_lines.append("----------------------------------------")
+        text_lines.append(additional_info)
+        text_lines.append("")
+
+    text_lines.append("Alert Duration")
+    text_lines.append("----------------------------------------")
+    text_lines.append(str(duration))
+    text_lines.append("")
+
+    text_lines.append("Attachments")
+    text_lines.append("----------------------------------------")
+    text_lines.append("areas.geojson  - areas covered by this alert (geoJSON format)")
+    text_lines.append("areas.cap.xml  - areas covered by this alert (CAP XML format)")
+    text_lines.append("areas.ibag.xml - areas covered by this alert (IBAG XML format)")
+    text_lines.append("")
+
+    text_lines.append(
+        "If you require assistance, or wish to unsubscribe from future advance "
+        "notice notifications, please contact the Emergency Alerts Support team "
+        "at emergency-alerts-support@digital.cabinet-office.gov.uk"
+    )
+    text_lines.append("")
+
+    text_lines.append(f"Alert created by {created_by} at {created_at}.")
+    text_lines.append("")
+
+    text_body = "\r\n".join(text_lines)
+
+    # -------------------------
+    # HTML BODY (your existing version)
+    # -------------------------
+    html_body = f"""
     <html>
       <body style="margin:0; padding:0; font-family: Arial, Helvetica, sans-serif; background:#f3f2f1;">
 
@@ -190,7 +247,7 @@ def _build_alert_summary_email_body(broadcast_message, data):
             Alert Summary
           </h2>
           <p style="font-size:16px; color:#0b0c0c;">
-            {extra_content}
+            {alert_summary}
           </p>
           <p style="font-size:16px; color:#0b0c0c;">
             <strong>Alert Message</strong><br>{alert_message}
@@ -201,13 +258,13 @@ def _build_alert_summary_email_body(broadcast_message, data):
     """
 
     if additional_info:
-        html += f"""
+        html_body += f"""
           <p style="font-size:16px; color:#0b0c0c;">
             <strong>Additional Info</strong><br>{additional_info}
           </p>
         """
 
-    html += f"""
+    html_body += f"""
           <p style="font-size:16px; color:#0b0c0c;">
             <strong>Alert Duration</strong><br>{duration}
           </p>
@@ -236,7 +293,7 @@ def _build_alert_summary_email_body(broadcast_message, data):
     </html>
     """
 
-    return html
+    return text_body, html_body
 
 
 def _build_alert_summary_email_attachments(data):

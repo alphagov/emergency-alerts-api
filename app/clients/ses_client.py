@@ -65,7 +65,7 @@ class SESClient:
             logger.error(f"SES send_email failed: {e.response['Error']}")
             raise
 
-    def send_raw_email(self, subject, html_body, to_addresses, attachments=None):
+    def send_raw_email(self, subject, text_body, html_body, to_addresses, attachments=None):
         """
         Send an email with optional attachments using SES send_raw_email.
         attachments: list of tuples -> [("file.txt", b"content"), ...]
@@ -76,8 +76,17 @@ class SESClient:
         msg["From"] = self.sender
         msg["To"] = ", ".join(to_addresses)
 
-        # Add HTML body
-        msg.attach(MIMEText(html_body, "html"))
+        # Alternative block for text + HTML
+        alt = MIMEMultipart("alternative")
+
+        # Plain text part
+        alt.attach(MIMEText(text_body, "plain", "utf-8"))
+
+        # HTML part
+        alt.attach(MIMEText(html_body, "html", "utf-8"))
+
+        # Attach the alternative block to the main message
+        msg.attach(alt)
 
         # Add attachments
         if attachments:
