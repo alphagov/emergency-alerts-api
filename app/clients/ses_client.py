@@ -1,5 +1,4 @@
 import logging
-import os
 from email import encoders
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
@@ -7,8 +6,9 @@ from email.mime.text import MIMEText
 
 import boto3
 import botocore.exceptions
+from flask import current_app
 
-from app.utils import is_local_host, is_local_stack
+from app.utils import is_local_host
 
 logger = logging.getLogger(__name__)
 
@@ -16,14 +16,9 @@ logger = logging.getLogger(__name__)
 class SESClient:
     def __init__(self, client=None, sender=None):
 
-        if is_local_stack() or is_local_host():
-            endpoint = os.environ.get("AWS_ENDPOINT_URL_SES", "http://localstack:4566")
-            from_address = "support@localhost"
-            aws_region = "us-east-1"
-        else:
-            endpoint = None
-            from_address = os.environ.get("SES_FROM_EMAIL_ADDRESS", "support@localhost")
-            aws_region = os.environ.get("AWS_REGION", "eu-west-2")
+        endpoint = current_app.config["SES_ENDPOINT"]
+        from_address = current_app.config["SES_FROM_ADDRESS"]
+        aws_region = current_app.config["SES_REGION"]
 
         self.client = client or boto3.client("ses", region_name=aws_region, endpoint_url=endpoint)
         self.sender = sender or from_address
