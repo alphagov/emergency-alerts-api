@@ -231,7 +231,7 @@ class Hosted(Config):
     HTTPS_PROXY = os.environ.get("HTTPS_PROXY")
     NO_PROXY = os.environ.get("NO_PROXY")
 
-    if ENVIRONMENT == "development":
+    if ENVIRONMENT == "local":
         SES_ENDPOINT = os.environ.get("AWS_ENDPOINT_URL_SES", "http://localstack:4566")
         SES_FROM_ADDRESS = "support@localhost"
         SES_REGION = "us-east-1"
