@@ -237,7 +237,7 @@ class Hosted(Config):
         SES_REGION = "us-east-1"
     else:
         SES_ENDPOINT = None
-        SES_FROM_ADDRESS = os.environ.get("SES_FROM_EMAIL_ADDRESS", "support@localhost")
+        SES_FROM_ADDRESS = os.environ.get("SES_FROM_EMAIL_ADDRESS")
         SES_REGION = AWS_REGION
 
 

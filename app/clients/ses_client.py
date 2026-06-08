@@ -8,6 +8,7 @@ import boto3
 import botocore.exceptions
 from flask import current_app
 
+from app.errors import InvalidRequest
 from app.utils import is_local_host
 
 logger = logging.getLogger(__name__)
@@ -18,6 +19,11 @@ class SESClient:
 
         endpoint = current_app.config["SES_ENDPOINT"]
         from_address = current_app.config["SES_FROM_ADDRESS"]
+        if from_address is None:
+            raise InvalidRequest(
+                "SES_FROM_ADDRESS configuration variable not set",
+                status_code=400,
+            )
         aws_region = current_app.config["SES_REGION"]
 
         self.client = client or boto3.client("ses", region_name=aws_region, endpoint_url=endpoint)
