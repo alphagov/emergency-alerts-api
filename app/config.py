@@ -172,6 +172,10 @@ class Config(object):
 
     GOVUK_ALERTS_S3_BUCKET_NAME = os.getenv("GOVUK_ALERTS_S3_BUCKET_NAME")
 
+    SES_ENDPOINT = os.environ.get("AWS_ENDPOINT_URL_SES", "http://localstack:4566")
+    SES_FROM_ADDRESS = "support@localhost"
+    SES_REGION = "us-east-1"
+
 
 class Hosted(Config):
     HOST = "hosted"
@@ -227,6 +231,15 @@ class Hosted(Config):
     HTTPS_PROXY = os.environ.get("HTTPS_PROXY")
     NO_PROXY = os.environ.get("NO_PROXY")
 
+    if ENVIRONMENT == "development":
+        SES_ENDPOINT = os.environ.get("AWS_ENDPOINT_URL_SES", "http://localstack:4566")
+        SES_FROM_ADDRESS = "support@localhost"
+        SES_REGION = "us-east-1"
+    else:
+        SES_ENDPOINT = None
+        SES_FROM_ADDRESS = os.environ.get("SES_FROM_EMAIL_ADDRESS", "support@localhost")
+        SES_REGION = AWS_REGION
+
 
 class Test(Config):
     NOTIFY_EMAIL_DOMAIN = "test.notify.com"
@@ -248,17 +261,17 @@ class Test(Config):
     API_HOST_NAME = "http://localhost:6011"
 
     TENANT = f"{os.environ.get('TENANT')}." if os.environ.get("TENANT") is not None else ""
-    ENVIRONMENT = os.getenv("ENVIRONMENT")
-    SUBDOMAIN = (
-        "dev."
-        if os.environ.get("ENVIRONMENT") == "development"
-        else f"{os.environ.get('ENVIRONMENT')}." if os.environ.get("ENVIRONMENT") != "production" else ""
-    )
+    ENVIRONMENT = os.environ.get("ENVIRONMENT")
+    SUBDOMAIN = "dev." if ENVIRONMENT == "development" else f"{ENVIRONMENT}." if ENVIRONMENT != "production" else ""
     ADMIN_EXTERNAL_URL = f"https://{TENANT}admin.{SUBDOMAIN}emergency-alerts.service.gov.uk"
     REPORTS_SLACK_WEBHOOK_URL = "https://hooks.slack.com/somewhere"
     CBC_PROXY_ENABLED = True
 
     GOVUK_ALERTS_S3_BUCKET_NAME = "test-govuk-alerts-bucket"
+
+    SES_ENDPOINT = os.environ.get("AWS_ENDPOINT_URL_SES", "http://localstack:4566")
+    SES_FROM_ADDRESS = "support@localhost"
+    SES_REGION = "us-east-1"
 
 
 configs = {
