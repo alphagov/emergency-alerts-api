@@ -10,7 +10,7 @@ Alert Message
 
 Phone Estimate
 ----------------------------------------
-{{ data.count_of_phones }}
+{{ data.phone_estimate }}
 
 {% if broadcast_message.extra_content %}
 Additional Info

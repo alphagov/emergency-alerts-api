@@ -79,10 +79,10 @@ send_alert_summary_email_schema = {
         "cap_xml": {"type": "string"},
         "ibag_xml": {"type": "string"},
         "alert_summary": {"type": "string", "minLength": 1},
-        "count_of_phones": {"type": "string"},
+        "phone_estimate": {"type": "string"},
         "duration": {"type": "string"},
         "created_by": uuid,
     },
-    "required": ["created_by", "geojson", "alert_summary", "count_of_phones", "duration"],
+    "required": ["created_by", "geojson", "alert_summary", "phone_estimate", "duration"],
     "additionalProperties": False,
 }
