@@ -56,10 +56,6 @@ def is_local_host():
     return current_app.config["HOST"] == "local"
 
 
-def is_local_stack():
-    return not is_local_host() and os.environ.get("ENVIRONMENT") == "local"
-
-
 def is_cloud_host():
     return not is_local_host()
 
