@@ -21,6 +21,8 @@ from tests.conftest import set_config
 
 
 def test_request_log_ingest_task_returns_early_if_event_not_found(mocker, notify_api):
+    # When the broadcast event does not exist, the task should exit immediately
+    # without invoking the Lambda or scheduling a retry.
     mocker.patch("app.tasks.log_ingest_tasks.BroadcastEvent.query").get.return_value = None
     mock_invoke = mocker.patch("app.tasks.log_ingest_tasks._invoke_log_upload_lambda")
     mock_send_with_options = mocker.patch("app.tasks.log_ingest_tasks.request_log_ingest_task.send_with_options")
@@ -34,6 +36,8 @@ def test_request_log_ingest_task_returns_early_if_event_not_found(mocker, notify
 def test_request_log_ingest_task_invokes_lambda_and_completes_when_all_providers_sent(
     mocker, notify_api, sample_broadcast_service
 ):
+    # When all enabled providers have provider messages, the Lambda should be invoked
+    # once with the correct MNO IDs and no retry should be scheduled.
     set_service_broadcast_providers(sample_broadcast_service, ["ee", "vodafone"])
     template = create_template(sample_broadcast_service, BROADCAST_TYPE)
     broadcast_message = create_broadcast_message(template, status=BroadcastStatusType.BROADCASTING)
@@ -56,6 +60,8 @@ def test_request_log_ingest_task_invokes_lambda_and_completes_when_all_providers
 
 
 def test_request_log_ingest_task_skips_already_sent_provider_ids(mocker, notify_api, sample_broadcast_service):
+    # When all provider messages are already in the sent_provider_ids list,
+    # the Lambda should not be invoked again and no retry should be scheduled.
     set_service_broadcast_providers(sample_broadcast_service, ["ee"])
     template = create_template(sample_broadcast_service, BROADCAST_TYPE)
     broadcast_message = create_broadcast_message(template, status=BroadcastStatusType.BROADCASTING)
@@ -77,6 +83,9 @@ def test_request_log_ingest_task_skips_already_sent_provider_ids(mocker, notify_
 
 
 def test_request_log_ingest_task_retries_when_providers_not_yet_ready(mocker, notify_api, sample_broadcast_service):
+    # When only some providers have messages (vodafone is missing here), the task should
+    # invoke the Lambda for the ready provider and schedule a retry carrying the
+    # incremented attempt count and the IDs already sent.
     set_service_broadcast_providers(sample_broadcast_service, ["ee", "vodafone"])
     template = create_template(sample_broadcast_service, BROADCAST_TYPE)
     broadcast_message = create_broadcast_message(template, status=BroadcastStatusType.BROADCASTING)
@@ -101,6 +110,8 @@ def test_request_log_ingest_task_retries_when_providers_not_yet_ready(mocker, no
 def test_request_log_ingest_task_logs_error_at_max_retries_with_nothing_sent(
     mocker, notify_api, sample_broadcast_service
 ):
+    # At max retries with no provider messages sent at all, the task should stop
+    # and not schedule another retry.
     set_service_broadcast_providers(sample_broadcast_service, ["ee"])
     template = create_template(sample_broadcast_service, BROADCAST_TYPE)
     broadcast_message = create_broadcast_message(template, status=BroadcastStatusType.BROADCASTING)
@@ -119,6 +130,8 @@ def test_request_log_ingest_task_logs_error_at_max_retries_with_nothing_sent(
 def test_request_log_ingest_task_logs_warning_at_max_retries_with_partial_sent(
     mocker, notify_api, sample_broadcast_service
 ):
+    # At max retries with only some providers sent, the task should stop
+    # and not schedule another retry.
     set_service_broadcast_providers(sample_broadcast_service, ["ee", "vodafone"])
     template = create_template(sample_broadcast_service, BROADCAST_TYPE)
     broadcast_message = create_broadcast_message(template, status=BroadcastStatusType.BROADCASTING)
@@ -141,6 +154,8 @@ def test_request_log_ingest_task_logs_warning_at_max_retries_with_partial_sent(
 def test_request_log_ingest_task_returns_early_when_lambda_arn_not_configured(
     mocker, notify_api, sample_broadcast_service
 ):
+    # When LOG_UPLOAD_LAMBDA_ARN is empty, the task should return early without
+    # invoking the Lambda or scheduling a retry.
     set_service_broadcast_providers(sample_broadcast_service, ["ee"])
     template = create_template(sample_broadcast_service, BROADCAST_TYPE)
     broadcast_message = create_broadcast_message(template, status=BroadcastStatusType.BROADCASTING)
@@ -159,10 +174,12 @@ def test_request_log_ingest_task_returns_early_when_lambda_arn_not_configured(
 
 
 def test_build_payload_returns_correct_structure(notify_api, sample_broadcast_service):
+    # Asserts that _build_payload produces a dict with the correct alert reference,
+    # environment, broadcast window timestamps, and MNO list structure.
     template = create_template(sample_broadcast_service, BROADCAST_TYPE)
     broadcast_message = create_broadcast_message(template, status=BroadcastStatusType.BROADCASTING)
-    starts_at = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
-    finishes_at = datetime(2024, 1, 2, 12, 0, 0, tzinfo=timezone.utc)
+    starts_at = datetime(2026, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+    finishes_at = datetime(2026, 1, 2, 12, 0, 0, tzinfo=timezone.utc)
     event = create_broadcast_event(
         broadcast_message,
         transmitted_starts_at=starts_at,
@@ -180,7 +197,9 @@ def test_build_payload_returns_correct_structure(notify_api, sample_broadcast_se
     assert payload["mnos"] == [{"mno_id": "EE", "provider_message_id": str(pm_ee.id)}]
 
 
-def test_build_payload_handles_none_transmitted_starts_at(sample_broadcast_service):
+def test_build_payload_handles_none_transmitted_starts_at(notify_api, sample_broadcast_service):
+    # When transmitted_starts_at is None, _build_payload should return broadcast_start
+    # as None rather than raising an error.
     template = create_template(sample_broadcast_service, BROADCAST_TYPE)
     broadcast_message = create_broadcast_message(template, status=BroadcastStatusType.BROADCASTING)
     event = create_broadcast_event(broadcast_message, transmitted_starts_at=None)
@@ -191,7 +210,9 @@ def test_build_payload_handles_none_transmitted_starts_at(sample_broadcast_servi
     assert payload["broadcast_start"] is None
 
 
-def test_invoke_log_upload_lambda_returns_true_on_202(mocker):
+def test_invoke_log_upload_lambda_returns_true_on_202(mocker, notify_api):
+    # When Lambda invocation returns a 202 (async accepted), the function should
+    # return True and have called invoke with the correct ARN, invocation type, and JSON payload.
     mock_client = MagicMock()
     mock_client.invoke.return_value = {"StatusCode": 202}
     mocker.patch("app.tasks.log_ingest_tasks.boto3.client", return_value=mock_client)
@@ -206,7 +227,8 @@ def test_invoke_log_upload_lambda_returns_true_on_202(mocker):
     )
 
 
-def test_invoke_log_upload_lambda_returns_false_on_non_202(mocker):
+def test_invoke_log_upload_lambda_returns_false_on_non_202(mocker, notify_api):
+    # When Lambda invocation returns any non-202 status code, the function should return False.
     mock_client = MagicMock()
     mock_client.invoke.return_value = {"StatusCode": 500}
     mocker.patch("app.tasks.log_ingest_tasks.boto3.client", return_value=mock_client)
@@ -216,7 +238,9 @@ def test_invoke_log_upload_lambda_returns_false_on_non_202(mocker):
     assert result is False
 
 
-def test_invoke_log_upload_lambda_returns_false_on_client_error(mocker):
+def test_invoke_log_upload_lambda_returns_false_on_client_error(mocker, notify_api):
+    # When boto3 raises a ClientError (e.g. function not found), the function
+    # should catch it and return False rather than propagating the exception.
     mock_client = MagicMock()
     mock_client.invoke.side_effect = botocore.exceptions.ClientError(
         {"Error": {"Code": "ResourceNotFoundException", "Message": "Function not found"}},
@@ -229,7 +253,9 @@ def test_invoke_log_upload_lambda_returns_false_on_client_error(mocker):
     assert result is False
 
 
-def test_invoke_log_upload_lambda_returns_false_on_generic_exception(mocker):
+def test_invoke_log_upload_lambda_returns_false_on_generic_exception(mocker, notify_api):
+    # When any unexpected exception is raised during invocation, the function
+    # should catch it and return False rather than propagating the exception.
     mock_client = MagicMock()
     mock_client.invoke.side_effect = Exception("network error")
     mocker.patch("app.tasks.log_ingest_tasks.boto3.client", return_value=mock_client)
