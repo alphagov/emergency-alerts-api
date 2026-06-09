@@ -37,6 +37,7 @@ def test_send_broadcast_event_queues_up_for_active_providers(mocker, notify_api,
     event = create_broadcast_event(broadcast_message)
 
     mocker.patch("app.tasks.broadcast_message_tasks.publish_govuk_alerts.send")
+    mocker.patch("app.tasks.broadcast_message_tasks.request_log_ingest_task.send")
 
     mock_send_broadcast_provider_message = mocker.patch(
         "app.tasks.broadcast_message_tasks.send_broadcast_provider_message.send",
@@ -67,6 +68,7 @@ def test_send_broadcast_event_calls_publish_govuk_alerts_task(
     mocker.patch(
         "app.tasks.broadcast_message_tasks.send_broadcast_provider_message",
     )
+    mocker.patch("app.tasks.broadcast_message_tasks.request_log_ingest_task.send")
 
     mock = mocker.patch("app.tasks.broadcast_message_tasks.publish_govuk_alerts.send")
 
@@ -85,6 +87,7 @@ def test_send_broadcast_event_only_sends_to_one_provider_if_set_on_service(
     event = create_broadcast_event(broadcast_message)
 
     mocker.patch("app.tasks.broadcast_message_tasks.publish_govuk_alerts.send")
+    mocker.patch("app.tasks.broadcast_message_tasks.request_log_ingest_task.send")
 
     mock_send_broadcast_provider_message = mocker.patch(
         "app.tasks.broadcast_message_tasks.send_broadcast_provider_message.send",
@@ -107,6 +110,7 @@ def test_send_broadcast_event_does_nothing_if_provider_set_on_service_isnt_enabl
     event = create_broadcast_event(broadcast_message)
 
     mocker.patch("app.tasks.broadcast_message_tasks.publish_govuk_alerts.send")
+    mocker.patch("app.tasks.broadcast_message_tasks.request_log_ingest_task.send")
 
     mock_send_broadcast_provider_message = mocker.patch(
         "app.tasks.broadcast_message_tasks.send_broadcast_provider_message.send",
@@ -729,6 +733,24 @@ def test_send_broadcast_provider_message_raises_if_message_is_stubbed(
         send_broadcast_provider_message(current_event.id, "ee")
 
     assert "message is stubbed" in str(exc.value)
+
+
+def test_send_broadcast_event_triggers_log_ingest_task(mocker, notify_api, sample_broadcast_service):
+    template = create_template(sample_broadcast_service, BROADCAST_TYPE)
+    broadcast_message = create_broadcast_message(template, status=BroadcastStatusType.BROADCASTING)
+    event = create_broadcast_event(broadcast_message)
+
+    mocker.patch("app.tasks.broadcast_message_tasks.publish_govuk_alerts.send")
+    mocker.patch("app.tasks.broadcast_message_tasks.send_broadcast_provider_message.send")
+    mock_log_ingest = mocker.patch(
+        "app.tasks.broadcast_message_tasks.request_log_ingest_task.send",
+    )
+
+    set_service_broadcast_providers(sample_broadcast_service, ["ee"])
+    with set_config(notify_api, "ENABLED_CBCS", {"ee"}):
+        send_broadcast_event(event.id)
+
+    mock_log_ingest.assert_called_once_with(broadcast_event_id=event.id)
 
 
 def test_send_broadcast_provider_message_does_nothing_if_cbc_proxy_disabled(mocker, notify_api, sample_template):
