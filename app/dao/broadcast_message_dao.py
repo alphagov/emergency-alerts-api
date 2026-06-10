@@ -210,6 +210,7 @@ def dao_get_filtered_broadcast_messages():
             BroadcastMessage.areas,
             BroadcastMessage.status,
             BroadcastMessage.starts_at,
+            BroadcastMessage.updated_at,
             BroadcastMessage.finishes_at,
             BroadcastMessage.approved_at,
             BroadcastMessage.cancelled_at,
