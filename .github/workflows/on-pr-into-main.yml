@@ -80,3 +80,12 @@ jobs:
           set -eu
           make bootstrap-for-tests
           make test
+
+  functional-tests:
+    name: Invoke Functional Tests
+    uses: alphagov/emergency-alerts-functional-tests/.github/workflows/run-functional-tests-pr.yml@main
+    with:
+      env-default: REPO_BRANCH_API=${{ github.head_ref }}
+      pr-description: ${{ github.event.pull_request.body }}
+    secrets:
+      EAS_GITHUB_RUNNER_RO_TOKEN: ${{ secrets.EAS_GITHUB_RUNNER_RO_TOKEN }}
