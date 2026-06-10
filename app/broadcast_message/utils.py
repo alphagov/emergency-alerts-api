@@ -1,4 +1,5 @@
 import inspect
+import json
 from datetime import datetime, timezone
 
 from emergency_alerts_utils.clients.zendesk.zendesk_client import (
@@ -6,8 +7,10 @@ from emergency_alerts_utils.clients.zendesk.zendesk_client import (
 )
 from emergency_alerts_utils.xml.common import SENDER
 from flask import current_app
+from jinja2 import Environment, FileSystemLoader
 
 from app import zendesk_client
+from app.clients.ses_client import SESClient
 from app.dao.dao_utils import dao_save_object
 from app.errors import InvalidRequest
 from app.models import (
@@ -143,3 +146,57 @@ def _create_broadcast_event(broadcast_message):
             f"Broadcast event not created. Stubbed status of broadcast message was {broadcast_message.stubbed}"
             f' but service was {"in trial mode" if service.restricted else "live"}'
         )
+
+
+def send_alert_summary_email(broadcast_message, data):
+    service = broadcast_message.service
+    alert_notification_addresses = service.alert_notification_addresses
+    to_addresses = [se.email_address for se in alert_notification_addresses]
+    subject = f"{service.name} advance notice of broadcast"
+    text_body, html_body = _build_alert_summary_email_bodies(
+        {
+            "broadcast_message": broadcast_message,
+            "data": data,
+            "env": current_app.config["ENVIRONMENT"],
+        }
+    )
+    attachments = _build_alert_summary_email_attachments(data)
+
+    ses = SESClient()
+    response = ses.send_raw_email(
+        subject=subject, to_addresses=to_addresses, text_body=text_body, html_body=html_body, attachments=attachments
+    )
+    return response
+
+
+def _build_alert_summary_email_bodies(data):
+    env = Environment(loader=FileSystemLoader("app/broadcast_message/email_template"))
+    html_body = env.get_template("alert_summary.html").render(data)
+    text_body = env.get_template("alert_summary.txt").render(data)
+
+    # Normalize text_body to CRLF and ensure final CRLF
+    text_body = text_body.replace("\n", "\r\n")
+    if not text_body.endswith("\r\n"):
+        text_body += "\r\n"
+
+    return text_body, html_body
+
+
+def _build_alert_summary_email_attachments(data):
+    """
+    Generate attachments for a broadcast message summary email.
+    """
+    geojson = data.get("geojson")
+    cap_xml = data.get("cap_xml")
+    ibag_xml = data.get("ibag_xml")
+
+    attachments = []
+
+    if geojson:
+        attachments.append(("areas.geojson", json.dumps(geojson), "application/geo+json"))
+    if cap_xml:
+        attachments.append(("areas.cap.xml", cap_xml, "application/xml"))
+    if ibag_xml:
+        attachments.append(("areas.ibag.xml", ibag_xml, "application/xml"))
+
+    return attachments
