@@ -61,6 +61,11 @@ class Config(object):
     CBC_PROXY_ENABLED = True
     ENABLED_CBCS = {BroadcastProvider.EE, BroadcastProvider.THREE, BroadcastProvider.O2, BroadcastProvider.VODAFONE}
 
+    LOG_UPLOAD_LAMBDA_ARN = os.getenv(
+        "LOG_UPLOAD_LAMBDA_ARN",
+        "arn:aws:lambda:eu-west-2:435684131547:function:mno-portal-development-log-upload-handler",
+    )
+
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_size": int(os.environ.get("SQLALCHEMY_POOL_SIZE", 5)),
         "pool_timeout": 30,
@@ -222,6 +227,11 @@ class Hosted(Config):
     CBC_PROXY_ENABLED = True
     DEBUG = False
 
+    LOG_UPLOAD_LAMBDA_ARN = os.getenv(
+        "LOG_UPLOAD_LAMBDA_ARN",
+        "arn:aws:lambda:eu-west-2:435684131547:function:mno-portal-development-log-upload-handler",
+    )
+
     TENANT_PREFIX = f"{os.environ.get('TENANT')}-" if os.environ.get("TENANT") is not None else ""
     ENVIRONMENT = os.getenv("ENVIRONMENT")
     ENVIRONMENT_PREFIX = ENVIRONMENT if ENVIRONMENT != "development" else "dev"
@@ -268,6 +278,8 @@ class Test(Config):
     CBC_PROXY_ENABLED = True
 
     GOVUK_ALERTS_S3_BUCKET_NAME = "test-govuk-alerts-bucket"
+
+    LOG_UPLOAD_LAMBDA_ARN = os.getenv("LOG_UPLOAD_LAMBDA_ARN", "")
 
     SES_ENDPOINT = os.environ.get("AWS_ENDPOINT_URL_SES", "http://localstack:4566")
     SES_FROM_ADDRESS = "support@localhost"

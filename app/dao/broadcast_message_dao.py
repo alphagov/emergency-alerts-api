@@ -173,6 +173,10 @@ def dao_get_broadcast_provider_messages_by_broadcast_message_id(broadcast_messag
     )
 
 
+def dao_get_broadcast_provider_messages_for_event(broadcast_event_id):
+    return BroadcastProviderMessage.query.filter_by(broadcast_event_id=broadcast_event_id).all()
+
+
 def dao_get_all_broadcast_messages():
     return (
         db.session.query(
