@@ -30,6 +30,7 @@ def get_broadcasts():
                 "areas": broadcast.areas,
                 "status": broadcast.status,
                 "starts_at": get_dt_string_or_none(broadcast.starts_at),
+                "updated_at": get_dt_string_or_none(broadcast.updated_at),
                 "finishes_at": get_dt_string_or_none(broadcast.finishes_at),
                 "approved_at": get_dt_string_or_none(broadcast.approved_at),
                 "cancelled_at": get_dt_string_or_none(broadcast.cancelled_at),

@@ -339,7 +339,9 @@ def test_cbc_proxy_vodafone_cancel_invokes_function(mocker, cbc_proxy_vodafone):
 
 
 @pytest.mark.parametrize("cbc", ["ee", "vodafone", "three", "o2"])
-def test_cbc_proxy_will_make_four_attempts_to_invoke_lambdas_if_boto_client_error(mocker, cbc_proxy_client, cbc):
+def test_cbc_proxy_will_make_four_attempts_to_invoke_lambdas_if_boto_client_error(
+    notify_db_session, mocker, cbc_proxy_client, cbc
+):
     cbc_proxy = cbc_proxy_client.get_proxy(cbc)
 
     ld_client_mock = mocker.patch.object(

@@ -11,6 +11,7 @@ from app.dao.broadcast_service_dao import set_service_broadcast_providers
 from app.dao.organisation_dao import dao_add_service_to_organisation
 from app.dao.service_user_dao import dao_get_service_user
 from app.dao.services_dao import (
+    dao_add_alert_notification_address_to_service,
     dao_add_user_to_service,
     dao_remove_user_from_service,
 )
@@ -23,6 +24,7 @@ from app.models import (
     Service,
     ServiceBroadcastProviders,
     ServiceBroadcastSettings,
+    ServiceEmail,
     ServicePermission,
     User,
 )
@@ -143,6 +145,7 @@ def test_get_service_by_id(admin_request, sample_service):
         "broadcast_channel",
         "created_at",
         "created_by",
+        "alert_notification_addresses",
         "go_live_at",
         "go_live_user",
         "id",
@@ -696,6 +699,60 @@ def test_get_users_for_service_returns_404_when_service_does_not_exist(notify_ap
             assert result["message"] == "No result found"
 
 
+def test_get_email_by_service_no_email_contact(notify_api, sample_service):
+    with notify_api.test_request_context():
+        with notify_api.test_client() as client:
+            auth_header = create_admin_authorization_header()
+
+            resp = client.get(
+                "/service/{}/email-contacts".format(sample_service.id),
+                headers=[("Content-Type", "application/json"), auth_header],
+            )
+
+            assert resp.status_code == 200
+            result = resp.json
+            assert result["data"] == []
+
+
+def test_get_email_by_service_single_email_contact(notify_api, sample_service):
+    dao_add_alert_notification_address_to_service(sample_service, ServiceEmail(email_address="test@test.com"))
+    with notify_api.test_request_context():
+        with notify_api.test_client() as client:
+            auth_header = create_admin_authorization_header()
+
+            resp = client.get(
+                "/service/{}/email-contacts".format(sample_service.id),
+                headers=[("Content-Type", "application/json"), auth_header],
+            )
+
+            assert resp.status_code == 200
+            result = resp.json
+            assert len(result["data"]) == 1
+            assert result["data"][0]["email_address"] == "test@test.com"
+
+
+def test_get_email_by_service_multiple_email_contact(notify_api, sample_service):
+    email1 = ServiceEmail(service_id=sample_service.id, email_address="test1@test.com")
+    email2 = ServiceEmail(service_id=sample_service.id, email_address="test2@test.com")
+    dao_add_alert_notification_address_to_service(sample_service, email1)
+    dao_add_alert_notification_address_to_service(sample_service, email2)
+
+    with notify_api.test_request_context():
+        with notify_api.test_client() as client:
+            auth_header = create_admin_authorization_header()
+
+            resp = client.get(
+                "/service/{}/email-contacts".format(sample_service.id),
+                headers=[("Content-Type", "application/json"), auth_header],
+            )
+
+            assert resp.status_code == 200
+            result = resp.json
+            assert len(result["data"]) == 2
+            assert result["data"][0]["email_address"] == "test1@test.com"
+            assert result["data"][1]["email_address"] == "test2@test.com"
+
+
 def test_default_permissions_are_added_for_user_service(notify_api, notify_db_session, sample_service, sample_user):
     with notify_api.test_request_context():
         with notify_api.test_client() as client:
@@ -762,7 +819,6 @@ def test_add_existing_user_to_another_service_with_all_permissions(
             data = {
                 "permissions": [
                     {"permission": "manage_users"},
-                    {"permission": "manage_settings"},
                     {"permission": "manage_api_keys"},
                     {"permission": "manage_templates"},
                     {"permission": "view_activity"},
@@ -802,7 +858,6 @@ def test_add_existing_user_to_another_service_with_all_permissions(
             permissions = json_resp["data"]["permissions"][str(sample_service.id)]
             expected_permissions = [
                 "manage_users",
-                "manage_settings",
                 "manage_templates",
                 "manage_api_keys",
                 "view_activity",
@@ -875,7 +930,6 @@ def test_add_existing_user_to_another_service_with_manage_permissions(
             data = {
                 "permissions": [
                     {"permission": "manage_users"},
-                    {"permission": "manage_settings"},
                     {"permission": "manage_templates"},
                 ]
             }
@@ -901,7 +955,7 @@ def test_add_existing_user_to_another_service_with_manage_permissions(
             json_resp = resp.json
 
             permissions = json_resp["data"]["permissions"][str(sample_service.id)]
-            expected_permissions = ["manage_users", "manage_settings", "manage_templates"]
+            expected_permissions = ["manage_users", "manage_templates"]
             assert sorted(expected_permissions) == sorted(permissions)
 
 
@@ -1067,7 +1121,7 @@ def test_remove_user_from_service(client, sample_user_service_permission):
     dao_add_user_to_service(
         service,
         second_user,
-        permissions=[Permission(service_id=service.id, user_id=second_user.id, permission="manage_settings")],
+        permissions=[Permission(service_id=service.id, user_id=second_user.id, permission="manage_templates")],
     )
 
     endpoint = url_for("service.remove_user_from_service", service_id=str(service.id), user_id=str(second_user.id))
@@ -1591,7 +1645,7 @@ def test_set_training_service_as_broadcast_service_removes_user_permissions(
             )
         ],
     )
-    assert len(service_user.get_permissions(service_id=sample_training_service.id)) == 5
+    assert len(service_user.get_permissions(service_id=sample_training_service.id)) == 4
     assert len(sample_invited_user.get_permissions()) == 3
 
     admin_request.post(
@@ -1629,7 +1683,7 @@ def test_change_service_broadcast_providers_does_not_remove_user_permissions(
             )
         ],
     )
-    assert len(service_user.get_permissions(service_id=sample_service.id)) == 5
+    assert len(service_user.get_permissions(service_id=sample_service.id)) == 4
     assert len(sample_invited_user.get_permissions()) == 3
 
     admin_request.post(
@@ -1642,7 +1696,6 @@ def test_change_service_broadcast_providers_does_not_remove_user_permissions(
     assert service_user.get_permissions(service_id=sample_service.id) == [
         "manage_users",
         "manage_templates",
-        "manage_settings",
         "manage_api_keys",
         "view_activity",
     ]

@@ -127,7 +127,7 @@ def setup_commands(application):
 @click.option("-p", "--permissions", required=True, help="Comma separated list of permissions.")
 def bulk_invite_user_to_service(file_name, service_id, user_id, auth_type, permissions):
     #  permissions
-    #  manage_users | manage_templates | manage_settings
+    #  manage_users | manage_templates
     #  Access API keys manage_api_keys
     #  platform_admin
     #  view_activity
