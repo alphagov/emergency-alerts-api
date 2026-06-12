@@ -1,7 +1,7 @@
 """
 
-Revision ID: 0426_add_area_population_table
-Revises: 0425_remove_permission
+Revision ID: 0427_add_area_population_table
+Revises: 0426_service_email_table
 Create Date: 2026-05-21 14:35:00
 
 """
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 from alembic import op
 from geoalchemy2 import Geometry
 
-revision = "0426_add_area_population_table"
-down_revision = "0425_remove_permission"
+revision = "0427_add_area_population_table"
+down_revision = "0426_service_email_table"
 
 
 def upgrade():
