@@ -1,9 +1,9 @@
 from flask import Blueprint, jsonify, request
 from marshmallow import ValidationError
+from shapely import MultiPolygon, Polygon, wkt
 
 from app.dao.populations_dao import dao_estimate_population_for_area
 from app.errors import register_errors
-from shapely import MultiPolygon, Polygon, wkt
 
 populations_blueprint = Blueprint(
     "populations",
@@ -22,6 +22,7 @@ def get_population_estimate_for_area():
     validate_wkt_area(area)
     return jsonify(dao_estimate_population_for_area(area))
 
+
 def validate_wkt_area(area):
     # Firstly check string is valid WKT
     try:
@@ -36,5 +37,3 @@ def validate_wkt_area(area):
     # Checking area has valid shape
     if not geom.is_valid:
         raise ValidationError("Provided WKT area is not valid")
-
-
