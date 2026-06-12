@@ -107,6 +107,8 @@ fqdn==1.5.1
     # via jsonschema
 freezegun==1.5.5
     # via -r requirements.in
+geoalchemy2==0.20.0
+    # via -r requirements.in
 googleapis-common-protos==1.72.0
     # via
     #   opentelemetry-exporter-otlp-proto-grpc
@@ -475,6 +477,7 @@ opentelemetry-util-http==0.54b1
 packaging==25.0
     # via
     #   black
+    #   geoalchemy2
     #   opentelemetry-instrumentation
     #   opentelemetry-instrumentation-falcon
     #   opentelemetry-instrumentation-flask
@@ -581,6 +584,7 @@ sqlalchemy==1.4.54
     #   -r requirements.in
     #   alembic
     #   flask-sqlalchemy
+    #   geoalchemy2
     #   marshmallow-sqlalchemy
 typing-extensions==4.15.0
     # via

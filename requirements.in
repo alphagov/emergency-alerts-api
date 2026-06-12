@@ -27,6 +27,7 @@ psycopg2-binary==2.9.11
 pwdpy==1.0.1
 PyJWT==2.12.1
 SQLAlchemy==1.4.54
+GeoAlchemy2==0.20.0
 urllib3==2.7.0
 Werkzeug==3.1.8
 
