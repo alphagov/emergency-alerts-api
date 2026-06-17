@@ -59,6 +59,11 @@ def test_population_estimate_returned_for_valid_area(
     [
         (
             # Invalid WKT as the polygon isn't closed
+            {},
+            {"result": "error", "message": "Area must be provided for population estimation"},
+        ),
+        (
+            # Invalid WKT as the polygon isn't closed
             {
                 "areas": (
                     "POLYGON ((-3.092981 53.549283, -3.055212 53.549283, " "-3.055212 53.568045, -3.092981 53.568045))"
