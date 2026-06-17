@@ -115,7 +115,7 @@ greenlet==3.5.0
     # via sqlalchemy
 grpcio==1.76.0
     # via opentelemetry-exporter-otlp-proto-grpc
-idna==3.15
+idna==3.18
     # via
     #   jsonschema
     #   requests
@@ -513,7 +513,7 @@ pyflakes==3.4.0
     # via flake8
 pygments==2.19.2
     # via pytest
-pyjwt==2.12.1
+pyjwt==2.13.0
     # via
     #   -r requirements.in
     #   notifications-python-client
