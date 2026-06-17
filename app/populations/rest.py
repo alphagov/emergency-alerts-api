@@ -3,7 +3,7 @@ from marshmallow import ValidationError
 from shapely import MultiPolygon, Polygon, wkt
 
 from app.dao.populations_dao import dao_estimate_population_for_area
-from app.errors import register_errors
+from app.errors import InvalidRequest, register_errors
 
 populations_blueprint = Blueprint(
     "populations",
@@ -19,6 +19,8 @@ def get_population_estimate_for_area():
     # get alert area population data based on area posted
     data = request.get_json()
     area = data.get("areas")
+    if not area:
+        raise InvalidRequest("Area must be provided for population estimation", 400)
     validate_wkt_area(area)
     return jsonify(dao_estimate_population_for_area(area))
 
