@@ -25,7 +25,7 @@ notifications-python-client==10.0.1
 periodiq==0.13.0
 psycopg2-binary==2.9.11
 pwdpy==1.0.1
-PyJWT==2.12.1
+PyJWT==2.13.0
 SQLAlchemy==1.4.54
 GeoAlchemy2==0.20.0
 urllib3==2.7.0
