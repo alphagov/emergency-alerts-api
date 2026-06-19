@@ -10,6 +10,7 @@ from app.dao.api_key_dao import (
     get_model_api_keys,
     get_unsigned_secret,
     get_unsigned_secrets,
+    purge_test_api_keys,
     save_model_api_key,
 )
 from app.models import ApiKey
@@ -151,3 +152,36 @@ def test_should_not_return_revoked_api_keys_older_than_7_days(sample_service, da
     all_api_keys = get_model_api_keys(service_id=sample_service.id)
 
     assert len(all_api_keys) == expected_length
+
+
+def test_dao_purge_test_api_keys(sample_service):
+    key1 = ApiKey(
+        name="Kept-123",
+        _secret="kept123",
+        service_id=sample_service.id,
+        key_type="normal",
+        created_by=sample_service.created_by,
+    )
+    key2 = ApiKey(
+        name="Key-123",
+        _secret="key123",
+        service_id=sample_service.id,
+        key_type="normal",
+        created_by=sample_service.created_by,
+    )
+
+    save_model_api_key(key1)
+    save_model_api_key(key2)
+
+    keys = get_model_api_keys(sample_service.id)
+    assert len(keys) == 2
+    history_keys = ApiKey.get_history_model().query.filter(ApiKey.service_id == sample_service.id).all()
+    assert len(history_keys) == 2
+
+    purge_test_api_keys(sample_service.id)
+
+    keys = get_model_api_keys(sample_service.id)
+    assert len(keys) == 1
+    assert keys[0].name == "Kept-123"
+    history_keys = ApiKey.get_history_model().query.filter(ApiKey.service_id == sample_service.id).all()
+    assert len(history_keys) == 1
