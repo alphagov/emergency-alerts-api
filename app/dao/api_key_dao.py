@@ -58,6 +58,7 @@ def purge_test_api_keys(service_id):
     ApiKey.query.filter(ApiKey.service_id == service_id, ApiKey.name.startswith("Key-")).delete(
         synchronize_session="fetch"
     )
-    ApiKey.get_history_model().query.filter(ApiKey.service_id == service_id, ApiKey.name.startswith("Key-")).delete(
+    ApiKeyHistory = ApiKey.get_history_model()
+    ApiKeyHistory.query.filter(ApiKeyHistory.service_id == service_id, ApiKeyHistory.name.startswith("Key-")).delete(
         synchronize_session="fetch"
     )

@@ -184,4 +184,4 @@ def test_dao_purge_test_api_keys(sample_service):
     assert len(keys) == 1
     assert keys[0].name == "Kept-123"
     history_keys = ApiKey.get_history_model().query.filter(ApiKey.service_id == sample_service.id).all()
-    assert len(history_keys) == 2
+    assert len(history_keys) == 1
