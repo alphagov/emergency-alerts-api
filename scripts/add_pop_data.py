@@ -4,10 +4,12 @@ import boto3
 
 s3 = boto3.client("s3")
 
+
 def get_population_data():
     areas_source_bucket = os.environ.get("AREAS_SOURCE_BUCKET")
     file = s3.get_object(Bucket=areas_source_bucket, Key="population_data.csv")
     return file["Body"]
+
 
 def get_environment_variables():
     user = os.environ.get("MASTER_USERNAME")
@@ -15,6 +17,7 @@ def get_environment_variables():
     host = os.environ.get("RDS_HOST", "localhost")
     database = os.environ.get("DATABASE", "emergency_alerts")
     return user, password, host, database
+
 
 def main():
     # Source variables necessary for DB connection
@@ -34,7 +37,7 @@ def main():
                 """,
                 population_data,
             )
-        print('Population data has been added to the table')
+        print("Population data has been added to the table")
     except Exception as e:
         print("Could not add data to population table as {}".format(e))
     finally:
