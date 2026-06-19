@@ -6,7 +6,7 @@ s3 = boto3.client("s3")
 
 
 def get_population_data():
-    areas_source_bucket = os.environ.get("AREAS_SOURCE_BUCKET")
+    areas_source_bucket = os.environ.get("AREAS_SOURCE_BUCKET_NAME")
     file = s3.get_object(Bucket=areas_source_bucket, Key="population_data.csv")
     return file["Body"]
 
