@@ -50,3 +50,14 @@ def get_unsigned_secret(key_id):
     """
     api_key = ApiKey.query.filter_by(id=key_id, expiry_date=None).one()
     return api_key.secret
+
+
+@autocommit
+def purge_test_api_keys(service_id):
+    # Only looks for TestKey-blah, which is what the functional tests make
+    ApiKey.query.filter(ApiKey.service_id == service_id, ApiKey.name.startswith("Key-")).delete(
+        synchronize_session="fetch"
+    )
+    ApiKey.get_history_model().query.filter(ApiKey.service_id == service_id, ApiKey.name.startswith("Key-")).delete(
+        synchronize_session="fetch"
+    )
