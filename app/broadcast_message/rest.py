@@ -23,6 +23,7 @@ from app.dao.broadcast_message_dao import (
     dao_get_broadcast_provider_messages_by_broadcast_message_id,
     dao_get_broadcast_provider_messages_by_broadcast_message_ids,
     dao_get_public_messages_older_than,
+    dao_purge_old_broadcast_messages,
 )
 from app.dao.broadcast_message_edit_reasons import (
     dao_create_broadcast_message_edit_reason,
@@ -499,9 +500,16 @@ def purge_broadcast_messages(service_id, older_than):
     except Exception as e:
         return jsonify(result="error", message=f"Unable to purge old alert items: {e}"), 500
 
+    # Also remove things exclusively from the DB (rejected, draft, etc)
+    db_purge = dao_purge_old_broadcast_messages(service_id, older_than)
+    current_app.logger.info("Additional removed DB items: %s", db_purge)
+
     return (
         jsonify(
-            {"message": result_message.format(counter["msgs"], counter["events"], counter["s3_objects"], older_than)}
+            {
+                "message": result_message.format(counter["msgs"], counter["events"], counter["s3_objects"], older_than),
+                "additional_db_purge": db_purge,
+            }
         ),
         200,
     )
