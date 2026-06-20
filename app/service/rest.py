@@ -10,6 +10,7 @@ from app.dao.api_key_dao import (
     expire_api_key,
     get_model_api_keys,
     get_unsigned_secret,
+    purge_test_api_keys,
     save_model_api_key,
 )
 from app.dao.broadcast_service_dao import (
@@ -201,6 +202,19 @@ def get_api_keys(service_id, key_id=None):
         raise InvalidRequest(error, status_code=404)
 
     return jsonify(apiKeys=api_key_schema.dump(api_keys, many=True)), 200
+
+
+@service_blueprint.route("/<uuid:service_id>/api-key/purge", methods=["DELETE"])
+def purge_test_admin_actions_created_by(service_id):
+    if is_public_environment():
+        raise InvalidRequest("Endpoint not found", status_code=404)
+
+    try:
+        purge_test_api_keys(service_id)
+    except Exception:
+        return jsonify(result="error", message="Unable to purge test API keys"), 500
+
+    return jsonify({"message": "Successfully purged API keys"}), 200
 
 
 @service_blueprint.route("/<uuid:service_id>/users", methods=["GET"])
