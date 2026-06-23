@@ -1,7 +1,7 @@
 import psycopg2
 import boto3
 
-from scripts.adding_area_data.utils import copy_data_to_table, get_environment_variables, get_source_data
+from utils import copy_data_to_table, get_environment_variables, get_source_data
 
 s3 = boto3.client("s3")
 
