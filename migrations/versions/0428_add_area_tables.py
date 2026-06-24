@@ -17,9 +17,9 @@ down_revision = "0427_add_area_population_table"
 def upgrade():
     op.create_table(
         "geography_type",
-        sa.Column("id", sa.String(), nullable=False),
-        sa.Column("name", sa.String(), nullable=False),
-        sa.Column("route", sa.String(), nullable=True),
+        sa.Column("id", sa.String(), nullable=False, unique=True),
+        sa.Column("name", sa.String(), nullable=False, unique=True),
+        sa.Column("route", sa.String(), nullable=True, unique=True),
     )
     op.create_index(
         "ix_geography_type_id",
