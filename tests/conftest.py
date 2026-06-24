@@ -1,5 +1,6 @@
 import os
 from contextlib import contextmanager
+from pathlib import Path
 
 import pytest
 import sqlalchemy
@@ -227,3 +228,20 @@ class Matcher:
 
     def __repr__(self):
         return "<Matcher: {}>".format(self.description)
+
+
+@pytest.fixture(scope="function")
+def add_population_test_data(notify_db_session):
+    # Test data consists of the first 20 geometries in population data CSV
+    # These happen to be ward boundaries in/around Merseyside
+    population_data_csv = Path(__file__).parent / "test_population_data.csv"
+    conn = notify_db_session.connection().connection
+    # Uses psycopg connection to create cursor for database connection
+    with open(population_data_csv) as f:
+        conn.cursor().copy_expert(
+            """
+            COPY populations (id, geometry, density) FROM STDIN WITH CSV HEADER
+            """,
+            f,
+        )
+    notify_db_session.commit()
