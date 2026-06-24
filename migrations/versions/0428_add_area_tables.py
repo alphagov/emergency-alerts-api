@@ -10,9 +10,8 @@ import sqlalchemy as sa
 from alembic import op
 from geoalchemy2 import Geometry
 
-
-revision = '0428_add_area_tables'
-down_revision = '0427_add_area_population_table'
+revision = "0428_add_area_tables"
+down_revision = "0427_add_area_population_table"
 
 
 def upgrade():
@@ -46,7 +45,7 @@ def upgrade():
         sa.Column("version", sa.String(), nullable=False),
         sa.Column("source_url", sa.String(), nullable=False),
         sa.Column("state", sa.String(), nullable=False),
-        sa.PrimaryKeyConstraint('id')
+        sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
         "ix_geography_version_geographic_type_id",
@@ -71,7 +70,7 @@ def upgrade():
         sa.Column("polygon_data", Geometry("GEOMETRY", srid=4326), nullable=True),
         sa.Column("parent_geography_id", sa.String(), nullable=False),
         sa.Column("geography_version_id", sa.String(), nullable=True),
-        sa.PrimaryKeyConstraint('id')
+        sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
         "ix_geography_polygons_id",
