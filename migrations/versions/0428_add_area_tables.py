@@ -67,7 +67,7 @@ def upgrade():
         "geography_polygons",
         sa.Column("id", sa.String(), nullable=False),
         sa.Column("name", sa.String(), nullable=True),
-        sa.Column("polygon_data", Geometry("GEOMETRY", srid=4326), nullable=True),
+        sa.Column("geometry", Geometry("GEOMETRY", srid=4326), nullable=True),
         sa.Column("parent_geography_id", sa.String(), nullable=False),
         sa.Column("geography_version_id", sa.String(), nullable=True),
         sa.PrimaryKeyConstraint("id"),
@@ -93,9 +93,9 @@ def upgrade():
         ["geography_version_id"],
     )
     op.create_index(
-        "ix_geography_polygons_polygon_data",
+        "ix_geography_polygons_geometry",
         "geography_polygons",
-        ["polygon_data"],
+        ["geometry"],
         postgresql_using="gist",
     )
 
@@ -113,7 +113,7 @@ def downgrade():
     op.drop_index("ix_geography_polygons_name", table_name="geography_polygons")
     op.drop_index("ix_geography_polygons_parent_geography_id", table_name="geography_polygons")
     op.drop_index("ix_geography_polygons_geography_version_id", table_name="geography_polygons")
-    op.drop_index("ix_geography_polygons_polygon_data", table_name="geography_polygons")
+    op.drop_index("ix_geography_polygons_geometry", table_name="geography_polygons")
 
     op.drop_table("geography_type")
     op.drop_table("geography_version")
