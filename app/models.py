@@ -10,6 +10,7 @@ from emergency_alerts_utils.xml.cap import (
     convert_utc_datetime_to_cap_standard_string,
 )
 from flask import current_app, url_for
+from geoalchemy2 import Geometry
 from sqlalchemy import CheckConstraint, Index, UniqueConstraint
 from sqlalchemy.dialects.postgresql import INET, JSON, JSONB, UUID
 from sqlalchemy.ext.associationproxy import association_proxy
@@ -1449,6 +1450,20 @@ class CommonPasswords(db.Model):
         return {
             "password": self.password,
         }
+
+
+class Populations(db.Model):
+    """
+    This table is used to store the population data.
+    """
+
+    __tablename__ = "populations"
+    id = db.Column(db.String, primary_key=True)
+    geometry = db.Column(Geometry("GEOMETRY", srid=4326), nullable=False)
+    density = db.Column(db.Float, nullable=False)
+
+    def serialize(self):
+        return {"id": self.id, "geometry": self.geometry, "density": self.density}
 
 
 class PublishTaskProgress(db.Model):
