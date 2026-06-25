@@ -721,8 +721,6 @@ def send_user_reset_password():
     data = email_data_request_schema.load(request_json)
     user_to_send_to = get_user_by_email(data["email"])
 
-    print(user_to_send_to)
-
     notification = {
         "type": EMAIL_TYPE,
         "template_id": current_app.config["PASSWORD_RESET_TEMPLATE_ID"],
