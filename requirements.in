@@ -22,13 +22,18 @@ lxml==6.1.0
 marshmallow-sqlalchemy==1.5.0
 marshmallow==4.3.0
 notifications-python-client==10.0.1
-periodiq==0.13.0
+periodiq==0.14.0
 psycopg2-binary==2.9.11
 pwdpy==1.0.1
-PyJWT==2.12.1
+PyJWT==2.13.0
 SQLAlchemy==1.4.54
+GeoAlchemy2==0.20.0
 urllib3==2.7.0
 Werkzeug==3.1.8
+
+# For transitive dependency resolution using pip-tools only.
+# In container builds we use the sibling (base image) version.
+emergency-alerts-utils @ git+https://github.com/alphagov/emergency-alerts-utils.git
 
 # Package for testing
 black==26.3.1
