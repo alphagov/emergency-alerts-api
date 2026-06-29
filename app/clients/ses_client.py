@@ -84,7 +84,7 @@ class SESClient:
         msg = MIMEMultipart()
         msg["Subject"] = subject
         msg["From"] = self.sender
-        msg["To"] = ", ".join(to_addresses)
+        msg["To"] = ", ".join(to_addresses) if to_addresses else "undisclosed-recipients:;"
 
         if cc_addresses:
             msg["Cc"] = ", ".join(cc_addresses)
