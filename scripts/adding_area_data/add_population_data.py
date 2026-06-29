@@ -1,6 +1,6 @@
 import boto3
 
-from utils import copy_data_to_table, create_db_connection, get_environment_variables, get_source_data
+from utils import copy_data_to_table, create_db_connection, get_source_data
 
 s3 = boto3.client("s3")
 
