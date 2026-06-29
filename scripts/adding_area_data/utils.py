@@ -1,13 +1,14 @@
+from io import StringIO
 import os
 import boto3
 import psycopg2
 
 s3 = boto3.client("s3")
+AREAS_SOURCE_BUCKET = os.environ.get("AREAS_SOURCE_BUCKET_NAME")
 
 
 def get_source_data(filename):
-    areas_source_bucket = os.environ.get("AREAS_SOURCE_BUCKET_NAME")
-    file = s3.get_object(Bucket=areas_source_bucket, Key=filename)
+    file = s3.get_object(Bucket=AREAS_SOURCE_BUCKET, Key=filename)
     return file["Body"]
 
 
@@ -25,18 +26,32 @@ def create_db_connection():
     return psycopg2.connect(host=host, database=database, user=user, password=password)
 
 
+def copy_from_stdin(conn, table_name, columns, data):
+    # Runs COPY ... FROM STDIN WITH CSV HEADER
+    with conn, conn.cursor() as curr:
+        curr.copy_expert(
+            f"""
+            COPY {table_name} ({",".join(columns)})
+            FROM STDIN WITH CSV HEADER
+            """,
+            data,
+        )
+
+
 def copy_data_to_table(data, conn, table_name, columns):
     try:
-        with conn, conn.cursor() as curr:
-            curr.copy_expert(
-                f"""
-                COPY {table_name} ({",".join(columns)}) FROM STDIN WITH CSV HEADER
-                """,
-                data,
-            )
+        copy_from_stdin(conn, table_name, columns, data)
         print(f"{table_name} data has been added to the table")
-    except Exception as e:
-        print(f"Could not add data to {table_name} table as {e}")
+    except Exception as exc:
+        print(f"Could not add data to {table_name} table: {exc}")
+
+
+def copy_dataframe_to_table(conn, table_name, columns, df):
+    # Copy a DataFrame into a table
+    sio = StringIO()
+    df.to_csv(sio, index=False, columns=columns)
+    sio.seek(0)
+    copy_from_stdin(conn, table_name, columns, sio)
 
 
 def insert_data_into_table(conn, table_name, columns, values):
