@@ -151,7 +151,7 @@ def _create_broadcast_event(broadcast_message):
 def send_alert_summary_email(broadcast_message, data):
     service = broadcast_message.service
     alert_notification_addresses = service.alert_notification_addresses
-    to_addresses = [se.email_address for se in alert_notification_addresses]
+    bcc_addresses = [se.email_address for se in alert_notification_addresses]
     subject = f"{service.name} advance notice of broadcast"
     text_body, html_body = _build_alert_summary_email_bodies(
         {
@@ -164,7 +164,7 @@ def send_alert_summary_email(broadcast_message, data):
 
     ses = SESClient()
     response = ses.send_raw_email(
-        subject=subject, to_addresses=to_addresses, text_body=text_body, html_body=html_body, attachments=attachments
+        subject=subject, bcc_addresses=bcc_addresses, text_body=text_body, html_body=html_body, attachments=attachments
     )
     return response
 

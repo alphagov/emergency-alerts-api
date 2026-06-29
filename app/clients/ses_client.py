@@ -66,16 +66,28 @@ class SESClient:
             logger.error(f"SES send_email failed: {e.response['Error']}")
             raise
 
-    def send_raw_email(self, subject, text_body, html_body, to_addresses, attachments=None):
+    def send_raw_email(
+        self, subject, text_body, html_body, to_addresses=None, cc_addresses=None, bcc_addresses=None, attachments=None
+    ):
         """
         Send an email with optional attachments using SES send_raw_email.
         attachments: list of tuples -> [("file.txt", b"content"), ...]
         """
 
+        to_addresses = to_addresses or []
+        cc_addresses = cc_addresses or []
+        bcc_addresses = bcc_addresses or []
+
+        # SES envelope recipients (this is what SES actually uses)
+        recipients = to_addresses + cc_addresses + bcc_addresses
+
         msg = MIMEMultipart()
         msg["Subject"] = subject
         msg["From"] = self.sender
         msg["To"] = ", ".join(to_addresses)
+
+        if cc_addresses:
+            msg["Cc"] = ", ".join(cc_addresses)
 
         # Alternative block for text + HTML
         alt = MIMEMultipart("alternative")
@@ -95,9 +107,15 @@ class SESClient:
                 part = _build_mime_attachment(filename, file_bytes, mime_type)
                 msg.attach(part)
 
+        # Double check for Bcc and remove if present
+        if "Bcc" in msg:
+            del msg["Bcc"]
+
         # Send via SES
         try:
-            response = self.client.send_raw_email(RawMessage={"Data": msg.as_string()})
+            response = self.client.send_raw_email(
+                Source=self.sender, Destinations=recipients, RawMessage={"Data": msg.as_string()}
+            )
 
             return response
         except botocore.exceptions.ClientError as e:
