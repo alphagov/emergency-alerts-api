@@ -7,6 +7,14 @@ from app import dramatiq
 # dramatiq can bind an actor name and queue name in this repo.
 
 
+@dramatiq.actor(actor_name=TaskNames.PUBLISH_GOVUK_ALERTS_FULL, queue_name=QueueNames.GOVUK_ALERTS)
+def publish_govuk_alerts_full(*args, **kwargs):
+    raise NotImplementedError(
+        f"Attempted to run {TaskNames.PUBLISH_GOVUK_ALERTS_FULL} but this is the "
+        "API worker - not govuk. Either this task was sent on the wrong queue or we're consuming the wrong queue."
+    )
+
+
 @dramatiq.actor(actor_name=TaskNames.PUBLISH_GOVUK_ALERTS, queue_name=QueueNames.GOVUK_ALERTS)
 def publish_govuk_alerts(*args, **kwargs):
     raise NotImplementedError(
