@@ -12,7 +12,9 @@ def main():
     # Uses psycopg2 connection to create cursor for database connection
     conn = create_db_connection()
     try:
-        copy_data_to_table(data=population_data, conn=conn, table_name="populations", columns=["id", "geometry", "density"])
+        copy_data_to_table(
+            data=population_data, conn=conn, table_name="populations", columns=["id", "geometry", "density"]
+        )
     finally:
         conn.close()
 
