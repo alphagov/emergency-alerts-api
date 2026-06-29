@@ -113,8 +113,6 @@ googleapis-common-protos==1.72.0
     # via
     #   opentelemetry-exporter-otlp-proto-grpc
     #   opentelemetry-exporter-otlp-proto-http
-greenlet==3.5.0
-    # via sqlalchemy
 grpcio==1.76.0
     # via opentelemetry-exporter-otlp-proto-grpc
 idna==3.18
@@ -174,6 +172,8 @@ mypy-extensions==1.1.0
     # via black
 notifications-python-client==10.0.1
     # via -r requirements.in
+numpy==2.5.0
+    # via pandas
 opentelemetry-api==1.33.1
     # via
     #   aws-opentelemetry-distro
@@ -484,6 +484,8 @@ packaging==25.0
     #   opentelemetry-instrumentation-pika
     #   opentelemetry-instrumentation-sqlalchemy
     #   pytest
+pandas==3.0.4
+    # via -r requirements.in
 pathspec==1.0.4
     # via black
 pendulum==3.2.0
@@ -541,6 +543,7 @@ python-dateutil==2.9.0.post0
     #   botocore
     #   freezegun
     #   moto
+    #   pandas
     #   pendulum
 python-dotenv==1.2.2
     # via pytest-env
