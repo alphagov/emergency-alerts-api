@@ -26,7 +26,7 @@ class SESClient:
             )
         aws_region = current_app.config["SES_REGION"]
 
-        self.client = client or boto3.client("ses", region_name=aws_region, endpoint_url=endpoint)
+        self.client = client or boto3.client("sesv2", region_name=aws_region, endpoint_url=endpoint)
         self.sender = sender or from_address
 
     def send_email(self, to, subject, body_text=None, body_html=None):
@@ -42,22 +42,19 @@ class SESClient:
         if not body_text and not body_html:
             raise ValueError("Must provide at least one of body_text or body_html")
 
-        message = {
-            "Subject": {"Data": subject},
-            "Body": {},
-        }
-
-        if body_text:
-            message["Body"]["Text"] = {"Data": body_text}
-
-        if body_html:
-            message["Body"]["Html"] = {"Data": body_html}
-
         try:
             response = self.client.send_email(
-                Source=self.sender,
+                FromEmailAddress=self.sender,
                 Destination={"ToAddresses": to},
-                Message=message,
+                Content={
+                    "Simple": {
+                        "Subject": {"Data": subject},
+                        "Body": {
+                            "Text": {"Data": body_text} if body_text else {},
+                            "Html": {"Data": body_html} if body_html else {},
+                        },
+                    }
+                },
             )
             logger.info(f"SES email sent to {to}")
             return response
@@ -113,8 +110,10 @@ class SESClient:
 
         # Send via SES
         try:
-            response = self.client.send_raw_email(
-                Source=self.sender, Destinations=recipients, RawMessage={"Data": msg.as_string()}
+            response = self.client.send_email(
+                FromEmailAddress=self.sender,
+                Destination={"ToAddresses": recipients},
+                Content={"Raw": {"Data": msg.as_string().encode("utf-8")}},
             )
 
             return response
