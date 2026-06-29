@@ -142,7 +142,7 @@ def test_auto_expire_broadcast_messages(
 
 
 def test_remove_yesterdays_planned_tests_on_govuk_alerts(notify_db_session, mocker):
-    mock_task = mocker.patch("app.tasks.broadcast_message_tasks.publish_govuk_alerts.send")
+    mock_task = mocker.patch("app.tasks.stub_tasks.publish_govuk_alerts_full.send")
 
     remove_yesterdays_planned_tests_on_govuk_alerts()
 

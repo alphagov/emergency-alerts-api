@@ -37,8 +37,8 @@ jobs:
 
           if [[ -n $PR_UTILS_BRANCH ]]; then
             echo "Going to use branch $PR_UTILS_BRANCH for utils"
-            sed -i "s|emergency-alerts-utils\.git|emergency-alerts-utils.git@$PR_UTILS_BRANCH|" requirements_github_utils.txt
-            cat requirements_github_utils.txt
+            sed -i "s|emergency-alerts-utils\.git|emergency-alerts-utils.git@$PR_UTILS_BRANCH|" requirements.txt
+            cat requirements.txt
           else
             echo "Leaving utils target as default"
           fi
