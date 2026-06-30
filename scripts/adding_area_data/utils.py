@@ -26,13 +26,14 @@ def create_db_connection():
     return psycopg2.connect(host=host, database=database, user=user, password=password)
 
 
-def copy_from_stdin(conn, table_name, columns, data):
-    # Runs COPY ... FROM STDIN WITH CSV HEADER
+def copy_from_stdin(conn, table_name, columns, data, with_header=True):
+    # Runs COPY ... FROM STDIN
+    header_clause = "WITH CSV HEADER" if with_header else "WITH CSV"
     with conn, conn.cursor() as curr:
         curr.copy_expert(
             f"""
             COPY {table_name} ({",".join(columns)})
-            FROM STDIN WITH CSV HEADER
+            FROM STDIN {header_clause}
             """,
             data,
         )
@@ -46,12 +47,12 @@ def copy_data_to_table(data, conn, table_name, columns):
         print(f"Could not add data to {table_name} table: {exc}")
 
 
-def copy_dataframe_to_table(conn, table_name, columns, df):
+def copy_dataframe_to_table(conn, table_name, columns, df, with_header=True):
     # Copy a DataFrame into a table
     sio = StringIO()
     df.to_csv(sio, index=False, columns=columns)
     sio.seek(0)
-    copy_from_stdin(conn, table_name, columns, sio)
+    copy_from_stdin(conn, table_name, columns, sio, with_header=with_header)
 
 
 def insert_data_into_table(conn, table_name, columns, values):

@@ -70,17 +70,19 @@ def insert_geography_type(conn, area):
 def insert_geography_polygons(conn, area, geography_version_id, geography_type_id):
     # Insert geography_polygons rows for a given area
     data = get_source_data(f"{VERSION}/{area}.csv")
-    csv_data = pd.read_csv(data, index_col=False)
+    # Splits CSV into chunks for processing
+    csv_data_chunks = pd.read_csv(data, index_col=False, chunksize=100000)
 
-    # Adds columns for geography_version_id & geography_type_id, values are generated within this script
-    csv_data["geography_version_id"] = geography_version_id
-    csv_data["geography_type_id"] = geography_type_id
+    for chunk in csv_data_chunks:
+        # Adds columns for geography_version_id & geography_type_id, values are generated within this script
+        chunk["geography_version_id"] = geography_version_id
+        chunk["geography_type_id"] = geography_type_id
 
-    try:
-        copy_dataframe_to_table(conn, "geography_polygons", GEOGRAPHY_POLYGON_COLUMNS, csv_data)
-        print(f"{area} geography_polygons data has been added to the table")
-    except Exception as exc:
-        print(f"Could not add {area} data to geography_polygons table: {exc}")
+        try:
+            copy_dataframe_to_table(conn, "geography_polygons", GEOGRAPHY_POLYGON_COLUMNS, chunk, with_header=False)
+            print(f"{area} geography_polygons data has been added to the table")
+        except Exception as exc:
+            print(f"Could not add {area} data to geography_polygons table: {exc}")
 
 
 def main():
