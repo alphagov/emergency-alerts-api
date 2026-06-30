@@ -58,11 +58,6 @@ def upgrade():
         ["geography_type_id"],
     )
     op.create_index(
-        "ix_geography_version_version",
-        "geography_version",
-        ["version"],
-    )
-    op.create_index(
         "ix_geography_version_state",
         "geography_version",
         ["state"],
@@ -130,7 +125,6 @@ def downgrade():
     op.drop_index("ix_geography_polygons_id", table_name="geography_polygons")
 
     op.drop_index("ix_geography_version_state", table_name="geography_version")
-    op.drop_index("ix_geography_version_version", table_name="geography_version")
     op.drop_index("ix_geography_version_geography_type_id", table_name="geography_version")
 
     op.drop_index("ix_geography_type_route", table_name="geography_type")
