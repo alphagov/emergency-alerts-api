@@ -72,6 +72,8 @@ def upgrade():
         sa.Column("geometry", Geometry("GEOMETRY", srid=4326), nullable=False),
         sa.Column("parent_geography_id", sa.String(), nullable=True),
         sa.Column("geography_version_id", sa.String(), nullable=False),
+        # Stored for optimisation purposes - not strictly necessary as we can retrieve
+        # geography_type_id from geography_version relation in first instance
         sa.Column("geography_type_id", sa.String(), nullable=False),
         sa.ForeignKeyConstraint(
             ["geography_version_id"],
