@@ -19,7 +19,10 @@ from app.dao.dao_utils import dao_save_object
 from app.models import BROADCAST_TYPE, BroadcastMessage, BroadcastStatusType
 from app.schema_validation import validate
 from app.v2.broadcast import v2_broadcast_blueprint
-from app.v2.broadcast.broadcast_schemas import post_broadcast_schema
+from app.v2.broadcast.broadcast_schemas import (
+    cancel_broadcast_schema,
+    post_broadcast_schema,
+)
 from app.v2.errors import BadRequestError, ValidationError
 from app.xml_schemas import validate_xml
 
@@ -51,9 +54,11 @@ def create_broadcast():
         )
 
     broadcast_json = cap_xml_to_dict(cap_xml)
-    validate(broadcast_json, post_broadcast_schema)
 
     if broadcast_json["msgType"] == "Cancel":
+        # A Cancel only needs <references>; it doesn't carry the alert content an
+        # Alert does, so validate against the slimmer schema and skip the Alert path.
+        validate(broadcast_json, cancel_broadcast_schema)
         if broadcast_json["references"] is None:
             raise BadRequestError(
                 message="Unable to cancel broadcast. Cap_xml is missing field: <references>",
@@ -66,6 +71,7 @@ def create_broadcast():
         return jsonify(broadcast_message.serialize()), 201
 
     else:
+        validate(broadcast_json, post_broadcast_schema)
         _validate_template(broadcast_json)
 
         polygons = Polygons(

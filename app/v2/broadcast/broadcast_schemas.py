@@ -119,3 +119,29 @@ post_broadcast_schema = {
         },
     },
 }
+
+# A Cancel only acts on <references> (to look up the alert being cancelled), so it
+# doesn't need the cap_event / category / content / areas that an Alert requires.
+# The route still emits a friendlier error than jsonschema for a missing
+# <references>, so we accept null here and let the handler raise that.
+cancel_broadcast_schema = {
+    "$schema": "http://json-schema.org/draft-07/schema",
+    "type": "object",
+    "required": [
+        "msgType",
+    ],
+    "properties": {
+        "msgType": {
+            "type": "string",
+            "enum": [
+                "Cancel",
+            ],
+        },
+        "references": {
+            "type": [
+                "string",
+                "null",
+            ],
+        },
+    },
+}

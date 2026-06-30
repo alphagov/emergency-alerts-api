@@ -153,6 +153,35 @@ def test_valid_cancel_broadcast_request_calls_update_broadcast_message_status_an
     mock_update.assert_called_once_with(broadcast_message, expected_status, api_key_id=api_key.id)
 
 
+def test_valid_cancel_broadcast_request_without_info_block_returns_201(client, sample_broadcast_service, mocker):
+    api_key = create_api_key(service=sample_broadcast_service)
+    auth_header = create_service_authorization_header(service_id=sample_broadcast_service.id)
+
+    # create a broadcast
+    response_for_create = client.post(
+        path="/v2/broadcast",
+        data=sample_cap_xml_documents.WAINFLEET,
+        headers=[("Content-Type", "application/cap+xml"), auth_header],
+    )
+    assert response_for_create.status_code == 201
+
+    response_json_for_create = json.loads(response_for_create.get_data(as_text=True))
+    broadcast_message = dao_get_broadcast_message_by_id_and_service_id(
+        response_json_for_create["id"], response_json_for_create["service_id"]
+    )
+
+    mock_update = mocker.patch("app.v2.broadcast.post_broadcast.broadcast_utils.update_broadcast_message_status")
+
+    # cancel broadcast with a minimal payload that omits the optional <info> block
+    response_for_cancel = client.post(
+        path="/v2/broadcast",
+        data=sample_cap_xml_documents.WAINFLEET_CANCEL_MINIMAL,
+        headers=[("Content-Type", "application/cap+xml"), auth_header],
+    )
+    assert response_for_cancel.status_code == 201
+    mock_update.assert_called_once_with(broadcast_message, "rejected", api_key_id=api_key.id)
+
+
 def test_team_api_key_cannot_create_broadcast_returns_403(client, sample_broadcast_service):
     auth_header = create_service_authorization_header(service_id=sample_broadcast_service.id, key_type=KEY_TYPE_TEAM)
 
