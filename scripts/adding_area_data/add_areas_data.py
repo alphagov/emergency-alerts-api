@@ -92,7 +92,7 @@ def main():
 
     try:
         for area in AREAS:
-            print(f'Processing {area} data')
+            print(f"Processing {area} data")
             # We have 3 tables; geography_type, geography_version, geography_polygons
             # For each area we populate them with relevant data
             geography_type_id = insert_geography_type(conn, area)
