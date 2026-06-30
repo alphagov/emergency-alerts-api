@@ -9,7 +9,7 @@ def fake_current_app():
     fake = SimpleNamespace(
         config={
             "SES_ENDPOINT": "http://example.com",
-            "SES_FROM_ADDRESS": "sender@example.com",
+            "SES_FROM_ADDRESS": "support@localhost",
             "SES_REGION": "eu-west-1",
         }
     )
@@ -24,7 +24,7 @@ def test_sesclient_initialises_correctly(fake_current_app):
         ses = SESClient(client=mock_client)
 
         assert ses.client is mock_client
-        assert ses.sender == "sender@example.com"
+        assert ses.sender == "support@localhost"
 
 
 def test_sesclient_batches(fake_current_app):
