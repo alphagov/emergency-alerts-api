@@ -32,6 +32,64 @@ class SESClient:
         self, subject, text_body, html_body, to_addresses=None, cc_addresses=None, bcc_addresses=None, attachments=None
     ):
         """
+        Send an email with optional attachments using SESv2 Simple content structure.
+        attachments: list of tuples -> [("file.txt", b"content", "text/plain"), ...]
+        """
+        to_addresses = to_addresses or []
+        cc_addresses = cc_addresses or []
+        bcc_addresses = bcc_addresses or []
+        attachments = attachments or []
+
+        # Build the Destination object
+        destination = {}
+        if to_addresses:
+            destination["ToAddresses"] = to_addresses
+        if cc_addresses:
+            destination["CcAddresses"] = cc_addresses
+        if bcc_addresses:
+            destination["BccAddresses"] = bcc_addresses
+
+        # Build the Body structure (supporting both text and html)
+        body_content = {}
+        if text_body:
+            body_content["Text"] = {"Data": text_body, "Charset": "UTF-8"}
+        if html_body:
+            body_content["Html"] = {"Data": html_body, "Charset": "UTF-8"}
+
+        # Format attachments for the SESv2 Simple schema
+        ses_attachments = []
+        for filename, file_bytes, mime_type in attachments:
+            attachment_structure = {
+                "RawContent": file_bytes,  # Boto3 handles the underlying serialization of bytes
+                "FileName": filename,
+            }
+            if mime_type:
+                attachment_structure["ContentType"] = mime_type
+
+            ses_attachments.append(attachment_structure)
+
+        # Construct the Simple message payload
+        simple_message = {"Subject": {"Data": subject, "Charset": "UTF-8"}, "Body": body_content}
+
+        if ses_attachments:
+            simple_message["Attachments"] = ses_attachments
+
+        # Execute the SESv2 send call
+        try:
+            response = self.client.send_email(
+                FromEmailAddress=self.sender, Destination=destination, Content={"Simple": simple_message}
+            )
+            logger.info(f"SESClient.send_email sent successfully with message_id {response.get('MessageId')}")
+            return [{"message_id": response.get("MessageId"), "status": "sent"}]
+
+        except botocore.exceptions.ClientError as e:
+            logger.error(f"SESClient.send_email failed: {e.response['Error']}")
+            raise
+
+    def send_email_old(
+        self, subject, text_body, html_body, to_addresses=None, cc_addresses=None, bcc_addresses=None, attachments=None
+    ):
+        """
         Send an email with optional attachments using SES send_email.
         attachments: list of tuples -> [("file.txt", b"content"), ...]
         """
