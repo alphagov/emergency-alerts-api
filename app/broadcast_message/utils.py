@@ -163,7 +163,7 @@ def send_alert_summary_email(broadcast_message, data):
     attachments = _build_alert_summary_email_attachments(data)
 
     ses = SESClient()
-    response = ses.send_raw_email(
+    response = ses.send_email(
         subject=subject, bcc_addresses=bcc_addresses, text_body=text_body, html_body=html_body, attachments=attachments
     )
     return response

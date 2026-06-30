@@ -9,7 +9,6 @@ import botocore.exceptions
 from flask import current_app
 
 from app.errors import InvalidRequest
-from app.utils import is_local_host
 
 logger = logging.getLogger(__name__)
 
@@ -29,45 +28,11 @@ class SESClient:
         self.client = client or boto3.client("sesv2", region_name=aws_region, endpoint_url=endpoint)
         self.sender = sender or from_address
 
-    def send_email(self, to, subject, body_text=None, body_html=None):
-        """
-        Sends an email via AWS SES.
-        Supports both text and HTML bodies.
-        """
-
-        if is_local_host():
-            logger.info("Local environment — skipping SES send")
-            return {"status": "skipped-local"}
-
-        if not body_text and not body_html:
-            raise ValueError("Must provide at least one of body_text or body_html")
-
-        try:
-            response = self.client.send_email(
-                FromEmailAddress=self.sender,
-                Destination={"ToAddresses": to},
-                Content={
-                    "Simple": {
-                        "Subject": {"Data": subject},
-                        "Body": {
-                            "Text": {"Data": body_text} if body_text else {},
-                            "Html": {"Data": body_html} if body_html else {},
-                        },
-                    }
-                },
-            )
-            logger.info(f"SES email sent to {to}")
-            return response
-
-        except botocore.exceptions.ClientError as e:
-            logger.error(f"SES send_email failed: {e.response['Error']}")
-            raise
-
-    def send_raw_email(
+    def send_email(
         self, subject, text_body, html_body, to_addresses=None, cc_addresses=None, bcc_addresses=None, attachments=None
     ):
         """
-        Send an email with optional attachments using SES send_raw_email.
+        Send an email with optional attachments using SES send_email.
         attachments: list of tuples -> [("file.txt", b"content"), ...]
         """
 
@@ -108,17 +73,29 @@ class SESClient:
         if "Bcc" in msg:
             del msg["Bcc"]
 
-        # Send via SES
+        # Send via SES.
+        results = []
         try:
-            response = self.client.send_email(
-                FromEmailAddress=self.sender,
-                Destination={"ToAddresses": recipients},
-                Content={"Raw": {"Data": msg.as_string().encode("utf-8")}},
-            )
-
-            return response
+            # SES has a hard limit of 50 recipients per SES call.
+            for batch in _batch_recipients(recipients, 50):
+                response = self.client.send_email(
+                    FromEmailAddress=self.sender,
+                    Destination={"ToAddresses": batch},
+                    Content={"Raw": {"Data": msg.as_string().encode("utf-8")}},
+                )
+                results.append(
+                    {
+                        "batch_size": len(batch),
+                        "message_id": response.get("MessageId"),
+                        "status": "sent",
+                    }
+                )
+                logger.info(
+                    f"SESClient.send_email sent to {len(batch)} recipients with message_id {response.get("MessageId")}"
+                )
+            return results
         except botocore.exceptions.ClientError as e:
-            logger.error(f"SES send_raw_email failed: {e.response['Error']}")
+            logger.error(f"SESClient.send_email failed: {e.response['Error']}")
             raise
 
 
@@ -131,3 +108,9 @@ def _build_mime_attachment(filename, file_bytes, mime_type):
     part.add_header("Content-Disposition", "attachment", filename=filename)
 
     return part
+
+
+def _batch_recipients(recipients, batchsize):
+    """Yield successive chunks of up to `batchsize` recipients."""
+    for i in range(0, len(recipients), batchsize):
+        yield recipients[i : i + batchsize]
