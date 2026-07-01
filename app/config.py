@@ -171,6 +171,11 @@ class Config(object):
     MAX_THROTTLE_PERIOD = 60
 
     GOVUK_ALERTS_S3_BUCKET_NAME = os.getenv("GOVUK_ALERTS_S3_BUCKET_NAME")
+    GOVUK_PUBLISH_CHECKS_FAILED_INTERVAL = (
+        int(os.getenv("GOVUK_PUBLISH_CHECKS_FAILED_INTERVAL"))
+        if os.environ.get("GOVUK_PUBLISH_CHECKS_FAILED_INTERVAL") is not None
+        else 30
+    )
 
     SES_ENDPOINT = os.environ.get("AWS_ENDPOINT_URL_SES", "http://localstack:4566")
     SES_FROM_ADDRESS = "support@localhost"

@@ -1,6 +1,6 @@
 from time import time
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, current_app, jsonify, request
 
 from app.dao.publish_task_progress_dao import (
     dao_create_publish_task,
@@ -89,8 +89,8 @@ def parse_task_id(task_id):
     return {"publish_type": publish_type, "publish_origin": publish_origin, "timestamp": timestamp}
 
 
-def has_publish_failed(now, task, failed_publish_interval=30.0):
-    return now - task.last_activity_at.timestamp() > failed_publish_interval
+def has_publish_failed(now, task):
+    return now - task.last_activity_at.timestamp() > current_app.config.get("GOVUK_PUBLISH_CHECKS_FAILED_INTERVAL")
 
 
 @publish_task_progress_blueprint.route("/purge/<int:days_older_than>", methods=["DELETE"])
