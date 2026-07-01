@@ -937,7 +937,7 @@ def test_send_alert_summary_email(admin_request, sample_broadcast_service, mocke
     bm = create_broadcast_message(t, status=BroadcastStatusType.DRAFT)
 
     mock_send = mocker.patch(
-        "app.broadcast_message.utils.SESClient.send_email",
+        "app.broadcast_message.utils.EmailClient.send_email",
         return_value={"ResponseMetadata": {"HTTPStatusCode": 200}},
     )
 

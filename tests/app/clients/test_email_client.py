@@ -18,10 +18,10 @@ def fake_current_app():
 
 def test_sesclient_initialises_correctly(fake_current_app):
     with patch("flask.current_app", fake_current_app):
-        from app.clients.ses_client import SESClient
+        from app.clients.email_client import EmailClient
 
         mock_client = MagicMock()
-        ses = SESClient(client=mock_client)
+        ses = EmailClient(client=mock_client)
 
         assert ses.client is mock_client
         assert ses.sender == "support@localhost"
@@ -29,13 +29,13 @@ def test_sesclient_initialises_correctly(fake_current_app):
 
 def test_sesclient_batches(fake_current_app):
     with patch("flask.current_app", fake_current_app):
-        from app.clients.ses_client import SESClient
+        from app.clients.email_client import EmailClient
 
         to_addrs = [f"user{i}@example.com" for i in range(120)]
         mock_client = MagicMock()
         mock_client.send_email.return_value = {"MessageId": "mock-id"}
 
-        ses = SESClient(client=mock_client)
+        ses = EmailClient(client=mock_client)
 
         results = ses.send_email(
             subject="Test",
@@ -56,13 +56,13 @@ def test_sesclient_batches(fake_current_app):
 
 def test_mime_reused_across_batches(fake_current_app):
     with patch("flask.current_app", fake_current_app):
-        from app.clients.ses_client import SESClient
+        from app.clients.email_client import EmailClient
 
         to_addrs = [f"user{i}@example.com" for i in range(120)]
         mock_client = MagicMock()
         mock_client.send_email.return_value = {"MessageId": "mock-id"}
 
-        ses = SESClient(client=mock_client)
+        ses = EmailClient(client=mock_client)
 
         ses.send_email(
             subject="Test",
@@ -81,12 +81,12 @@ def test_mime_reused_across_batches(fake_current_app):
 
 def test_bcc_header_is_removed(fake_current_app):
     with patch("flask.current_app", fake_current_app):
-        from app.clients.ses_client import SESClient
+        from app.clients.email_client import EmailClient
 
         mock_client = MagicMock()
         mock_client.send_email.return_value = {"MessageId": "mock-id"}
 
-        ses = SESClient(client=mock_client)
+        ses = EmailClient(client=mock_client)
 
         ses.send_email(
             subject="Test",
@@ -104,12 +104,12 @@ def test_attachments_added_correctly(fake_current_app):
     with patch("flask.current_app", fake_current_app):
         import base64
 
-        from app.clients.ses_client import SESClient
+        from app.clients.email_client import EmailClient
 
         mock_client = MagicMock()
         mock_client.send_email.return_value = {"MessageId": "mock-id"}
 
-        ses = SESClient(client=mock_client)
+        ses = EmailClient(client=mock_client)
 
         ses.send_email(
             subject="Test",
@@ -132,7 +132,7 @@ def test_ses_errors_propagate(fake_current_app):
     with patch("flask.current_app", fake_current_app):
         import botocore.exceptions
 
-        from app.clients.ses_client import SESClient
+        from app.clients.email_client import EmailClient
 
         mock_client = MagicMock()
         mock_client.send_email.side_effect = botocore.exceptions.ClientError(
@@ -140,7 +140,7 @@ def test_ses_errors_propagate(fake_current_app):
             operation_name="SendEmail",
         )
 
-        ses = SESClient(client=mock_client)
+        ses = EmailClient(client=mock_client)
 
         with pytest.raises(botocore.exceptions.ClientError):
             ses.send_email(

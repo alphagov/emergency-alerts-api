@@ -10,7 +10,7 @@ from flask import current_app
 from jinja2 import Environment, FileSystemLoader
 
 from app import zendesk_client
-from app.clients.ses_client import SESClient
+from app.clients.email_client import EmailClient
 from app.dao.dao_utils import dao_save_object
 from app.errors import InvalidRequest
 from app.models import (
@@ -162,7 +162,7 @@ def send_alert_summary_email(broadcast_message, data):
     )
     attachments = _build_alert_summary_email_attachments(data)
 
-    ses = SESClient()
+    ses = EmailClient()
     response = ses.send_email(
         subject=subject, bcc_addresses=bcc_addresses, text_body=text_body, html_body=html_body, attachments=attachments
     )

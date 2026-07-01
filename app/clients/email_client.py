@@ -11,7 +11,7 @@ from app.errors import InvalidRequest
 logger = logging.getLogger(__name__)
 
 
-class SESClient:
+class EmailClient:
     def __init__(self, client=None, sender=None):
 
         endpoint = current_app.config["SES_ENDPOINT"]
@@ -81,14 +81,14 @@ class SESClient:
                 response = self.client.send_email(
                     FromEmailAddress=self.sender, Destination=destination, Content={"Simple": simple_message}
                 )
-                logger.info(f"SESClient.send_email sent successfully with message_id {response.get('MessageId')}")
+                logger.info(f"EmailClient.send_email sent successfully with message_id {response.get('MessageId')}")
                 return [{"message_id": response.get("MessageId"), "status": "sent"}]
             else:
-                logger.info(f"SESClient - localstack would be sending from {self.sender} to {destination} ")
+                logger.info(f"EmailClient - localstack would be sending from {self.sender} to {destination} ")
                 return [{"message_id": "localstack", "status": "sent"}]
 
         except botocore.exceptions.ClientError as e:
-            logger.error(f"SESClient.send_email failed: {e.response['Error']}")
+            logger.error(f"EmailClient.send_email failed: {e.response['Error']}")
             raise
 
 
