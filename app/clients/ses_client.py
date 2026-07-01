@@ -1,8 +1,6 @@
 import logging
 from email import encoders
 from email.mime.base import MIMEBase
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 
 import boto3
 import botocore.exceptions
@@ -28,12 +26,15 @@ class SESClient:
         self.client = client or boto3.client("sesv2", region_name=aws_region, endpoint_url=endpoint)
         self.sender = sender or from_address
 
+        # Localstack does not support sesv2, so set flag to say sending not enabled
+        is_localstack = "localstack" in endpoint or "localhost" in endpoint
+        self.send_enabled = not is_localstack
+
     def send_email(
         self, subject, text_body, html_body, to_addresses=None, cc_addresses=None, bcc_addresses=None, attachments=None
     ):
         """
         Send an email with optional attachments using SESv2 Simple content structure.
-        attachments: list of tuples -> [("file.txt", b"content", "text/plain"), ...]
         """
         to_addresses = to_addresses or []
         cc_addresses = cc_addresses or []
@@ -49,7 +50,7 @@ class SESClient:
         if bcc_addresses:
             destination["BccAddresses"] = bcc_addresses
 
-        # Build the Body structure (supporting both text and html)
+        # Build the Body structure
         body_content = {}
         if text_body:
             body_content["Text"] = {"Data": text_body, "Charset": "UTF-8"}
@@ -68,7 +69,7 @@ class SESClient:
 
             ses_attachments.append(attachment_structure)
 
-        # Construct the Simple message payload
+        # Construct Simple message payload
         simple_message = {"Subject": {"Data": subject, "Charset": "UTF-8"}, "Body": body_content}
 
         if ses_attachments:
@@ -76,82 +77,16 @@ class SESClient:
 
         # Execute the SESv2 send call
         try:
-            response = self.client.send_email(
-                FromEmailAddress=self.sender, Destination=destination, Content={"Simple": simple_message}
-            )
-            logger.info(f"SESClient.send_email sent successfully with message_id {response.get('MessageId')}")
-            return [{"message_id": response.get("MessageId"), "status": "sent"}]
-
-        except botocore.exceptions.ClientError as e:
-            logger.error(f"SESClient.send_email failed: {e.response['Error']}")
-            raise
-
-    def send_email_old(
-        self, subject, text_body, html_body, to_addresses=None, cc_addresses=None, bcc_addresses=None, attachments=None
-    ):
-        """
-        Send an email with optional attachments using SES send_email.
-        attachments: list of tuples -> [("file.txt", b"content"), ...]
-        """
-
-        to_addresses = to_addresses or []
-        cc_addresses = cc_addresses or []
-        bcc_addresses = bcc_addresses or []
-
-        # SES envelope recipients (this is what SES actually uses)
-        recipients = to_addresses + cc_addresses + bcc_addresses
-
-        msg = MIMEMultipart()
-        msg["Subject"] = subject
-        msg["From"] = self.sender
-        msg["To"] = ", ".join(to_addresses) if to_addresses else "undisclosed-recipients:;"
-
-        if cc_addresses:
-            msg["Cc"] = ", ".join(cc_addresses)
-
-        # Alternative block for text + HTML
-        alt = MIMEMultipart("alternative")
-
-        # Plain text part
-        alt.attach(MIMEText(text_body, "plain", "utf-8"))
-
-        # HTML part
-        alt.attach(MIMEText(html_body, "html", "utf-8"))
-
-        # Attach the alternative block to the main message
-        msg.attach(alt)
-
-        # Add attachments
-        if attachments:
-            for filename, file_bytes, mime_type in attachments:
-                part = _build_mime_attachment(filename, file_bytes, mime_type)
-                msg.attach(part)
-
-        # Double check for Bcc and remove if present
-        if "Bcc" in msg:
-            del msg["Bcc"]
-
-        # Send via SES.
-        results = []
-        try:
-            # SES has a hard limit of 50 recipients per SES call.
-            for batch in _batch_recipients(recipients, 50):
+            if self.send_enabled:
                 response = self.client.send_email(
-                    FromEmailAddress=self.sender,
-                    Destination={"ToAddresses": batch},
-                    Content={"Raw": {"Data": msg.as_string().encode("utf-8")}},
+                    FromEmailAddress=self.sender, Destination=destination, Content={"Simple": simple_message}
                 )
-                results.append(
-                    {
-                        "batch_size": len(batch),
-                        "message_id": response.get("MessageId"),
-                        "status": "sent",
-                    }
-                )
-                logger.info(
-                    f"SESClient.send_email sent to {len(batch)} recipients with message_id {response.get("MessageId")}"
-                )
-            return results
+                logger.info(f"SESClient.send_email sent successfully with message_id {response.get('MessageId')}")
+                return [{"message_id": response.get("MessageId"), "status": "sent"}]
+            else:
+                logger.info(f"SESClient - localstack would be sending from {self.sender} to {destination} ")
+                return [{"message_id": "localstack", "status": "sent"}]
+
         except botocore.exceptions.ClientError as e:
             logger.error(f"SESClient.send_email failed: {e.response['Error']}")
             raise
