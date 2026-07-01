@@ -26,9 +26,8 @@ class EmailClient:
         self.client = client or boto3.client("sesv2", region_name=aws_region, endpoint_url=endpoint)
         self.sender = sender or from_address
 
-        # Localstack does not support sesv2, so set flag to say sending not enabled
-        is_localstack = "localstack" in endpoint or "localhost" in endpoint
-        self.send_enabled = not is_localstack
+        # Localstack does not support sesv2 so only enable if config allows it
+        self.send_enabled = current_app.config["SES_ENABLED"]
 
     def send_email(
         self, subject, text_body, html_body, to_addresses=None, cc_addresses=None, bcc_addresses=None, attachments=None
