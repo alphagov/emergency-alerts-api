@@ -1,13 +1,15 @@
-# This module handles the post-broadcast log ingest flow.
-#
-# After a broadcast event is sent to the MNOs, each MNO generates a CBC log for
-# that broadcast. This task invokes the mno-portal-{environment}-log-upload-handler
-# lambda, which sends an email to each MNO requesting that they upload their CBC log
-# for the broadcast.
-#
-# Because the broadcast_provider_message records (which carry the unique IDs that
-# identify the broadcast to each MNO) may not exist immediately after the alert is
-# accepted, the task retries up to _MAX_ATTEMPTS times before giving up.
+"""
+This module handles the post-broadcast log ingest flow.
+
+After a broadcast event is sent to the MNOs, each MNO generates a CBC log for
+that broadcast. This task invokes the mno-portal-{environment}-log-upload-handler
+lambda, which sends an email to each MNO requesting that they upload their CBC log
+for the broadcast.
+
+Because the broadcast_provider_message records (which carry the unique IDs that
+identify the broadcast to each MNO) may not exist immediately after the alert is
+accepted, the task retries up to _MAX_ATTEMPTS times before giving up.
+"""
 
 import json
 
