@@ -1,5 +1,6 @@
 from itertools import chain
 
+from emergency_alerts_utils.api_key import KEY_TYPE_TEAM, KEY_TYPE_TEST
 from emergency_alerts_utils.polygons import Polygons
 from emergency_alerts_utils.template import BroadcastMessageTemplate
 from flask import current_app, jsonify, make_response, request
@@ -8,6 +9,7 @@ from shapely.validation import explain_validity
 from sqlalchemy.orm.exc import MultipleResultsFound
 
 from app import api_user, authenticated_service
+from app.authentication.auth import AuthError
 from app.broadcast_message import utils as broadcast_utils
 from app.broadcast_message.translators import cap_xml_to_dict
 from app.dao.broadcast_message_dao import (
@@ -17,7 +19,10 @@ from app.dao.dao_utils import dao_save_object
 from app.models import BROADCAST_TYPE, BroadcastMessage, BroadcastStatusType
 from app.schema_validation import validate
 from app.v2.broadcast import v2_broadcast_blueprint
-from app.v2.broadcast.broadcast_schemas import post_broadcast_schema
+from app.v2.broadcast.broadcast_schemas import (
+    cancel_broadcast_schema,
+    post_broadcast_schema,
+)
 from app.v2.errors import BadRequestError, ValidationError
 from app.xml_schemas import validate_xml
 
@@ -29,6 +34,7 @@ def create_broadcast():
         BROADCAST_TYPE,
         authenticated_service.permissions,
     )
+    _check_key_type_allowed(api_user.key_type)
 
     if request.content_type != "application/cap+xml":
         raise BadRequestError(
@@ -48,9 +54,11 @@ def create_broadcast():
         )
 
     broadcast_json = cap_xml_to_dict(cap_xml)
-    validate(broadcast_json, post_broadcast_schema)
 
     if broadcast_json["msgType"] == "Cancel":
+        # A Cancel only needs <references>; it doesn't carry the alert content an
+        # Alert does, so validate against the slimmer schema and skip the Alert path.
+        validate(broadcast_json, cancel_broadcast_schema)
         if broadcast_json["references"] is None:
             raise BadRequestError(
                 message="Unable to cancel broadcast. Cap_xml is missing field: <references>",
@@ -63,6 +71,7 @@ def create_broadcast():
         return jsonify(broadcast_message.serialize()), 201
 
     else:
+        validate(broadcast_json, post_broadcast_schema)
         _validate_template(broadcast_json)
 
         polygons = Polygons(
@@ -100,7 +109,7 @@ def create_broadcast():
             },
             status=BroadcastStatusType.PENDING_APPROVAL,
             created_by_api_key_id=api_user.id,
-            stubbed=authenticated_service.restricted,
+            stubbed=authenticated_service.restricted or api_user.key_type == KEY_TYPE_TEST,
             # The client may pass in broadcast_json['expires'] but it’s
             # simpler for now to ignore it and have the rules around expiry
             # for broadcasts created with the API match those created from
@@ -140,6 +149,9 @@ def _cancel_or_reject_broadcast(references_to_original_broadcast, service_id):
             status_code=400,
         )
 
+    if api_user.key_type == KEY_TYPE_TEST and not broadcast_message.stubbed:
+        raise AuthError("Cannot cancel a live broadcast with a test API key", 403)
+
     if broadcast_message.status == BroadcastStatusType.PENDING_APPROVAL:
         new_status = BroadcastStatusType.REJECTED
     else:
@@ -162,6 +174,14 @@ def _validate_template(broadcast_json):
 def _check_service_has_permission(type, permissions):
     if type not in permissions:
         raise BadRequestError(message="Service is not allowed to send broadcast messages")
+
+
+def _check_key_type_allowed(key_type):
+    # Team keys are a legacy Notify grouping of 'team & guest list', so they are not
+    # allowed to create, cancel or reject alerts. Test keys are allowed but their
+    # broadcasts are forced to be stubbed (see create_broadcast / _cancel_or_reject_broadcast).
+    if key_type == KEY_TYPE_TEAM:
+        raise AuthError("Cannot send broadcasts with a team API key", 403)
 
 
 def _validate_polygons(polygons):

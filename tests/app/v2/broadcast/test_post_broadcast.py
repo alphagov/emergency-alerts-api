@@ -1,6 +1,7 @@
 from unittest.mock import ANY
 
 import pytest
+from emergency_alerts_utils.api_key import KEY_TYPE_TEAM, KEY_TYPE_TEST
 from flask import json
 
 from app.dao.broadcast_message_dao import (
@@ -150,6 +151,143 @@ def test_valid_cancel_broadcast_request_calls_update_broadcast_message_status_an
     )
     assert response_for_cancel.status_code == 201
     mock_update.assert_called_once_with(broadcast_message, expected_status, api_key_id=api_key.id)
+
+
+def test_valid_cancel_broadcast_request_without_info_block_returns_201(client, sample_broadcast_service, mocker):
+    api_key = create_api_key(service=sample_broadcast_service)
+    auth_header = create_service_authorization_header(service_id=sample_broadcast_service.id)
+
+    # create a broadcast
+    response_for_create = client.post(
+        path="/v2/broadcast",
+        data=sample_cap_xml_documents.WAINFLEET,
+        headers=[("Content-Type", "application/cap+xml"), auth_header],
+    )
+    assert response_for_create.status_code == 201
+
+    response_json_for_create = json.loads(response_for_create.get_data(as_text=True))
+    broadcast_message = dao_get_broadcast_message_by_id_and_service_id(
+        response_json_for_create["id"], response_json_for_create["service_id"]
+    )
+
+    mock_update = mocker.patch("app.v2.broadcast.post_broadcast.broadcast_utils.update_broadcast_message_status")
+
+    # cancel broadcast with a minimal payload that omits the optional <info> block
+    response_for_cancel = client.post(
+        path="/v2/broadcast",
+        data=sample_cap_xml_documents.WAINFLEET_CANCEL_MINIMAL,
+        headers=[("Content-Type", "application/cap+xml"), auth_header],
+    )
+    assert response_for_cancel.status_code == 201
+    mock_update.assert_called_once_with(broadcast_message, "rejected", api_key_id=api_key.id)
+
+
+def test_team_api_key_cannot_create_broadcast_returns_403(client, sample_broadcast_service):
+    auth_header = create_service_authorization_header(service_id=sample_broadcast_service.id, key_type=KEY_TYPE_TEAM)
+
+    response = client.post(
+        path="/v2/broadcast",
+        data=sample_cap_xml_documents.WAINFLEET,
+        headers=[("Content-Type", "application/cap+xml"), auth_header],
+    )
+
+    assert response.status_code == 403
+    assert response.get_json()["errors"][0]["message"] == "Cannot send broadcasts with a team API key"
+
+
+def test_team_api_key_cannot_cancel_broadcast_returns_403(client, sample_broadcast_service):
+    # Create both keys up front: the api-key collection is cached per service, so a key
+    # created after the first request would not be visible to a later request.
+    live_auth_header = create_service_authorization_header(service_id=sample_broadcast_service.id)
+    team_auth_header = create_service_authorization_header(
+        service_id=sample_broadcast_service.id, key_type=KEY_TYPE_TEAM
+    )
+
+    # create a real broadcast with a live key
+    response_for_create = client.post(
+        path="/v2/broadcast",
+        data=sample_cap_xml_documents.WAINFLEET,
+        headers=[("Content-Type", "application/cap+xml"), live_auth_header],
+    )
+    assert response_for_create.status_code == 201
+
+    response_for_cancel = client.post(
+        path="/v2/broadcast",
+        data=sample_cap_xml_documents.WAINFLEET_CANCEL_WITH_REFERENCES,
+        headers=[("Content-Type", "application/cap+xml"), team_auth_header],
+    )
+
+    assert response_for_cancel.status_code == 403
+    assert response_for_cancel.get_json()["errors"][0]["message"] == "Cannot send broadcasts with a team API key"
+
+
+def test_test_api_key_forces_broadcast_to_be_stubbed_on_live_service(client, sample_broadcast_service):
+    # sample_broadcast_service is not restricted (i.e. live), but a test key must still be stubbed
+    assert sample_broadcast_service.restricted is False
+    auth_header = create_service_authorization_header(service_id=sample_broadcast_service.id, key_type=KEY_TYPE_TEST)
+
+    response = client.post(
+        path="/v2/broadcast",
+        data=sample_cap_xml_documents.WAINFLEET,
+        headers=[("Content-Type", "application/cap+xml"), auth_header],
+    )
+
+    assert response.status_code == 201
+    response_json = json.loads(response.get_data(as_text=True))
+    broadcast_message = dao_get_broadcast_message_by_id_and_service_id(response_json["id"], sample_broadcast_service.id)
+    assert broadcast_message.stubbed is True
+
+
+def test_test_api_key_cannot_cancel_a_live_broadcast_returns_403(client, sample_broadcast_service):
+    # Create both keys up front: the api-key collection is cached per service, so a key
+    # created after the first request would not be visible to a later request.
+    live_auth_header = create_service_authorization_header(service_id=sample_broadcast_service.id)
+    test_auth_header = create_service_authorization_header(
+        service_id=sample_broadcast_service.id, key_type=KEY_TYPE_TEST
+    )
+
+    # create a real (non-stubbed) broadcast with a live key
+    response_for_create = client.post(
+        path="/v2/broadcast",
+        data=sample_cap_xml_documents.WAINFLEET,
+        headers=[("Content-Type", "application/cap+xml"), live_auth_header],
+    )
+    assert response_for_create.status_code == 201
+
+    response_for_cancel = client.post(
+        path="/v2/broadcast",
+        data=sample_cap_xml_documents.WAINFLEET_CANCEL_WITH_REFERENCES,
+        headers=[("Content-Type", "application/cap+xml"), test_auth_header],
+    )
+
+    assert response_for_cancel.status_code == 403
+    assert (
+        response_for_cancel.get_json()["errors"][0]["message"] == "Cannot cancel a live broadcast with a test API key"
+    )
+
+
+def test_test_api_key_can_cancel_its_own_stubbed_broadcast_returns_201(client, sample_broadcast_service, mocker):
+    test_auth_header = create_service_authorization_header(
+        service_id=sample_broadcast_service.id, key_type=KEY_TYPE_TEST
+    )
+
+    # create a stubbed broadcast with the test key
+    response_for_create = client.post(
+        path="/v2/broadcast",
+        data=sample_cap_xml_documents.WAINFLEET,
+        headers=[("Content-Type", "application/cap+xml"), test_auth_header],
+    )
+    assert response_for_create.status_code == 201
+
+    mocker.patch("app.v2.broadcast.post_broadcast.broadcast_utils.update_broadcast_message_status")
+
+    response_for_cancel = client.post(
+        path="/v2/broadcast",
+        data=sample_cap_xml_documents.WAINFLEET_CANCEL_WITH_REFERENCES,
+        headers=[("Content-Type", "application/cap+xml"), test_auth_header],
+    )
+
+    assert response_for_cancel.status_code == 201
 
 
 @pytest.mark.parametrize(

@@ -6,28 +6,43 @@ def cap_xml_to_dict(cap_xml):
     # We explicitly tell BS4 that we're expecting utf-8 here, otherwise it uses encoding detection heuristics that
     # can sometimes make the wrong call.
     cap = BeautifulSoup(cap_xml, "xml", from_encoding="utf-8")
+    alert = cap.alert
+    # <info> is optional in the CAP 1.2 schema (minOccurs=0). A Cancel only needs
+    # <references>, so we guard every <info> access here rather than dereferencing
+    # blindly — missing fields then surface as schema validation errors (400) rather
+    # than an AttributeError (500).
+    info = alert.info
 
-    return {
-        "msgType": cap.alert.msgType.text,
-        "reference": cap.alert.identifier.text,
+    broadcast = {
+        "msgType": alert.msgType.text,
+        "reference": alert.identifier.text,
         "references": (
             # references to previous events belonging to the same alert
-            cap.alert.references.text
-            if cap.alert.references
+            alert.references.text
+            if alert.references
             else None
         ),
-        "cap_event": cap.alert.info.event.text,
-        "category": cap.alert.info.category.text,
-        "expires": cap.alert.info.expires.text,
-        "content": cap.alert.info.description.text,
-        "areas": [
+        "cap_event": None,
+        "category": None,
+        "expires": None,
+        "content": None,
+        "areas": [],
+    }
+
+    if info is not None:
+        broadcast["cap_event"] = info.event.text if info.event else None
+        broadcast["category"] = info.category.text if info.category else None
+        broadcast["expires"] = info.expires.text if info.expires else None
+        broadcast["content"] = info.description.text if info.description else None
+        broadcast["areas"] = [
             {
                 "name": area.areaDesc.text,
                 "polygons": [cap_xml_polygon_to_list(polygon.text) for polygon in area.find_all("polygon")],
             }
-            for area in cap.alert.info.find_all("area")
-        ],
-    }
+            for area in info.find_all("area")
+        ]
+
+    return broadcast
 
 
 def cap_xml_polygon_to_list(polygon_string):

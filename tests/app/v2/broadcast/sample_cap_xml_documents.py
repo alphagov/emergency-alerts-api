@@ -75,6 +75,20 @@ WAINFLEET_CANCEL_WITH_REFERENCES = WAINFLEET_CANCEL.format(
 WAINFLEET_CANCEL_WITH_MISSING_REFERENCES = WAINFLEET_CANCEL.format("")
 WAINFLEET_CANCEL_WITH_EMPTY_REFERENCES = WAINFLEET_CANCEL.format("<references></references>")
 
+# A Cancel only needs <references>; the <info> block is optional in CAP 1.2 and is
+# ignored on the cancel path, so a minimal Cancel can omit it entirely.
+WAINFLEET_CANCEL_MINIMAL = """
+    <alert xmlns="urn:oasis:names:tc:emergency:cap:1.2">
+        <identifier>5fc99d720abb86020b233422a503af78E</identifier>
+        <sender>www.gov.uk/environment-agency</sender>
+        <sent>2020-02-16T23:02:26-00:00</sent>
+        <status>Actual</status>
+        <msgType>Cancel</msgType>
+        <scope>Public</scope>
+        <references>www.gov.uk/environment-agency,50385fcb0ab7aa447bbd46d848ce8466E,2020-02-16T23:01:13-00:00</references>
+    </alert>
+"""
+
 WAINFLEET_CANCEL_WITH_WINDMERE_REFERENCES = WAINFLEET_CANCEL.format(
     "<references>"
     # Wainfleet

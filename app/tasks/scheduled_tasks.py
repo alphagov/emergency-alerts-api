@@ -34,7 +34,7 @@ from app.tasks.broadcast_message_tasks import (
     trigger_link_test_secondary_to_A,
     trigger_link_test_secondary_to_B,
 )
-from app.tasks.stub_tasks import publish_govuk_alerts
+from app.tasks.stub_tasks import publish_govuk_alerts, publish_govuk_alerts_full
 
 
 @dramatiq.actor(actor_name=TaskNames.RUN_HEALTH_CHECK, queue_name=QueueNames.PERIODIC, periodic=cron("*/1 * * * *"))
@@ -118,7 +118,7 @@ def remove_yesterdays_planned_tests_on_govuk_alerts():
     # purged from the `publish_task_progress` table
     purge_publish_tasks(days_older_than=1)
 
-    publish_task = publish_govuk_alerts.send()
+    publish_task = publish_govuk_alerts_full.send()
     current_app.logger.info("Enqueued publish GOV UK Alerts for nightly rebuild: %s", publish_task.asdict())
 
 
