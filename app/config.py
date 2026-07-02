@@ -175,6 +175,7 @@ class Config(object):
     SES_ENDPOINT = os.environ.get("AWS_ENDPOINT_URL_SES", "http://localstack:4566")
     SES_FROM_ADDRESS = "support@localhost"
     SES_REGION = "us-east-1"
+    SES_ENABLED = os.getenv("SES_ENABLED", "true").lower() != "false"
 
 
 class Hosted(Config):
