@@ -224,18 +224,7 @@ class Hosted(Config):
     CBC_PROXY_ENABLED = True
     DEBUG = False
 
-    _mno_portal_account_id = os.environ.get("MNO_PORTAL_ACCOUNT_ID")
-    _aws_region = os.environ.get("AWS_REGION", "eu-west-2")
-    _mno_portal_environment = os.environ.get("ENVIRONMENT", "development")
-    LOG_UPLOAD_LAMBDA_ARN = os.getenv(
-        "LOG_UPLOAD_LAMBDA_ARN",
-        (
-            f"arn:aws:lambda:{_aws_region}:{_mno_portal_account_id}:"
-            f"function:mno-portal-{_mno_portal_environment}-log-upload-handler"
-            if _mno_portal_account_id
-            else None
-        ),
-    )
+    LOG_UPLOAD_LAMBDA_ARN = os.getenv("LOG_UPLOAD_LAMBDA_ARN")
 
     TENANT_PREFIX = f"{os.environ.get('TENANT')}-" if os.environ.get("TENANT") is not None else ""
     ENVIRONMENT = os.getenv("ENVIRONMENT")
