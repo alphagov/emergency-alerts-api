@@ -37,7 +37,7 @@ def test_send_broadcast_event_queues_up_for_active_providers(mocker, notify_api,
     event = create_broadcast_event(broadcast_message)
 
     mocker.patch("app.tasks.broadcast_message_tasks.publish_govuk_alerts.send")
-    mocker.patch("app.tasks.broadcast_message_tasks.request_log_ingest_task.send")
+    mocker.patch("app.tasks.broadcast_message_tasks.send_broadcast_log_upload_request_emails_task.send")
 
     mock_send_broadcast_provider_message = mocker.patch(
         "app.tasks.broadcast_message_tasks.send_broadcast_provider_message.send",
@@ -68,7 +68,7 @@ def test_send_broadcast_event_calls_publish_govuk_alerts_task(
     mocker.patch(
         "app.tasks.broadcast_message_tasks.send_broadcast_provider_message",
     )
-    mocker.patch("app.tasks.broadcast_message_tasks.request_log_ingest_task.send")
+    mocker.patch("app.tasks.broadcast_message_tasks.send_broadcast_log_upload_request_emails_task.send")
 
     mock = mocker.patch("app.tasks.broadcast_message_tasks.publish_govuk_alerts.send")
 
@@ -87,7 +87,7 @@ def test_send_broadcast_event_only_sends_to_one_provider_if_set_on_service(
     event = create_broadcast_event(broadcast_message)
 
     mocker.patch("app.tasks.broadcast_message_tasks.publish_govuk_alerts.send")
-    mocker.patch("app.tasks.broadcast_message_tasks.request_log_ingest_task.send")
+    mocker.patch("app.tasks.broadcast_message_tasks.send_broadcast_log_upload_request_emails_task.send")
 
     mock_send_broadcast_provider_message = mocker.patch(
         "app.tasks.broadcast_message_tasks.send_broadcast_provider_message.send",
@@ -110,7 +110,7 @@ def test_send_broadcast_event_does_nothing_if_provider_set_on_service_isnt_enabl
     event = create_broadcast_event(broadcast_message)
 
     mocker.patch("app.tasks.broadcast_message_tasks.publish_govuk_alerts.send")
-    mocker.patch("app.tasks.broadcast_message_tasks.request_log_ingest_task.send")
+    mocker.patch("app.tasks.broadcast_message_tasks.send_broadcast_log_upload_request_emails_task.send")
 
     mock_send_broadcast_provider_message = mocker.patch(
         "app.tasks.broadcast_message_tasks.send_broadcast_provider_message.send",
@@ -743,7 +743,7 @@ def test_send_broadcast_event_triggers_log_ingest_task(mocker, notify_api, sampl
     mocker.patch("app.tasks.broadcast_message_tasks.publish_govuk_alerts.send")
     mocker.patch("app.tasks.broadcast_message_tasks.send_broadcast_provider_message.send")
     mock_log_ingest = mocker.patch(
-        "app.tasks.broadcast_message_tasks.request_log_ingest_task.send",
+        "app.tasks.broadcast_message_tasks.send_broadcast_log_upload_request_emails_task.send",
     )
 
     set_service_broadcast_providers(sample_broadcast_service, ["ee"])
