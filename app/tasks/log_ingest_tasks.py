@@ -21,7 +21,7 @@ from app.models import BroadcastEvent, BroadcastProviderMessage
 
 def _mno_log_upload_handler_arn():
     account_number = current_app.config.get("MNO_PORTAL_ACCOUNT_NUMBER")
-    environment = current_app.config.get("ENVIRONMENT_PREFIX") or current_app.config.get("ENVIRONMENT")
+    environment = current_app.config.get("ENVIRONMENT")
     if not account_number:
         return None
     return f"{account_number}:function:mno-portal-{environment}-log-upload-handler"

@@ -227,10 +227,6 @@ class Hosted(Config):
     TENANT_PREFIX = f"{os.environ.get('TENANT')}-" if os.environ.get("TENANT") is not None else ""
     ENVIRONMENT = os.getenv("ENVIRONMENT")
     ENVIRONMENT_PREFIX = ENVIRONMENT if ENVIRONMENT != "development" else "dev"
-    # Temporary fallback
-    MNO_PORTAL_ACCOUNT_NUMBER = os.getenv("MNO_PORTAL_ACCOUNT_NUMBER") or (
-        "435684131547" if ENVIRONMENT == "development" else None
-    )
     AWS_REGION = os.environ.get("AWS_REGION", "eu-west-2")
     QUEUE_PREFIX = f"{ENVIRONMENT_PREFIX}-{TENANT_PREFIX}dramatiq-"
 
