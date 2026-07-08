@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from flask import current_app
 from lxml import etree
 
 
@@ -9,6 +10,10 @@ def validate_xml(document: str, schema_file_name):
     This will either return a string with a description of how validation
     failed or None.
     """
+    max_length = current_app.config["MAX_BROADCASTS_XML_LENGTH"]
+    if len(document) > max_length:
+        return f"XML must be {max_length} characters or fewer"
+
     path = Path(__file__).resolve().parent / schema_file_name
     contents = path.read_text()
 

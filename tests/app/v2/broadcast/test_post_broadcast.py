@@ -563,19 +563,22 @@ def test_unsupported_message_types_400(
 
 
 @pytest.mark.parametrize(
-    "xml_document, expected_error",
+    "xml_document, error_type, expected_error",
     (
         (
             sample_cap_xml_documents.LONG_UCS2,
+            "ValidationError",
             ("description must be 615 characters or fewer (because it " "could not be GSM7 encoded)"),
         ),
-        (sample_cap_xml_documents.LONG_GSM7, ("description must be 1,395 characters or fewer")),
+        (sample_cap_xml_documents.LONG_GSM7, "ValidationError", ("description must be 1,395 characters or fewer")),
+        ("a" * 10_001, "BadRequestError", ("Request data is not valid CAP XML: XML must be 10000 characters or fewer")),
     ),
 )
 def test_content_too_long_returns_400(
     client,
     sample_broadcast_service,
     xml_document,
+    error_type,
     expected_error,
 ):
     auth_header = create_service_authorization_header(service_id=sample_broadcast_service.id)
@@ -588,7 +591,7 @@ def test_content_too_long_returns_400(
     assert json.loads(response.get_data(as_text=True)) == {
         "errors": [
             {
-                "error": "ValidationError",
+                "error": error_type,
                 "message": expected_error,
             }
         ],
