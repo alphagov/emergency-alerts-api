@@ -94,7 +94,7 @@ def _trigger_mno_log_upload_request(log_upload_request):
         current_app.logger.error("MNO_PORTAL_ACCOUNT_NUMBER not configured — cannot invoke MNO log upload handler")
         return False
 
-    lambda_client = boto3.client("lambda", region_name="eu-west-2")
+    lambda_client = boto3.client("lambda", region_name=current_app.config["AWS_REGION"])
     payload_bytes = bytes(json.dumps(log_upload_request), encoding="utf8")
 
     try:

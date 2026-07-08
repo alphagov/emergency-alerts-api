@@ -233,7 +233,7 @@ def send_broadcast_provider_message(broadcast_event_id, provider):
                 )
 
         add_broadcast_provider_message_status(broadcast_provider_message, status=BROADCAST_PROVIDER_STATUS_ACK)
-        if not is_local_host():
+        if not is_local_host() and broadcast_event.message_type == BroadcastEventMessageType.ALERT:
             send_mno_log_upload_request_email_task.send(
                 broadcast_event_id=str(broadcast_event_id),
                 provider_message_id=str(broadcast_provider_message.id),
