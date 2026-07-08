@@ -571,7 +571,11 @@ def test_unsupported_message_types_400(
             ("description must be 615 characters or fewer (because it " "could not be GSM7 encoded)"),
         ),
         (sample_cap_xml_documents.LONG_GSM7, "ValidationError", ("description must be 1,395 characters or fewer")),
-        ("a" * 10_001, "BadRequestError", ("Request data is not valid CAP XML: XML must be 10000 characters or fewer")),
+        (
+            "a" * 1_000_001,
+            "BadRequestError",
+            ("Request data is not valid CAP XML: XML must be 1000000 characters or fewer"),
+        ),
     ),
 )
 def test_content_too_long_returns_400(
