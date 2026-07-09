@@ -562,6 +562,29 @@ def test_unsupported_message_types_400(
     } in (json.loads(response.get_data(as_text=True))["errors"])
 
 
+def test_body_too_large_returns_400(
+    client,
+    sample_broadcast_service,
+):
+    xml_document = "a" * 65_000_001
+    auth_header = create_service_authorization_header(service_id=sample_broadcast_service.id)
+    response = client.post(
+        path="/v2/broadcast",
+        data=xml_document,
+        headers=[("Content-Type", "application/cap+xml"), auth_header],
+    )
+
+    assert json.loads(response.get_data(as_text=True)) == {
+        "errors": [
+            {
+                "error": "BadRequestError",
+                "message": "Request data is not valid CAP XML: XML must be 65000000 characters or fewer",
+            }
+        ],
+        "status_code": 400,
+    }
+
+
 @pytest.mark.parametrize(
     "xml_document, expected_error",
     (
