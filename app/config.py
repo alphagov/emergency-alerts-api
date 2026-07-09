@@ -172,6 +172,24 @@ class Config(object):
 
     MAX_THROTTLE_PERIOD = 60
 
+    # Cap the size of an incoming request body. A legitimate CAP XML alert is a
+    # few KB; anything approaching this ceiling could be a DoS attack.
+    # Flask rejects the request with 413 before we read or parse the body, so this
+    # is the outermost guard against an oversized payload.
+    MAX_CONTENT_LENGTH = 1 * 1024 * 1024  # 1 MB
+
+    # Hard ceilings on broadcast geometry, enforced before any Shapely/pyproj
+    # geometry work runs. The 12-polygon / 250-point thresholds in
+    # post_broadcast.py only decide whether to simplify the payload; exceeding
+    # these values rejects it with a 400.
+    #
+    # These are safety limits, not functional ones, so they sit well above real
+    # traffic: a whole-UK operator test alert is ~243 polygons / ~8,300 points,
+    # so these leave ~4x / ~6x headroom while still bounding the O(n^2) overlap
+    # check and per-request memory.
+    MAX_BROADCAST_POLYGON_COUNT = 1_000
+    MAX_BROADCAST_POLYGON_POINT_COUNT = 50_000
+
     GOVUK_ALERTS_S3_BUCKET_NAME = os.getenv("GOVUK_ALERTS_S3_BUCKET_NAME")
 
     SES_ENDPOINT = os.environ.get("AWS_ENDPOINT_URL_SES", "http://localstack:4566")

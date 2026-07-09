@@ -676,6 +676,100 @@ def test_invalid_area_polygons_returns_400(
     assert response.status_code == status_code
 
 
+_ALERT_WITH_GENERATED_AREAS = """
+    <alert xmlns='urn:oasis:names:tc:emergency:cap:1.2'>
+        <identifier>c60bc14b-8411-4dd7-8d9e-0f159f79eab3</identifier>
+        <sender>broadcasts@notifications.service.gov.uk</sender>
+        <sent>2025-02-16T23:01:13-00:00</sent>
+        <status>Actual</status>
+        <msgType>Alert</msgType>
+        <scope>Public</scope>
+        <info>
+            <language>en-GB</language>
+            <category>Safety</category>
+            <event>Test Alert</event>
+            <urgency>Expected</urgency>
+            <severity>Severe</severity>
+            <certainty>Likely</certainty>
+            <expires>2025-02-17T21:31:13-00:00</expires>
+            <senderName>GOV.UK Emergency Alerts</senderName>
+            <headline>GOV.UK Emergency Alert</headline>
+            <description>Test</description>
+            {areas}
+        </info>
+    </alert>
+"""
+
+
+def _cap_xml_with_polygons(polygon_strings):
+    areas = "".join(
+        f"<area><areaDesc>area</areaDesc><polygon>{polygon}</polygon></area>" for polygon in polygon_strings
+    )
+    return _ALERT_WITH_GENERATED_AREAS.format(areas=areas)
+
+
+def test_too_many_polygons_is_rejected_before_geometry_work(client, sample_broadcast_service, mocker):
+    # Each polygon is a tiny valid 4-point ring; the request is rejected purely
+    # for exceeding the polygon-count ceiling, before any Polygons/Shapely work.
+    max_polygons = client.application.config["MAX_BROADCAST_POLYGON_COUNT"]
+    polygons_spy = mocker.patch("app.v2.broadcast.post_broadcast.Polygons")
+
+    square = "0,50 0.1,50 0.1,50.1 0,50"
+    cap_xml = _cap_xml_with_polygons([square] * (max_polygons + 1))
+
+    auth_header = create_service_authorization_header(service_id=sample_broadcast_service.id)
+    response = client.post(
+        path="/v2/broadcast",
+        data=cap_xml,
+        headers=[("Content-Type", "application/cap+xml"), auth_header],
+    )
+
+    assert response.status_code == 400
+    assert response.json["errors"][0]["message"] == (
+        f"Too many polygons ({max_polygons + 1}); the maximum is {max_polygons}"
+    )
+    # The cheap count check must short-circuit before we construct any geometry.
+    polygons_spy.assert_not_called()
+
+
+def test_too_many_points_is_rejected_before_geometry_work(client, sample_broadcast_service, mocker):
+    max_points = client.application.config["MAX_BROADCAST_POLYGON_POINT_COUNT"]
+    polygons_spy = mocker.patch("app.v2.broadcast.post_broadcast.Polygons")
+
+    # A single polygon whose point count exceeds the ceiling.
+    huge_polygon = " ".join(f"{i / 100000},50" for i in range(max_points + 1))
+    cap_xml = _cap_xml_with_polygons([huge_polygon])
+
+    auth_header = create_service_authorization_header(service_id=sample_broadcast_service.id)
+    response = client.post(
+        path="/v2/broadcast",
+        data=cap_xml,
+        headers=[("Content-Type", "application/cap+xml"), auth_header],
+    )
+
+    assert response.status_code == 400
+    assert response.json["errors"][0]["message"] == (
+        f"Too many coordinates ({max_points + 1}); the maximum is {max_points}"
+    )
+    polygons_spy.assert_not_called()
+
+
+def test_oversized_request_body_is_rejected_with_413(client, sample_broadcast_service):
+    # A body larger than MAX_CONTENT_LENGTH is refused by Flask before the route
+    # (and therefore before any XML parsing) runs.
+    max_content_length = client.application.config["MAX_CONTENT_LENGTH"]
+    oversized_body = b"<alert>" + b"a" * (max_content_length + 1)
+
+    auth_header = create_service_authorization_header(service_id=sample_broadcast_service.id)
+    response = client.post(
+        path="/v2/broadcast",
+        data=oversized_body,
+        headers=[("Content-Type", "application/cap+xml"), auth_header],
+    )
+
+    assert response.status_code == 413
+
+
 def test_request_for_status_returns_allowed_methods(client, sample_broadcast_service):
     auth_header = create_service_authorization_header(service_id=sample_broadcast_service.id)
     response = client.options(
