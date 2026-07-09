@@ -182,11 +182,6 @@ class Config(object):
     # geometry work runs. The 12-polygon / 250-point thresholds in
     # post_broadcast.py only decide whether to simplify the payload; exceeding
     # these values rejects it with a 400.
-    #
-    # These are safety limits, not functional ones, so they sit well above real
-    # traffic: a whole-UK operator test alert is ~243 polygons / ~8,300 points,
-    # so these leave ~4x / ~6x headroom while still bounding the O(n^2) overlap
-    # check and per-request memory.
     MAX_BROADCAST_POLYGON_COUNT = 1_000
     MAX_BROADCAST_POLYGON_POINT_COUNT = 50_000
 
