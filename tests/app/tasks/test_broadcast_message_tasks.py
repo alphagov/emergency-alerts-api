@@ -37,6 +37,7 @@ def test_send_broadcast_event_queues_up_for_active_providers(mocker, notify_api,
     event = create_broadcast_event(broadcast_message)
 
     mocker.patch("app.tasks.broadcast_message_tasks.publish_govuk_alerts.send")
+    mocker.patch("app.tasks.broadcast_message_tasks.send_mno_log_upload_request_email_task.send")
 
     mock_send_broadcast_provider_message = mocker.patch(
         "app.tasks.broadcast_message_tasks.send_broadcast_provider_message.send",
@@ -67,6 +68,7 @@ def test_send_broadcast_event_calls_publish_govuk_alerts_task(
     mocker.patch(
         "app.tasks.broadcast_message_tasks.send_broadcast_provider_message",
     )
+    mocker.patch("app.tasks.broadcast_message_tasks.send_mno_log_upload_request_email_task.send")
 
     mock = mocker.patch("app.tasks.broadcast_message_tasks.publish_govuk_alerts.send")
 
@@ -85,6 +87,7 @@ def test_send_broadcast_event_only_sends_to_one_provider_if_set_on_service(
     event = create_broadcast_event(broadcast_message)
 
     mocker.patch("app.tasks.broadcast_message_tasks.publish_govuk_alerts.send")
+    mocker.patch("app.tasks.broadcast_message_tasks.send_mno_log_upload_request_email_task.send")
 
     mock_send_broadcast_provider_message = mocker.patch(
         "app.tasks.broadcast_message_tasks.send_broadcast_provider_message.send",
@@ -107,6 +110,7 @@ def test_send_broadcast_event_does_nothing_if_provider_set_on_service_isnt_enabl
     event = create_broadcast_event(broadcast_message)
 
     mocker.patch("app.tasks.broadcast_message_tasks.publish_govuk_alerts.send")
+    mocker.patch("app.tasks.broadcast_message_tasks.send_mno_log_upload_request_email_task.send")
 
     mock_send_broadcast_provider_message = mocker.patch(
         "app.tasks.broadcast_message_tasks.send_broadcast_provider_message.send",
@@ -148,6 +152,7 @@ def test_send_broadcast_provider_message_sends_data_correctly(
     mock_create_broadcast = mocker.patch(
         f"app.clients.cbc_proxy.CBCProxy{provider_capitalised}.create_and_send_broadcast",
     )
+    mocker.patch("app.tasks.broadcast_message_tasks.send_mno_log_upload_request_email_task.send")
 
     assert event.get_provider_message(provider) is None
 
@@ -219,6 +224,7 @@ def test_send_broadcast_provider_message_uses_channel_set_on_broadcast_service(
     mock_create_broadcast = mocker.patch(
         f"app.clients.cbc_proxy.CBCProxy{provider_capitalised}.create_and_send_broadcast",
     )
+    mocker.patch("app.tasks.broadcast_message_tasks.send_mno_log_upload_request_email_task.send")
 
     send_broadcast_provider_message(provider=provider, broadcast_event_id=str(event.id))
 
@@ -258,6 +264,7 @@ def test_send_broadcast_provider_message_works_if_we_retried_previously(mocker, 
     mock_create_broadcast = mocker.patch(
         "app.clients.cbc_proxy.CBCProxyEE.create_and_send_broadcast",
     )
+    mocker.patch("app.tasks.broadcast_message_tasks.send_mno_log_upload_request_email_task.send")
 
     send_broadcast_provider_message(provider="ee", broadcast_event_id=str(event.id))
 
@@ -315,6 +322,7 @@ def test_send_broadcast_provider_message_sends_data_correctly_when_broadcast_mes
     mock_create_broadcast = mocker.patch(
         f"app.clients.cbc_proxy.CBCProxy{provider_capitalised}.create_and_send_broadcast",
     )
+    mocker.patch("app.tasks.broadcast_message_tasks.send_mno_log_upload_request_email_task.send")
 
     send_broadcast_provider_message(provider=provider, broadcast_event_id=str(event.id))
 
@@ -365,6 +373,7 @@ def test_send_broadcast_provider_message_sends_update_with_references(
     mock_update_broadcast = mocker.patch(
         f"app.clients.cbc_proxy.CBCProxy{provider_capitalised}.update_and_send_broadcast",
     )
+    mocker.patch("app.tasks.broadcast_message_tasks.send_mno_log_upload_request_email_task.send")
 
     send_broadcast_provider_message(provider=provider, broadcast_event_id=str(update_event.id))
 
@@ -427,6 +436,7 @@ def test_send_broadcast_provider_message_sends_cancel_with_references(
     mock_cancel_broadcast = mocker.patch(
         f"app.clients.cbc_proxy.CBCProxy{provider_capitalised}.cancel_broadcast",
     )
+    mocker.patch("app.tasks.broadcast_message_tasks.send_mno_log_upload_request_email_task.send")
 
     send_broadcast_provider_message(provider=provider, broadcast_event_id=str(cancel_event.id))
 
@@ -685,6 +695,7 @@ def test_send_broadcast_provider_message_doesnt_raise_for_sending_or_failed_stat
     mocker.patch(
         "app.clients.cbc_proxy.CBCProxyEE.create_and_send_broadcast",
     )
+    mocker.patch("app.tasks.broadcast_message_tasks.send_mno_log_upload_request_email_task.send")
 
     broadcast_message = create_broadcast_message(sample_template)
     current_event = create_broadcast_event(broadcast_message, message_type="alert")
@@ -729,6 +740,68 @@ def test_send_broadcast_provider_message_raises_if_message_is_stubbed(
         send_broadcast_provider_message(current_event.id, "ee")
 
     assert "message is stubbed" in str(exc.value)
+
+
+def test_send_broadcast_event_does_not_trigger_log_ingest_task(mocker, notify_api, sample_broadcast_service):
+
+    template = create_template(sample_broadcast_service, BROADCAST_TYPE)
+    broadcast_message = create_broadcast_message(template, status=BroadcastStatusType.BROADCASTING)
+    event = create_broadcast_event(broadcast_message)
+
+    mocker.patch("app.tasks.broadcast_message_tasks.publish_govuk_alerts.send")
+    mocker.patch("app.tasks.broadcast_message_tasks.send_broadcast_provider_message.send")
+    mock_log_ingest = mocker.patch(
+        "app.tasks.broadcast_message_tasks.send_mno_log_upload_request_email_task.send",
+    )
+
+    set_service_broadcast_providers(sample_broadcast_service, ["ee"])
+    with set_config(notify_api, "ENABLED_CBCS", {"ee"}):
+        send_broadcast_event(event.id)
+
+    mock_log_ingest.assert_not_called()
+
+
+def test_send_broadcast_provider_message_triggers_log_ingest_task_after_ack(
+    mocker, notify_api, sample_broadcast_service
+):
+    # After a provider message is successfully sent, the log ingest task
+    # should be enqueued for that specific provider message.
+    template = create_template(sample_broadcast_service, BROADCAST_TYPE)
+    broadcast_message = create_broadcast_message(template, status=BroadcastStatusType.BROADCASTING)
+    event = create_broadcast_event(broadcast_message)
+
+    mock_proxy_client_getter = mocker.patch("app.tasks.broadcast_message_tasks.cbc_proxy_client")
+    mock_proxy_client_getter.get_proxy.return_value = Mock()
+    mocker.patch("app.tasks.broadcast_message_tasks.is_local_host", return_value=False)
+    mock_log_ingest = mocker.patch("app.tasks.broadcast_message_tasks.send_mno_log_upload_request_email_task.send")
+
+    set_service_broadcast_providers(sample_broadcast_service, ["ee"])
+    with set_config(notify_api, "ENABLED_CBCS", {"ee"}):
+        send_broadcast_provider_message(event.id, "ee")
+
+    mock_log_ingest.assert_called_once()
+    call_kwargs = mock_log_ingest.call_args[1]
+    assert call_kwargs["broadcast_event_id"] == str(event.id)
+    assert "provider_message_id" in call_kwargs
+
+
+def test_send_broadcast_provider_message_does_not_trigger_log_ingest_task_on_local_host(
+    mocker, notify_api, sample_broadcast_service
+):
+    template = create_template(sample_broadcast_service, BROADCAST_TYPE)
+    broadcast_message = create_broadcast_message(template, status=BroadcastStatusType.BROADCASTING)
+    event = create_broadcast_event(broadcast_message)
+
+    mock_proxy_client_getter = mocker.patch("app.tasks.broadcast_message_tasks.cbc_proxy_client")
+    mock_proxy_client_getter.get_proxy.return_value = Mock()
+    mocker.patch("app.tasks.broadcast_message_tasks.is_local_host", return_value=True)
+    mock_log_ingest = mocker.patch("app.tasks.broadcast_message_tasks.send_mno_log_upload_request_email_task.send")
+
+    set_service_broadcast_providers(sample_broadcast_service, ["ee"])
+    with set_config(notify_api, "ENABLED_CBCS", {"ee"}):
+        send_broadcast_provider_message(event.id, "ee")
+
+    mock_log_ingest.assert_not_called()
 
 
 def test_send_broadcast_provider_message_does_nothing_if_cbc_proxy_disabled(mocker, notify_api, sample_template):

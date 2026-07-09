@@ -20,6 +20,7 @@ from app.models import (
     BroadcastProvider,
     BroadcastProviderMessage,
 )
+from app.tasks.log_ingest_tasks import send_mno_log_upload_request_email_task
 from app.tasks.stub_tasks import publish_govuk_alerts
 from app.utils import format_sequential_number, is_local_host
 
@@ -128,6 +129,7 @@ def send_broadcast_event(broadcast_event_id):
 
         for provider in providers:
             send_broadcast_provider_message.send(broadcast_event_id=broadcast_event_id, provider=provider)
+
     except Exception as e:
         current_app.logger.exception(
             f"Failed to send broadcast (event id {broadcast_event_id})",
@@ -231,6 +233,11 @@ def send_broadcast_provider_message(broadcast_event_id, provider):
                 )
 
         add_broadcast_provider_message_status(broadcast_provider_message, status=BROADCAST_PROVIDER_STATUS_ACK)
+        if not is_local_host() and broadcast_event.message_type == BroadcastEventMessageType.ALERT:
+            send_mno_log_upload_request_email_task.send(
+                broadcast_event_id=str(broadcast_event_id),
+                provider_message_id=str(broadcast_provider_message.id),
+            )
     except Exception as e:
         exception_detail = getattr(e, "message", repr(e))
 
