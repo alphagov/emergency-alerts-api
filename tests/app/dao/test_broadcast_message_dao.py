@@ -12,7 +12,6 @@ from app.dao.broadcast_message_dao import (
     dao_get_broadcast_message_by_id_and_service_id_with_user,
     dao_get_broadcast_messages_for_service_with_user,
     dao_get_broadcast_provider_messages_by_broadcast_message_ids,
-    dao_get_broadcast_provider_messages_for_event,
     dao_get_public_messages_older_than,
     dao_purge_old_broadcast_messages,
     get_earlier_events_for_broadcast_event,
@@ -769,20 +768,3 @@ def test_dao_delete_records_for_broadcast(sample_broadcast_service, sample_broad
     assert counter["events"] == 1
     assert counter["provider_msgs"] == 4
     assert counter["msg_numbers"] == 1
-
-
-def test_dao_get_broadcast_provider_messages_for_event(sample_broadcast_service):
-    template = create_template(sample_broadcast_service, BROADCAST_TYPE)
-    broadcast_message = create_broadcast_message(template, status=BroadcastStatusType.BROADCASTING)
-
-    event_1 = create_broadcast_event(broadcast_message)
-    event_2 = create_broadcast_event(broadcast_message)
-
-    pm_ee = create_broadcast_provider_message(event_1, "ee")
-    pm_vodafone = create_broadcast_provider_message(event_1, "vodafone")
-    create_broadcast_provider_message(event_2, "o2")
-
-    results = dao_get_broadcast_provider_messages_for_event(event_1.id)
-
-    result_ids = {r.id for r in results}
-    assert result_ids == {pm_ee.id, pm_vodafone.id}

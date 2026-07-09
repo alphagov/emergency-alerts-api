@@ -61,8 +61,6 @@ class Config(object):
     CBC_PROXY_ENABLED = True
     ENABLED_CBCS = {BroadcastProvider.EE, BroadcastProvider.THREE, BroadcastProvider.O2, BroadcastProvider.VODAFONE}
 
-    MNO_PORTAL_ACCOUNT_NUMBER = os.getenv("MNO_PORTAL_ACCOUNT_NUMBER")
-
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_size": int(os.environ.get("SQLALCHEMY_POOL_SIZE", 5)),
         "pool_timeout": 30,
