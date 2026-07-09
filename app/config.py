@@ -176,7 +176,7 @@ class Config(object):
     # few KB; anything approaching this ceiling could be a DoS attack.
     # Flask rejects the request with 413 before we read or parse the body, so this
     # is the outermost guard against an oversized payload.
-    MAX_CONTENT_LENGTH = 1 * 1024 * 1024  # 1 MB
+    MAX_CONTENT_SIZE = 1 * 1024 * 1024  # 1 MB
 
     # Hard ceilings on broadcast geometry, enforced before any Shapely/pyproj
     # geometry work runs. The 12-polygon / 250-point thresholds in

@@ -755,9 +755,9 @@ def test_too_many_points_is_rejected_before_geometry_work(client, sample_broadca
 
 
 def test_oversized_request_body_is_rejected_with_413(client, sample_broadcast_service):
-    # A body larger than MAX_CONTENT_LENGTH is refused by Flask before the route
+    # A body larger than MAX_CONTENT_SIZE is refused by Flask before the route
     # (and therefore before any XML parsing) runs.
-    max_content_length = client.application.config["MAX_CONTENT_LENGTH"]
+    max_content_length = client.application.config["MAX_CONTENT_SIZE"]
     oversized_body = b"<alert>" + b"a" * (max_content_length + 1)
 
     auth_header = create_service_authorization_header(service_id=sample_broadcast_service.id)
