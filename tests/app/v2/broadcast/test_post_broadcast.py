@@ -562,27 +562,43 @@ def test_unsupported_message_types_400(
     } in (json.loads(response.get_data(as_text=True))["errors"])
 
 
+def test_body_too_large_returns_400(
+    client,
+    sample_broadcast_service,
+):
+    xml_document = "a" * 65_000_001
+    auth_header = create_service_authorization_header(service_id=sample_broadcast_service.id)
+    response = client.post(
+        path="/v2/broadcast",
+        data=xml_document,
+        headers=[("Content-Type", "application/cap+xml"), auth_header],
+    )
+
+    assert json.loads(response.get_data(as_text=True)) == {
+        "errors": [
+            {
+                "error": "BadRequestError",
+                "message": "Request data is not valid CAP XML: XML must be 65000000 characters or fewer",
+            }
+        ],
+        "status_code": 400,
+    }
+
+
 @pytest.mark.parametrize(
-    "xml_document, error_type, expected_error",
+    "xml_document, expected_error",
     (
         (
             sample_cap_xml_documents.LONG_UCS2,
-            "ValidationError",
             ("description must be 615 characters or fewer (because it " "could not be GSM7 encoded)"),
         ),
-        (sample_cap_xml_documents.LONG_GSM7, "ValidationError", ("description must be 1,395 characters or fewer")),
-        (
-            "a" * 1_000_001,
-            "BadRequestError",
-            ("Request data is not valid CAP XML: XML must be 1000000 characters or fewer"),
-        ),
+        (sample_cap_xml_documents.LONG_GSM7, ("description must be 1,395 characters or fewer")),
     ),
 )
 def test_content_too_long_returns_400(
     client,
     sample_broadcast_service,
     xml_document,
-    error_type,
     expected_error,
 ):
     auth_header = create_service_authorization_header(service_id=sample_broadcast_service.id)
@@ -595,7 +611,7 @@ def test_content_too_long_returns_400(
     assert json.loads(response.get_data(as_text=True)) == {
         "errors": [
             {
-                "error": error_type,
+                "error": "ValidationError",
                 "message": expected_error,
             }
         ],
