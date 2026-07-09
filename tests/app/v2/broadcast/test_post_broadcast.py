@@ -777,11 +777,13 @@ def test_too_many_points_is_rejected_before_geometry_work(client, sample_broadca
     polygons_spy.assert_not_called()
 
 
-def test_oversized_request_body_is_rejected_with_413(client, sample_broadcast_service):
-    # A body larger than MAX_CONTENT_SIZE is refused by Flask before the route
-    # (and therefore before any XML parsing) runs.
-    max_content_length = client.application.config["MAX_CONTENT_SIZE"]
-    oversized_body = b"<alert>" + b"a" * (max_content_length + 1)
+def test_oversized_request_body_is_rejected_with_400(client, sample_broadcast_service, mocker):
+    # A body larger than MAX_BROADCASTS_XML_LENGTH is rejected in validate_xml
+    # before the document is parsed against the schema. Override the limit to a
+    # small value so we don't have to allocate a 65MB payload in the test.
+    mocker.patch.dict(client.application.config, {"MAX_BROADCASTS_XML_LENGTH": 100})
+    max_length = client.application.config["MAX_BROADCASTS_XML_LENGTH"]
+    oversized_body = b"<alert>" + b"a" * (max_length + 1)
 
     auth_header = create_service_authorization_header(service_id=sample_broadcast_service.id)
     response = client.post(
@@ -790,7 +792,10 @@ def test_oversized_request_body_is_rejected_with_413(client, sample_broadcast_se
         headers=[("Content-Type", "application/cap+xml"), auth_header],
     )
 
-    assert response.status_code == 413
+    assert response.status_code == 400
+    assert response.json["errors"][0]["message"] == (
+        f"Request data is not valid CAP XML: XML must be {max_length} characters or fewer"
+    )
 
 
 def test_request_for_status_returns_allowed_methods(client, sample_broadcast_service):
