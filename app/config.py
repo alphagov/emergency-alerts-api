@@ -116,6 +116,8 @@ class Config(object):
     MAX_VERIFY_CODE_COUNT = 5
     MAX_FAILED_LOGIN_COUNT = 10
     MIN_ENTROPY_THRESHOLD = 70
+    # 65mb - chosen on local empirical testing locally with container memory usage
+    MAX_BROADCASTS_XML_LENGTH = int(os.environ.get("MAX_BROADCASTS_XML_LENGTH", "65_000_000"))
 
     CHECK_PROXY_HEADER = False
 
