@@ -176,6 +176,8 @@ class UserUpdatePasswordSchema(BaseSchema):
     class Meta(BaseSchema.Meta):
         model = models.User
 
+    _oldpassword = fields.String(required=True)
+
     @validates_schema(pass_original=True)
     def check_unknown_fields(self, data, original_data, **kwargs):
         for key in original_data:
@@ -461,7 +463,9 @@ class UnarchivedTemplateSchema(BaseSchema):
 # should not be used on its own for dumping - only for loading
 create_user_schema = UserSchema()
 user_update_schema_load_json = UserUpdateAttributeSchema(load_json=True, partial=True)
-user_update_password_schema_load_json = UserUpdatePasswordSchema(only=("_password",), load_json=True, partial=True)
+user_update_password_schema_load_json = UserUpdatePasswordSchema(
+    only=("_password", "_oldpassword"), load_json=True, partial=False
+)
 service_schema = ServiceSchema()
 providers_schema = ProvidersSchema()
 detailed_service_schema = DetailedServiceSchema()
