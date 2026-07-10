@@ -738,24 +738,92 @@ def send_user_reset_password():
 @user_blueprint.route("/<uuid:user_id>/update-password", methods=["POST"])
 def update_password(user_id):
     user = get_user_by_id(user_id=user_id)
+
+    # Ensure user id supplied has logged in successfully (failed count = 0)
+    # and has a current session.
+    if user.failed_login_count > 0 or user.current_session_id is None:
+        return (
+            jsonify(
+                {
+                    "errors": [
+                        {
+                            "field": "old_password",
+                            "message": "User specified is not currently logged in, please contact support.",
+                        }
+                    ]
+                }
+            ),
+            400,
+        )
+
     req_json = request.get_json()
+    try:
+        user_update_password_schema_load_json.load(req_json)
+    except Exception:
+        current_app.logger.exception(
+            f"Failed user_update_password_schema_load_json check for user {user_id}", extra={"python_module": __name__}
+        )
+        return (
+            jsonify(
+                {
+                    "errors": [
+                        {"field": "old_password", "message": "Problem with passwords supplied, please contact support."}
+                    ]
+                }
+            ),
+            400,
+        )
 
     password = req_json.get("_password")
-    user_update_password_schema_load_json.load(req_json)
+    oldpassword = req_json.get("_oldpassword")
+
+    # Check current password is correct
+    if not user.check_password(oldpassword):
+        return (
+            jsonify({"errors": [{"field": "old_password", "message": "Current password entered incorrectly."}]}),
+            400,
+        )
 
     if is_password_common(password):
         return (
-            jsonify({"errors": ["Your password is too common. Please choose a new one."]}),
+            jsonify(
+                {
+                    "errors": [
+                        {"field": "new_password", "message": "Your password is too common. Please choose a new one."}
+                    ]
+                }
+            ),
             400,
         )
     user = get_user_by_id(user_id=user_id)
     if password and (pwdpy.entropy(password) < current_app.config["MIN_ENTROPY_THRESHOLD"]):
         return (
-            jsonify({"errors": ["Your password is not strong enough, try adding more words"]}),
+            jsonify(
+                {
+                    "errors": [
+                        {
+                            "field": "new_password",
+                            "message": "Your password is not strong enough, try adding more words.",
+                        }
+                    ]
+                }
+            ),
             400,
         )
     if password and has_user_already_used_password(user_id, password):
-        return jsonify({"errors": ["You've used this password before. Please choose a new one."]}), 400
+        return (
+            jsonify(
+                {
+                    "errors": [
+                        {
+                            "field": "new_password",
+                            "message": "You've used this password before. Please choose a new one.",
+                        }
+                    ]
+                }
+            ),
+            400,
+        )
 
     add_old_password_for_user(user_id, password)
 
