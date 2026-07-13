@@ -1,4 +1,4 @@
-from itertools import chain
+from itertools import chain, combinations
 
 from emergency_alerts_utils.api_key import KEY_TYPE_TEAM, KEY_TYPE_TEST
 from emergency_alerts_utils.polygons import Polygons
@@ -72,6 +72,7 @@ def create_broadcast():
 
     else:
         validate(broadcast_json, post_broadcast_schema)
+        _check_broadcast_complexity(broadcast_json)
         _validate_template(broadcast_json)
 
         polygons = Polygons(
@@ -160,6 +161,37 @@ def _cancel_or_reject_broadcast(references_to_original_broadcast, service_id):
     return broadcast_message
 
 
+def _check_broadcast_complexity(broadcast_json):
+    """
+    Reject excessively large polygons before Shapely/pyproj processing.
+    The 12-polygon / 250-point check in create_broadcast only triggers
+    simplification. Without this check, an authenticated broadcast key
+    could submit thousands of disjoint unmergeable polygons or a single
+    polygon with a huge point count and exhaust API worker CPU/memory.
+    """
+    polygon_count = 0
+    point_count = 0
+    for area in broadcast_json["areas"]:
+        for polygon in area["polygons"]:
+            polygon_count += 1
+            point_count += len(polygon)
+
+    max_polygons = current_app.config["MAX_BROADCAST_POLYGON_COUNT"]
+    max_points = current_app.config["MAX_BROADCAST_POLYGON_POINT_COUNT"]
+
+    if polygon_count > max_polygons:
+        raise BadRequestError(
+            message=f"Too many polygons ({polygon_count}); the maximum is {max_polygons}",
+            status_code=400,
+        )
+
+    if point_count > max_points:
+        raise BadRequestError(
+            message=f"Too many coordinates ({point_count}); the maximum is {max_points}",
+            status_code=400,
+        )
+
+
 def _validate_template(broadcast_json):
     template = BroadcastMessageTemplate.from_content(broadcast_json["content"])
 
@@ -186,19 +218,23 @@ def _check_key_type_allowed(key_type):
 
 def _validate_polygons(polygons):
     try:
-        for polygon1 in polygons:
-            for polygon2 in polygons:
-                p1 = ShapelyPolygon(polygon1) if not isinstance(polygon1, ShapelyPolygon) else polygon1
-                p2 = ShapelyPolygon(polygon2) if not isinstance(polygon2, ShapelyPolygon) else polygon2
-                # Check for overlapping polygons, including partial
-                # intersections and enclosed polygons (holes)
-                if p1 != p2 and p1.intersects(p2):
-                    raise ValidationError(
-                        message="Overlapping areas are not supported.",
-                        status_code=400,
-                    )
-        for polygon in polygons:
-            p = ShapelyPolygon(polygon) if not isinstance(polygon, ShapelyPolygon) else polygon
+        # Build each Shapely polygon exactly once rather than reconstructing both
+        # operands on every pass of the nested loop below. The polygon count is
+        # bounded up front by _check_broadcast_complexity.
+        shapely_polygons = [
+            polygon if isinstance(polygon, ShapelyPolygon) else ShapelyPolygon(polygon) for polygon in polygons
+        ]
+
+        # Check for overlapping polygons, including partial intersections and
+        # enclosed polygons (holes). intersects() is symmetric, so only compare
+        # each unordered pair once.
+        for p1, p2 in combinations(shapely_polygons, 2):
+            if p1.intersects(p2):
+                raise ValidationError(
+                    message="Overlapping areas are not supported.",
+                    status_code=400,
+                )
+        for p in shapely_polygons:
             # Check if valid (no self-intersections, no duplicate vertices,
             # minimum vertex count, no overlapping segments)
             if not p.is_valid:

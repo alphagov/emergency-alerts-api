@@ -172,6 +172,13 @@ class Config(object):
 
     MAX_THROTTLE_PERIOD = 60
 
+    # Hard ceilings on broadcast geometry, enforced before any Shapely/pyproj
+    # geometry work runs. The 12-polygon / 250-point thresholds in
+    # post_broadcast.py only decide whether to simplify the payload; exceeding
+    # these values rejects it with a 400.
+    MAX_BROADCAST_POLYGON_COUNT = 1_000
+    MAX_BROADCAST_POLYGON_POINT_COUNT = 50_000
+
     GOVUK_ALERTS_S3_BUCKET_NAME = os.getenv("GOVUK_ALERTS_S3_BUCKET_NAME")
 
     SES_ENDPOINT = os.environ.get("AWS_ENDPOINT_URL_SES", "http://localstack:4566")
