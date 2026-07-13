@@ -11,23 +11,22 @@ status = Blueprint("status", __name__)
 @status.route("/", methods=["GET"])
 @status.route("/_api_status", methods=["GET", "POST"])
 def show_api_status():
+    if request.args.get("simple", None):
+        return jsonify(status="ok"), 200  # cheap liveness probe: no DB, no CloudWatch
+
     post_app_version_to_cloudwatch()
     db_version = get_db_version()
     post_db_version_to_cloudwatch(db_version)
-
-    if request.args.get("simple", None):
-        return jsonify(status="ok"), 200
-    else:
-        return (
-            jsonify(
-                status="ok",  # This should be considered part of the public API
-                git_commit=version.git_commit,
-                build_time=version.time,
-                db_version=db_version,
-                app_version=version.app_version,
-            ),
-            200,
-        )
+    return (
+        jsonify(
+            status="ok",  # This should be considered part of the public API
+            git_commit=version.git_commit,
+            build_time=version.time,
+            db_version=db_version,
+            app_version=version.app_version,
+        ),
+        200,
+    )
 
 
 @status.route("/_api_status/live-service-and-organisation-counts")
