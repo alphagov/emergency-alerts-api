@@ -1,11 +1,15 @@
+import json
 import os
 import uuid
 from datetime import datetime, timezone
 from unittest import mock
+from urllib.parse import unquote
 
 import pytest
+from emergency_alerts_utils.url_safe_token import generate_token
 from flask import current_app
 from freezegun import freeze_time
+from itsdangerous import SignatureExpired
 
 from app.dao.permissions_dao import default_service_permissions
 from app.dao.service_user_dao import (
@@ -836,10 +840,156 @@ def test_send_user_confirm_new_email_returns_400_when_email_missing(admin_reques
 @freeze_time("2020-02-14T12:00:00")
 def test_update_user_password_saves_correctly(admin_request, sample_service):
     sample_user = sample_service.users[0]
+    sample_user.current_session_id = uuid.uuid4()
+    old_password = "old"
+    sample_user.password = old_password
     new_password = "A1234567890!?!"
-    data = {"_password": "A1234567890!?!"}
+    data = {"_password": "A1234567890!?!", "_oldpassword": old_password}
 
     json_resp = admin_request.post("user.update_password", user_id=str(sample_user.id), _data=data)
+
+    assert json_resp["data"]["password_changed_at"] is not None
+    data = {"password": new_password}
+
+    admin_request.post("user.verify_user_password", user_id=str(sample_user.id), _data=data, _expected_status=204)
+
+
+@freeze_time("2020-02-14T12:00:00")
+@pytest.mark.parametrize(
+    "user_setup, data, expected_message",
+    [
+        # No token or old password
+        (
+            lambda u: None,
+            {"_password": "A1234567890!?!"},
+            "Problem with password or token supplied",
+        ),
+        # No current session
+        (
+            lambda u: setattr(u, "password", "old"),
+            {"_password": "A1234567890!?!", "_oldpassword": "old"},
+            "User specified is not currently logged in",
+        ),
+        # Failed logins > 0
+        (
+            lambda u: (setattr(u, "password", "old"), setattr(u, "failed_logins", 2)),
+            {"_password": "A1234567890!?!", "_oldpassword": "old"},
+            "User specified is not currently logged in",
+        ),
+        # Incorrect old password
+        (
+            lambda u: (
+                setattr(u, "current_session_id", uuid.uuid4()),
+                setattr(u, "password", "correct_password"),
+                setattr(u, "failed_logins", 0),
+            ),
+            {"_password": "A1234567890!?!", "_oldpassword": "old"},
+            "Current password entered incorrectly.",
+        ),
+    ],
+)
+def test_update_user_password_errors(admin_request, sample_service, user_setup, data, expected_message):
+    sample_user = sample_service.users[0]
+
+    user_setup(sample_user)
+
+    json_resp = admin_request.post(
+        "user.update_password",
+        user_id=str(sample_user.id),
+        _data=data,
+        _expected_status=400,
+    )
+
+    assert expected_message in json_resp["errors"][0]["message"]
+
+
+@freeze_time("2020-02-14T12:00:00")
+def test_update_user_password_expired_token(admin_request, sample_service, mocker):
+    sample_user = sample_service.users[0]
+    data = json.dumps({"email": "test@test.com", "created_at": str(datetime.now(timezone.utc))})
+    fake_token = unquote(generate_token(data, "key", "salt"))
+    new_password = "A1234567890!?!"
+    data = {"_password": new_password, "_token": fake_token}
+
+    # Patch the config values used by update_password()
+    mocker.patch.dict(
+        "app.user.rest.current_app.config",
+        {
+            "SECRET_KEY": "key",
+            "DANGEROUS_SALT": "salt",
+            "EMAIL_2FA_EXPIRY_SECONDS": 1,  # force expiry after 1 second
+        },
+        clear=False,
+    )
+    mocker.patch("app.user.rest.check_token", side_effect=SignatureExpired("expired"))
+
+    # advance time by 2 seconds
+    with freeze_time("2020-02-14T12:00:02"):
+        with pytest.raises(SignatureExpired):
+            admin_request.post(
+                "user.update_password",
+                user_id=str(sample_user.id),
+                _data=data,
+                _expected_status=400,
+            )
+
+
+@freeze_time("2020-02-14T12:00:00")
+def test_update_user_password_wrong_email_in_token(admin_request, sample_service, mocker):
+    sample_user = sample_service.users[0]
+    sample_user.email_address = "test@test.com"
+    data = json.dumps({"email": "wrongtest@test.com", "created_at": str(datetime.now(timezone.utc))})
+    fake_token = unquote(generate_token(data, "key", "salt"))
+    new_password = "A1234567890!?!"
+    data = {"_password": new_password, "_token": fake_token}
+
+    # Patch the config values used by update_password()
+    mocker.patch.dict(
+        "app.user.rest.current_app.config",
+        {
+            "SECRET_KEY": "key",
+            "DANGEROUS_SALT": "salt",
+            "EMAIL_2FA_EXPIRY_SECONDS": 1800,
+        },
+        clear=False,
+    )
+
+    with pytest.raises(Exception) as excinfo:
+        admin_request.post(
+            "user.update_password",
+            user_id=str(sample_user.id),
+            _data=data,
+            _expected_status=400,
+        )
+
+    assert "user attempted password reset with invalid token" in str(excinfo.value)
+
+
+@freeze_time("2020-02-14T12:00:00")
+def test_update_user_password_valid_token(admin_request, sample_service, mocker):
+    sample_user = sample_service.users[0]
+    sample_user.email_address = "test@test.com"
+    data = json.dumps({"email": "test@test.com", "created_at": str(datetime.now(timezone.utc))})
+    fake_token = unquote(generate_token(data, "key", "salt"))
+    new_password = "A1234567890!?!"
+    data = {"_password": new_password, "_token": fake_token}
+
+    # Patch the config values used by update_password()
+    mocker.patch.dict(
+        "app.user.rest.current_app.config",
+        {
+            "SECRET_KEY": "key",
+            "DANGEROUS_SALT": "salt",
+            "EMAIL_2FA_EXPIRY_SECONDS": 1800,
+        },
+        clear=False,
+    )
+
+    json_resp = admin_request.post(
+        "user.update_password",
+        user_id=str(sample_user.id),
+        _data=data,
+    )
 
     assert json_resp["data"]["password_changed_at"] is not None
     data = {"password": new_password}
@@ -1220,9 +1370,24 @@ def test_complete_login_after_webauthn_authentication_attempt_raises_400_if_sche
 
 
 def test_check_password_is_valid_rejects_reused_password(admin_request, sample_service, mocker):
-    data = {"_password": "1234567890TEST!!!"}
-    new_data = {"_password": "1234567890TEST!!!!"}
+
     sample_user = sample_service.users[0]
+    sample_user.email_address = "test@test.com"
+    data = json.dumps({"email": "test@test.com", "created_at": str(datetime.now(timezone.utc))})
+    fake_token = unquote(generate_token(data, "key", "salt"))
+    data = {"_password": "1234567890TEST!!!", "_token": fake_token}
+    new_data = {"_password": "1234567890TEST!!!!", "_token": fake_token}
+
+    # Patch the config values used by update_password()
+    mocker.patch.dict(
+        "app.user.rest.current_app.config",
+        {
+            "SECRET_KEY": "key",
+            "DANGEROUS_SALT": "salt",
+            "EMAIL_2FA_EXPIRY_SECONDS": 1800,
+        },
+        clear=False,
+    )
 
     json_resp1 = admin_request.post("user.update_password", user_id=sample_user.id, _data=data, _expected_status=200)
     assert json_resp1["data"]["password_changed_at"] is not None
@@ -1236,7 +1401,7 @@ def test_check_password_is_valid_rejects_reused_password(admin_request, sample_s
     assert json_resp2["data"]["password_changed_at"] is not None
 
     json_resp3 = admin_request.post("user.update_password", user_id=sample_user.id, _data=data, _expected_status=400)
-    assert json_resp3["errors"] == ["You've used this password before. Please choose a new one."]
+    assert "You've used this password before. Please choose a new one." in json_resp3["errors"][0]["message"]
 
     json_resp4 = admin_request.post(
         "user.check_password_is_valid", user_id=sample_user.id, _data=data, _expected_status=400
