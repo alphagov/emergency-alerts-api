@@ -1,5 +1,6 @@
-from itertools import chain
+from itertools import chain, combinations
 
+from emergency_alerts_utils.api_key import KEY_TYPE_TEAM, KEY_TYPE_TEST
 from emergency_alerts_utils.polygons import Polygons
 from emergency_alerts_utils.template import BroadcastMessageTemplate
 from flask import current_app, jsonify, make_response, request
@@ -8,6 +9,7 @@ from shapely.validation import explain_validity
 from sqlalchemy.orm.exc import MultipleResultsFound
 
 from app import api_user, authenticated_service
+from app.authentication.auth import AuthError
 from app.broadcast_message import utils as broadcast_utils
 from app.broadcast_message.translators import cap_xml_to_dict
 from app.dao.broadcast_message_dao import (
@@ -17,7 +19,10 @@ from app.dao.dao_utils import dao_save_object
 from app.models import BROADCAST_TYPE, BroadcastMessage, BroadcastStatusType
 from app.schema_validation import validate
 from app.v2.broadcast import v2_broadcast_blueprint
-from app.v2.broadcast.broadcast_schemas import post_broadcast_schema
+from app.v2.broadcast.broadcast_schemas import (
+    cancel_broadcast_schema,
+    post_broadcast_schema,
+)
 from app.v2.errors import BadRequestError, ValidationError
 from app.xml_schemas import validate_xml
 
@@ -29,6 +34,7 @@ def create_broadcast():
         BROADCAST_TYPE,
         authenticated_service.permissions,
     )
+    _check_key_type_allowed(api_user.key_type)
 
     if request.content_type != "application/cap+xml":
         raise BadRequestError(
@@ -48,9 +54,11 @@ def create_broadcast():
         )
 
     broadcast_json = cap_xml_to_dict(cap_xml)
-    validate(broadcast_json, post_broadcast_schema)
 
     if broadcast_json["msgType"] == "Cancel":
+        # A Cancel only needs <references>; it doesn't carry the alert content an
+        # Alert does, so validate against the slimmer schema and skip the Alert path.
+        validate(broadcast_json, cancel_broadcast_schema)
         if broadcast_json["references"] is None:
             raise BadRequestError(
                 message="Unable to cancel broadcast. Cap_xml is missing field: <references>",
@@ -63,6 +71,8 @@ def create_broadcast():
         return jsonify(broadcast_message.serialize()), 201
 
     else:
+        validate(broadcast_json, post_broadcast_schema)
+        _check_broadcast_complexity(broadcast_json)
         _validate_template(broadcast_json)
 
         polygons = Polygons(
@@ -100,7 +110,7 @@ def create_broadcast():
             },
             status=BroadcastStatusType.PENDING_APPROVAL,
             created_by_api_key_id=api_user.id,
-            stubbed=authenticated_service.restricted,
+            stubbed=authenticated_service.restricted or api_user.key_type == KEY_TYPE_TEST,
             # The client may pass in broadcast_json['expires'] but it’s
             # simpler for now to ignore it and have the rules around expiry
             # for broadcasts created with the API match those created from
@@ -140,12 +150,46 @@ def _cancel_or_reject_broadcast(references_to_original_broadcast, service_id):
             status_code=400,
         )
 
+    if api_user.key_type == KEY_TYPE_TEST and not broadcast_message.stubbed:
+        raise AuthError("Cannot cancel a live broadcast with a test API key", 403)
+
     if broadcast_message.status == BroadcastStatusType.PENDING_APPROVAL:
         new_status = BroadcastStatusType.REJECTED
     else:
         new_status = BroadcastStatusType.CANCELLED
     broadcast_utils.update_broadcast_message_status(broadcast_message, new_status, api_key_id=api_user.id)
     return broadcast_message
+
+
+def _check_broadcast_complexity(broadcast_json):
+    """
+    Reject excessively large polygons before Shapely/pyproj processing.
+    The 12-polygon / 250-point check in create_broadcast only triggers
+    simplification. Without this check, an authenticated broadcast key
+    could submit thousands of disjoint unmergeable polygons or a single
+    polygon with a huge point count and exhaust API worker CPU/memory.
+    """
+    polygon_count = 0
+    point_count = 0
+    for area in broadcast_json["areas"]:
+        for polygon in area["polygons"]:
+            polygon_count += 1
+            point_count += len(polygon)
+
+    max_polygons = current_app.config["MAX_BROADCAST_POLYGON_COUNT"]
+    max_points = current_app.config["MAX_BROADCAST_POLYGON_POINT_COUNT"]
+
+    if polygon_count > max_polygons:
+        raise BadRequestError(
+            message=f"Too many polygons ({polygon_count}); the maximum is {max_polygons}",
+            status_code=400,
+        )
+
+    if point_count > max_points:
+        raise BadRequestError(
+            message=f"Too many coordinates ({point_count}); the maximum is {max_points}",
+            status_code=400,
+        )
 
 
 def _validate_template(broadcast_json):
@@ -164,21 +208,33 @@ def _check_service_has_permission(type, permissions):
         raise BadRequestError(message="Service is not allowed to send broadcast messages")
 
 
+def _check_key_type_allowed(key_type):
+    # Team keys are a legacy Notify grouping of 'team & guest list', so they are not
+    # allowed to create, cancel or reject alerts. Test keys are allowed but their
+    # broadcasts are forced to be stubbed (see create_broadcast / _cancel_or_reject_broadcast).
+    if key_type == KEY_TYPE_TEAM:
+        raise AuthError("Cannot send broadcasts with a team API key", 403)
+
+
 def _validate_polygons(polygons):
     try:
-        for polygon1 in polygons:
-            for polygon2 in polygons:
-                p1 = ShapelyPolygon(polygon1) if not isinstance(polygon1, ShapelyPolygon) else polygon1
-                p2 = ShapelyPolygon(polygon2) if not isinstance(polygon2, ShapelyPolygon) else polygon2
-                # Check for overlapping polygons, including partial
-                # intersections and enclosed polygons (holes)
-                if p1 != p2 and p1.intersects(p2):
-                    raise ValidationError(
-                        message="Overlapping areas are not supported.",
-                        status_code=400,
-                    )
-        for polygon in polygons:
-            p = ShapelyPolygon(polygon) if not isinstance(polygon, ShapelyPolygon) else polygon
+        # Build each Shapely polygon exactly once rather than reconstructing both
+        # operands on every pass of the nested loop below. The polygon count is
+        # bounded up front by _check_broadcast_complexity.
+        shapely_polygons = [
+            polygon if isinstance(polygon, ShapelyPolygon) else ShapelyPolygon(polygon) for polygon in polygons
+        ]
+
+        # Check for overlapping polygons, including partial intersections and
+        # enclosed polygons (holes). intersects() is symmetric, so only compare
+        # each unordered pair once.
+        for p1, p2 in combinations(shapely_polygons, 2):
+            if p1.intersects(p2):
+                raise ValidationError(
+                    message="Overlapping areas are not supported.",
+                    status_code=400,
+                )
+        for p in shapely_polygons:
             # Check if valid (no self-intersections, no duplicate vertices,
             # minimum vertex count, no overlapping segments)
             if not p.is_valid:

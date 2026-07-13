@@ -114,6 +114,8 @@ class Config(object):
     MAX_VERIFY_CODE_COUNT = 5
     MAX_FAILED_LOGIN_COUNT = 10
     MIN_ENTROPY_THRESHOLD = 70
+    # 65mb - chosen on local empirical testing locally with container memory usage
+    MAX_BROADCASTS_XML_LENGTH = int(os.environ.get("MAX_BROADCASTS_XML_LENGTH", "65_000_000"))
 
     CHECK_PROXY_HEADER = False
 
@@ -171,11 +173,19 @@ class Config(object):
 
     MAX_THROTTLE_PERIOD = 60
 
+    # Hard ceilings on broadcast geometry, enforced before any Shapely/pyproj
+    # geometry work runs. The 12-polygon / 250-point thresholds in
+    # post_broadcast.py only decide whether to simplify the payload; exceeding
+    # these values rejects it with a 400.
+    MAX_BROADCAST_POLYGON_COUNT = 1_000
+    MAX_BROADCAST_POLYGON_POINT_COUNT = 50_000
+
     GOVUK_ALERTS_S3_BUCKET_NAME = os.getenv("GOVUK_ALERTS_S3_BUCKET_NAME")
 
     SES_ENDPOINT = os.environ.get("AWS_ENDPOINT_URL_SES", "http://localstack:4566")
     SES_FROM_ADDRESS = "support@localhost"
     SES_REGION = "us-east-1"
+    SES_ENABLED = os.getenv("SES_ENABLED", "true").lower() != "false"
 
 
 class Hosted(Config):

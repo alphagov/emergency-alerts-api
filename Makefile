@@ -67,10 +67,6 @@ freeze-requirements: ## create static requirements.txt
 fix-imports:
 	isort ./app ./tests
 
-.PHONY: bump-utils
-bump-utils:  # Bump emergency-alerts-utils package to latest version
-	${PYTHON_EXECUTABLE_PREFIX}python -c "from emergency_alerts_utils.version_tools import upgrade_version; upgrade_version()"
-
 .PHONY: clean
 clean:
 	rm -rf node_modules cache target venv .coverage build tests/.cache

@@ -10,7 +10,7 @@ from flask import current_app
 from jinja2 import Environment, FileSystemLoader
 
 from app import zendesk_client
-from app.clients.ses_client import SESClient
+from app.clients.email_client import EmailClient
 from app.dao.dao_utils import dao_save_object
 from app.errors import InvalidRequest
 from app.models import (
@@ -151,7 +151,7 @@ def _create_broadcast_event(broadcast_message):
 def send_alert_summary_email(broadcast_message, data):
     service = broadcast_message.service
     alert_notification_addresses = service.alert_notification_addresses
-    to_addresses = [se.email_address for se in alert_notification_addresses]
+    bcc_addresses = [se.email_address for se in alert_notification_addresses]
     subject = f"{service.name} advance notice of broadcast"
     text_body, html_body = _build_alert_summary_email_bodies(
         {
@@ -162,9 +162,9 @@ def send_alert_summary_email(broadcast_message, data):
     )
     attachments = _build_alert_summary_email_attachments(data)
 
-    ses = SESClient()
-    response = ses.send_raw_email(
-        subject=subject, to_addresses=to_addresses, text_body=text_body, html_body=html_body, attachments=attachments
+    client = EmailClient()
+    response = client.send_email(
+        subject=subject, bcc_addresses=bcc_addresses, text_body=text_body, html_body=html_body, attachments=attachments
     )
     return response
 

@@ -6,6 +6,8 @@ _Most of the API endpoints in this repo are for internal use. These are all defi
 
 Public APIs are intended for use by services and are all located under `app/v2/` to distinguish them from internal endpoints. Originally we did have a "v1" public API, where we tried to reuse / expose existing internal endpoints. The needs for public APIs are sufficiently different that we decided to separate them out. Any "v1" endpoints that remain are now purely internal and no longer exposed to services.
 
+For the request format of the public broadcast endpoint specifically, see [Broadcast CAP XML request format](broadcast-cap-xml.md).
+
 ## New APIs
 
 Here are some pointers for how we write public API endpoints.

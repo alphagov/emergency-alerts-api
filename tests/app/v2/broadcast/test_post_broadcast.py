@@ -1,6 +1,7 @@
 from unittest.mock import ANY
 
 import pytest
+from emergency_alerts_utils.api_key import KEY_TYPE_TEAM, KEY_TYPE_TEST
 from flask import json
 
 from app.dao.broadcast_message_dao import (
@@ -150,6 +151,143 @@ def test_valid_cancel_broadcast_request_calls_update_broadcast_message_status_an
     )
     assert response_for_cancel.status_code == 201
     mock_update.assert_called_once_with(broadcast_message, expected_status, api_key_id=api_key.id)
+
+
+def test_valid_cancel_broadcast_request_without_info_block_returns_201(client, sample_broadcast_service, mocker):
+    api_key = create_api_key(service=sample_broadcast_service)
+    auth_header = create_service_authorization_header(service_id=sample_broadcast_service.id)
+
+    # create a broadcast
+    response_for_create = client.post(
+        path="/v2/broadcast",
+        data=sample_cap_xml_documents.WAINFLEET,
+        headers=[("Content-Type", "application/cap+xml"), auth_header],
+    )
+    assert response_for_create.status_code == 201
+
+    response_json_for_create = json.loads(response_for_create.get_data(as_text=True))
+    broadcast_message = dao_get_broadcast_message_by_id_and_service_id(
+        response_json_for_create["id"], response_json_for_create["service_id"]
+    )
+
+    mock_update = mocker.patch("app.v2.broadcast.post_broadcast.broadcast_utils.update_broadcast_message_status")
+
+    # cancel broadcast with a minimal payload that omits the optional <info> block
+    response_for_cancel = client.post(
+        path="/v2/broadcast",
+        data=sample_cap_xml_documents.WAINFLEET_CANCEL_MINIMAL,
+        headers=[("Content-Type", "application/cap+xml"), auth_header],
+    )
+    assert response_for_cancel.status_code == 201
+    mock_update.assert_called_once_with(broadcast_message, "rejected", api_key_id=api_key.id)
+
+
+def test_team_api_key_cannot_create_broadcast_returns_403(client, sample_broadcast_service):
+    auth_header = create_service_authorization_header(service_id=sample_broadcast_service.id, key_type=KEY_TYPE_TEAM)
+
+    response = client.post(
+        path="/v2/broadcast",
+        data=sample_cap_xml_documents.WAINFLEET,
+        headers=[("Content-Type", "application/cap+xml"), auth_header],
+    )
+
+    assert response.status_code == 403
+    assert response.get_json()["errors"][0]["message"] == "Cannot send broadcasts with a team API key"
+
+
+def test_team_api_key_cannot_cancel_broadcast_returns_403(client, sample_broadcast_service):
+    # Create both keys up front: the api-key collection is cached per service, so a key
+    # created after the first request would not be visible to a later request.
+    live_auth_header = create_service_authorization_header(service_id=sample_broadcast_service.id)
+    team_auth_header = create_service_authorization_header(
+        service_id=sample_broadcast_service.id, key_type=KEY_TYPE_TEAM
+    )
+
+    # create a real broadcast with a live key
+    response_for_create = client.post(
+        path="/v2/broadcast",
+        data=sample_cap_xml_documents.WAINFLEET,
+        headers=[("Content-Type", "application/cap+xml"), live_auth_header],
+    )
+    assert response_for_create.status_code == 201
+
+    response_for_cancel = client.post(
+        path="/v2/broadcast",
+        data=sample_cap_xml_documents.WAINFLEET_CANCEL_WITH_REFERENCES,
+        headers=[("Content-Type", "application/cap+xml"), team_auth_header],
+    )
+
+    assert response_for_cancel.status_code == 403
+    assert response_for_cancel.get_json()["errors"][0]["message"] == "Cannot send broadcasts with a team API key"
+
+
+def test_test_api_key_forces_broadcast_to_be_stubbed_on_live_service(client, sample_broadcast_service):
+    # sample_broadcast_service is not restricted (i.e. live), but a test key must still be stubbed
+    assert sample_broadcast_service.restricted is False
+    auth_header = create_service_authorization_header(service_id=sample_broadcast_service.id, key_type=KEY_TYPE_TEST)
+
+    response = client.post(
+        path="/v2/broadcast",
+        data=sample_cap_xml_documents.WAINFLEET,
+        headers=[("Content-Type", "application/cap+xml"), auth_header],
+    )
+
+    assert response.status_code == 201
+    response_json = json.loads(response.get_data(as_text=True))
+    broadcast_message = dao_get_broadcast_message_by_id_and_service_id(response_json["id"], sample_broadcast_service.id)
+    assert broadcast_message.stubbed is True
+
+
+def test_test_api_key_cannot_cancel_a_live_broadcast_returns_403(client, sample_broadcast_service):
+    # Create both keys up front: the api-key collection is cached per service, so a key
+    # created after the first request would not be visible to a later request.
+    live_auth_header = create_service_authorization_header(service_id=sample_broadcast_service.id)
+    test_auth_header = create_service_authorization_header(
+        service_id=sample_broadcast_service.id, key_type=KEY_TYPE_TEST
+    )
+
+    # create a real (non-stubbed) broadcast with a live key
+    response_for_create = client.post(
+        path="/v2/broadcast",
+        data=sample_cap_xml_documents.WAINFLEET,
+        headers=[("Content-Type", "application/cap+xml"), live_auth_header],
+    )
+    assert response_for_create.status_code == 201
+
+    response_for_cancel = client.post(
+        path="/v2/broadcast",
+        data=sample_cap_xml_documents.WAINFLEET_CANCEL_WITH_REFERENCES,
+        headers=[("Content-Type", "application/cap+xml"), test_auth_header],
+    )
+
+    assert response_for_cancel.status_code == 403
+    assert (
+        response_for_cancel.get_json()["errors"][0]["message"] == "Cannot cancel a live broadcast with a test API key"
+    )
+
+
+def test_test_api_key_can_cancel_its_own_stubbed_broadcast_returns_201(client, sample_broadcast_service, mocker):
+    test_auth_header = create_service_authorization_header(
+        service_id=sample_broadcast_service.id, key_type=KEY_TYPE_TEST
+    )
+
+    # create a stubbed broadcast with the test key
+    response_for_create = client.post(
+        path="/v2/broadcast",
+        data=sample_cap_xml_documents.WAINFLEET,
+        headers=[("Content-Type", "application/cap+xml"), test_auth_header],
+    )
+    assert response_for_create.status_code == 201
+
+    mocker.patch("app.v2.broadcast.post_broadcast.broadcast_utils.update_broadcast_message_status")
+
+    response_for_cancel = client.post(
+        path="/v2/broadcast",
+        data=sample_cap_xml_documents.WAINFLEET_CANCEL_WITH_REFERENCES,
+        headers=[("Content-Type", "application/cap+xml"), test_auth_header],
+    )
+
+    assert response_for_cancel.status_code == 201
 
 
 @pytest.mark.parametrize(
@@ -424,6 +562,29 @@ def test_unsupported_message_types_400(
     } in (json.loads(response.get_data(as_text=True))["errors"])
 
 
+def test_body_too_large_returns_400(
+    client,
+    sample_broadcast_service,
+):
+    xml_document = "a" * 65_000_001
+    auth_header = create_service_authorization_header(service_id=sample_broadcast_service.id)
+    response = client.post(
+        path="/v2/broadcast",
+        data=xml_document,
+        headers=[("Content-Type", "application/cap+xml"), auth_header],
+    )
+
+    assert json.loads(response.get_data(as_text=True)) == {
+        "errors": [
+            {
+                "error": "BadRequestError",
+                "message": "Request data is not valid CAP XML: XML must be 65000000 characters or fewer",
+            }
+        ],
+        "status_code": 400,
+    }
+
+
 @pytest.mark.parametrize(
     "xml_document, expected_error",
     (
@@ -536,6 +697,105 @@ def test_invalid_area_polygons_returns_400(
         assert errors[0]["message"] == expected_message
 
     assert response.status_code == status_code
+
+
+_ALERT_WITH_GENERATED_AREAS = """
+    <alert xmlns='urn:oasis:names:tc:emergency:cap:1.2'>
+        <identifier>c60bc14b-8411-4dd7-8d9e-0f159f79eab3</identifier>
+        <sender>broadcasts@notifications.service.gov.uk</sender>
+        <sent>2025-02-16T23:01:13-00:00</sent>
+        <status>Actual</status>
+        <msgType>Alert</msgType>
+        <scope>Public</scope>
+        <info>
+            <language>en-GB</language>
+            <category>Safety</category>
+            <event>Test Alert</event>
+            <urgency>Expected</urgency>
+            <severity>Severe</severity>
+            <certainty>Likely</certainty>
+            <expires>2025-02-17T21:31:13-00:00</expires>
+            <senderName>GOV.UK Emergency Alerts</senderName>
+            <headline>GOV.UK Emergency Alert</headline>
+            <description>Test</description>
+            {areas}
+        </info>
+    </alert>
+"""
+
+
+def _cap_xml_with_polygons(polygon_strings):
+    areas = "".join(
+        f"<area><areaDesc>area</areaDesc><polygon>{polygon}</polygon></area>" for polygon in polygon_strings
+    )
+    return _ALERT_WITH_GENERATED_AREAS.format(areas=areas)
+
+
+def test_too_many_polygons_is_rejected_before_geometry_work(client, sample_broadcast_service, mocker):
+    # Each polygon is a tiny valid 4-point ring; the request is rejected purely
+    # for exceeding the polygon-count ceiling, before any Polygons/Shapely work.
+    max_polygons = client.application.config["MAX_BROADCAST_POLYGON_COUNT"]
+    polygons_spy = mocker.patch("app.v2.broadcast.post_broadcast.Polygons")
+
+    square = "0,50 0.1,50 0.1,50.1 0,50"
+    cap_xml = _cap_xml_with_polygons([square] * (max_polygons + 1))
+
+    auth_header = create_service_authorization_header(service_id=sample_broadcast_service.id)
+    response = client.post(
+        path="/v2/broadcast",
+        data=cap_xml,
+        headers=[("Content-Type", "application/cap+xml"), auth_header],
+    )
+
+    assert response.status_code == 400
+    assert response.json["errors"][0]["message"] == (
+        f"Too many polygons ({max_polygons + 1}); the maximum is {max_polygons}"
+    )
+    # The cheap count check must short-circuit before we construct any geometry.
+    polygons_spy.assert_not_called()
+
+
+def test_too_many_points_is_rejected_before_geometry_work(client, sample_broadcast_service, mocker):
+    max_points = client.application.config["MAX_BROADCAST_POLYGON_POINT_COUNT"]
+    polygons_spy = mocker.patch("app.v2.broadcast.post_broadcast.Polygons")
+
+    # A single polygon whose point count exceeds the ceiling.
+    huge_polygon = " ".join(f"{i / 100000},50" for i in range(max_points + 1))
+    cap_xml = _cap_xml_with_polygons([huge_polygon])
+
+    auth_header = create_service_authorization_header(service_id=sample_broadcast_service.id)
+    response = client.post(
+        path="/v2/broadcast",
+        data=cap_xml,
+        headers=[("Content-Type", "application/cap+xml"), auth_header],
+    )
+
+    assert response.status_code == 400
+    assert response.json["errors"][0]["message"] == (
+        f"Too many coordinates ({max_points + 1}); the maximum is {max_points}"
+    )
+    polygons_spy.assert_not_called()
+
+
+def test_oversized_request_body_is_rejected_with_400(client, sample_broadcast_service, mocker):
+    # A body larger than MAX_BROADCASTS_XML_LENGTH is rejected in validate_xml
+    # before the document is parsed against the schema. Override the limit to a
+    # small value so we don't have to allocate a 65MB payload in the test.
+    mocker.patch.dict(client.application.config, {"MAX_BROADCASTS_XML_LENGTH": 100})
+    max_length = client.application.config["MAX_BROADCASTS_XML_LENGTH"]
+    oversized_body = b"<alert>" + b"a" * (max_length + 1)
+
+    auth_header = create_service_authorization_header(service_id=sample_broadcast_service.id)
+    response = client.post(
+        path="/v2/broadcast",
+        data=oversized_body,
+        headers=[("Content-Type", "application/cap+xml"), auth_header],
+    )
+
+    assert response.status_code == 400
+    assert response.json["errors"][0]["message"] == (
+        f"Request data is not valid CAP XML: XML must be {max_length} characters or fewer"
+    )
 
 
 def test_request_for_status_returns_allowed_methods(client, sample_broadcast_service):
