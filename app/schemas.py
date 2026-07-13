@@ -176,13 +176,21 @@ class UserUpdatePasswordSchema(BaseSchema):
     class Meta(BaseSchema.Meta):
         model = models.User
 
-    _oldpassword = fields.String(required=True)
+    _oldpassword = fields.String(required=False)
+    _token = fields.String(required=False)
 
     @validates_schema(pass_original=True)
     def check_unknown_fields(self, data, original_data, **kwargs):
         for key in original_data:
             if key not in self.fields:
                 raise ValidationError("Unknown field name {}".format(key))
+
+        # Require exactly one of the two fields
+        has_old = "_oldpassword" in original_data
+        has_token = "_token" in original_data
+
+        if not (has_old ^ has_token):  # XOR: True only when exactly one is present
+            raise ValidationError("Either _oldpassword or _token must be supplied")
 
 
 class ServiceSchema(BaseSchema, UUIDsAsStringsMixin):
@@ -464,7 +472,7 @@ class UnarchivedTemplateSchema(BaseSchema):
 create_user_schema = UserSchema()
 user_update_schema_load_json = UserUpdateAttributeSchema(load_json=True, partial=True)
 user_update_password_schema_load_json = UserUpdatePasswordSchema(
-    only=("_password", "_oldpassword"), load_json=True, partial=False
+    only=("_password", "_oldpassword", "_token"), load_json=True, partial=False
 )
 service_schema = ServiceSchema()
 providers_schema = ProvidersSchema()
