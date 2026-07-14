@@ -31,11 +31,9 @@ def upgrade():
         # If content has been changed, update the stored value
         if unescaped_content != original_content:
             conn.execute(
-                sa.update(BroadcastMessage)
-                .where(BroadcastMessage.id == message_id)
-                .values(content=unescaped_content)
+                sa.update(BroadcastMessage).where(BroadcastMessage.id == message_id).values(content=unescaped_content)
             )
+
 
 def downgrade():
     pass
-
