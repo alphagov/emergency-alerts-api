@@ -14,15 +14,12 @@ def show_api_status():
     if request.args.get("simple", None):
         return jsonify(status="ok"), 200  # cheap liveness probe: no DB, no CloudWatch
 
-    post_app_version_to_cloudwatch()
-    db_version = get_db_version()
-    post_db_version_to_cloudwatch(db_version)
     return (
         jsonify(
             status="ok",  # This should be considered part of the public API
             git_commit=version.git_commit,
             build_time=version.time,
-            db_version=db_version,
+            db_version=get_db_version(),
             app_version=version.app_version,
         ),
         200,
