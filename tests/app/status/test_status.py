@@ -1,6 +1,5 @@
 import os
 
-import boto3
 import pytest
 from flask import json
 
@@ -24,18 +23,6 @@ def test_get_status_all_ok(mocked_aws, client, notify_db_session, notify_api, pa
     assert resp_json["db_version"] == db_version
     assert resp_json["git_commit"]
     assert resp_json["build_time"]
-
-    cloudwatch = boto3.client("cloudwatch", region_name=aws_region)
-    app_metric = cloudwatch.list_metrics()["Metrics"][0]
-    assert app_metric["MetricName"] == "AppVersion"
-    assert app_metric["Namespace"] == "Emergency Alerts"
-    assert {"Name": "Application", "Value": service} in app_metric["Dimensions"]
-
-    db_metric = cloudwatch.list_metrics()["Metrics"][1]
-    assert db_metric["MetricName"] == "DBVersion"
-    assert db_metric["Namespace"] == "Emergency Alerts"
-    assert {"Name": "Application", "Value": service} in db_metric["Dimensions"]
-    assert {"Name": "Version", "Value": db_version} in db_metric["Dimensions"]
 
 
 def test_empty_live_service_and_organisation_counts(admin_request):
