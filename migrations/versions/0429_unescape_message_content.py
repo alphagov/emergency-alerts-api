@@ -17,8 +17,7 @@ revision = "0429_unescape_message_content"
 down_revision = "0428_add_area_tables"
 
 
-def upgrade():
-    # unescape the broadcast message `content` data
+def transform_broadcast_message_content(transform_func):
     conn = op.get_bind()
 
     fetch_content_sql = sa.select(BroadcastMessage.id, BroadcastMessage.content)
@@ -28,30 +27,20 @@ def upgrade():
         if original_content is None:
             continue
 
-        unescaped_content = unescape(original_content)
+        changed_content = transform_func(original_content)
 
         # If content has been changed, update the stored value
-        if unescaped_content != original_content:
+        if changed_content != original_content:
             conn.execute(
-                sa.update(BroadcastMessage).where(BroadcastMessage.id == message_id).values(content=unescaped_content)
+                sa.update(BroadcastMessage).where(BroadcastMessage.id == message_id).values(content=changed_content)
             )
+
+
+def upgrade():
+    # unescape the broadcast message `content` data
+    transform_broadcast_message_content(unescape)
 
 
 def downgrade():
     # escape the broadcast message `content` data
-    conn = op.get_bind()
-
-    fetch_content_sql = sa.select(BroadcastMessage.id, BroadcastMessage.content)
-    results = conn.execute(fetch_content_sql)
-
-    for message_id, original_content in results:
-        if original_content is None:
-            continue
-
-        escaped_content = escape(original_content)
-
-        # If content has been changed, update the stored value
-        if escaped_content != original_content:
-            conn.execute(
-                sa.update(BroadcastMessage).where(BroadcastMessage.id == message_id).values(content=escaped_content)
-            )
+    transform_broadcast_message_content(escape)
