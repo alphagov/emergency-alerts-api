@@ -1,22 +1,32 @@
 import boto3
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 
 from app import current_app, db, version
+from app.authentication.auth import requires_admin_auth
 from app.dao.organisation_dao import dao_count_organisations_with_live_services
 from app.dao.services_dao import dao_count_live_services
+from app.errors import register_errors
 
 status = Blueprint("status", __name__)
+
+register_errors(status)
 
 
 @status.route("/", methods=["GET"])
 @status.route("/_api_status", methods=["GET", "POST"])
-def show_api_status():
-    if request.args.get("simple", None):
-        return jsonify(status="ok"), 200  # cheap liveness probe: no DB, no CloudWatch
+def fast_api_status():
+    # Unauthenticated liveness probe used by load balancers / uptime checks: no DB, no metadata.
+    return jsonify(status="ok"), 200  # This should be considered part of the public API
 
+
+@status.route("/_api_status/full", methods=["GET"])
+def full_api_status():
+    # Full status exposes build/version/schema metadata, so it is restricted to authenticated
+    # internal callers (e.g. the admin app). The status blueprint is otherwise unauthenticated.
+    requires_admin_auth()
     return (
         jsonify(
-            status="ok",  # This should be considered part of the public API
+            status="ok",
             git_commit=version.git_commit,
             build_time=version.time,
             db_version=get_db_version(),
