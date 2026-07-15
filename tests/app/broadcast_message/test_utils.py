@@ -337,7 +337,7 @@ def test_update_broadcast_message_status_creates_event_with_correct_content_if_b
     "content, expected_content",
     [
         ("Test Alert", "Test Alert"),
-        ("Some content\r\n€ŷŵ~\r\n‘’“”—–-", 'Some content\n€ŷŵ~\n\'\'""---'),
+        ("Some content\r\n€ŷŵ~\r\n‘’“”—–-", "Some content\n€ŷŵ~\n''\"\"---"),
         ("Hello <b>World</b>", "Hello &lt;b&gt;World&lt;/b&gt;"),
         ("Emergency & Alerts & Service", "Emergency &amp; Alerts &amp; Service"),
     ],
