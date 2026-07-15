@@ -329,7 +329,7 @@ def test_create_broadcast_message(admin_request, sample_broadcast_service, train
         "ids": ["manchester"],
         "simple_polygons": [[[50.12, 1.2], [50.13, 1.2], [50.14, 1.21]]],
     }
-    assert response["content"] == "Some content\n€ŷŵ~\n''\"\"---"
+    assert response["content"] == "Some content\r\n€ŷŵ~\r\n‘’“”—–-"
 
     broadcast_message = dao_get_broadcast_message_by_id_and_service_id(response["id"], sample_broadcast_service.id)
     assert broadcast_message.stubbed == training_mode_service
@@ -431,7 +431,7 @@ def test_create_broadcast_message_can_be_created_from_content(admin_request, sam
         service_id=sample_broadcast_service.id,
         _expected_status=201,
     )
-    assert response["content"] == "Some content\n€ŷŵ~\n''\"\"---"
+    assert response["content"] == "Some content\r\n€ŷŵ~\r\n‘’“”—–-"
     assert response["reference"] == "abc123"
     assert response["template_id"] is None
     assert response["cap_event"] is None
