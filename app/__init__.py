@@ -243,6 +243,12 @@ def init_app(app):
         response.headers.add("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE")
         response.headers.add("Strict-Transport-Security", "max-age=63072000; includeSubdomains; preload")
         response.headers.add("Referrer-Policy", "no-referrer")
+        # Suppress server/version fingerprinting. Overriding (not deleting) is required: the
+        # Werkzeug dev server only injects its own "Server: Werkzeug/x Python/y" default when the
+        # response has no Server header, so popping it would let that default come back.
+        response.headers["Server"] = "eas-api"
+        response.headers.pop("X-B3-TraceId", None)
+        response.headers.pop("X-B3-SpanId", None)
         return response
 
     @app.after_request
