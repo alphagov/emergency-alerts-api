@@ -424,7 +424,6 @@ def test_create_broadcast_message_400s_if_content_too_long(
         ("Some content\r\n€ŷŵ~\r\n‘’“”—–-"),
         ("Hello <b>World</b>"),
         ("Emergency & Alerts & Service"),
-
     ),
 )
 @freeze_time("2020-01-01")

@@ -212,7 +212,7 @@ def create_broadcast_message(service_id):
         starts_at=_parse_nullable_datetime(data.get("starts_at")),
         finishes_at=_parse_nullable_datetime(data.get("finishes_at")),
         created_by_id=user.id,
-        content=data["content"], # Storing broadcast message content as raw text from posted data
+        content=data["content"],  # Storing broadcast message content as raw text from posted data
         reference=reference,
         stubbed=service.restricted,
     )
