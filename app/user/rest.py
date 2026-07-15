@@ -7,7 +7,9 @@ import pwdpy
 from emergency_alerts_utils.admin_action import (
     ADMIN_ELEVATION_REDEMPTION_TIMEOUT,
 )
+from emergency_alerts_utils.url_safe_token import check_token
 from flask import Blueprint, abort, current_app, jsonify, request
+from itsdangerous import SignatureExpired
 from notifications_python_client.errors import HTTPError
 from sqlalchemy.exc import IntegrityError
 
@@ -737,25 +739,135 @@ def send_user_reset_password():
 
 @user_blueprint.route("/<uuid:user_id>/update-password", methods=["POST"])
 def update_password(user_id):
-    user = get_user_by_id(user_id=user_id)
-    req_json = request.get_json()
 
+    req_json = request.get_json()
+    try:
+        user_update_password_schema_load_json.load(req_json)
+    except Exception:
+        current_app.logger.exception(
+            f"Failed user_update_password_schema_load_json check for user {user_id}", extra={"python_module": __name__}
+        )
+        return (
+            jsonify(
+                {
+                    "errors": [
+                        {
+                            "field": "old_password",
+                            "message": "Problem with password or token supplied, please contact support.",
+                        }
+                    ]
+                }
+            ),
+            400,
+        )
+
+    user = get_user_by_id(user_id=user_id)
     password = req_json.get("_password")
-    user_update_password_schema_load_json.load(req_json)
+    oldpassword = req_json.get("_oldpassword")
+    token = req_json.get("_token")
+
+    # Depending on what called this function, we should either have a token, or an oldpassword
+    # oldpassword - when called from user profile -> change password
+    # token - when called from forgotten password -> password reset
+
+    # oldpassword checks
+    if oldpassword is not None:
+        # Ensure user id supplied has logged in successfully (failed count = 0)
+        # and has a current session.
+        if user.failed_login_count > 0 or user.current_session_id is None:
+            return (
+                jsonify(
+                    {
+                        "errors": [
+                            {
+                                "field": "old_password",
+                                "message": "User specified is not currently logged in, please contact support.",
+                            }
+                        ]
+                    }
+                ),
+                400,
+            )
+
+        # Check old password is correct
+        if not user.check_password(oldpassword):
+            return (
+                jsonify({"errors": [{"field": "old_password", "message": "Current password entered incorrectly."}]}),
+                400,
+            )
+
+    # token checks
+    if token is not None:
+        try:
+            token_data = json.loads(
+                check_token(
+                    token,
+                    current_app.config["SECRET_KEY"],
+                    current_app.config["DANGEROUS_SALT"],
+                    current_app.config["EMAIL_2FA_EXPIRY_SECONDS"],
+                )
+            )
+        except SignatureExpired:
+            # Token has already been validated by the admin application, and if it had expired user would have seen a
+            # friendly error advising of this.
+            # If a request has got to this point it means something malicious is going on, so
+            # log the error and raise exception - user will be directed to the generic application error page.
+            current_app.logger.error(
+                "update_password - user attempted password reset with expired token.",
+                extra={"python_module": __name__, "user_id": user_id},
+            )
+            raise
+        token_email_address = token_data["email"]
+        if token_email_address != user.email_address:
+            # As above - if the email address in the token doesn't match the email address of the user requesting
+            # the password reset then something malicious is going on, so raise error and redirect user to
+            # generic app error page.
+            current_app.logger.error(
+                "update_password - user attempted password reset with invalid token.",
+                extra={"python_module": __name__, "user_id": user_id},
+            )
+            raise Exception("user attempted password reset with invalid token")
 
     if is_password_common(password):
         return (
-            jsonify({"errors": ["Your password is too common. Please choose a new one."]}),
+            jsonify(
+                {
+                    "errors": [
+                        {"field": "new_password", "message": "Your password is too common. Please choose a new one."}
+                    ]
+                }
+            ),
             400,
         )
     user = get_user_by_id(user_id=user_id)
     if password and (pwdpy.entropy(password) < current_app.config["MIN_ENTROPY_THRESHOLD"]):
         return (
-            jsonify({"errors": ["Your password is not strong enough, try adding more words"]}),
+            jsonify(
+                {
+                    "errors": [
+                        {
+                            "field": "new_password",
+                            "message": "Your password is not strong enough, try adding more words.",
+                        }
+                    ]
+                }
+            ),
             400,
         )
     if password and has_user_already_used_password(user_id, password):
-        return jsonify({"errors": ["You've used this password before. Please choose a new one."]}), 400
+        return (
+            jsonify(
+                {
+                    "errors": [
+                        {
+                            "field": "new_password",
+                            "message": "You've used this password before. Please choose a new one.",
+                        }
+                    ]
+                }
+            ),
+            400,
+        )
 
     add_old_password_for_user(user_id, password)
 
