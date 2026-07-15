@@ -201,7 +201,6 @@ def create_broadcast_message(service_id):
             + (" (because it could not be GSM7 encoded)" if temporary_template.non_gsm_characters else ""),
             status_code=400,
         )
-    content = str(temporary_template)
     reference = data["reference"]
 
     broadcast_message = BroadcastMessage(
@@ -213,7 +212,7 @@ def create_broadcast_message(service_id):
         starts_at=_parse_nullable_datetime(data.get("starts_at")),
         finishes_at=_parse_nullable_datetime(data.get("finishes_at")),
         created_by_id=user.id,
-        content=content,
+        content=data["content"],
         reference=reference,
         stubbed=service.restricted,
     )
