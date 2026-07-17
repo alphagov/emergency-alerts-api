@@ -130,8 +130,6 @@ googleapis-common-protos==1.72.0
     # via
     #   opentelemetry-exporter-otlp-proto-grpc
     #   opentelemetry-exporter-otlp-proto-http
-greenlet==3.5.3
-    # via sqlalchemy
 grpcio==1.76.0
     # via opentelemetry-exporter-otlp-proto-grpc
 idna==3.18
@@ -197,7 +195,9 @@ mypy-extensions==1.1.0
 notifications-python-client==10.0.1
     # via -r requirements.in
 numpy==2.5.0
-    # via pandas
+    # via
+    #   pandas
+    #   shapely
 opentelemetry-api==1.33.1
     # via
     #   aws-opentelemetry-distro
@@ -522,6 +522,8 @@ periodiq==0.14.0
     #   emergency-alerts-utils
 phonenumbers==9.0.33
     # via emergency-alerts-utils
+pillow==10.3.0
+    # via -r requirements.in
 platformdirs==4.5.0
     # via black
 pluggy==1.6.0
