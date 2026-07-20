@@ -197,7 +197,9 @@ mypy-extensions==1.1.0
 notifications-python-client==10.0.1
     # via -r requirements.in
 numpy==2.5.0
-    # via pandas
+    # via
+    #   pandas
+    #   shapely
 opentelemetry-api==1.33.1
     # via
     #   aws-opentelemetry-distro
@@ -625,7 +627,7 @@ six==1.17.0
     #   rfc3339-validator
 smartypants==2.0.2
     # via emergency-alerts-utils
-soupsieve==2.8
+soupsieve==2.8.4
     # via beautifulsoup4
 sqlalchemy==1.4.54
     # via

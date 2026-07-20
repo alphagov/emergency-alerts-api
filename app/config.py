@@ -61,8 +61,6 @@ class Config(object):
     CBC_PROXY_ENABLED = True
     ENABLED_CBCS = {BroadcastProvider.EE, BroadcastProvider.THREE, BroadcastProvider.O2, BroadcastProvider.VODAFONE}
 
-    MNO_PORTAL_ACCOUNT_NUMBER = os.getenv("MNO_PORTAL_ACCOUNT_NUMBER")
-
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_size": int(os.environ.get("SQLALCHEMY_POOL_SIZE", 5)),
         "pool_timeout": 30,
@@ -165,6 +163,7 @@ class Config(object):
     TEMPLATE_PREVIEW_API_KEY = os.environ.get("TEMPLATE_PREVIEW_API_KEY", "my-secret-key")
 
     EAS_EMAIL_REPLY_TO_ID = "591164ac-721d-46e5-b329-fe40f5253241"
+    EMAIL_2FA_EXPIRY_SECONDS = 1800  # 30 Minutes
 
     # as defined in api db migration 0331_add_broadcast_org.py
     BROADCAST_ORGANISATION_ID = "38e4bf69-93b0-445d-acee-53ea53fe02df"
@@ -174,7 +173,19 @@ class Config(object):
 
     MAX_THROTTLE_PERIOD = 60
 
+    # Hard ceilings on broadcast geometry, enforced before any Shapely/pyproj
+    # geometry work runs. The 12-polygon / 250-point thresholds in
+    # post_broadcast.py only decide whether to simplify the payload; exceeding
+    # these values rejects it with a 400.
+    MAX_BROADCAST_POLYGON_COUNT = 1_000
+    MAX_BROADCAST_POLYGON_POINT_COUNT = 50_000
+
     GOVUK_ALERTS_S3_BUCKET_NAME = os.getenv("GOVUK_ALERTS_S3_BUCKET_NAME")
+    GOVUK_PUBLISH_CHECKS_FAILED_INTERVAL = (
+        int(os.getenv("GOVUK_PUBLISH_CHECKS_FAILED_INTERVAL"))
+        if os.environ.get("GOVUK_PUBLISH_CHECKS_FAILED_INTERVAL") is not None
+        else 30
+    )
 
     SES_ENDPOINT = os.environ.get("AWS_ENDPOINT_URL_SES", "http://localstack:4566")
     SES_FROM_ADDRESS = "support@localhost"
