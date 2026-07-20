@@ -1198,15 +1198,19 @@ ALL_BROADCAST_PROVIDERS = BroadcastProvider.PROVIDERS
 
 # These should be stable as they're used for display by admin:
 BROADCAST_PROVIDER_STATUS_TECHNICAL_FAILURE = "technical-failure"  # (Unused)
-BROADCAST_PROVIDER_STATUS_SENDING = "sending"  # Sent to cbc, awaiting response
-BROADCAST_PROVIDER_STATUS_ACK = "returned-ack"  # Received ack response
-BROADCAST_PROVIDER_STATUS_ERR = "returned-error"  # Received error response
+BROADCAST_PROVIDER_STATUS_SENDING = "sending"  # Task started to send to CBC
+BROADCAST_PROVIDER_STATUS_ACK = "returned-ack"  # Received ack response from CBC
+BROADCAST_PROVIDER_STATUS_ERR = "returned-error"  # Received error response from CBC (retrying logic should be working)
+BROADCAST_PROVIDER_STATUS_ERR_RETRY_EXHAUSTED = (
+    "returned-error-retry-exhausted"  # Received error response and the DLQ has picked it up
+)
 
 ALL_BROADCAST_PROVIDER_STATUSES = [
     BROADCAST_PROVIDER_STATUS_TECHNICAL_FAILURE,
     BROADCAST_PROVIDER_STATUS_SENDING,
     BROADCAST_PROVIDER_STATUS_ACK,
     BROADCAST_PROVIDER_STATUS_ERR,
+    BROADCAST_PROVIDER_STATUS_ERR_RETRY_EXHAUSTED,
 ]
 
 
