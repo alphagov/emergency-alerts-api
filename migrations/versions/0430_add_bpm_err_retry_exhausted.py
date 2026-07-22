@@ -1,6 +1,6 @@
 """
 
-Revision ID: 0430_add_bpm_error_retry_exhausted
+Revision ID: 0430_add_bpm_err_retry_exhausted
 Revises: 0429_unescape_message_content
 Create Date: 2026-07-20 14:07:25.230919
 
@@ -8,7 +8,7 @@ Create Date: 2026-07-20 14:07:25.230919
 
 from alembic import op
 
-revision = "0430_add_bpm_error_retry_exhausted"
+revision = "0430_add_bpm_err_retry_exhausted"
 down_revision = "0429_unescape_message_content"
 
 
