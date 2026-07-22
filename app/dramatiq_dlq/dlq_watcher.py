@@ -43,7 +43,7 @@ class DlqWatcher:
             AttributeNames=["All"],
         )
 
-        messages = response["Messages"]
+        messages = response.get("Messages", [])
         self.logger.info("Got SQS messages: %s", messages)
         return messages
 
