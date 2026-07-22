@@ -1136,7 +1136,7 @@ class BroadcastEvent(db.Model):
     def formatted_datetime_for(self, property_name):
         return convert_utc_datetime_to_cap_standard_string(getattr(self, property_name))
 
-    def get_provider_message(self, provider):
+    def get_provider_message(self, provider) -> "BroadcastProviderMessage" | None:
         return next(
             (provider_message for provider_message in self.provider_messages if provider_message.provider == provider),
             None,
@@ -1200,9 +1200,9 @@ ALL_BROADCAST_PROVIDERS = BroadcastProvider.PROVIDERS
 BROADCAST_PROVIDER_STATUS_TECHNICAL_FAILURE = "technical-failure"  # (Unused)
 BROADCAST_PROVIDER_STATUS_SENDING = "sending"  # Task started to send to CBC
 BROADCAST_PROVIDER_STATUS_ACK = "returned-ack"  # Received ack response from CBC
-BROADCAST_PROVIDER_STATUS_ERR = "returned-error"  # Received error response from CBC (retrying logic should be working)
+BROADCAST_PROVIDER_STATUS_ERR = "returned-error"  # Received error response from CBC (retrying logic should reattempt)
 BROADCAST_PROVIDER_STATUS_ERR_RETRY_EXHAUSTED = (
-    "returned-error-retry-exhausted"  # Received error response and the DLQ has picked it up
+    "returned-error-retry-exhausted"  # The task has been picked up from the DLQ - it won't be retried automatically
 )
 
 ALL_BROADCAST_PROVIDER_STATUSES = [

@@ -1,0 +1,83 @@
+import base64
+import json
+import logging
+
+import boto3
+from dramatiq.message import Message
+from emergency_alerts_utils.tasks import TaskNames
+
+from app.dao.broadcast_message_dao import (
+    add_broadcast_provider_message_status,
+    dao_get_broadcast_event_by_id,
+)
+from app.models import BROADCAST_PROVIDER_STATUS_ERR_RETRY_EXHAUSTED
+
+# Get a created init-ed Flask app
+from application import application
+
+
+class DlqWatcher:
+    """
+    A watcher program that looks at the SQS' DLQ directly and watches for failed tasks that end up on it.
+    Failed Dramatiq tasks that end up here will have been retried many times already and SQS has given up on them.
+    Broadcasts tasks will have their BroadcastProviderMessageStatus updated accordingly to a 'permanently failed'
+    status. Then all given messages/tasks will be put onto another queue for manual intervention.
+    """
+
+    def __init__(self):
+        self.logger = logging.getLogger(__name__)
+        self.sqs_client = boto3.client("sqs")
+        self.dlq_url = application.config["DLQ_URL"]
+        self.failed_queue_url = application.config["FAILED_QUEUE_URL"]
+
+    def get_messages(self):
+        # See https://docs.aws.amazon.com/boto3/latest/reference/services/sqs/client/receive_message.html
+        response = self.sqs_client.receive_message(
+            QueueUrl=self.dlq_url,
+            WaitTimeSeconds=20,  # Long polling
+            MessageAttributeNames=["All"],
+            AttributeNames=["All"],
+        )
+
+        messages = response["Messages"]
+        self.logger.info("Got SQS messages: %s", messages)
+        return messages
+
+    def process_sqs_message(self, sqs_message: dict):
+        try:
+            self.logger.info("Processing DLQ message %s", sqs_message["MessageId"])
+
+            message_body_base64 = sqs_message["Body"]
+            # Dramatiq encodes messages as base64-ed JSON. Decode it.
+            message_body_json = base64.b64decode(message_body_base64)
+            self.logger.info("Base64 decoded message body: %s", message_body_json)
+
+            message_body = json.loads(message_body_json)
+            message = Message(**message_body)
+
+            if message.actor_name == TaskNames.SEND_BROADCAST_PROVIDER_MESSAGE:
+                # This is a failed broadcast, update the status accordingly.
+                self.logger.info("Was broadcast task, setting failed status")
+                self.add_final_failed_status(message.kwargs["broadcast_event_id"], message.kwargs["provider"])
+        finally:
+            # Regardless of 'processability', forward the message to the failed SQS queue
+            self.send_to_failed_queue(sqs_message)
+
+            self.sqs_client.delete_message(QueueUrl=self.dlq_url, ReceiptHandle=sqs_message["ReceiptHandle"])
+            pass
+
+    def send_to_failed_queue(self, sqs_message):
+        result = self.sqs_client.send_message(QueueUrl=self.failed_queue_url, MessageBody=json.dumps(sqs_message))
+        self.logger.info("Sent message to failed queue: %s", result)
+
+    def add_final_failed_status(self, broadcast_event_id: str, provider: str):
+        broadcast_event = dao_get_broadcast_event_by_id(broadcast_event_id)
+        broadcast_provider_message = broadcast_event.get_provider_message(provider)
+
+        add_broadcast_provider_message_status(
+            broadcast_provider_message, status=BROADCAST_PROVIDER_STATUS_ERR_RETRY_EXHAUSTED
+        )
+        self.logger.info(
+            "Added BROADCAST_PROVIDER_STATUS_ERR_RETRY_EXHAUSTED status for BroadcastProviderMessage ID: %s",
+            broadcast_provider_message.id,
+        )
