@@ -170,6 +170,11 @@ run_periodiq(){
     export SERVICE=api_periodiq && . $VENV_API/bin/activate && exec python -m app.periodiq -v app.dramatiq_broker:broker
 }
 
+run_dlq_watcher(){
+    cd $DIR_API;
+    export SERVICE=api_dlq_watcher && . $VENV_API/bin/activate && exec python -m app.dramatiq_dlq
+}
+
 if [[ ! -z $DEBUG ]]; then
     echo "Starting in debug mode.."
     while true; do echo 'Debug mode active..'; sleep 30; done
@@ -184,6 +189,8 @@ else
         run_worker
     elif [[ $SERVICE_ACTION == "run_periodiq" ]]; then
         run_periodiq
+    elif [[ $SERVICE_ACTION == "run_dlq_watcher" ]]; then
+        run_dlq_watcher
     elif [[ $SERVICE_ACTION == "run_migrations" ]]; then
 
         if [[ ! -z $MASTER_USERNAME ]] && [[ ! -z $MASTER_PASSWORD ]]; then
