@@ -63,14 +63,16 @@ class DlqWatcher:
                 # This is a failed broadcast, update the status accordingly.
                 self.logger.info("Was broadcast task, setting failed status")
                 self._add_final_failed_status(message.kwargs["broadcast_event_id"], message.kwargs["provider"])
+        except Exception:
+            self.logger.warning("Failed to process as a Dramatiq message?", exc_info=True)
         finally:
             # Regardless of 'processability', forward the message to the failed SQS queue
             self._send_to_failed_queue(sqs_message)
-
             self.sqs_client.delete_message(QueueUrl=self.dlq_url, ReceiptHandle=sqs_message["ReceiptHandle"])
-            pass
 
     def _send_to_failed_queue(self, sqs_message):
+        # We don't send the body as base64 to make it easier to investigate in the console
+        # Plus we keep the entire message intact, not just the Dramatiq JSON payload (e.g. attributes)
         result = self.sqs_client.send_message(QueueUrl=self.failed_queue_url, MessageBody=json.dumps(sqs_message))
         self.logger.info("Sent message to failed queue: %s", result)
 
