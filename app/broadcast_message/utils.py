@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from emergency_alerts_utils.clients.zendesk.zendesk_client import (
     EASSupportTicket,
 )
+from emergency_alerts_utils.template import BroadcastMessageTemplate
 from emergency_alerts_utils.xml.common import SENDER
 from flask import current_app
 from jinja2 import Environment, FileSystemLoader
@@ -118,6 +119,9 @@ def _create_broadcast_event(broadcast_message):
     database, and triggers the task to send the CAP XML off.
     """
     service = broadcast_message.service
+    # `content` is stored in the DB as raw text, so it needs to be sanitised before being used in a BroadcastEvent
+    # Previously done during alert creation; that logic has now been moved here
+    content = str(BroadcastMessageTemplate.from_content(broadcast_message.content))
 
     if not broadcast_message.stubbed and not service.restricted:
         msg_types = {
@@ -128,7 +132,7 @@ def _create_broadcast_event(broadcast_message):
             service=service,
             broadcast_message=broadcast_message,
             message_type=msg_types[broadcast_message.status],
-            transmitted_content={"body": broadcast_message.content},
+            transmitted_content={"body": content},
             transmitted_areas=broadcast_message.areas,
             transmitted_sender=SENDER,
             # TODO: Should this be set to now? Or the original starts_at?

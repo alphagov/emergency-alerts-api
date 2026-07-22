@@ -329,7 +329,7 @@ def test_create_broadcast_message(admin_request, sample_broadcast_service, train
         "ids": ["manchester"],
         "simple_polygons": [[[50.12, 1.2], [50.13, 1.2], [50.14, 1.21]]],
     }
-    assert response["content"] == "Some content\n€ŷŵ~\n''\"\"---"
+    assert response["content"] == "Some content\r\n€ŷŵ~\r\n‘’“”—–-"
 
     broadcast_message = dao_get_broadcast_message_by_id_and_service_id(response["id"], sample_broadcast_service.id)
     assert broadcast_message.stubbed == training_mode_service
@@ -418,12 +418,20 @@ def test_create_broadcast_message_400s_if_content_too_long(
     assert response.get("message") == expected_errors
 
 
+@pytest.mark.parametrize(
+    "content",
+    (
+        ("Some content\r\n€ŷŵ~\r\n‘’“”—–-"),
+        ("Hello <b>World</b>"),
+        ("Emergency & Alerts & Service"),
+    ),
+)
 @freeze_time("2020-01-01")
-def test_create_broadcast_message_can_be_created_from_content(admin_request, sample_broadcast_service):
+def test_create_broadcast_message_can_be_created_from_content(admin_request, sample_broadcast_service, content):
     response = admin_request.post(
         "broadcast_message.create_broadcast_message",
         _data={
-            "content": "Some content\r\n€ŷŵ~\r\n‘’“”—–-",
+            "content": content,
             "reference": "abc123",
             "service_id": str(sample_broadcast_service.id),
             "created_by": str(sample_broadcast_service.created_by_id),
@@ -431,7 +439,8 @@ def test_create_broadcast_message_can_be_created_from_content(admin_request, sam
         service_id=sample_broadcast_service.id,
         _expected_status=201,
     )
-    assert response["content"] == "Some content\n€ŷŵ~\n''\"\"---"
+    # broadcast message content stored exactly as in posted data, no escaping
+    assert response["content"] == content
     assert response["reference"] == "abc123"
     assert response["template_id"] is None
     assert response["cap_event"] is None
