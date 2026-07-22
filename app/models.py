@@ -1,5 +1,6 @@
 import datetime
 import uuid
+from typing import Optional
 
 from emergency_alerts_utils.admin_action import (
     ADMIN_ACTION_LIST,
@@ -1136,7 +1137,7 @@ class BroadcastEvent(db.Model):
     def formatted_datetime_for(self, property_name):
         return convert_utc_datetime_to_cap_standard_string(getattr(self, property_name))
 
-    def get_provider_message(self, provider) -> "BroadcastProviderMessage" | None:
+    def get_provider_message(self, provider) -> Optional["BroadcastProviderMessage"]:
         return next(
             (provider_message for provider_message in self.provider_messages if provider_message.provider == provider),
             None,
