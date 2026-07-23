@@ -38,7 +38,7 @@ from app.dao.templates_dao import dao_get_template_by_id_and_service_id
 from app.dao.users_dao import get_user_by_id
 from app.errors import InvalidRequest, register_errors
 from app.models import (
-    BROADCAST_PROVIDER_STATUS_ERR,
+    FAILED_BROADCAST_PROVIDER_STATUSES,
     BroadcastEventMessageType,
     BroadcastMessage,
     BroadcastStatusType,
@@ -90,7 +90,7 @@ def get_broadcast_msgs_for_service(service_id):
         if message_type != BroadcastEventMessageType.ALERT:
             continue
 
-        if broadcast_provider_message.get_latest_status_entry().status == BROADCAST_PROVIDER_STATUS_ERR:
+        if broadcast_provider_message.get_latest_status_entry().status in FAILED_BROADCAST_PROVIDER_STATUSES:
             failed_broadcast_ids.add(broadcast_id)
 
     broadcast_messages = [
