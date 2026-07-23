@@ -1,5 +1,6 @@
 import datetime
 import uuid
+from typing import Optional
 
 from emergency_alerts_utils.admin_action import (
     ADMIN_ACTION_LIST,
@@ -1136,7 +1137,7 @@ class BroadcastEvent(db.Model):
     def formatted_datetime_for(self, property_name):
         return convert_utc_datetime_to_cap_standard_string(getattr(self, property_name))
 
-    def get_provider_message(self, provider):
+    def get_provider_message(self, provider) -> Optional["BroadcastProviderMessage"]:
         return next(
             (provider_message for provider_message in self.provider_messages if provider_message.provider == provider),
             None,
@@ -1198,15 +1199,25 @@ ALL_BROADCAST_PROVIDERS = BroadcastProvider.PROVIDERS
 
 # These should be stable as they're used for display by admin:
 BROADCAST_PROVIDER_STATUS_TECHNICAL_FAILURE = "technical-failure"  # (Unused)
-BROADCAST_PROVIDER_STATUS_SENDING = "sending"  # Sent to cbc, awaiting response
-BROADCAST_PROVIDER_STATUS_ACK = "returned-ack"  # Received ack response
-BROADCAST_PROVIDER_STATUS_ERR = "returned-error"  # Received error response
+BROADCAST_PROVIDER_STATUS_SENDING = "sending"  # Task started to send to CBC
+BROADCAST_PROVIDER_STATUS_ACK = "returned-ack"  # Received ack response from CBC
+BROADCAST_PROVIDER_STATUS_ERR = "returned-error"  # Received error response from CBC (retrying logic should reattempt)
+BROADCAST_PROVIDER_STATUS_ERR_RETRY_EXHAUSTED = (
+    "returned-error-retry-exhausted"  # The task has been picked up from the DLQ - it won't be retried automatically
+)
+
+FAILED_BROADCAST_PROVIDER_STATUSES = [
+    BROADCAST_PROVIDER_STATUS_TECHNICAL_FAILURE,
+    BROADCAST_PROVIDER_STATUS_ERR,
+    BROADCAST_PROVIDER_STATUS_ERR_RETRY_EXHAUSTED,
+]
 
 ALL_BROADCAST_PROVIDER_STATUSES = [
     BROADCAST_PROVIDER_STATUS_TECHNICAL_FAILURE,
     BROADCAST_PROVIDER_STATUS_SENDING,
     BROADCAST_PROVIDER_STATUS_ACK,
     BROADCAST_PROVIDER_STATUS_ERR,
+    BROADCAST_PROVIDER_STATUS_ERR_RETRY_EXHAUSTED,
 ]
 
 
