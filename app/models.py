@@ -1475,9 +1475,12 @@ class PublishTaskProgress(db.Model):
     id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     task_id = db.Column(db.String, index=True, unique=False, nullable=False)
     last_published_file = db.Column(db.String, nullable=True)
-    started_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
+    started_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.now())
     last_activity_at = db.Column(
-        db.DateTime, nullable=True, onupdate=datetime.datetime.utcnow, default=datetime.datetime.utcnow
+        db.DateTime,
+        nullable=True,
+        onupdate=datetime.datetime.now(),
+        default=datetime.datetime.now(),
     )
     finished_at = db.Column(db.DateTime, nullable=True)
 
