@@ -1,6 +1,6 @@
 import time
 from collections import namedtuple
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import call
 
 import pytest
@@ -185,7 +185,8 @@ def test_validate_functional_test_account_emails(notify_db_session):
     notify_db_session.add(user2)
     notify_db_session.commit()
 
-    now = datetime.now()
+    # UTC datetime but email_access_validated_at is offset-naive so remove TZ info
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     time.sleep(1)
 
     validate_functional_test_account_emails()
