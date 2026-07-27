@@ -144,6 +144,8 @@ class Config(object):
     SERVICE = os.environ.get("SERVICE")
 
     QUEUE_PREFIX = ""  # Overidden in hosted for multitenancy
+    DLQ_URL = os.environ.get("DLQ_URL")  # The DLQ URL to watch for retried tasks
+    FAILED_QUEUE_URL = os.environ.get("FAILED_QUEUE_URL")  # The queue URL to post failed (post DLQ) tasks for analysis
 
     FROM_NUMBER = "development"
 

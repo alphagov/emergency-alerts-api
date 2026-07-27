@@ -557,7 +557,7 @@ def test_send_broadcast_provider_message_raises_if_event_has_expired(sample_temp
         transmitted_finishes_at=datetime(2021, 1, 1, 11, 59),
     )
     with pytest.raises(BroadcastIntegrityError) as exc:
-        send_broadcast_provider_message(current_event.id, "ee")
+        send_broadcast_provider_message(broadcast_event_id=current_event.id, provider="ee")
     assert "The expiry time of 2021-01-01 11:59:00 has already passed" in str(exc.value)
 
 
@@ -590,7 +590,7 @@ def test_send_broadcast_provider_message_raises_if_older_event_still_sending(sam
 
     # we havent sent the previous update yet - it's still in sending - so don't try and send this one.
     with pytest.raises(BroadcastIntegrityError) as exc:
-        send_broadcast_provider_message(current_event.id, "ee")
+        send_broadcast_provider_message(broadcast_event_id=current_event.id, provider="ee")
 
     assert f"Previous event {past_still_sending_event.id} (type update) has not finished sending to provider ee" in str(
         exc.value
@@ -624,7 +624,7 @@ def test_send_broadcast_provider_message_raises_if_older_event_hasnt_started_sen
 
     # we shouldn't send the update now, because a previous event is still stuck in sending
     with pytest.raises(BroadcastIntegrityError) as exc:
-        send_broadcast_provider_message(current_event.id, "ee")
+        send_broadcast_provider_message(broadcast_event_id=current_event.id, provider="ee")
 
     assert f"Previous event {past_still_sending_event.id} (type update) has no provider_message for provider ee" in str(
         exc.value
@@ -667,7 +667,7 @@ def test_send_broadcast_provider_message_raises_if_current_event_already_has_pro
     create_broadcast_provider_message(current_event, provider="ee", status=existing_message_status)
 
     with pytest.raises(BroadcastIntegrityError) as exc:
-        send_broadcast_provider_message(current_event.id, "ee")
+        send_broadcast_provider_message(broadcast_event_id=current_event.id, provider="ee")
 
     assert f"in status {existing_message_status}" in str(exc.value)
 
@@ -690,7 +690,7 @@ def test_send_broadcast_provider_message_doesnt_raise_for_sending_or_failed_stat
     current_event = create_broadcast_event(broadcast_message, message_type="alert")
     create_broadcast_provider_message(current_event, provider="ee", status=existing_message_status)
 
-    send_broadcast_provider_message(current_event.id, "ee")
+    send_broadcast_provider_message(broadcast_event_id=current_event.id, provider="ee")
 
 
 def test_send_broadcast_provider_message_raises_if_service_is_suspended(
@@ -701,7 +701,7 @@ def test_send_broadcast_provider_message_raises_if_service_is_suspended(
     current_event = create_broadcast_event(broadcast_message, message_type="alert")
 
     with pytest.raises(BroadcastIntegrityError) as exc:
-        send_broadcast_provider_message(current_event.id, "ee")
+        send_broadcast_provider_message(broadcast_event_id=current_event.id, provider="ee")
 
     assert "service is suspended" in str(exc.value)
 
@@ -714,7 +714,7 @@ def test_send_broadcast_provider_message_raises_if_service_is_not_live(
     current_event = create_broadcast_event(broadcast_message, message_type="alert")
 
     with pytest.raises(BroadcastIntegrityError) as exc:
-        send_broadcast_provider_message(current_event.id, "ee")
+        send_broadcast_provider_message(broadcast_event_id=current_event.id, provider="ee")
 
     assert "service is not live" in str(exc.value)
 
@@ -726,7 +726,7 @@ def test_send_broadcast_provider_message_raises_if_message_is_stubbed(
     current_event = create_broadcast_event(broadcast_message, message_type="alert")
 
     with pytest.raises(BroadcastIntegrityError) as exc:
-        send_broadcast_provider_message(current_event.id, "ee")
+        send_broadcast_provider_message(broadcast_event_id=current_event.id, provider="ee")
 
     assert "message is stubbed" in str(exc.value)
 
@@ -741,6 +741,6 @@ def test_send_broadcast_provider_message_does_nothing_if_cbc_proxy_disabled(mock
     broadcast_message = create_broadcast_message(sample_template)
     broadcast_event = create_broadcast_event(broadcast_message, message_type="alert")
     with set_config(notify_api, "ENABLED_CBCS", {"ee", "vodafone"}), set_config(notify_api, "CBC_PROXY_ENABLED", False):
-        send_broadcast_provider_message(broadcast_event.id, "ee")
+        send_broadcast_provider_message(broadcast_event_id=broadcast_event.id, provider="ee")
 
     assert mock_client.create_and_send_broadcast.called is False

@@ -146,7 +146,8 @@ def send_broadcast_event(broadcast_event_id):
     allow_retry=True,
     retry_for=CBCProxyRetryableException,
 )
-def send_broadcast_provider_message(broadcast_event_id, provider):
+# Note: Adjusting the args? You may need to edit DlqWatcher accordingly
+def send_broadcast_provider_message(*, broadcast_event_id, provider):
     if not current_app.config["CBC_PROXY_ENABLED"]:
         current_app.logger.info(
             "CBC Proxy disabled, unable to send broadcast_provider_message",
