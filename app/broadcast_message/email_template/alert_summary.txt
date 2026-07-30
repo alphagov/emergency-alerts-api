@@ -27,6 +27,7 @@ Attachments
 areas.geojson  - areas covered by this alert (geoJSON format)
 areas.cap.xml  - areas covered by this alert (CAP XML format)
 areas.ibag.xml - areas covered by this alert (IBAG XML format)
+areas.png      - map image of areas covered by this alert (png format)
 
 If you require assistance, or wish to unsubscribe from future advance notice notifications, please contact the Emergency Alerts Support team at emergency-alerts-support@digital.cabinet-office.gov.uk
 

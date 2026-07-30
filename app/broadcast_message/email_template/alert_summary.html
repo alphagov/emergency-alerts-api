@@ -25,9 +25,14 @@
 
       {% if broadcast_message.extra_content %}
       <p style="font-size:16px; color:#0b0c0c;">
-        <strong>Additional Info</strong><br>{{ broadcast_message.extra_content }}
+        <strong>Additional Information</strong><br>{{ broadcast_message.extra_content }}
       </p>
       {% endif %}
+
+      <p style="font-size:16px; color:#0b0c0c;">
+        <strong>Area</strong><br>
+        <img src="cid:areas" width="350">
+      </p>
 
       <p style="font-size:16px; color:#0b0c0c;">
         <strong>Alert Duration</strong><br>{{ data.duration }}
@@ -40,6 +45,7 @@
           <li style="margin-bottom: 5px;">areas.geojson - areas covered by this alert, in geoJSON format</li>
           <li style="margin-bottom: 5px;">areas.cap.xml - areas covered by this alert, in CAP XML format</li>
           <li style="margin-bottom: 5px;">areas.ibag.xml - areas covered by this alert, in IBAG XML format</li>
+          <li style="margin-bottom: 5px;">areas.png - map image of areas covered by this alert</li>
         </ul>
       </p>
 
