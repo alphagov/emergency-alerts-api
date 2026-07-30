@@ -1,3 +1,4 @@
+import base64
 import logging
 
 import boto3
@@ -28,7 +29,15 @@ class EmailClient:
         self.send_enabled = current_app.config["SES_ENABLED"]
 
     def send_email(
-        self, subject, text_body, html_body, to_addresses=None, cc_addresses=None, bcc_addresses=None, attachments=None
+        self,
+        subject,
+        text_body,
+        html_body,
+        to_addresses=None,
+        cc_addresses=None,
+        bcc_addresses=None,
+        attachments=None,
+        image=None,
     ):
         """
         Send an email with optional attachments using SESv2 Simple content structure.
@@ -38,6 +47,7 @@ class EmailClient:
         cc_addresses = cc_addresses or []
         bcc_addresses = bcc_addresses or []
         attachments = attachments or []
+        image = image or None
 
         # Build the Body structure
         body_content = {}
@@ -49,9 +59,20 @@ class EmailClient:
         # Format attachments for the SESv2 Simple schema
         ses_attachments = []
         for filename, file_bytes, mime_type in attachments:
-            attachment_structure = {"RawContent": file_bytes, "FileName": filename}
+            attachment_structure = {"RawContent": file_bytes, "ContentDisposition": "ATTACHMENT", "FileName": filename}
             if mime_type:
                 attachment_structure["ContentType"] = mime_type
+            ses_attachments.append(attachment_structure)
+
+        # Add inline image if available
+        if image:
+            attachment_structure = {
+                "RawContent": base64.b64encode(image),
+                "ContentDisposition": "INLINE",
+                "FileName": "areas.png",
+                "ContentId": "areas",
+                "ContentTransferEncoding": "BASE64",
+            }
             ses_attachments.append(attachment_structure)
 
         # Construct Simple message payload
