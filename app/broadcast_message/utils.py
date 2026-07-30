@@ -228,25 +228,14 @@ def _geojson_to_miniscale_png(
     Render a GeoJSON polygon on top of the MiniScale Web Mercator raster.
     Requires MiniScale_standard_3857.tif already converted to EPSG:3857.
     """
-    # Check buckets and map file exists
+    # Check bucket and map file exists
     bucket = current_app.config.get("MINISCALE_MAP_S3_BUCKET_NAME")
     if not bucket:
         current_app.logger.error("MINISCALE_MAP_S3_BUCKET_NAME not set in config")
         return None
 
     s3 = boto3.client("s3")
-    try:
-        s3.head_bucket(Bucket=bucket)
-    except ClientError as e:
-        current_app.logger.error(f"MiniScale bucket '{bucket}' does not exist or is not accessible: {e}")
-        return None
-
     key = "map.tif"
-    try:
-        s3.head_object(Bucket=bucket, Key=key)
-    except ClientError as e:
-        current_app.logger.error(f"MiniScale map file '{key}' not found in bucket '{bucket}': {e}")
-        return None
 
     # Read MiniScale raster map file into memory
     try:
@@ -254,6 +243,11 @@ def _geojson_to_miniscale_png(
         s3.download_fileobj(bucket, key, buf)
         buf.seek(0)
         base = Image.open(buf).convert("RGBA")
+
+    except ClientError as e:
+        current_app.logger.error(f"Failed to download MiniScale map '{key}' from bucket '{bucket}': {e}")
+        return None
+
     except Exception as e:
         current_app.logger.error(f"Failed to load MiniScale TIFF from S3: {e}")
         return None
