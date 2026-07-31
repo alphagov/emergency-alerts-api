@@ -80,6 +80,7 @@ class EmailClient:
                 "ContentDisposition": "ATTACHMENT",
                 "FileName": "areas.png",
                 "ContentTransferEncoding": "BASE64",
+                "ContentType": "image/png",
             }
             ses_attachments.append(attachment_structure)
 
