@@ -334,8 +334,11 @@ def _geojson_to_miniscale_png(
             pts = [wm_to_px(x, y) for x, y in ring]
             pts = [(x - px_min, y - py_min) for x, y in pts]
 
-            # Semi‑transparent fill + solid outline
-            overlay_draw.polygon(pts, fill=(255, 0, 0, 80), outline=(255, 0, 0, 255))  # 80 = opacity  # solid outline
+            # Semi‑transparent light blue fill + solid outline
+            overlay_draw.polygon(pts, fill=(180, 200, 220, 205), outline=(0, 0, 0, 0))
+
+            # Increase outline width
+            overlay_draw.line(pts + [pts[0]], fill=(0, 0, 0, 255), width=12)
 
     # Composite overlay onto the cropped basemap
     cropped = Image.alpha_composite(cropped, overlay)
