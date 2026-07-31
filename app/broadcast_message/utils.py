@@ -267,11 +267,11 @@ def _geojson_to_miniscale_png(
     data = json.loads(geojson_str)
 
     if data["type"] == "FeatureCollection":
-        geoms = [shape(f["geometry"]) for f in data["features"]]
+        geoms = [shape(f["geometry"]).buffer(0) for f in data["features"]]
     elif data["type"] == "Feature":
-        geoms = [shape(data["geometry"])]
+        geoms = [shape(data["geometry"]).buffer(0)]
     else:
-        geoms = [shape(data)]
+        geoms = [shape(data).buffer(0)]
 
     # Union geometry and convert to Web Mercator
     full_geom = geoms[0]
@@ -286,24 +286,69 @@ def _geojson_to_miniscale_png(
     # Bounding box in Web Mercator
     minx, miny, maxx, maxy = geom_wm.bounds
 
-    # Add padding
-    dx = (maxx - minx) * padding_ratio
-    dy = (maxy - miny) * padding_ratio
-    minx -= dx
-    maxx += dx
-    miny -= dy
-    maxy += dy
-
     # Convert WM → pixel coordinates
     def wm_to_px(x, y):
         px = int((x - wm_left) / (wm_right - wm_left) * width)
         py = int((wm_top - y) / (wm_top - wm_bottom) * height)
         return px, py
 
-    # Crop MiniScale to bounding box
+    # Raw pixel crop box
     px_min, py_min = wm_to_px(minx, maxy)
     px_max, py_max = wm_to_px(maxx, miny)
 
+    # Smart padding
+    raw_w = px_max - px_min
+    raw_h = py_max - py_min
+
+    # 1. Base padding proportional to polygon size
+    base_pad = int(max(raw_w, raw_h) * 0.15)
+
+    # 2. Minimum padding for tiny polygons
+    min_pad = 10
+
+    # 3. Maximum padding to avoid zooming out too far
+    max_pad = 150
+
+    PAD = max(min_pad, min(base_pad, max_pad))
+
+    px_min -= PAD
+    py_min -= PAD
+    px_max += PAD
+    py_max += PAD
+
+    # 4. Enforce minimum crop size
+    MIN_SIZE = 250
+
+    if (px_max - px_min) < MIN_SIZE:
+        mid_x = (px_min + px_max) // 2
+        px_min = mid_x - MIN_SIZE // 2
+        px_max = mid_x + MIN_SIZE // 2
+
+    if (py_max - py_min) < MIN_SIZE:
+        mid_y = (py_min + py_max) // 2
+        py_min = mid_y - MIN_SIZE // 2
+        py_max = mid_y + MIN_SIZE // 2
+
+    # Scale outline width based on polygon size
+    max_dim = max(raw_w, raw_h)
+
+    # Tunable thresholds
+    if max_dim < 150:
+        outline_w = 2  # tiny polygons
+    elif max_dim < 400:
+        outline_w = 3  # medium polygons
+    elif max_dim < 800:
+        outline_w = 4  # large polygons
+    else:
+        outline_w = 12  # Country-scale polygons
+
+    # Clamp to raster bounds
+    px_min = max(0, px_min)
+    py_min = max(0, py_min)
+    px_max = min(width, px_max)
+    py_max = min(height, py_max)
+
+    # Crop MiniScale to bounding box
     cropped = base.crop((px_min, py_min, px_max, py_max))
 
     # Draw polygons with proper opacity using a transparent overlay
@@ -315,9 +360,7 @@ def _geojson_to_miniscale_png(
         g_wm = transform(proj_xy, g)
 
         if isinstance(g_wm, Polygon):
-            # Exterior ring
             rings = [g_wm.exterior.coords]
-            # Interior rings
             for interior in g_wm.interiors:
                 rings.append(interior.coords)
         elif isinstance(g_wm, MultiPolygon):
@@ -327,18 +370,17 @@ def _geojson_to_miniscale_png(
                 for interior in poly.interiors:
                     rings.append(interior.coords)
         else:
-            # Not a polygon (LineString, Point, etc.)
             continue
 
         for ring in rings:
             pts = [wm_to_px(x, y) for x, y in ring]
             pts = [(x - px_min, y - py_min) for x, y in pts]
 
-            # Semi‑transparent light blue fill + solid outline
+            # Semi‑transparent grey‑blue fill
             overlay_draw.polygon(pts, fill=(180, 200, 220, 205), outline=(0, 0, 0, 0))
 
-            # Increase outline width
-            overlay_draw.line(pts + [pts[0]], fill=(0, 0, 0, 255), width=12)
+            # Outline
+            overlay_draw.line(pts + [pts[0]], fill=(0, 0, 0, 255), width=outline_w)
 
     # Composite overlay onto the cropped basemap
     cropped = Image.alpha_composite(cropped, overlay)
