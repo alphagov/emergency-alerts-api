@@ -1,4 +1,3 @@
-import base64
 import logging
 
 import boto3
@@ -66,12 +65,19 @@ class EmailClient:
 
         # Add inline image if available
         if image:
+            logger.info(f"EmailClient.send_email image size in bytes: {len(image)}")
+
+            # attachment_structure = {
+            #    "RawContent": base64.b64encode(image),
+            #    "ContentDisposition": "INLINE",
+            #    "FileName": "areas.png",
+            #    "ContentId": "areas",
+            #    "ContentTransferEncoding": "BASE64",
+            # }
             attachment_structure = {
-                "RawContent": base64.b64encode(image),
-                "ContentDisposition": "INLINE",
+                "RawContent": image,
+                "ContentDisposition": "ATTACHMENT",
                 "FileName": "areas.png",
-                "ContentId": "areas",
-                "ContentTransferEncoding": "BASE64",
             }
             ses_attachments.append(attachment_structure)
 
@@ -148,6 +154,10 @@ class EmailClient:
                         f"EmailClient.send_email would be sending batch {idx} to {batch_total} "
                         f"recipients (BCC chunk size: {len(bcc_batch)}) with message_id {mock_id}"
                     )
+                    logger.info(f"simple_message = {simple_message}")
+                    if image:
+                        with open("output.png", "wb") as f:
+                            f.write(image)
 
             return results
 
