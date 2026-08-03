@@ -1,4 +1,3 @@
-import base64
 import logging
 
 import boto3
@@ -76,18 +75,20 @@ class EmailClient:
             #    "ContentTransferEncoding": "BASE64",
             # }
             attachment_structure = {
-                "RawContent": base64.b64encode(image),
+                "RawContent": image,
                 "ContentDisposition": "ATTACHMENT",
                 "FileName": "areas_attach.png",
                 "ContentType": "image/png",
+                "ContentTransferEncoding": "BASE64",
             }
             ses_attachments.append(attachment_structure)
             attachment_structure = {
-                "RawContent": base64.b64encode(image),
+                "RawContent": image,
                 "ContentDisposition": "INLINE",
                 "FileName": "areas.png",
                 "ContentId": "areas",
                 "ContentType": "image/png",
+                "ContentTransferEncoding": "BASE64",
             }
             ses_attachments.append(attachment_structure)
 
