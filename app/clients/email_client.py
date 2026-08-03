@@ -76,14 +76,6 @@ class EmailClient:
             # }
             attachment_structure = {
                 "RawContent": image,
-                "ContentDisposition": "ATTACHMENT",
-                "FileName": "areas_attach.png",
-                "ContentType": "image/png",
-                "ContentTransferEncoding": "BASE64",
-            }
-            ses_attachments.append(attachment_structure)
-            attachment_structure = {
-                "RawContent": image,
                 "ContentDisposition": "INLINE",
                 "FileName": "areas.png",
                 "ContentId": "areas",
