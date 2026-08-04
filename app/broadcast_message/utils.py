@@ -4,7 +4,6 @@ from datetime import datetime, timezone
 from io import BytesIO
 
 import boto3
-from botocore.exceptions import ClientError
 from emergency_alerts_utils.clients.zendesk.zendesk_client import (
     EASSupportTicket,
 )
@@ -13,7 +12,8 @@ from flask import current_app
 from jinja2 import Environment, FileSystemLoader
 from PIL import Image, ImageDraw
 from pyproj import Transformer
-from shapely.geometry import MultiPolygon, Polygon, shape
+from shapely import wkt
+from shapely.geometry import Polygon
 from shapely.ops import transform
 
 from app import zendesk_client
@@ -169,10 +169,7 @@ def send_alert_summary_email(broadcast_message, data):
     )
     attachments = _build_alert_summary_email_attachments(data)
 
-    geojson_obj = data.get("geojson")
-    geojson_str = json.dumps(geojson_obj)
-
-    png_bytes = _geojson_to_miniscale_png(geojson_str)
+    png_bytes = _geojson_to_miniscale_png(data["wkt"], data["wkt_with_bleed"])
 
     client = EmailClient()
     response = client.send_email(
@@ -219,16 +216,73 @@ def _build_alert_summary_email_attachments(data):
     return attachments
 
 
-def _geojson_to_miniscale_png(
-    geojson_str: str,
-    miniscale_path: str = "MiniScale_standard_3857.tif",
-    padding_ratio: float = 0.1,
-):
-    """
-    Render a GeoJSON polygon on top of the MiniScale Web Mercator raster.
-    Requires MiniScale_standard_3857.tif already converted to EPSG:3857.
-    """
-    # Check bucket and map file exists
+def _geojson_to_miniscale_png(wkt_main, wkt_buffered):
+
+    # Load miniscale map from S3 bucket
+    base = _load_miniscale_from_s3()
+    if base is None:
+        return None
+
+    width, height = base.size
+
+    # MiniScale Web Mercator extents
+    wm_left = -1057132.938
+    wm_top = 8760625.698
+    wm_right = 404592.962
+    wm_bottom = 6405960.394
+
+    # Setup CRS transformer
+    to_wm = Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True)
+
+    # Helper function to convert WM co-ordinates to pixel co-ordinates
+    def wm_to_px(x, y):
+        px = int((x - wm_left) / (wm_right - wm_left) * width)
+        py = int((wm_top - y) / (wm_top - wm_bottom) * height)
+        return px, py
+
+    # Read main and bufferred polygon WKT, and project to WM
+    geom_main_wm, geom_buffer_wm = _parse_and_project_wkt(wkt_main, wkt_buffered, to_wm)
+    if geom_main_wm is None:
+        return None
+
+    # Set up a crop box for the image, which will comfortably display the overlaid polygons.
+    # Should have a minimimum size, and should be roughly square shaped.
+    MIN_SIZE = 150
+    px_min, py_min, px_max, py_max = _compute_crop_box(geom_buffer_wm, wm_to_px, width, height, MIN_SIZE)
+
+    # Crop the Miniscale image to the required size and create a new Image from it, which we'll add the
+    # polygons to.
+    cropped = base.crop((px_min, py_min, px_max, py_max))
+    overlay = Image.new("RGBA", cropped.size, (0, 0, 0, 0))
+
+    # Guesstimate how thick to make the polygon lines, depending on the size of the polygon
+    raw_w = px_max - px_min
+    raw_h = py_max - py_min
+    max_dim = max(raw_w, raw_h)
+
+    if max_dim <= MIN_SIZE:
+        outline_w = 1
+    elif max_dim < 500:
+        outline_w = 2
+    elif max_dim < 1250:
+        outline_w = 3
+    elif max_dim < 2500:
+        outline_w = 5
+    else:
+        outline_w = 12
+
+    # ...and draw the polygons
+    _draw_polygons(overlay, geom_buffer_wm, geom_main_wm, wm_to_px, px_min, py_min, outline_w)
+
+    # Finally write and return the new image bytes
+    out = Image.alpha_composite(cropped, overlay)
+    buf = BytesIO()
+    out.save(buf, "PNG")
+    buf.seek(0)
+    return buf.getvalue()
+
+
+def _load_miniscale_from_s3():
     bucket = current_app.config.get("MINISCALE_MAP_S3_BUCKET_NAME")
     if not bucket:
         current_app.logger.error("MINISCALE_MAP_S3_BUCKET_NAME not set in config")
@@ -237,156 +291,105 @@ def _geojson_to_miniscale_png(
     s3 = boto3.client("s3")
     key = "map.tif"
 
-    # Read MiniScale raster map file into memory
     try:
         buf = BytesIO()
         s3.download_fileobj(bucket, key, buf)
         buf.seek(0)
-        base = Image.open(buf).convert("RGBA")
-
-    except ClientError as e:
-        current_app.logger.error(f"Failed to download MiniScale map '{key}' from bucket '{bucket}': {e}")
-        return None
-
+        return Image.open(buf).convert("RGBA")
     except Exception as e:
         current_app.logger.error(f"Failed to load MiniScale TIFF from S3: {e}")
         return None
 
-    width, height = base.size
 
-    # Web Mercator bounds
-    wm_left = -1057132.938
-    wm_top = 8760625.698
-    wm_right = 404592.962
-    wm_bottom = 6405960.394
+def _parse_and_project_wkt(wkt_main, wkt_buffered, to_wm):
+    try:
+        geom_main = wkt.loads(wkt_main)
+        geom_buffer = wkt.loads(wkt_buffered)
+    except Exception as e:
+        current_app.logger.error(f"Invalid WKT geometry: {e}")
+        return None, None
 
-    # lon/lat → Web Mercator transformer
-    to_wm = Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True)
+    return (
+        transform(to_wm.transform, geom_main),
+        transform(to_wm.transform, geom_buffer),
+    )
 
-    # Parse GeoJSON
-    data = json.loads(geojson_str)
 
-    if data["type"] == "FeatureCollection":
-        geoms = [shape(f["geometry"]).buffer(0) for f in data["features"]]
-    elif data["type"] == "Feature":
-        geoms = [shape(data["geometry"]).buffer(0)]
-    else:
-        geoms = [shape(data).buffer(0)]
+def _compute_crop_box(geom_buffer_wm, wm_to_px, width, height, MIN_SIZE):
+    minx, miny, maxx, maxy = geom_buffer_wm.bounds
 
-    # Union geometry and convert to Web Mercator
-    full_geom = geoms[0]
-    for g in geoms[1:]:
-        full_geom = full_geom.union(g)
-
-    def proj_xy(x, y, z=None):
-        return to_wm.transform(x, y)
-
-    geom_wm = transform(proj_xy, full_geom)
-
-    # Bounding box in Web Mercator
-    minx, miny, maxx, maxy = geom_wm.bounds
-
-    # Convert WM → pixel coordinates
-    def wm_to_px(x, y):
-        px = int((x - wm_left) / (wm_right - wm_left) * width)
-        py = int((wm_top - y) / (wm_top - wm_bottom) * height)
-        return px, py
-
-    # Raw pixel crop box
+    # Set up pixel crop box, and ensure correct ordering
     px_min, py_min = wm_to_px(minx, maxy)
     px_max, py_max = wm_to_px(maxx, miny)
 
-    # Smart padding
-    raw_w = px_max - px_min
-    raw_h = py_max - py_min
+    if px_min > px_max:
+        px_min, px_max = px_max, px_min
+    if py_min > py_max:
+        py_min, py_max = py_max, py_min
 
-    # 1. Base padding proportional to polygon size
-    base_pad = int(max(raw_w, raw_h) * 0.15)
+    crop_w = px_max - px_min
+    crop_h = py_max - py_min
 
-    # 2. Minimum padding for tiny polygons
-    min_pad = 10
-
-    # 3. Maximum padding to avoid zooming out too far
-    max_pad = 150
-
-    PAD = max(min_pad, min(base_pad, max_pad))
-
-    px_min -= PAD
-    py_min -= PAD
-    px_max += PAD
-    py_max += PAD
-
-    # 4. Enforce minimum crop size
-    MIN_SIZE = 250
-
-    if (px_max - px_min) < MIN_SIZE:
+    # Enforce minimum crop size
+    if crop_w < MIN_SIZE:
         mid_x = (px_min + px_max) // 2
         px_min = mid_x - MIN_SIZE // 2
         px_max = mid_x + MIN_SIZE // 2
 
-    if (py_max - py_min) < MIN_SIZE:
+    if crop_h < MIN_SIZE:
         mid_y = (py_min + py_max) // 2
         py_min = mid_y - MIN_SIZE // 2
         py_max = mid_y + MIN_SIZE // 2
 
-    # Scale outline width based on polygon size
-    max_dim = max(raw_w, raw_h)
+    # Enforce balanced crop in case of long and thin (or short and fat:) polygon
+    crop_w = px_max - px_min
+    crop_h = py_max - py_min
+    target = max(crop_w, crop_h)
 
-    # Tunable thresholds
-    if max_dim < 150:
-        outline_w = 2  # tiny polygons
-    elif max_dim < 400:
-        outline_w = 3  # medium polygons
-    elif max_dim < 800:
-        outline_w = 4  # large polygons
-    else:
-        outline_w = 12  # Country-scale polygons
+    if crop_w < target:
+        mid_x = (px_min + px_max) // 2
+        px_min = mid_x - target // 2
+        px_max = mid_x + target // 2
 
-    # Clamp to raster bounds
+    if crop_h < target:
+        mid_y = (py_min + py_max) // 2
+        py_min = mid_y - target // 2
+        py_max = mid_y + target // 2
+
+    # Clamp to image bounds
     px_min = max(0, px_min)
     py_min = max(0, py_min)
     px_max = min(width, px_max)
     py_max = min(height, py_max)
 
-    # Crop MiniScale to bounding box
-    cropped = base.crop((px_min, py_min, px_max, py_max))
+    return px_min, py_min, px_max, py_max
 
-    # Draw polygons with proper opacity using a transparent overlay
-    overlay = Image.new("RGBA", cropped.size, (0, 0, 0, 0))
-    overlay_draw = ImageDraw.Draw(overlay)
 
-    # Draw polygons
-    for g in geoms:
-        g_wm = transform(proj_xy, g)
+def _draw_polygons(overlay, geom_buffer_wm, geom_main_wm, wm_to_px, px_min, py_min, outline_w):
+    draw = ImageDraw.Draw(overlay)
 
-        if isinstance(g_wm, Polygon):
-            rings = [g_wm.exterior.coords]
-            for interior in g_wm.interiors:
-                rings.append(interior.coords)
-        elif isinstance(g_wm, MultiPolygon):
-            rings = []
-            for poly in g_wm.geoms:
-                rings.append(poly.exterior.coords)
-                for interior in poly.interiors:
-                    rings.append(interior.coords)
-        else:
-            continue
+    def draw_polygon(geom, fill, outline, width):
+        polys = [geom] if isinstance(geom, Polygon) else list(geom.geoms)
+        for poly in polys:
+            rings = [poly.exterior.coords] + [r.coords for r in poly.interiors]
+            for ring in rings:
+                pts = [wm_to_px(x, y) for x, y in ring]
+                pts = [(x - px_min, y - py_min) for x, y in pts]
+                draw.polygon(pts, fill=fill)
+                draw.line(pts + [pts[0]], fill=outline, width=width)
 
-        for ring in rings:
-            pts = [wm_to_px(x, y) for x, y in ring]
-            pts = [(x - px_min, y - py_min) for x, y in pts]
+    # Draw buffered polygon first (lighter fill and thinner outline)
+    draw_polygon(
+        geom_buffer_wm,
+        fill=(130, 145, 180, 80),
+        outline=(0, 90, 180, 255),
+        width=max(1, outline_w - 6),
+    )
 
-            # Semi‑transparent grey‑blue fill
-            overlay_draw.polygon(pts, fill=(180, 200, 220, 205), outline=(0, 0, 0, 0))
-
-            # Outline
-            overlay_draw.line(pts + [pts[0]], fill=(0, 0, 0, 255), width=outline_w)
-
-    # Composite overlay onto the cropped basemap
-    cropped = Image.alpha_composite(cropped, overlay)
-
-    # Save the image in memory and return the bytes
-    buf = BytesIO()
-    cropped.save(buf, "PNG")
-    buf.seek(0)
-    return buf.getvalue()
+    # Draw main polygon on top (darker fill and fatter outline)
+    draw_polygon(
+        geom_main_wm,
+        fill=(180, 200, 220, 205),
+        outline=(0, 0, 0, 255),
+        width=outline_w,
+    )
