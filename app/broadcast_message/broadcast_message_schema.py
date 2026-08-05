@@ -82,9 +82,7 @@ send_alert_summary_email_schema = {
         "phone_estimate": {"type": "string"},
         "duration": {"type": "string"},
         "created_by": uuid,
-        "approx_bleed_in_m": {"type": "number"},
         "wkt": {"type": "string", "minLength": 1, "pattern": "^(POLYGON|MULTIPOLYGON)\\s*\\(.*\\)$"},
-        "wkt_with_bleed": {"type": "string", "minLength": 1, "pattern": "^(POLYGON|MULTIPOLYGON)\\s*\\(.*\\)$"},
     },
     "required": [
         "created_by",
@@ -92,9 +90,7 @@ send_alert_summary_email_schema = {
         "alert_summary",
         "phone_estimate",
         "duration",
-        "approx_bleed_in_m",
         "wkt",
-        "wkt_with_bleed",
     ],
     "additionalProperties": False,
 }
