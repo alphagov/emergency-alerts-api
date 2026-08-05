@@ -169,7 +169,7 @@ def send_alert_summary_email(broadcast_message, data):
     )
     attachments = _build_alert_summary_email_attachments(data)
 
-    png_bytes = _geojson_to_miniscale_png(data["wkt"], data["wkt_with_bleed"])
+    jpeg_bytes = _geojson_to_miniscale_jpeg(data["wkt"])
 
     client = EmailClient()
     response = client.send_email(
@@ -178,7 +178,7 @@ def send_alert_summary_email(broadcast_message, data):
         text_body=text_body,
         html_body=html_body,
         attachments=attachments,
-        image=png_bytes,
+        image=jpeg_bytes,
     )
     return response
 
@@ -216,7 +216,7 @@ def _build_alert_summary_email_attachments(data):
     return attachments
 
 
-def _geojson_to_miniscale_png(wkt_main, wkt_buffered):
+def _geojson_to_miniscale_jpeg(wkt_main):
 
     # Load miniscale map from S3 bucket
     base = _load_miniscale_from_s3()
@@ -240,15 +240,15 @@ def _geojson_to_miniscale_png(wkt_main, wkt_buffered):
         py = int((wm_top - y) / (wm_top - wm_bottom) * height)
         return px, py
 
-    # Read main and bufferred polygon WKT, and project to WM
-    geom_main_wm, geom_buffer_wm = _parse_and_project_wkt(wkt_main, wkt_buffered, to_wm)
-    if geom_main_wm is None:
+    # Read  WKT and project to WM
+    geom_wm = _parse_and_project_wkt(wkt_main, to_wm)
+    if geom_wm is None:
         return None
 
     # Set up a crop box for the image, which will comfortably display the overlaid polygons.
     # Should have a minimimum size, and should be roughly square shaped.
-    MIN_SIZE = 150
-    px_min, py_min, px_max, py_max = _compute_crop_box(geom_buffer_wm, wm_to_px, width, height, MIN_SIZE)
+    MIN_SIZE = 250
+    px_min, py_min, px_max, py_max = _compute_crop_box(geom_wm, wm_to_px, width, height, MIN_SIZE)
 
     # Crop the Miniscale image to the required size and create a new Image from it, which we'll add the
     # polygons to.
@@ -271,13 +271,15 @@ def _geojson_to_miniscale_png(wkt_main, wkt_buffered):
     else:
         outline_w = 12
 
-    # ...and draw the polygons
-    _draw_polygons(overlay, geom_buffer_wm, geom_main_wm, wm_to_px, px_min, py_min, outline_w)
+    # ...and draw the polygon
+    _draw_polygon(overlay, geom_wm, wm_to_px, px_min, py_min, outline_w)
 
     # Finally write and return the new image bytes
     out = Image.alpha_composite(cropped, overlay)
     buf = BytesIO()
-    out.save(buf, "PNG")
+    # Reduction in quality drastically reduces file size, and doesn't seem to impact image quality
+    # too much - probably due to the nature of the maps i.e. large blocks of solid color
+    out.convert("RGB").save(buf, "JPEG", quality=30, optimize=True)
     buf.seek(0)
     return buf.getvalue()
 
@@ -301,22 +303,18 @@ def _load_miniscale_from_s3():
         return None
 
 
-def _parse_and_project_wkt(wkt_main, wkt_buffered, to_wm):
+def _parse_and_project_wkt(wkt_main, to_wm):
     try:
         geom_main = wkt.loads(wkt_main)
-        geom_buffer = wkt.loads(wkt_buffered)
     except Exception as e:
         current_app.logger.error(f"Invalid WKT geometry: {e}")
-        return None, None
+        return None
 
-    return (
-        transform(to_wm.transform, geom_main),
-        transform(to_wm.transform, geom_buffer),
-    )
+    return transform(to_wm.transform, geom_main)
 
 
-def _compute_crop_box(geom_buffer_wm, wm_to_px, width, height, MIN_SIZE):
-    minx, miny, maxx, maxy = geom_buffer_wm.bounds
+def _compute_crop_box(geom_wm, wm_to_px, width, height, MIN_SIZE):
+    minx, miny, maxx, maxy = geom_wm.bounds
 
     # Set up pixel crop box, and ensure correct ordering
     px_min, py_min = wm_to_px(minx, maxy)
@@ -365,31 +363,16 @@ def _compute_crop_box(geom_buffer_wm, wm_to_px, width, height, MIN_SIZE):
     return px_min, py_min, px_max, py_max
 
 
-def _draw_polygons(overlay, geom_buffer_wm, geom_main_wm, wm_to_px, px_min, py_min, outline_w):
+def _draw_polygon(overlay, geom, wm_to_px, px_min, py_min, outline_w):
     draw = ImageDraw.Draw(overlay)
+    fill = (180, 200, 220, 205)
+    outline = (0, 0, 0, 255)
 
-    def draw_polygon(geom, fill, outline, width):
-        polys = [geom] if isinstance(geom, Polygon) else list(geom.geoms)
-        for poly in polys:
-            rings = [poly.exterior.coords] + [r.coords for r in poly.interiors]
-            for ring in rings:
-                pts = [wm_to_px(x, y) for x, y in ring]
-                pts = [(x - px_min, y - py_min) for x, y in pts]
-                draw.polygon(pts, fill=fill)
-                draw.line(pts + [pts[0]], fill=outline, width=width)
-
-    # Draw buffered polygon first (lighter fill and thinner outline)
-    draw_polygon(
-        geom_buffer_wm,
-        fill=(130, 145, 180, 80),
-        outline=(0, 90, 180, 255),
-        width=max(1, outline_w - 6),
-    )
-
-    # Draw main polygon on top (darker fill and fatter outline)
-    draw_polygon(
-        geom_main_wm,
-        fill=(180, 200, 220, 205),
-        outline=(0, 0, 0, 255),
-        width=outline_w,
-    )
+    polys = [geom] if isinstance(geom, Polygon) else list(geom.geoms)
+    for poly in polys:
+        rings = [poly.exterior.coords] + [r.coords for r in poly.interiors]
+        for ring in rings:
+            pts = [wm_to_px(x, y) for x, y in ring]
+            pts = [(x - px_min, y - py_min) for x, y in pts]
+            draw.polygon(pts, fill=fill)
+            draw.line(pts + [pts[0]], fill=outline, width=outline_w)
