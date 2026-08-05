@@ -63,15 +63,24 @@ class EmailClient:
                 attachment_structure["ContentType"] = mime_type
             ses_attachments.append(attachment_structure)
 
-        # Add inline image if available
+        # Add inline and attached image if available
         if image:
             logger.debug(f"EmailClient.send_email image size in bytes: {len(image)}")
             attachment_structure = {
                 "RawContent": image,
                 "ContentDisposition": "INLINE",
-                "FileName": "areas.png",
+                "FileName": "areas.jpg",
                 "ContentId": "areas",
-                "ContentType": "image/png",
+                "ContentType": "image/jpeg",
+                "ContentTransferEncoding": "BASE64",
+            }
+            ses_attachments.append(attachment_structure)
+            attachment_structure = {
+                "RawContent": image,
+                "ContentDisposition": "ATTACHMENT",
+                "FileName": "areas.jpg",
+                "ContentId": "areas",
+                "ContentType": "image/jpeg",
                 "ContentTransferEncoding": "BASE64",
             }
             ses_attachments.append(attachment_structure)
@@ -150,7 +159,7 @@ class EmailClient:
                         f"recipients (BCC chunk size: {len(bcc_batch)}) with message_id {mock_id}"
                     )
                     if image:
-                        with open("output.png", "wb") as f:
+                        with open("output.jpg", "wb") as f:
                             f.write(image)
 
             return results
