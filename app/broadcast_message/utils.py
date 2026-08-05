@@ -279,13 +279,13 @@ def _geojson_to_miniscale_jpeg(wkt_main):
 
     # Reduce image size by taking a thumbnail.
     # ECS containers die otherwise due to OOM.
-    MAX_SIZE = 4096
+    MAX_SIZE = 2048
     out.thumbnail((MAX_SIZE, MAX_SIZE), Image.Resampling.LANCZOS)
 
     buf = BytesIO()
     # Reduction in quality drastically reduces file size, and doesn't seem to impact image quality
     # too much - probably due to the nature of the maps i.e. large blocks of solid color
-    out.save(buf, "JPEG", quality=65, optimize=True, subsampling=0)
+    out.save(buf, "JPEG", quality=75, optimize=True, subsampling=0)
     buf.seek(0)
     return buf.getvalue()
 
