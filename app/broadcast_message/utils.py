@@ -1,5 +1,7 @@
 import inspect
 import json
+import os
+import secrets
 from datetime import datetime, timezone
 from io import BytesIO
 
@@ -282,12 +284,18 @@ def _geojson_to_miniscale_jpeg(wkt_main):
     MAX_SIZE = 2048
     out.thumbnail((MAX_SIZE, MAX_SIZE), Image.Resampling.LANCZOS)
 
-    buf = BytesIO()
+    # Write to tmp file to avoid ECS OOM errors
+    rand_hex = secrets.token_hex(3)
+    tmp_file = f"/tmp/map_{rand_hex}.jpg"
+
     # Reduction in quality drastically reduces file size, and doesn't seem to impact image quality
     # too much - probably due to the nature of the maps i.e. large blocks of solid color
-    out.save(buf, "JPEG", quality=75, optimize=True, subsampling=0)
-    buf.seek(0)
-    return buf.getvalue()
+    out.save(tmp_file, "JPEG", quality=75, optimize=True, subsampling=0)
+    with open(tmp_file, "rb") as f:
+        img_bytes = f.read()
+
+    os.remove(tmp_file)
+    return img_bytes
 
 
 def _load_miniscale_from_s3():
