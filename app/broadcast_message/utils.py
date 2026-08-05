@@ -275,11 +275,11 @@ def _geojson_to_miniscale_jpeg(wkt_main):
     _draw_polygon(overlay, geom_wm, wm_to_px, px_min, py_min, outline_w)
 
     # Finally write and return the new image bytes
-    out = Image.alpha_composite(cropped, overlay)
+    out = Image.alpha_composite(cropped, overlay).convert("RGB")
     buf = BytesIO()
     # Reduction in quality drastically reduces file size, and doesn't seem to impact image quality
     # too much - probably due to the nature of the maps i.e. large blocks of solid color
-    out.convert("RGB").save(buf, "JPEG", quality=30, optimize=True)
+    out.save(buf, "JPEG", quality=30, optimize=True, subsampling=0)
     buf.seek(0)
     return buf.getvalue()
 
