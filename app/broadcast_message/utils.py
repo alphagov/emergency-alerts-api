@@ -297,8 +297,15 @@ def _geojson_to_miniscale_jpeg(wkt_main):
     # Draw polygon onto the overlay
     _draw_polygon(overlay, geom_wm, wm_to_cropped_px, outline_w)
 
-    # Composite small images in memory
-    final_img = Image.alpha_composite(cropped, overlay).convert("RGB")
+    # Composite the overlay onto the cropped map (results in an RGBA image)
+    rgba = Image.alpha_composite(cropped, overlay)
+
+    # Create a solid white RGB background canvas of the same size
+    final_img = Image.new("RGB", rgba.size, (255, 255, 255))
+
+    # Paste the RGBA image onto the white background using its own alpha channel as a mask.
+    # Any transparent/semi-transparent pixels will show the white background beneath them.
+    final_img.paste(rgba, (0, 0), mask=rgba.split()[3])
 
     # Save directly to BytesIO stream
     buffer = BytesIO()
@@ -308,6 +315,7 @@ def _geojson_to_miniscale_jpeg(wkt_main):
     base.close()
     cropped.close()
     overlay.close()
+    rgba.close()
     final_img.close()
 
     return buffer.getvalue()
