@@ -2,6 +2,8 @@ from datetime import datetime
 from unittest.mock import ANY, Mock, call
 
 import pytest
+from dramatiq.middleware.time_limit import TimeLimitExceeded
+from dramatiq.threading import Interrupt
 from freezegun import freeze_time
 
 from app.clients.cbc_proxy import CBCProxyRetryableException
@@ -456,8 +458,15 @@ def test_send_broadcast_provider_message_sends_cancel_with_references(
         ["vodafone", "Vodafone"],
     ],
 )
+@pytest.mark.parametrize(
+    "exception_type, exception_detail",
+    [
+        (CBCProxyRetryableException("test"), "CBCProxyRetryableException('test')"),
+        (TimeLimitExceeded("test"), "TimeLimitExceeded('test')"),
+    ],
+)
 def test_send_broadcast_provider_message_error_statuses_are_saved(
-    mocker, sample_broadcast_service, provider, provider_capitalised
+    mocker, sample_broadcast_service, provider, provider_capitalised, exception_type, exception_detail
 ):
     template = create_template(sample_broadcast_service, BROADCAST_TYPE)
 
@@ -476,15 +485,15 @@ def test_send_broadcast_provider_message_error_statuses_are_saved(
 
     mock_create_broadcast = mocker.patch(
         f"app.clients.cbc_proxy.CBCProxy{provider_capitalised}.create_and_send_broadcast",
-        side_effect=CBCProxyRetryableException("oh no"),
+        side_effect=exception_type,
     )
 
     # The retry logic here is based around the idea we should bubble exceptions where appropriate
-    # and that the actor is registered for retry (for SqsRetryMiddleware to handle)
+    # and that the Dramatiq actor is registered for retry (for SqsRetryMiddleware to handle)
     assert send_broadcast_provider_message.kw.get("allow_retry")
-    assert send_broadcast_provider_message.kw.get("retry_for") == CBCProxyRetryableException
+    assert send_broadcast_provider_message.kw.get("retry_for") == {CBCProxyRetryableException, Interrupt}
 
-    with pytest.raises(CBCProxyRetryableException):
+    with pytest.raises(type(exception_type)):
         send_broadcast_provider_message(provider=provider, broadcast_event_id=str(event.id))
 
     mock_create_broadcast.assert_called_once_with(
@@ -510,7 +519,7 @@ def test_send_broadcast_provider_message_error_statuses_are_saved(
     assert len(broadcast_provider_message.statuses) == 2
     assert broadcast_provider_message.statuses[0].status == BROADCAST_PROVIDER_STATUS_SENDING
     assert broadcast_provider_message.statuses[1].status == BROADCAST_PROVIDER_STATUS_ERR
-    assert broadcast_provider_message.statuses[1].error_detail == {"exception": "CBCProxyRetryableException('oh no')"}
+    assert broadcast_provider_message.statuses[1].error_detail == {"exception": exception_detail}
     assert broadcast_provider_message.get_latest_status_entry() == broadcast_provider_message.statuses[1]
 
 
