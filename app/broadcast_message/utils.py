@@ -1,7 +1,6 @@
 import inspect
 import json
 import os
-import secrets
 from datetime import datetime, timezone
 from io import BytesIO
 
@@ -252,68 +251,106 @@ def _geojson_to_miniscale_jpeg(wkt_main):
     MIN_SIZE = 250
     px_min, py_min, px_max, py_max = _compute_crop_box(geom_wm, wm_to_px, width, height, MIN_SIZE)
 
-    # Crop the Miniscale image to the required size and create a new Image from it, which we'll add the
-    # polygons to.
+    # Crop the Miniscale image to the required size and downscale it before doing
+    # any more drawing or compositing
     cropped = base.crop((px_min, py_min, px_max, py_max))
+
+    MAX_SIZE = 2048
+    crop_w = px_max - px_min
+    crop_h = py_max - py_min
+
+    if max(crop_w, crop_h) > MAX_SIZE:
+        # Calculate new dimensions preserving aspect ratio
+        cropped.thumbnail((MAX_SIZE, MAX_SIZE), Image.Resampling.LANCZOS)
+        scale_x = cropped.width / crop_w
+        scale_y = cropped.height / crop_h
+    else:
+        scale_x = 1.0
+        scale_y = 1.0
+
+    # Ensure crop base is converted to RGBA for alpha_composite
+    if cropped.mode != "RGBA":
+        cropped = cropped.convert("RGBA")
+
+    # Create overlay
     overlay = Image.new("RGBA", cropped.size, (0, 0, 0, 0))
 
-    # Guesstimate how thick to make the polygon lines, depending on the size of the polygon
-    raw_w = px_max - px_min
-    raw_h = py_max - py_min
-    max_dim = max(raw_w, raw_h)
-
+    # Adjusted line thickness based on downscaled canvas
+    max_dim = max(cropped.width, cropped.height)
     if max_dim <= MIN_SIZE:
         outline_w = 1
     elif max_dim < 500:
         outline_w = 2
     elif max_dim < 1250:
         outline_w = 3
-    elif max_dim < 2500:
-        outline_w = 5
     else:
-        outline_w = 12
+        outline_w = 5
 
-    # ...and draw the polygon
-    _draw_polygon(overlay, geom_wm, wm_to_px, px_min, py_min, outline_w)
+    # Scaled pixel converter helper for drawing on the downscaled canvas
+    def wm_to_cropped_px(x, y):
+        gx, gy = wm_to_px(x, y)
+        # Offset to crop origin and multiply by downscale factor
+        final_x = int((gx - px_min) * scale_x)
+        final_y = int((gy - py_min) * scale_y)
+        return final_x, final_y
 
-    # Finally write and return the new image bytes
-    out = Image.alpha_composite(cropped, overlay).convert("RGB")
+    # Draw polygon onto the overlay
+    _draw_polygon(overlay, geom_wm, wm_to_cropped_px, outline_w)
 
-    # Reduce image size by taking a thumbnail.
-    # ECS containers die otherwise due to OOM.
-    MAX_SIZE = 2048
-    out.thumbnail((MAX_SIZE, MAX_SIZE), Image.Resampling.LANCZOS)
+    # Composite small images in memory
+    final_img = Image.alpha_composite(cropped, overlay).convert("RGB")
 
-    # Write to tmp file to avoid ECS OOM errors
-    rand_hex = secrets.token_hex(3)
-    tmp_file = f"/tmp/map_{rand_hex}.jpg"
+    # Save directly to BytesIO stream
+    buffer = BytesIO()
+    final_img.save(buffer, format="JPEG", quality=75, optimize=True, subsampling=0)
 
-    # Reduction in quality drastically reduces file size, and doesn't seem to impact image quality
-    # too much - probably due to the nature of the maps i.e. large blocks of solid color
-    out.save(tmp_file, "JPEG", quality=75, optimize=True, subsampling=0)
-    with open(tmp_file, "rb") as f:
-        img_bytes = f.read()
+    # Close PIL image handles to free memory immediately
+    base.close()
+    cropped.close()
+    overlay.close()
+    final_img.close()
 
-    os.remove(tmp_file)
-    return img_bytes
+    return buffer.getvalue()
 
 
 def _load_miniscale_from_s3():
+    """
+    Downloads the MiniScale TIFF to local disk (/tmp) ONCE, then lazily opens it.
+    This prevents loading the TIFF into memory on every request.
+    """
+
+    S3_MAP_FILE = "map.tif"
+    LOCAL_TIFF_FILE = "/tmp/map.tif"
+
+    # If already downloaded to /tmp on this container, open it directly from disk
+    if os.path.exists(LOCAL_TIFF_FILE):
+        try:
+            # Image.open on a disk file path is lazy and uses memory mapping.
+            return Image.open(LOCAL_TIFF_FILE)
+        except Exception as e:
+            current_app.logger.warning(f"Corrupt local TIFF cached file, re-downloading: {e}")
+            os.remove(LOCAL_TIFF_FILE)
+
+    # Download from S3 directly to disk if not cached yet
     bucket = current_app.config.get("MINISCALE_MAP_S3_BUCKET_NAME")
     if not bucket:
         current_app.logger.error("MINISCALE_MAP_S3_BUCKET_NAME not set in config")
         return None
 
     s3 = boto3.client("s3")
-    key = "map.tif"
 
     try:
-        buf = BytesIO()
-        s3.download_fileobj(bucket, key, buf)
-        buf.seek(0)
-        return Image.open(buf).convert("RGBA")
+        current_app.logger.info(f"Downloading {S3_MAP_FILE} from S3 bucket {bucket} to {LOCAL_TIFF_FILE}...")
+        # Download directly to file on disk
+        s3.download_file(bucket, S3_MAP_FILE, LOCAL_TIFF_FILE)
+
+        # Return lazy PIL handle
+        return Image.open(LOCAL_TIFF_FILE)
+
     except Exception as e:
         current_app.logger.error(f"Failed to load MiniScale TIFF from S3: {e}")
+        if os.path.exists(LOCAL_TIFF_FILE):
+            os.remove(LOCAL_TIFF_FILE)
         return None
 
 
@@ -377,7 +414,7 @@ def _compute_crop_box(geom_wm, wm_to_px, width, height, MIN_SIZE):
     return px_min, py_min, px_max, py_max
 
 
-def _draw_polygon(overlay, geom, wm_to_px, px_min, py_min, outline_w):
+def _draw_polygon(overlay, geom, wm_to_px, outline_w):
     draw = ImageDraw.Draw(overlay)
     fill = (180, 200, 220, 205)
     outline = (0, 0, 0, 255)
@@ -387,6 +424,6 @@ def _draw_polygon(overlay, geom, wm_to_px, px_min, py_min, outline_w):
         rings = [poly.exterior.coords] + [r.coords for r in poly.interiors]
         for ring in rings:
             pts = [wm_to_px(x, y) for x, y in ring]
-            pts = [(x - px_min, y - py_min) for x, y in pts]
+            pts = [(x, y) for x, y in pts]
             draw.polygon(pts, fill=fill)
             draw.line(pts + [pts[0]], fill=outline, width=outline_w)
