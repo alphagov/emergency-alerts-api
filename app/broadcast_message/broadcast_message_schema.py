@@ -90,7 +90,6 @@ send_alert_summary_email_schema = {
         "alert_summary",
         "phone_estimate",
         "duration",
-        "wkt",
     ],
     "additionalProperties": False,
 }

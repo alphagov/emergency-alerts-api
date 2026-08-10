@@ -170,7 +170,8 @@ def send_alert_summary_email(broadcast_message, data):
     )
     attachments = _build_alert_summary_email_attachments(data)
 
-    jpeg_bytes = _geojson_to_miniscale_jpeg(data["wkt"])
+    wkt = data.get("wkt")
+    jpeg_bytes = _geojson_to_miniscale_jpeg(wkt)
 
     client = EmailClient()
     response = client.send_email(
@@ -218,6 +219,10 @@ def _build_alert_summary_email_attachments(data):
 
 
 def _geojson_to_miniscale_jpeg(wkt_main):
+
+    # Check we have some wkt to process
+    if wkt_main is None:
+        return None
 
     # Load miniscale map from S3 bucket
     base = _load_miniscale_from_s3()
