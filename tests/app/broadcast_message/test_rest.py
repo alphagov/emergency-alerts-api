@@ -932,7 +932,7 @@ def test_generate_s3_keys_from_list_of_id_timestamp_tuples():
     assert _generate_s3_keys(messages) == expected
 
 
-def test_send_alert_summary_email(admin_request, sample_broadcast_service, mocker):
+def test_send_alert_summary_email_no_wkt(admin_request, sample_broadcast_service, mocker):
     t = create_template(sample_broadcast_service, BROADCAST_TYPE)
     bm = create_broadcast_message(t, status=BroadcastStatusType.DRAFT)
 
@@ -991,6 +991,55 @@ def test_send_alert_summary_email(admin_request, sample_broadcast_service, mocke
 
 
 @pytest.mark.parametrize(
+    "wkt_value",
+    [
+        # Simple 4‑point polygon over London
+        "POLYGON ((-0.1400 51.5150,-0.1400 51.4950,-0.1000 51.4950,-0.1000 51.5150,-0.1400 51.5150))",
+        # Equivalent MULTIPOLYGON wrapper
+        "MULTIPOLYGON (((-0.1400 51.5150,-0.1400 51.4950,-0.1000 51.4950,-0.1000 51.5150,-0.1400 51.5150)))",
+    ],
+)
+def test_send_alert_summary_email_wkt(admin_request, sample_broadcast_service, mocker, wkt_value):
+    t = create_template(sample_broadcast_service, BROADCAST_TYPE)
+    bm = create_broadcast_message(t, status=BroadcastStatusType.DRAFT)
+
+    mock_send = mocker.patch(
+        "app.broadcast_message.utils.EmailClient.send_email",
+        return_value={"ResponseMetadata": {"HTTPStatusCode": 200}},
+    )
+
+    geojson = json.loads('{"type": "Point", "coordinates": [0, 0]}')
+    somexml = "<a/>"
+
+    response = admin_request.post(
+        "broadcast_message.send_alert_summary_email",
+        _data={
+            "geojson": geojson,
+            "cap_xml": somexml,
+            "ibag_xml": somexml,
+            "phone_estimate": "less than 1 million",
+            "duration": "30 minutes",
+            "alert_summary": "alert summary",
+            "created_by": str(t.created_by_id),
+            "wkt": wkt_value,
+        },
+        service_id=t.service_id,
+        broadcast_message_id=bm.id,
+        _expected_status=200,
+    )
+
+    mock_send.assert_called_once()
+    assert response["ResponseMetadata"]["HTTPStatusCode"] == 200
+
+    # Extract and check the arguments/content passed to SES
+    args, kwargs = mock_send.call_args
+
+    # Valid WKT must produce an image
+    assert kwargs["image"] is not None
+    assert isinstance(kwargs["image"], bytes)
+
+
+@pytest.mark.parametrize(
     "data, expected_errors",
     [
         (
@@ -1011,10 +1060,32 @@ def test_send_alert_summary_email(admin_request, sample_broadcast_service, mocke
                 "duration": "30 minutes",
                 "created_by": str(uuid.uuid4()),
                 "foo": "something else",
+                "wkt": "not-a-valid-wkt",
             },
             [
                 {"error": "ValidationError", "message": "alert_summary  should be non-empty"},
+                {
+                    "error": "ValidationError",
+                    "message": "wkt not-a-valid-wkt does not match ^(POLYGON|MULTIPOLYGON)\\\\s*\\\\(.*\\\\)$",
+                },
                 {"error": "ValidationError", "message": "Additional properties are not allowed (foo was unexpected)"},
+            ],
+        ),
+        (
+            {
+                "geojson": json.loads('{"type": "Point", "coordinates": [0, 0]}'),
+                "alert_summary": "summary",
+                "phone_estimate": "more than 1 million",
+                "duration": "30 minutes",
+                "created_by": str(uuid.uuid4()),
+                "wkt": "",
+            },
+            [
+                {"error": "ValidationError", "message": "wkt  should be non-empty"},
+                {
+                    "error": "ValidationError",
+                    "message": "wkt  does not match ^(POLYGON|MULTIPOLYGON)\\\\s*\\\\(.*\\\\)$",
+                },
             ],
         ),
     ],
