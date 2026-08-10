@@ -1000,6 +1000,10 @@ def test_send_alert_summary_email_no_wkt(admin_request, sample_broadcast_service
     ],
 )
 def test_send_alert_summary_email_wkt(admin_request, sample_broadcast_service, mocker, wkt_value):
+    mocker.patch(
+        "app.broadcast_message.utils._geojson_to_miniscale_jpeg",
+        return_value=b"jpegbytes",
+    )
     t = create_template(sample_broadcast_service, BROADCAST_TYPE)
     bm = create_broadcast_message(t, status=BroadcastStatusType.DRAFT)
 
@@ -1035,7 +1039,7 @@ def test_send_alert_summary_email_wkt(admin_request, sample_broadcast_service, m
     args, kwargs = mock_send.call_args
 
     # Valid WKT must produce an image
-    assert kwargs["image"] is not None
+    assert kwargs["image"] == b"jpegbytes"
     assert isinstance(kwargs["image"], bytes)
 
 
