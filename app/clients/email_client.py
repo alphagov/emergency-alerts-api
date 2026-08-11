@@ -63,18 +63,9 @@ class EmailClient:
                 attachment_structure["ContentType"] = mime_type
             ses_attachments.append(attachment_structure)
 
-        # Add inline and attached image if available
+        # Add image as attachment if available
         if image:
             logger.debug(f"EmailClient.send_email image size in bytes: {len(image)}")
-            attachment_structure = {
-                "RawContent": image,
-                "ContentDisposition": "INLINE",
-                "FileName": "areas.jpg",
-                "ContentId": "areas",
-                "ContentType": "image/jpeg",
-                "ContentTransferEncoding": "BASE64",
-            }
-            ses_attachments.append(attachment_structure)
             attachment_structure = {
                 "RawContent": image,
                 "ContentDisposition": "ATTACHMENT",
