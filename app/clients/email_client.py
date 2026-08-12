@@ -82,6 +82,12 @@ class EmailClient:
         if ses_attachments:
             simple_message["Attachments"] = ses_attachments
 
+        # Set custom headers to suppress out of office replies
+        email_headers = [
+            {"Name": "Auto-Submitted", "Value": "auto-generated"},
+            {"Name": "X-Auto-Response-Suppress", "Value": "All"},
+        ]
+
         # Chunk the BCC list to respect the 50 maximum recipient limit
         # First batch budget accommodates any To and Cc addresses
         fixed_recipients_count = len(to_addresses) + len(cc_addresses)
@@ -124,7 +130,9 @@ class EmailClient:
                 # Send email, if enabled (ssev2 not supported in localstack envs)
                 if self.send_enabled:
                     response = self.client.send_email(
-                        FromEmailAddress=self.sender, Destination=destination, Content={"Simple": simple_message}
+                        FromEmailAddress=self.sender,
+                        Destination=destination,
+                        Content={"Simple": simple_message, "Headers": email_headers},
                     )
                     batch_total = len(bcc_batch) + (fixed_recipients_count if idx == 0 else 0)
                     results.append(
