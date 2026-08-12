@@ -76,17 +76,18 @@ class EmailClient:
             }
             ses_attachments.append(attachment_structure)
 
-        # Construct Simple message payload
-        simple_message = {"Subject": {"Data": subject, "Charset": "UTF-8"}, "Body": body_content}
+        # Construct Simple message payload with custom headers
+        simple_message = {
+            "Subject": {"Data": subject, "Charset": "UTF-8"},
+            "Body": body_content,
+            "Headers": [
+                {"Name": "Auto-Submitted", "Value": "auto-generated"},
+                {"Name": "X-Auto-Response-Suppress", "Value": "All"},
+            ],
+        }
 
         if ses_attachments:
             simple_message["Attachments"] = ses_attachments
-
-        # Set custom headers to suppress out of office replies
-        email_headers = [
-            {"Name": "Auto-Submitted", "Value": "auto-generated"},
-            {"Name": "X-Auto-Response-Suppress", "Value": "All"},
-        ]
 
         # Chunk the BCC list to respect the 50 maximum recipient limit
         # First batch budget accommodates any To and Cc addresses
@@ -132,7 +133,7 @@ class EmailClient:
                     response = self.client.send_email(
                         FromEmailAddress=self.sender,
                         Destination=destination,
-                        Content={"Simple": simple_message, "Headers": email_headers},
+                        Content={"Simple": simple_message},
                     )
                     batch_total = len(bcc_batch) + (fixed_recipients_count if idx == 0 else 0)
                     results.append(
