@@ -82,7 +82,14 @@ send_alert_summary_email_schema = {
         "phone_estimate": {"type": "string"},
         "duration": {"type": "string"},
         "created_by": uuid,
+        "wkt": {"type": "string", "minLength": 1, "pattern": "^(POLYGON|MULTIPOLYGON)\\s*\\(.*\\)$"},
     },
-    "required": ["created_by", "geojson", "alert_summary", "phone_estimate", "duration"],
+    "required": [
+        "created_by",
+        "geojson",
+        "alert_summary",
+        "phone_estimate",
+        "duration",
+    ],
     "additionalProperties": False,
 }

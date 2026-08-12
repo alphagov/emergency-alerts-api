@@ -193,6 +193,7 @@ class Config(object):
     SES_FROM_ADDRESS = "support@localhost"
     SES_REGION = "us-east-1"
     SES_ENABLED = os.getenv("SES_ENABLED", "true").lower() != "false"
+    MINISCALE_MAP_S3_BUCKET_NAME = os.getenv("MINISCALE_MAP_S3_BUCKET_NAME")
 
 
 class Hosted(Config):
