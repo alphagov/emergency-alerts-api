@@ -112,7 +112,8 @@ def log_throttled_login(ip):
 
 def get_ip_address():
     if x_forwarded_for_ips := request.headers.get("X-Forwarded-For"):
-        return [ip.strip() for ip in x_forwarded_for_ips.split(",")][0]
+        # Use the rightmost IP
+        return [ip.strip() for ip in x_forwarded_for_ips.split(",")][-1]
     else:
         return request.remote_addr
 

@@ -333,6 +333,38 @@ def test_update_broadcast_message_status_creates_event_with_correct_content_if_b
     assert alert_event.transmitted_content == {"body": "tailor made emergency broadcast content"}
 
 
+@pytest.mark.parametrize(
+    "content, expected_content",
+    [
+        ("Test Alert", "Test Alert"),
+        ("Some content\r\n€ŷŵ~\r\n‘’“”—–-", "Some content\n€ŷŵ~\n''\"\"---"),
+        ("Hello <b>World</b>", "Hello &lt;b&gt;World&lt;/b&gt;"),
+        ("Emergency & Alerts & Service", "Emergency &amp; Alerts &amp; Service"),
+    ],
+)
+def test_update_broadcast_message_status_creates_broadcast_event_with_sanitised_content(
+    sample_broadcast_service, mocker, content, expected_content
+):
+    broadcast_message = create_broadcast_message(
+        service=sample_broadcast_service,
+        content=content,
+        status=BroadcastStatusType.PENDING_APPROVAL,
+        areas={"ids": ["london"], "simple_polygons": [[[51.30, 0.7], [51.28, 0.8], [51.25, -0.7]]]},
+    )
+    approver = create_user(email="approver@gov.uk")
+    sample_broadcast_service.users.append(approver)
+    mock_task = mocker.patch("app.tasks.broadcast_message_tasks.send_broadcast_event.send")
+
+    update_broadcast_message_status(broadcast_message, BroadcastStatusType.BROADCASTING, approver)
+
+    assert len(broadcast_message.events) == 1
+    alert_event = broadcast_message.events[0]
+
+    mock_task.assert_called_once_with(broadcast_event_id=str(alert_event.id))
+
+    assert alert_event.transmitted_content == {"body": expected_content}
+
+
 def test_update_broadcast_message_status_creates_zendesk_ticket(mocker, notify_api, sample_broadcast_service):
     broadcast_message = create_broadcast_message(
         service=sample_broadcast_service,

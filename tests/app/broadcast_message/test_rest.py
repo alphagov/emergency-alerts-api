@@ -18,6 +18,7 @@ from app.dao.broadcast_message_history_dao import (
 from app.models import (
     BROADCAST_PROVIDER_STATUS_ACK,
     BROADCAST_PROVIDER_STATUS_ERR,
+    BROADCAST_PROVIDER_STATUS_ERR_RETRY_EXHAUSTED,
     BROADCAST_PROVIDER_STATUS_SENDING,
     BROADCAST_TYPE,
     BroadcastEventMessageType,
@@ -267,23 +268,33 @@ def test_get_broadcast_messages_for_service_with_user(
         add_broadcast_provider_message_status(bpm1, status=BROADCAST_PROVIDER_STATUS_ERR)
     with freeze_time("2020-01-01 13:00"):
         bm2 = create_broadcast_message(t, status=BroadcastStatusType.BROADCASTING)
-        be2 = create_broadcast_event(broadcast_message=bm1)
+        be2 = create_broadcast_event(broadcast_message=bm2)
         bpm2 = create_broadcast_provider_message(broadcast_event=be2, provider="test")
         add_broadcast_provider_message_status(bpm2, status=BROADCAST_PROVIDER_STATUS_SENDING)
         add_broadcast_provider_message_status(bpm2, status=BROADCAST_PROVIDER_STATUS_ACK)
+    with freeze_time("2020-01-01 14:00"):
+        bm3 = create_broadcast_message(t, status=BroadcastStatusType.BROADCASTING)
+        be3 = create_broadcast_event(broadcast_message=bm3)
+        bpm3 = create_broadcast_provider_message(broadcast_event=be3, provider="test")
+        add_broadcast_provider_message_status(bpm3, status=BROADCAST_PROVIDER_STATUS_SENDING)
+        add_broadcast_provider_message_status(bpm3, status=BROADCAST_PROVIDER_STATUS_ERR_RETRY_EXHAUSTED)
     with freeze_time("2020-01-01 13:00"):
-        bm3 = create_broadcast_message(t_2)
+        bm_s2 = create_broadcast_message(t_2)
 
     # Getting all Broadcast messages from first sample service and making relevant assertions
     response_service_1 = admin_request.get(
         "broadcast_message.get_broadcast_msgs_for_service", service_id=t.service_id, _expected_status=200
     )
-    assert len(response_service_1["broadcast_messages"]) == 2
+    assert len(response_service_1["broadcast_messages"]) == 3
     assert response_service_1["broadcast_messages"][0]["id"] == str(bm1.id)
     assert response_service_1["broadcast_messages"][1]["id"] == str(bm2.id)
+    assert response_service_1["broadcast_messages"][2]["id"] == str(bm3.id)
     assert response_service_1["broadcast_messages"][0]["created_by"] == sample_user.name
+    assert response_service_1["broadcast_messages"][1]["created_by"] == sample_user.name
+    assert response_service_1["broadcast_messages"][2]["created_by"] == sample_user.name
     assert response_service_1["broadcast_messages"][0]["sending_error"] is True
     assert response_service_1["broadcast_messages"][1]["sending_error"] is False
+    assert response_service_1["broadcast_messages"][2]["sending_error"] is True
 
     # Getting all Broadcast messages from second sample service and making relevant assertions
     response_service_2 = admin_request.get(
@@ -292,7 +303,7 @@ def test_get_broadcast_messages_for_service_with_user(
 
     assert len(response_service_2["broadcast_messages"]) == 1
     assert response_service_2["broadcast_messages"][0]["created_by"] == sample_user_2.name
-    assert response_service_2["broadcast_messages"][0]["id"] == str(bm3.id)
+    assert response_service_2["broadcast_messages"][0]["id"] == str(bm_s2.id)
     assert response_service_2["broadcast_messages"][0]["sending_error"] is False
 
 
@@ -329,7 +340,7 @@ def test_create_broadcast_message(admin_request, sample_broadcast_service, train
         "ids": ["manchester"],
         "simple_polygons": [[[50.12, 1.2], [50.13, 1.2], [50.14, 1.21]]],
     }
-    assert response["content"] == "Some content\n€ŷŵ~\n''\"\"---"
+    assert response["content"] == "Some content\r\n€ŷŵ~\r\n‘’“”—–-"
 
     broadcast_message = dao_get_broadcast_message_by_id_and_service_id(response["id"], sample_broadcast_service.id)
     assert broadcast_message.stubbed == training_mode_service
@@ -418,12 +429,20 @@ def test_create_broadcast_message_400s_if_content_too_long(
     assert response.get("message") == expected_errors
 
 
+@pytest.mark.parametrize(
+    "content",
+    (
+        ("Some content\r\n€ŷŵ~\r\n‘’“”—–-"),
+        ("Hello <b>World</b>"),
+        ("Emergency & Alerts & Service"),
+    ),
+)
 @freeze_time("2020-01-01")
-def test_create_broadcast_message_can_be_created_from_content(admin_request, sample_broadcast_service):
+def test_create_broadcast_message_can_be_created_from_content(admin_request, sample_broadcast_service, content):
     response = admin_request.post(
         "broadcast_message.create_broadcast_message",
         _data={
-            "content": "Some content\r\n€ŷŵ~\r\n‘’“”—–-",
+            "content": content,
             "reference": "abc123",
             "service_id": str(sample_broadcast_service.id),
             "created_by": str(sample_broadcast_service.created_by_id),
@@ -431,7 +450,8 @@ def test_create_broadcast_message_can_be_created_from_content(admin_request, sam
         service_id=sample_broadcast_service.id,
         _expected_status=201,
     )
-    assert response["content"] == "Some content\n€ŷŵ~\n''\"\"---"
+    # broadcast message content stored exactly as in posted data, no escaping
+    assert response["content"] == content
     assert response["reference"] == "abc123"
     assert response["template_id"] is None
     assert response["cap_event"] is None

@@ -459,7 +459,15 @@ def create_2fa_code(template_id, code_type, user_to_send_to, secret_code, recipi
         "reply_to": current_app.config["EAS_EMAIL_REPLY_TO_ID"] if code_type == EMAIL_TYPE else None,
     }
 
-    current_app.logger.info("create_2fa_code", extra={"python_module": __name__, "notification": notification})
+    current_app.logger.info(
+        "create_2fa_code",
+        extra={
+            "python_module": __name__,
+            "template_id": template_id,
+            "code_type": code_type,
+            "recipient": recipient,
+        },
+    )
 
     response = notify_send(notification)
 
@@ -515,7 +523,8 @@ def send_user_confirm_new_email(user_id):
         extra={
             "python_module": __name__,
             "user_id": user_id,
-            "notification": notification,
+            "template_id": notification["template_id"],
+            "recipient": notification["recipient"],
         },
     )
 
@@ -550,7 +559,8 @@ def send_new_user_email_verification(user_id):
         extra={
             "python_module": __name__,
             "user_id": user_id,
-            "notification": notification,
+            "template_id": notification["template_id"],
+            "recipient": notification["recipient"],
         },
     )
 
@@ -713,8 +723,6 @@ def send_user_reset_password():
     data = email_data_request_schema.load(request_json)
     user_to_send_to = get_user_by_email(data["email"])
 
-    print(user_to_send_to)
-
     notification = {
         "type": EMAIL_TYPE,
         "template_id": current_app.config["PASSWORD_RESET_TEMPLATE_ID"],
@@ -730,7 +738,14 @@ def send_user_reset_password():
         },
     }
 
-    current_app.logger.info("send_user_reset_password", extra={"python_module": __name__, "notification": notification})
+    current_app.logger.info(
+        "send_user_reset_password",
+        extra={
+            "python_module": __name__,
+            "template_id": notification["template_id"],
+            "recipient": notification["recipient"],
+        },
+    )
 
     notify_send(notification)
 

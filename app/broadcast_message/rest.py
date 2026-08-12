@@ -38,7 +38,7 @@ from app.dao.templates_dao import dao_get_template_by_id_and_service_id
 from app.dao.users_dao import get_user_by_id
 from app.errors import InvalidRequest, register_errors
 from app.models import (
-    BROADCAST_PROVIDER_STATUS_ERR,
+    FAILED_BROADCAST_PROVIDER_STATUSES,
     BroadcastEventMessageType,
     BroadcastMessage,
     BroadcastStatusType,
@@ -90,7 +90,7 @@ def get_broadcast_msgs_for_service(service_id):
         if message_type != BroadcastEventMessageType.ALERT:
             continue
 
-        if broadcast_provider_message.get_latest_status_entry().status == BROADCAST_PROVIDER_STATUS_ERR:
+        if broadcast_provider_message.get_latest_status_entry().status in FAILED_BROADCAST_PROVIDER_STATUSES:
             failed_broadcast_ids.add(broadcast_id)
 
     broadcast_messages = [
@@ -201,7 +201,6 @@ def create_broadcast_message(service_id):
             + (" (because it could not be GSM7 encoded)" if temporary_template.non_gsm_characters else ""),
             status_code=400,
         )
-    content = str(temporary_template)
     reference = data["reference"]
 
     broadcast_message = BroadcastMessage(
@@ -213,7 +212,7 @@ def create_broadcast_message(service_id):
         starts_at=_parse_nullable_datetime(data.get("starts_at")),
         finishes_at=_parse_nullable_datetime(data.get("finishes_at")),
         created_by_id=user.id,
-        content=content,
+        content=data["content"],  # Storing broadcast message content as raw text from posted data
         reference=reference,
         stubbed=service.restricted,
     )
