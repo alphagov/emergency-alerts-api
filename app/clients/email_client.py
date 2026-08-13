@@ -76,8 +76,15 @@ class EmailClient:
             }
             ses_attachments.append(attachment_structure)
 
-        # Construct Simple message payload
-        simple_message = {"Subject": {"Data": subject, "Charset": "UTF-8"}, "Body": body_content}
+        # Construct Simple message payload with custom headers
+        simple_message = {
+            "Subject": {"Data": subject, "Charset": "UTF-8"},
+            "Body": body_content,
+            "Headers": [
+                {"Name": "Auto-Submitted", "Value": "auto-generated"},
+                {"Name": "X-Auto-Response-Suppress", "Value": "All"},
+            ],
+        }
 
         if ses_attachments:
             simple_message["Attachments"] = ses_attachments
@@ -124,7 +131,9 @@ class EmailClient:
                 # Send email, if enabled (ssev2 not supported in localstack envs)
                 if self.send_enabled:
                     response = self.client.send_email(
-                        FromEmailAddress=self.sender, Destination=destination, Content={"Simple": simple_message}
+                        FromEmailAddress=self.sender,
+                        Destination=destination,
+                        Content={"Simple": simple_message},
                     )
                     batch_total = len(bcc_batch) + (fixed_recipients_count if idx == 0 else 0)
                     results.append(
