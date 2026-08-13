@@ -18,6 +18,11 @@ Additional Info
 {{ broadcast_message.extra_content }}
 
 {% endif %}
+{% if data.areas %}
+Areas
+----------------------------------------
+{% for area in data.areas %}{{ area }}
+{% endfor %}{% endif %}
 Alert Duration
 ----------------------------------------
 {{ data.duration }}
