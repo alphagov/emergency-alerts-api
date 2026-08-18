@@ -83,6 +83,10 @@ send_alert_summary_email_schema = {
         "duration": {"type": "string"},
         "created_by": uuid,
         "wkt": {"type": "string", "minLength": 1, "pattern": "^(POLYGON|MULTIPOLYGON)\\s*\\(.*\\)$"},
+        "areas": {
+            "type": "array",
+            "items": {"type": "string"},
+        },
     },
     "required": [
         "created_by",
@@ -90,6 +94,8 @@ send_alert_summary_email_schema = {
         "alert_summary",
         "phone_estimate",
         "duration",
+        "wkt",
+        "areas",
     ],
     "additionalProperties": False,
 }

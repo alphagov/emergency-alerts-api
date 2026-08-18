@@ -29,6 +29,18 @@
       </p>
       {% endif %}
 
+      {% if data.areas %}
+        <p style="font-size:16px; color:#0b0c0c; margin:0;">
+          <strong>Areas</strong>
+        </p>
+
+        {% for area in data.areas %}
+          <p style="font-size:16px; color:#0b0c0c; margin:0;">
+            {{ area }}
+          </p>
+        {% endfor %}
+      {% endif %}
+
       <p style="font-size:16px; color:#0b0c0c;">
         <strong>Alert Duration</strong><br>{{ data.duration }}
       </p>
