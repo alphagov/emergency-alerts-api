@@ -1,7 +1,7 @@
 """
 
-Revision ID: 0430_adjust_area_tables
-Revises: 0429_unescape_message_content
+Revision ID: 0431_adjust_area_tables.py
+Revises: 0430_add_bpm_err_retry_exhausted
 Create Date: 2026-08-05 14:22:30
 
 """
@@ -13,8 +13,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision = "0430_adjust_area_tables"
-down_revision = "0429_unescape_message_content"
+revision = "0431_adjust_area_tables.py"
+down_revision = "0430_add_bpm_err_retry_exhausted"
 
 
 def upgrade():
