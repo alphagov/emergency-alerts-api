@@ -28,7 +28,15 @@ class EmailClient:
         self.send_enabled = current_app.config["SES_ENABLED"]
 
     def send_email(
-        self, subject, text_body, html_body, to_addresses=None, cc_addresses=None, bcc_addresses=None, attachments=None
+        self,
+        subject,
+        text_body,
+        html_body,
+        to_addresses=None,
+        cc_addresses=None,
+        bcc_addresses=None,
+        attachments=None,
+        image=None,
     ):
         """
         Send an email with optional attachments using SESv2 Simple content structure.
@@ -38,6 +46,7 @@ class EmailClient:
         cc_addresses = cc_addresses or []
         bcc_addresses = bcc_addresses or []
         attachments = attachments or []
+        image = image or None
 
         # Build the Body structure
         body_content = {}
@@ -49,13 +58,33 @@ class EmailClient:
         # Format attachments for the SESv2 Simple schema
         ses_attachments = []
         for filename, file_bytes, mime_type in attachments:
-            attachment_structure = {"RawContent": file_bytes, "FileName": filename}
+            attachment_structure = {"RawContent": file_bytes, "ContentDisposition": "ATTACHMENT", "FileName": filename}
             if mime_type:
                 attachment_structure["ContentType"] = mime_type
             ses_attachments.append(attachment_structure)
 
-        # Construct Simple message payload
-        simple_message = {"Subject": {"Data": subject, "Charset": "UTF-8"}, "Body": body_content}
+        # Add image as attachment if available
+        if image:
+            logger.debug(f"EmailClient.send_email image size in bytes: {len(image)}")
+            attachment_structure = {
+                "RawContent": image,
+                "ContentDisposition": "ATTACHMENT",
+                "FileName": "areas.jpg",
+                "ContentId": "areas",
+                "ContentType": "image/jpeg",
+                "ContentTransferEncoding": "BASE64",
+            }
+            ses_attachments.append(attachment_structure)
+
+        # Construct Simple message payload with custom headers
+        simple_message = {
+            "Subject": {"Data": subject, "Charset": "UTF-8"},
+            "Body": body_content,
+            "Headers": [
+                {"Name": "Auto-Submitted", "Value": "auto-generated"},
+                {"Name": "X-Auto-Response-Suppress", "Value": "All"},
+            ],
+        }
 
         if ses_attachments:
             simple_message["Attachments"] = ses_attachments
@@ -102,7 +131,9 @@ class EmailClient:
                 # Send email, if enabled (ssev2 not supported in localstack envs)
                 if self.send_enabled:
                     response = self.client.send_email(
-                        FromEmailAddress=self.sender, Destination=destination, Content={"Simple": simple_message}
+                        FromEmailAddress=self.sender,
+                        Destination=destination,
+                        Content={"Simple": simple_message},
                     )
                     batch_total = len(bcc_batch) + (fixed_recipients_count if idx == 0 else 0)
                     results.append(
@@ -127,6 +158,9 @@ class EmailClient:
                         f"EmailClient.send_email would be sending batch {idx} to {batch_total} "
                         f"recipients (BCC chunk size: {len(bcc_batch)}) with message_id {mock_id}"
                     )
+                    if image:
+                        with open("output.jpg", "wb") as f:
+                            f.write(image)
 
             return results
 

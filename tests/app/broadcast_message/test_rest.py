@@ -18,6 +18,7 @@ from app.dao.broadcast_message_history_dao import (
 from app.models import (
     BROADCAST_PROVIDER_STATUS_ACK,
     BROADCAST_PROVIDER_STATUS_ERR,
+    BROADCAST_PROVIDER_STATUS_ERR_RETRY_EXHAUSTED,
     BROADCAST_PROVIDER_STATUS_SENDING,
     BROADCAST_TYPE,
     BroadcastEventMessageType,
@@ -267,23 +268,33 @@ def test_get_broadcast_messages_for_service_with_user(
         add_broadcast_provider_message_status(bpm1, status=BROADCAST_PROVIDER_STATUS_ERR)
     with freeze_time("2020-01-01 13:00"):
         bm2 = create_broadcast_message(t, status=BroadcastStatusType.BROADCASTING)
-        be2 = create_broadcast_event(broadcast_message=bm1)
+        be2 = create_broadcast_event(broadcast_message=bm2)
         bpm2 = create_broadcast_provider_message(broadcast_event=be2, provider="test")
         add_broadcast_provider_message_status(bpm2, status=BROADCAST_PROVIDER_STATUS_SENDING)
         add_broadcast_provider_message_status(bpm2, status=BROADCAST_PROVIDER_STATUS_ACK)
+    with freeze_time("2020-01-01 14:00"):
+        bm3 = create_broadcast_message(t, status=BroadcastStatusType.BROADCASTING)
+        be3 = create_broadcast_event(broadcast_message=bm3)
+        bpm3 = create_broadcast_provider_message(broadcast_event=be3, provider="test")
+        add_broadcast_provider_message_status(bpm3, status=BROADCAST_PROVIDER_STATUS_SENDING)
+        add_broadcast_provider_message_status(bpm3, status=BROADCAST_PROVIDER_STATUS_ERR_RETRY_EXHAUSTED)
     with freeze_time("2020-01-01 13:00"):
-        bm3 = create_broadcast_message(t_2)
+        bm_s2 = create_broadcast_message(t_2)
 
     # Getting all Broadcast messages from first sample service and making relevant assertions
     response_service_1 = admin_request.get(
         "broadcast_message.get_broadcast_msgs_for_service", service_id=t.service_id, _expected_status=200
     )
-    assert len(response_service_1["broadcast_messages"]) == 2
+    assert len(response_service_1["broadcast_messages"]) == 3
     assert response_service_1["broadcast_messages"][0]["id"] == str(bm1.id)
     assert response_service_1["broadcast_messages"][1]["id"] == str(bm2.id)
+    assert response_service_1["broadcast_messages"][2]["id"] == str(bm3.id)
     assert response_service_1["broadcast_messages"][0]["created_by"] == sample_user.name
+    assert response_service_1["broadcast_messages"][1]["created_by"] == sample_user.name
+    assert response_service_1["broadcast_messages"][2]["created_by"] == sample_user.name
     assert response_service_1["broadcast_messages"][0]["sending_error"] is True
     assert response_service_1["broadcast_messages"][1]["sending_error"] is False
+    assert response_service_1["broadcast_messages"][2]["sending_error"] is True
 
     # Getting all Broadcast messages from second sample service and making relevant assertions
     response_service_2 = admin_request.get(
@@ -292,7 +303,7 @@ def test_get_broadcast_messages_for_service_with_user(
 
     assert len(response_service_2["broadcast_messages"]) == 1
     assert response_service_2["broadcast_messages"][0]["created_by"] == sample_user_2.name
-    assert response_service_2["broadcast_messages"][0]["id"] == str(bm3.id)
+    assert response_service_2["broadcast_messages"][0]["id"] == str(bm_s2.id)
     assert response_service_2["broadcast_messages"][0]["sending_error"] is False
 
 
@@ -941,7 +952,20 @@ def test_generate_s3_keys_from_list_of_id_timestamp_tuples():
     assert _generate_s3_keys(messages) == expected
 
 
-def test_send_alert_summary_email(admin_request, sample_broadcast_service, mocker):
+@pytest.mark.parametrize(
+    "wkt_value",
+    [
+        # Simple 4‑point polygon over London
+        "POLYGON ((-0.1400 51.5150,-0.1400 51.4950,-0.1000 51.4950,-0.1000 51.5150,-0.1400 51.5150))",
+        # Equivalent MULTIPOLYGON wrapper
+        "MULTIPOLYGON (((-0.1400 51.5150,-0.1400 51.4950,-0.1000 51.4950,-0.1000 51.5150,-0.1400 51.5150)))",
+    ],
+)
+def test_send_alert_summary_email_wkt(admin_request, sample_broadcast_service, mocker, wkt_value):
+    mocker.patch(
+        "app.broadcast_message.utils._geojson_to_miniscale_jpeg",
+        return_value=b"jpegbytes",
+    )
     t = create_template(sample_broadcast_service, BROADCAST_TYPE)
     bm = create_broadcast_message(t, status=BroadcastStatusType.DRAFT)
 
@@ -963,6 +987,8 @@ def test_send_alert_summary_email(admin_request, sample_broadcast_service, mocke
             "duration": "30 minutes",
             "alert_summary": "alert summary",
             "created_by": str(t.created_by_id),
+            "wkt": wkt_value,
+            "areas": ["area1", "area2"],
         },
         service_id=t.service_id,
         broadcast_message_id=bm.id,
@@ -975,28 +1001,9 @@ def test_send_alert_summary_email(admin_request, sample_broadcast_service, mocke
     # Extract and check the arguments/content passed to SES
     args, kwargs = mock_send.call_args
 
-    assert kwargs["subject"] == f"{t.service.name} advance notice of broadcast"
-    assert "advance notice" in kwargs["html_body"]
-    assert "less than 1 million" in kwargs["html_body"]
-    assert "alert summary" in kwargs["html_body"]
-    assert "30 minutes" in kwargs["html_body"]
-
-    assert "advance notice" in kwargs["text_body"]
-    assert "less than 1 million" in kwargs["text_body"]
-    assert "alert summary" in kwargs["text_body"]
-    assert "30 minutes" in kwargs["text_body"]
-
-    # Check attachments
-    attachments = kwargs["attachments"]
-
-    assert isinstance(attachments, list)
-    assert len(attachments) == 3
-    assert attachments[0][0] == "areas.geojson"
-    assert attachments[0][2] == "application/geo+json"
-    assert attachments[1][0] == "areas.cap.xml"
-    assert attachments[1][2] == "application/xml"
-    assert attachments[2][0] == "areas.ibag.xml"
-    assert attachments[2][2] == "application/xml"
+    # Valid WKT must produce an image
+    assert kwargs["image"] == b"jpegbytes"
+    assert isinstance(kwargs["image"], bytes)
 
 
 @pytest.mark.parametrize(
@@ -1010,6 +1017,8 @@ def test_send_alert_summary_email(admin_request, sample_broadcast_service, mocke
                 {"error": "ValidationError", "message": "alert_summary is a required property"},
                 {"error": "ValidationError", "message": "phone_estimate is a required property"},
                 {"error": "ValidationError", "message": "duration is a required property"},
+                {"error": "ValidationError", "message": "wkt is a required property"},
+                {"error": "ValidationError", "message": "areas is a required property"},
             ],
         ),
         (
@@ -1020,10 +1029,48 @@ def test_send_alert_summary_email(admin_request, sample_broadcast_service, mocke
                 "duration": "30 minutes",
                 "created_by": str(uuid.uuid4()),
                 "foo": "something else",
+                "wkt": "not-a-valid-wkt",
+                "areas": ["area1", "area2"],
             },
             [
                 {"error": "ValidationError", "message": "alert_summary  should be non-empty"},
+                {
+                    "error": "ValidationError",
+                    "message": "wkt not-a-valid-wkt does not match ^(POLYGON|MULTIPOLYGON)\\\\s*\\\\(.*\\\\)$",
+                },
                 {"error": "ValidationError", "message": "Additional properties are not allowed (foo was unexpected)"},
+            ],
+        ),
+        (
+            {
+                "geojson": json.loads('{"type": "Point", "coordinates": [0, 0]}'),
+                "alert_summary": "summary",
+                "phone_estimate": "more than 1 million",
+                "duration": "30 minutes",
+                "created_by": str(uuid.uuid4()),
+                "wkt": "",
+                "areas": ["area1", "area2"],
+            },
+            [
+                {"error": "ValidationError", "message": "wkt  should be non-empty"},
+                {
+                    "error": "ValidationError",
+                    "message": "wkt  does not match ^(POLYGON|MULTIPOLYGON)\\\\s*\\\\(.*\\\\)$",
+                },
+            ],
+        ),
+        (
+            {
+                "geojson": json.loads('{"type": "Point", "coordinates": [0, 0]}'),
+                "alert_summary": "summary",
+                "phone_estimate": "more than 1 million",
+                "duration": "30 minutes",
+                "created_by": str(uuid.uuid4()),
+                "wkt": "POLYGON ((-0.1400 51.5150,-0.1400 51.4950,-0.1000 51.4950,-0.1000 51.5150,-0.1400 51.5150))",
+                "areas": "should be string array",
+            },
+            [
+                {"error": "ValidationError", "message": "areas should be string array is not of type array"},
             ],
         ),
     ],

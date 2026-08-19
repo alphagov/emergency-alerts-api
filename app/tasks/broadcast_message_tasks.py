@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 
+from dramatiq.threading import Interrupt
 from emergency_alerts_utils.tasks import QueueNames, TaskNames
 from emergency_alerts_utils.xml.common import HEADLINE
 from flask import current_app
@@ -144,9 +145,10 @@ def send_broadcast_event(broadcast_event_id):
     actor_name=TaskNames.SEND_BROADCAST_PROVIDER_MESSAGE,
     queue_name=QueueNames.HIGH_PRIORITY,
     allow_retry=True,
-    retry_for=CBCProxyRetryableException,
+    retry_for={CBCProxyRetryableException, Interrupt},
 )
-def send_broadcast_provider_message(broadcast_event_id, provider):
+# Note: Adjusting the args? You may need to edit DlqWatcher accordingly
+def send_broadcast_provider_message(*, broadcast_event_id, provider):
     if not current_app.config["CBC_PROXY_ENABLED"]:
         current_app.logger.info(
             "CBC Proxy disabled, unable to send broadcast_provider_message",
@@ -231,7 +233,9 @@ def send_broadcast_provider_message(broadcast_event_id, provider):
                 )
 
         add_broadcast_provider_message_status(broadcast_provider_message, status=BROADCAST_PROVIDER_STATUS_ACK)
-    except Exception as e:
+    except (Exception, Interrupt) as e:
+        # Interrupt is from Dramatiq, and does not inherit from Exception
+
         exception_detail = getattr(e, "message", repr(e))
 
         current_app.logger.exception(
