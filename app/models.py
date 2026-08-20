@@ -1522,3 +1522,76 @@ class RouteAdvisor(db.Model):
             "target": self.target,
             "updated_at": self.updated_at,
         }
+
+
+class GeographyType(db.Model):
+    __tablename__ = "geography_type"
+
+    id = db.Column(db.String, primary_key=True)
+    name = db.Column(db.String, nullable=False, unique=True)
+    route = db.Column(db.String, nullable=True, unique=True)
+    name_singular = db.Column(db.String, nullable=True, unique=True)
+
+    versions = db.relationship("GeographyVersion", back_populates="geography_type")
+    polygons = db.relationship("GeographyPolygon", back_populates="geography_type")
+
+    def serialize(self):
+        return {"id": self.id, "name": self.name, "route": self.route, "name_singular": self.name_singular}
+
+
+class GeographyVersion(db.Model):
+    __tablename__ = "geography_version"
+
+    id = db.Column(db.String, primary_key=True)
+    geography_type_id = db.Column(db.String, db.ForeignKey("geography_type.id"), nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False)
+    version = db.Column(db.String, nullable=False)
+    source_url = db.Column(db.String, nullable=False)
+    state = db.Column(db.String, nullable=False)
+
+    geography_type = db.relationship("GeographyType", back_populates="versions")
+    polygons = db.relationship("GeographyPolygon", back_populates="geography_version")
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "geography_type_id": self.geography_type_id,
+            "created_at": self.created_at.strftime(DATETIME_FORMAT),
+            "version": self.version,
+            "source_url": self.source_url,
+            "state": self.state,
+        }
+
+
+class GeographyPolygon(db.Model):
+    __tablename__ = "geography_polygons"
+
+    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    geographic_id = db.Column(db.String)
+    name = db.Column(db.String, nullable=False)
+    geometry = db.Column(Geometry("GEOMETRY", srid=4326), nullable=False)
+
+    parent_geography_id = db.Column(db.String, nullable=True)
+
+    geography_version_id = db.Column(
+        db.String,
+        db.ForeignKey("geography_version.id"),
+        nullable=False,
+    )
+    geography_type_id = db.Column(
+        db.String,
+        db.ForeignKey("geography_type.id"),
+        nullable=False,
+    )
+
+    geography_version = db.relationship("GeographyVersion", back_populates="polygons")
+    geography_type = db.relationship("GeographyType", back_populates="polygons")
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "geography_type_id": self.geography_type_id,
+            "geography_version_id": self.geography_version_id,
+            "parent_geography_id": self.parent_geography_id,
+        }
