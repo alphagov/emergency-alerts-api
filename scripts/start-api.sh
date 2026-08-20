@@ -153,21 +153,32 @@ configure_container_role(){
     aws configure set default.region ${AWS_REGION:-eu-west-2}
 }
 
+PYTHON_COMMAND="python -m"
+if [[ ! -z $DEBUGPY_PORT ]]; then
+    echo "Starting with debugpy on port $DEBUGPY_PORT"
+    PYTHON_COMMAND="python -Xfrozen_modules=off -m debugpy --listen 0.0.0.0:${DEBUGPY_PORT} -m"
+fi
+
 run_api(){
     cd "$DIR_API";
-    export SERVICE=api && . $VENV_API/bin/activate && exec flask run -p 6011 --host=0.0.0.0;
+    export SERVICE=api && . $VENV_API/bin/activate && exec $PYTHON_COMMAND flask run -p 6011 --host=0.0.0.0;
 }
 
 run_worker(){
     cd $DIR_API;
-    export SERVICE=api_worker && . $VENV_API/bin/activate && exec dramatiq --skip-logging --processes 1 --threads 4 app.dramatiq_broker:broker --queues $WORKER_QUEUE_NAMES
+    export SERVICE=api_worker && . $VENV_API/bin/activate && exec $PYTHON_COMMAND dramatiq --skip-logging --processes 1 --threads 4 app.dramatiq_broker:broker --queues $WORKER_QUEUE_NAMES
 }
 
 run_periodiq(){
     cd $DIR_API;
     # We can't use the Periodiq CLI as then the import order is wrong for OpenTelemetry
     # (our instrumentation can't override the __main__ module)
-    export SERVICE=api_periodiq && . $VENV_API/bin/activate && exec python -m app.periodiq -v app.dramatiq_broker:broker
+    export SERVICE=api_periodiq && . $VENV_API/bin/activate && exec $PYTHON_COMMAND app.periodiq -v app.dramatiq_broker:broker
+}
+
+run_dlq_watcher(){
+    cd $DIR_API;
+    export SERVICE=api_dlq_watcher && . $VENV_API/bin/activate && exec python -m app.dramatiq_dlq
 }
 
 if [[ ! -z $DEBUG ]]; then
@@ -184,6 +195,8 @@ else
         run_worker
     elif [[ $SERVICE_ACTION == "run_periodiq" ]]; then
         run_periodiq
+    elif [[ $SERVICE_ACTION == "run_dlq_watcher" ]]; then
+        run_dlq_watcher
     elif [[ $SERVICE_ACTION == "run_migrations" ]]; then
 
         if [[ ! -z $MASTER_USERNAME ]] && [[ ! -z $MASTER_PASSWORD ]]; then

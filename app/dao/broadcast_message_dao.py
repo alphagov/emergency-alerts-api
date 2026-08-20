@@ -77,7 +77,7 @@ def dao_get_broadcast_message_by_references_and_service_id(references_to_origina
     ).one()
 
 
-def dao_get_broadcast_event_by_id(broadcast_event_id):
+def dao_get_broadcast_event_by_id(broadcast_event_id) -> BroadcastEvent:
     return BroadcastEvent.query.filter(BroadcastEvent.id == broadcast_event_id).one()
 
 
