@@ -1533,7 +1533,7 @@ class GeographyType(db.Model):
     name_singular = db.Column(db.String, nullable=True, unique=True)
 
     versions = db.relationship("GeographyVersion", back_populates="geography_type")
-    polygons = db.relationship("GeographyPolygon", back_populates="geography_type")
+    polygons = db.relationship("GeographyPolygons", back_populates="geography_type")
 
     def serialize(self):
         return {"id": self.id, "name": self.name, "route": self.route, "name_singular": self.name_singular}
@@ -1550,7 +1550,7 @@ class GeographyVersion(db.Model):
     state = db.Column(db.String, nullable=False)
 
     geography_type = db.relationship("GeographyType", back_populates="versions")
-    polygons = db.relationship("GeographyPolygon", back_populates="geography_version")
+    polygons = db.relationship("GeographyPolygons", back_populates="geography_version")
 
     def serialize(self):
         return {
@@ -1563,7 +1563,7 @@ class GeographyVersion(db.Model):
         }
 
 
-class GeographyPolygon(db.Model):
+class GeographyPolygons(db.Model):
     __tablename__ = "geography_polygons"
 
     id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
