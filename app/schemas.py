@@ -260,6 +260,12 @@ class ServiceSchema(BaseSchema, UUIDsAsStringsMixin):
 
             in_data["permissions"] = permissions
 
+        if "alert_notification_addresses" in in_data:
+            in_data["alert_notification_addresses"] = [
+                {"service_id": in_data["id"], "email_address": email}
+                for email in in_data["alert_notification_addresses"]
+            ]
+
         return in_data
 
 
