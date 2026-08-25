@@ -385,7 +385,7 @@ def test_send_broadcast_provider_message_sends_update_with_references(
                 "polygon": [[50.12, 1.2], [50.13, 1.2], [50.14, 1.21]],
             }
         ],
-        previous_provider_messages=[alert_event.get_provider_message(provider)],
+        previous_events=[alert_event],
         sent=update_event.sent_at_as_cap_datetime_string,
         expires=update_event.transmitted_finishes_at_as_cap_datetime_string,
         channel="severe",
@@ -439,9 +439,9 @@ def test_send_broadcast_provider_message_sends_cancel_with_references(
     mock_cancel_broadcast.assert_called_once_with(
         identifier=str(cancel_event.id),
         message_number=mocker.ANY,
-        previous_provider_messages=[
-            alert_event.get_provider_message(provider),
-            update_event.get_provider_message(provider),
+        previous_events=[
+            alert_event,
+            update_event,
         ],
         sent=cancel_event.sent_at_as_cap_datetime_string,
     )
