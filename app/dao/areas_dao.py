@@ -54,6 +54,47 @@ def dao_get_areas_for_geography_type(type_name):
     return query.all()
 
 
+def dao_get_area_by_id(area_id):
+    """Returns the area, from geography_polygons, with specified area ID (UUID)"""
+    return (
+        db.session.query(
+            GeographyPolygons.id,
+            GeographyPolygons.geographic_id,
+            GeographyPolygons.name,
+            GeographyPolygons.parent_geography_id,
+            GeographyType.route.label("geography_type_name"),
+            GeographyPolygons.geometry,
+        )
+        .join(
+            GeographyType,
+            GeographyPolygons.geography_type_id == GeographyType.id,
+        )
+        .filter(GeographyPolygons.id == area_id)
+        .one_or_none()
+    )
+
+
+def dao_get_areas_by_ids(area_ids):
+    """Returns list of areas for the specified area IDs"""
+    return (
+        db.session.query(
+            GeographyPolygons.id,
+            GeographyPolygons.geographic_id,
+            GeographyPolygons.name,
+            GeographyPolygons.parent_geography_id,
+            GeographyType.route.label("geography_type_name"),
+            GeographyPolygons.geometry,
+        )
+        .join(
+            GeographyType,
+            GeographyPolygons.geography_type_id == GeographyType.id,
+        )
+        .filter(GeographyPolygons.id.in_(area_ids))
+        .order_by(GeographyPolygons.name)
+        .all()
+    )
+
+
 def dao_get_child_areas_for_parent_geography_id(parent_geography_id):
     # Only areas with latest local authority or ward version to be retrieved,
     # as these are the only child areas we are interested in currently
@@ -170,47 +211,6 @@ def dao_get_areas_by_names(area_names, type_name):
     return (
         GeographyPolygons.query.filter(GeographyPolygons.name.in_(area_names))
         .filter_by(geography_version_id=latest_version_id)
-        .all()
-    )
-
-
-def dao_get_area_by_id(area_id):
-    """Returns the area, from geography_polygons, with specified area ID (UUID)"""
-    return (
-        db.session.query(
-            GeographyPolygons.id,
-            GeographyPolygons.geographic_id,
-            GeographyPolygons.name,
-            GeographyPolygons.parent_geography_id,
-            GeographyType.route.label("geography_type_name"),
-            GeographyPolygons.geometry,
-        )
-        .join(
-            GeographyType,
-            GeographyPolygons.geography_type_id == GeographyType.id,
-        )
-        .filter(GeographyPolygons.id == area_id)
-        .one_or_none()
-    )
-
-
-def dao_get_areas_by_ids(area_ids):
-    """Returns list of areas for the specified area IDs"""
-    return (
-        db.session.query(
-            GeographyPolygons.id,
-            GeographyPolygons.geographic_id,
-            GeographyPolygons.name,
-            GeographyPolygons.parent_geography_id,
-            GeographyType.route.label("geography_type_name"),
-            GeographyPolygons.geometry,
-        )
-        .join(
-            GeographyType,
-            GeographyPolygons.geography_type_id == GeographyType.id,
-        )
-        .filter(GeographyPolygons.id.in_(area_ids))
-        .order_by(GeographyPolygons.name)
         .all()
     )
 
