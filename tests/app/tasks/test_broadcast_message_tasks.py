@@ -162,7 +162,7 @@ def test_send_broadcast_provider_message_sends_data_correctly(
     assert broadcast_provider_message.get_latest_status_entry().status == BROADCAST_PROVIDER_STATUS_ACK
 
     mock_create_broadcast.assert_called_once_with(
-        identifier=str(broadcast_provider_message.id),
+        identifier=str(event.id),
         message_number=mocker.ANY,
         headline="GOV.UK Emergency Alert",
         description="this is an emergency broadcast message",
@@ -275,7 +275,7 @@ def test_send_broadcast_provider_message_works_if_we_retried_previously(mocker, 
     assert broadcast_provider_message.get_latest_status_entry() == broadcast_provider_message.statuses[1]
 
     mock_create_broadcast.assert_called_once_with(
-        identifier=str(broadcast_provider_message.id),
+        identifier=str(event.id),
         message_number=mocker.ANY,
         headline="GOV.UK Emergency Alert",
         description="this is an emergency broadcast message",
@@ -320,10 +320,8 @@ def test_send_broadcast_provider_message_sends_data_correctly_when_broadcast_mes
 
     send_broadcast_provider_message(provider=provider, broadcast_event_id=str(event.id))
 
-    broadcast_provider_message = event.get_provider_message(provider)
-
     mock_create_broadcast.assert_called_once_with(
-        identifier=str(broadcast_provider_message.id),
+        identifier=str(event.id),
         message_number=mocker.ANY,
         headline="GOV.UK Emergency Alert",
         description="this is an emergency broadcast message",
@@ -378,7 +376,7 @@ def test_send_broadcast_provider_message_sends_update_with_references(
     assert broadcast_provider_message.get_latest_status_entry() == broadcast_provider_message.statuses[1]
 
     mock_update_broadcast.assert_called_once_with(
-        identifier=str(broadcast_provider_message.id),
+        identifier=str(update_event.id),
         message_number=mocker.ANY,
         headline="GOV.UK Emergency Alert",
         description="this is an emergency broadcast message",
@@ -439,7 +437,7 @@ def test_send_broadcast_provider_message_sends_cancel_with_references(
     assert broadcast_provider_message.get_latest_status_entry() == broadcast_provider_message.statuses[1]
 
     mock_cancel_broadcast.assert_called_once_with(
-        identifier=str(broadcast_provider_message.id),
+        identifier=str(cancel_event.id),
         message_number=mocker.ANY,
         previous_provider_messages=[
             alert_event.get_provider_message(provider),
