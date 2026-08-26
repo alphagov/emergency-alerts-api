@@ -727,7 +727,7 @@ def test_dao_get_public_messages_older_than(
         template_severe, starts_at=datetime(2025, 6, 19, 12, 0, 0), status="completed"
     )  # excluded: not old enough
 
-    broadcast_messages = dao_get_public_messages_older_than(3)
+    broadcast_messages = dao_get_public_messages_older_than(None, 3)
     assert len(broadcast_messages) == 3
 
 
@@ -756,13 +756,15 @@ def test_dao_delete_records_for_broadcast(sample_broadcast_service, sample_broad
     _ = create_broadcast_provider_message(be2, "three")
     _ = create_broadcast_provider_message(be2, "vodafone")
 
-    counter = dao_delete_records_for_broadcast(template_severe.service_id, bm1.id)
+    # counter = dao_delete_records_for_broadcast(template_severe.service_id, bm1.id)
+    counter = dao_delete_records_for_broadcast(bm1.id)
 
     assert counter["msgs"] == 1
     assert counter["events"] == 1
     assert counter["provider_msgs"] == 2
 
-    counter = dao_delete_records_for_broadcast(template_government.service_id, bm2.id)
+    # counter = dao_delete_records_for_broadcast(template_government.service_id, bm2.id)
+    counter = dao_delete_records_for_broadcast(bm2.id)
 
     assert counter["msgs"] == 1
     assert counter["events"] == 1
