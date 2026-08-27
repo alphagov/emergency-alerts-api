@@ -8,9 +8,9 @@ Create Date: 2026-08-05 14:22:30
 
 import uuid
 
-from geoalchemy2 import Geometry
 import sqlalchemy as sa
 from alembic import op
+from geoalchemy2 import Geometry
 from sqlalchemy.dialects import postgresql
 
 revision = "0431_adjust_area_tables.py"
@@ -23,6 +23,7 @@ def upgrade():
     op.execute("DELETE FROM geography_version")
     op.execute("DELETE FROM geography_type")
 
+    # How a single area from this library is referred to in Admin application
     op.add_column("geography_type", sa.Column("name_singular", sa.Text(), nullable=True))
 
     op.drop_table("geography_polygons")
