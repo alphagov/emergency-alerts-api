@@ -90,7 +90,7 @@ def upgrade():
 
 def downgrade():
     # Dropping everything related to geography_polygons table before we re-add with adjustments
-    op.drop_column("geography_type", "name_singular") 
+    op.drop_column("geography_type", "name_singular")
     op.drop_table("geography_polygons")
 
     op.create_table(
