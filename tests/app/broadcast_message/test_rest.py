@@ -105,14 +105,18 @@ def test_get_broadcast_provider_statuses(admin_request, sample_broadcast_service
     )
 
     sending_event = create_broadcast_event(broadcast_message=bm)
+    sending_bpms = dict()
     for mno in mnos:
         # Implicitly creates sending status message_type
         bpm = create_broadcast_provider_message(broadcast_event=sending_event, provider=mno)
+        sending_bpms[mno] = bpm
         add_broadcast_provider_message_status(bpm, status=BROADCAST_PROVIDER_STATUS_ACK)
 
     cancel_event = create_broadcast_event(broadcast_message=bm, message_type="cancel")
+    cancel_bpms = dict()
     for mno in mnos:
         bpm = create_broadcast_provider_message(broadcast_event=cancel_event, provider=mno)
+        cancel_bpms[mno] = bpm
         add_broadcast_provider_message_status(bpm, status=BROADCAST_PROVIDER_STATUS_ERR, error_detail={"test": True})
 
     response = admin_request.get(
@@ -128,9 +132,11 @@ def test_get_broadcast_provider_statuses(admin_request, sample_broadcast_service
         mno_statuses = response[mno]
 
         assert mno_statuses["alertBroadcastEventId"] == str(sending_event.id)
+        assert mno_statuses["alertBroadcastProviderMessageId"] == str(sending_bpms[mno].id)
         assert mno_statuses["alert"][0]["status"] == "sending"
         assert mno_statuses["alert"][1]["status"] == "returned-ack"
         assert mno_statuses["cancelBroadcastEventId"] == str(cancel_event.id)
+        assert mno_statuses["cancelBroadcastProviderMessageId"] == str(cancel_bpms[mno].id)
         assert mno_statuses["cancel"][0]["status"] == "sending"
         assert mno_statuses["cancel"][1]["status"] == "returned-error"
 

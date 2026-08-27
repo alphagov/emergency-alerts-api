@@ -138,7 +138,10 @@ def get_broadcast_provider_statuses(service_id, broadcast_message_id):
     messages = dao_get_broadcast_provider_messages_by_broadcast_message_id(broadcast_message_id)
 
     # Create a structure like:
-    # { "<mno>": { "alertBroadcastEventId": "", "alert": [{}], "cancelBroadcastEventId": "", "cancel": [{}] } }
+    # { "<mno>": {
+    #   "alertBroadcastEventId": "", "alertBroadcastProviderMessageId": "", "alert": [{}],
+    #   "cancelBroadcastEventId": "", "cancelBroadcastProviderMessageId", "", "cancel": [{}]
+    # } }
     # (yes, the broadcast event ID will be the same for each MNO - it's to keep the data structure backwards compatible)
 
     result = {}
@@ -147,8 +150,10 @@ def get_broadcast_provider_statuses(service_id, broadcast_message_id):
             broadcast_provider_message.provider,
             {
                 "alertBroadcastEventId": None,
+                "alertBroadcastProviderMessageId": None,
                 BroadcastEventMessageType.ALERT: [],
                 "cancelBroadcastEventId": None,
+                "cancelBroadcastProviderMessageId": None,
                 BroadcastEventMessageType.CANCEL: [],
             },
         )
@@ -167,10 +172,18 @@ def get_broadcast_provider_statuses(service_id, broadcast_message_id):
             result[broadcast_provider_message.provider][
                 "alertBroadcastEventId"
             ] = broadcast_provider_message.broadcast_event_id
+
+            result[broadcast_provider_message.provider][
+                "alertBroadcastProviderMessageId"
+            ] = broadcast_provider_message.id
         elif broadcast_event_message_type == "cancel":
             result[broadcast_provider_message.provider][
                 "cancelBroadcastEventId"
             ] = broadcast_provider_message.broadcast_event_id
+
+            result[broadcast_provider_message.provider][
+                "cancelBroadcastProviderMessageId"
+            ] = broadcast_provider_message.id
 
         result[broadcast_provider_message.provider][broadcast_event_message_type] = statuses
 
