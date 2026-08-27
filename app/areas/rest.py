@@ -221,7 +221,7 @@ def get_postcode_centroid():
 @areas_blueprint.route("/coordinates/get-centroid", methods=["POST"])
 def get_coordinates_centroid():
     """
-    Returns a centroid WKT for the provided coordinates.
+    Returns a centroid WKT for the provided coordinates, in latitude longitude.
     """
     data = request.get_json() or {}
     first_coordinate = data.get("first_coordinate")
@@ -237,9 +237,10 @@ def get_coordinates_centroid():
 
 
 @areas_blueprint.route("/get-<type_name>-by-names", methods=["POST"])
-def get_local_authorities_areas_by_names(type_name):
+def get_areas_by_names(type_name):
     """Returns a list of areas that have the names provided for the provided type,
-    or error response with custom error messages set for local_authorities areas."""
+    or error response with custom error messages set for local_authorities
+    and flood_warning_areas areas."""
     data = request.get_json() or {}
     area_names = data.get("area_names") or []
 
@@ -256,16 +257,10 @@ def get_local_authorities_areas_by_names(type_name):
     # rendered as is in Admin application
     for name in area_names:
         if name not in found_by_name:
-            return (
-                jsonify(
-                    {
-                        "message": error_messages["invalid"],
-                        "missing_area_name": name,
-                        "geography_type": type_name,
-                    }
-                ),
-                400,
+            message = (
+                f"Local authority '{name}' not found" if type_name == "local_authorities" else error_messages["invalid"]
             )
+            return jsonify({"message": message}), 400
 
     ids = [found_by_name[name] for name in area_names]
     return jsonify({"data": ids})
@@ -278,6 +273,8 @@ def create_postcode_area():
     data = request.get_json()
     radius = data.get("radius")
     postcode = data.get("postcode")
+    if not radius or not postcode:
+        return jsonify({"message": "Enter postcode and radius to create postcode area"}), 400
     postcode_area_id = dao_get_latest_area_by_geographic_id(postcode, "postcodes").id
     centroid = dao_get_area_centroid(postcode_area_id)
     circle = dao_create_circle_area(centroid, radius)
