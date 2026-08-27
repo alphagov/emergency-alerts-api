@@ -23,6 +23,7 @@ def upgrade():
     op.execute("DELETE FROM geography_version")
     op.execute("DELETE FROM geography_type")
 
+    # How a single area from this library is referred to in Admin application
     op.add_column("geography_type", sa.Column("name_singular", sa.Text(), nullable=True))
 
     op.drop_table("geography_polygons")
@@ -89,7 +90,7 @@ def upgrade():
 
 def downgrade():
     # Dropping everything related to geography_polygons table before we re-add with adjustments
-    op.drop_column("geography_type", "name_singular")
+    op.drop_column("geography_type", "name_singular") 
     op.drop_table("geography_polygons")
 
     op.create_table(
