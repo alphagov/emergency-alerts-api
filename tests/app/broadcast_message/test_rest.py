@@ -127,8 +127,10 @@ def test_get_broadcast_provider_statuses(admin_request, sample_broadcast_service
     for mno in mnos:
         mno_statuses = response[mno]
 
+        assert mno_statuses["alertBroadcastEventId"] == str(sending_event.id)
         assert mno_statuses["alert"][0]["status"] == "sending"
         assert mno_statuses["alert"][1]["status"] == "returned-ack"
+        assert mno_statuses["cancelBroadcastEventId"] == str(cancel_event.id)
         assert mno_statuses["cancel"][0]["status"] == "sending"
         assert mno_statuses["cancel"][1]["status"] == "returned-error"
 
