@@ -292,8 +292,8 @@ def dao_get_all_finished_broadcast_messages_with_outstanding_actions() -> list[B
     )
 
 
-def dao_get_public_messages_older_than(days):
-    messages = (
+def dao_get_public_messages_older_than(service_id, days):
+    query = (
         db.session.query(
             BroadcastMessage.id,
             BroadcastMessage.starts_at,
@@ -305,9 +305,12 @@ def dao_get_public_messages_older_than(days):
             BroadcastMessage.status.in_(BroadcastStatusType.LIVE_STATUSES),
             ServiceBroadcastSettings.channel.in_(ServiceBroadcastSettings.PUBLIC_CHANNEL),
         )
-        .order_by(asc(BroadcastMessage.starts_at))
-        .all()
     )
+
+    if service_id is not None:
+        query = query.filter(BroadcastMessage.service_id == service_id)
+
+    messages = query.order_by(asc(BroadcastMessage.starts_at)).all()
     return [(str(row[0]), row[1]) for row in messages]
 
 
@@ -368,14 +371,7 @@ def dao_purge_old_broadcast_messages(service, days_older_than=30, dry_run=False)
     return counter
 
 
-def dao_delete_records_for_broadcast(service, message_id, dry_run=False):
-    if service is None:
-        raise ValueError("Service ID is required")
-
-    service_id = _resolve_service_id(service)
-    if service_id is None:
-        raise ValueError("Unable to find service ID")
-
+def dao_delete_records_for_broadcast(message_id, dry_run=False):
     counter = Counter()
     try:
         broadcast_event_ids = _get_broadcast_event_ids(message_id)

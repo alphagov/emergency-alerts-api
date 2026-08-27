@@ -899,9 +899,9 @@ def test_return_broadcast_message_for_edit_errors_with_empty_reason(admin_reques
     assert response["message"] == "Enter the reason for returning the alert for edit"
 
 
-def test_purge_broadcast_messages(admin_request, sample_broadcast_service, mocker):
+def test_purge_service_broadcast_messages(admin_request, sample_broadcast_service, mocker):
     response = admin_request.delete(
-        "broadcast_message.purge_broadcast_messages",
+        "broadcast_message.purge_service_broadcast_messages",
         service_id=sample_broadcast_service.id,
         older_than=100,
         _expected_status=200,
@@ -910,7 +910,7 @@ def test_purge_broadcast_messages(admin_request, sample_broadcast_service, mocke
     print(response["message"])
 
     pattern = (
-        r"Purged (\d+) BroadcastMessage items, (\d+) BroadcastEvent items"
+        r"Purged (\d+) \(.*\) BroadcastMessage items, (\d+) BroadcastEvent items"
         r" and (\d+) S3 objects, created more than 100 days ago"
     )
     assert re.match(pattern, response["message"])
