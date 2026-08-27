@@ -32,6 +32,9 @@ from app.models import (
     Domain,
     FailedLogin,
     FeatureToggle,
+    GeographyPolygons,
+    GeographyType,
+    GeographyVersion,
     InvitedOrganisationUser,
     InvitedUser,
     Organisation,
@@ -521,3 +524,104 @@ def create_publish_task(
     db.session.add(publish_task)
     db.session.commit()
     return publish_task
+
+
+def create_geography_version(
+    id=None, geography_type_id=None, created_at=None, version="1.0.0", source_url="test.csv", state="active"
+):
+    version = GeographyVersion(
+        id=id or str(uuid.uuid4()),
+        geography_type_id=geography_type_id or str(uuid.uuid4()),
+        created_at=created_at or datetime.now(),
+        version=version,
+        source_url=source_url,
+        state=state,
+    )
+    db.session.add(version)
+    db.session.commit()
+    return version
+
+
+def create_geography_type(id=None, name=None, route=None, name_singular="Test singular area"):
+    type = GeographyType(
+        id=id or str(uuid.uuid4()), name=name or "Test name", route=route or "Test route", name_singular=name_singular
+    )
+    db.session.add(type)
+    db.session.commit()
+    return type
+
+
+def create_area(
+    id=None,
+    geographic_id="Test geographic id",
+    name="Test name",
+    geometry=None,
+    parent_geography_id="Test parent geography id",
+    geography_version_id=None,
+    geography_type_id=None,
+):
+    if geometry is None:
+        # london area WKT
+        geometry = (
+            "0103000020E61000000100000005000000A4",
+            "703D0AD7A3C0BFE17A14AE47C14940B81E85E",
+            "B51B8BEBFE17A14AE47C14940B81E85EB51B8",
+            "BEBF0000000000C04940A4703D0AD7A3C0BF0",
+            "000000000C04940A4703D0AD7A3C0BFE17A14",
+            "AE47C14940",
+        )
+    area = GeographyPolygons(
+        id=id or uuid.uuid4(),
+        geographic_id=geographic_id,
+        name=name,
+        geometry="".join(geometry),
+        parent_geography_id=parent_geography_id,
+        geography_version_id=geography_version_id,
+        geography_type_id=geography_type_id,
+    )
+    db.session.add(area)
+    db.session.commit()
+    return area
+
+
+def create_area_with_version_and_type(
+    id=None,
+    geographic_id="Test geographic id",
+    name="Test name",
+    geometry=None,
+    parent_geography_id="Test parent geography id",
+    geography_version_id=None,
+    geography_type_id=None,
+    geography_type_name=None,
+    geography_type_route=None,
+):
+    # Ensure we always have a GeographyType and GeographyVersion, and use their UUID ids directly
+    if geography_type_id is None:
+        geography_type = create_geography_type(name=geography_type_name, route=geography_type_route)
+        geography_type_id = str(geography_type.id)
+
+    if geography_version_id is None:
+        geography_version = create_geography_version(geography_type_id=geography_type_id)
+        geography_version_id = str(geography_version.id)
+
+    if geometry is None:
+        # Dummy WKT geomtry - Yorkshire
+        geometry = (
+            "0103000020E610000001000000050000003333333",
+            "3333305C09A99999999994A40000000000000D03F9A99999999994A",
+            "40000000000000D03F3333333333534B4033333333333305C033333",
+            "33333534B4033333333333305C09A99999999994A40",
+        )
+
+    area = GeographyPolygons(
+        id=id or uuid.uuid4(),
+        geographic_id=geographic_id,
+        name=name,
+        geometry="".join(geometry),
+        parent_geography_id=parent_geography_id,
+        geography_version_id=geography_version_id,
+        geography_type_id=geography_type_id,
+    )
+    db.session.add(area)
+    db.session.commit()
+    return area, geography_version, geography_type
