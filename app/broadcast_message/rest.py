@@ -494,7 +494,6 @@ def purge_broadcast_messages(service_id=None, older_than=365):
                         counter["s3_deletion_errors"] += len(s3_result.get("Errors", []))
 
                 # delete database records associated with this message
-                # counter += dao_delete_records_for_broadcast(service_id, message[0])
                 counter += dao_delete_records_for_broadcast(message[0])
 
             current_app.logger.info(

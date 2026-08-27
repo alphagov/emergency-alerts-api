@@ -371,14 +371,6 @@ def dao_purge_old_broadcast_messages(service, days_older_than=30, dry_run=False)
     return counter
 
 
-# def dao_delete_records_for_broadcast(service, message_id, dry_run=False):
-# if service is None:
-#     raise ValueError("Service ID is required")
-
-
-# service_id = _resolve_service_id(service)
-# if service_id is None:
-#     raise ValueError("Unable to find service ID")
 def dao_delete_records_for_broadcast(message_id, dry_run=False):
     counter = Counter()
     try:
