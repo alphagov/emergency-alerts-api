@@ -8,9 +8,9 @@ Create Date: 2026-08-05 14:22:30
 
 import uuid
 
-from geoalchemy2 import Geometry
 import sqlalchemy as sa
 from alembic import op
+from geoalchemy2 import Geometry
 from sqlalchemy.dialects import postgresql
 
 revision = "0431_adjust_area_tables.py"
@@ -30,6 +30,7 @@ def upgrade():
     op.create_table(
         "geography_polygons",
         sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, unique=True, default=uuid.uuid4),
+        #  Office for National Statistics (ONS) and Government Statistical Service (GSS) code for the area e.g. England's is E92000001
         sa.Column("geographic_id", sa.String(), nullable=False),
         sa.Column("name", sa.String(), nullable=False),
         sa.Column("geometry", Geometry("GEOMETRY", srid=4326), nullable=False),

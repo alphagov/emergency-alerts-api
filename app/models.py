@@ -1530,6 +1530,7 @@ class GeographyType(db.Model):
     id = db.Column(db.String, primary_key=True)
     name = db.Column(db.String, nullable=False, unique=True)
     route = db.Column(db.String, nullable=True, unique=True)
+    # How a single area from this library is referred to in Admin application
     name_singular = db.Column(db.String, nullable=True, unique=True)
 
     versions = db.relationship("GeographyVersion", back_populates="geography_type")
@@ -1567,6 +1568,7 @@ class GeographyPolygons(db.Model):
     __tablename__ = "geography_polygons"
 
     id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    #  Office for National Statistics (ONS) and Government Statistical Service (GSS) code for the area
     geographic_id = db.Column(db.String)
     name = db.Column(db.String, nullable=False)
     geometry = db.Column(Geometry("GEOMETRY", srid=4326), nullable=False)
