@@ -7,6 +7,7 @@ from periodiq import cron
 from sqlalchemy.exc import SQLAlchemyError
 
 from app import db, dramatiq
+from app.broadcast_message.rest import purge_broadcast_messages
 from app.dao.broadcast_message_dao import (
     dao_get_all_finished_broadcast_messages_with_outstanding_actions,
 )
@@ -205,3 +206,26 @@ def queue_after_alert_activities():
             current_app.logger.info("Enqueued publish GOV UK Alerts: %s", publish_task.asdict())
 
         # Down the line we will look to request logs from MNOs
+
+
+@dramatiq.actor(
+    actor_name=TaskNames.PURGE_OLD_ALERTS_FROM_PREVIEW_ENVIRONMENT,
+    queue_name=QueueNames.PERIODIC,
+    periodic=cron("15 10 * * 2"),  # Every Tuesday at 10:15 UTC
+)
+def purge_old_alerts_from_preview_environment():
+    """
+    Purge old alerts from the preview environment.
+    Preview already purges the alerts created by the functional test
+    service; this task purges any other alerts that may have been
+    created manually or through the API.
+    As the non-test alerts may be supporting long-termmanual testing
+    activities, we only purge alerts older that 1 year.
+    """
+    if current_app.config["ENVIRONMENT"] == "preview":
+        try:
+            purge_broadcast_messages(service_id=None, older_than=365)
+            current_app.logger.info("Purged messages older than 1 year from preview environment")
+        except Exception as e:
+            current_app.logger.exception(f"Unable to purge preview messages: {e}")
+            raise
