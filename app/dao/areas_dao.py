@@ -9,7 +9,15 @@ from app.models import GeographyPolygons, GeographyType, GeographyVersion
 
 def dao_get_latest_geography_version_number():
     """Returns latest active version's version number"""
-    return GeographyVersion.query.filter_by(state="active").order_by(GeographyVersion.created_at.desc()).first().version
+    if GeographyVersion.query.filter_by(state="active").order_by(GeographyVersion.created_at.desc()).first():
+        return (
+            GeographyVersion.query.filter_by(state="active")
+            .order_by(GeographyVersion.created_at.desc())
+            .first()
+            .version
+        )
+    else:
+        return None
 
 
 def dao_get_latest_geography_versions():
@@ -37,21 +45,24 @@ def dao_get_latest_active_version_for_type_route(type_name):
 
 
 def dao_get_areas_for_geography_type(type_name):
-    latest_active_version = dao_get_latest_active_version_for_type_route(type_name).id
-    query = (
-        GeographyPolygons.query.with_entities(
-            GeographyPolygons.id,
-            GeographyPolygons.geographic_id,
-            GeographyPolygons.name,
-            GeographyPolygons.parent_geography_id,
+    latest_active_version = dao_get_latest_active_version_for_type_route(type_name)
+    if latest_active_version:
+        latest_active_version_id = latest_active_version.id
+        query = (
+            GeographyPolygons.query.with_entities(
+                GeographyPolygons.id,
+                GeographyPolygons.geographic_id,
+                GeographyPolygons.name,
+                GeographyPolygons.parent_geography_id,
+            )
+            .filter_by(
+                geography_version_id=latest_active_version_id,
+            )
+            .order_by(GeographyPolygons.name)
         )
-        .filter_by(
-            geography_version_id=latest_active_version,
-        )
-        .order_by(GeographyPolygons.name)
-    )
-
-    return query.all()
+        return query.all()
+    else:
+        return []
 
 
 def dao_get_area_by_id(area_id):
@@ -100,10 +111,13 @@ def dao_get_child_areas_for_parent_geography_id(parent_geography_id):
     # as these are the only child areas we are interested in currently
     # Note: REPPIR sites also have parent_geography_id but we don't
     # want them rendered as children for selection
-    latest_la_version_id = dao_get_latest_active_version_for_type_route("local_authorities").id
-    latest_ward_version_id = dao_get_latest_active_version_for_type_route("wards").id
-
-    version_ids = [latest_la_version_id, latest_ward_version_id]
+    latest_la_version_id, latest_ward_version_id, version_ids = None, None, []
+    if latest_la_version := dao_get_latest_active_version_for_type_route("local_authorities"):
+        latest_la_version_id = latest_la_version.id
+        version_ids.append(latest_la_version_id)
+    if latest_ward_version := dao_get_latest_active_version_for_type_route("wards"):
+        latest_ward_version_id = latest_ward_version.id
+        version_ids.append(latest_ward_version_id)
 
     query = (
         GeographyPolygons.query.with_entities(
@@ -157,32 +171,10 @@ def dao_get_latest_area_by_geographic_id(area_id, type_name=None):
 
     if type_name:
         latest_active_version = dao_get_latest_active_version_for_type_route(type_name)
-        return (
-            db.session.query(
-                GeographyPolygons.id,
-                GeographyPolygons.geographic_id,
-                GeographyPolygons.name,
-                GeographyPolygons.parent_geography_id,
-                GeographyType.route.label("geography_type_name"),
-                GeographyPolygons.geometry,
-            )
-            .join(
-                GeographyType,
-                GeographyPolygons.geography_type_id == GeographyType.id,
-            )
-            .filter(
-                GeographyPolygons.geographic_id == area_id,
-                GeographyPolygons.geography_version_id == latest_active_version.id,
-            )
-            .one_or_none()
-        )
-
-    else:
-        latest_geography_versions = dao_get_latest_geography_versions()
-        if latest_geography_versions == []:
+        if not latest_active_version:
             return None
 
-        latest_version_ids = [v.id for v in latest_geography_versions]
+        latest_active_version_id = latest_active_version.id
 
         return (
             db.session.query(
@@ -199,10 +191,36 @@ def dao_get_latest_area_by_geographic_id(area_id, type_name=None):
             )
             .filter(
                 GeographyPolygons.geographic_id == area_id,
-                GeographyPolygons.geography_version_id.in_(latest_version_ids),
+                GeographyPolygons.geography_version_id == latest_active_version_id,
             )
             .one_or_none()
         )
+
+    latest_geography_versions = dao_get_latest_geography_versions()
+    if not latest_geography_versions:
+        return None
+
+    latest_version_ids = [v.id for v in latest_geography_versions]
+
+    return (
+        db.session.query(
+            GeographyPolygons.id,
+            GeographyPolygons.geographic_id,
+            GeographyPolygons.name,
+            GeographyPolygons.parent_geography_id,
+            GeographyType.route.label("geography_type_name"),
+            GeographyPolygons.geometry,
+        )
+        .join(
+            GeographyType,
+            GeographyPolygons.geography_type_id == GeographyType.id,
+        )
+        .filter(
+            GeographyPolygons.geographic_id == area_id,
+            GeographyPolygons.geography_version_id.in_(latest_version_ids),
+        )
+        .one_or_none()
+    )
 
 
 def dao_get_areas_by_names(area_names, type_name):
