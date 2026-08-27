@@ -161,7 +161,9 @@ def dao_get_broadcast_provider_messages_by_broadcast_message_ids(
     )
 
 
-def dao_get_broadcast_provider_messages_by_broadcast_message_id(broadcast_message_id):
+def dao_get_broadcast_provider_messages_by_broadcast_message_id(
+    broadcast_message_id,
+) -> list[tuple[BroadcastProviderMessage, str]]:
     return (
         db.session.query(
             BroadcastProviderMessage,
