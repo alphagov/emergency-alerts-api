@@ -30,6 +30,7 @@ def upgrade():
     op.create_table(
         "geography_polygons",
         sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, unique=True, default=uuid.uuid4),
+        #  Office for National Statistics (ONS) and Government Statistical Service (GSS) code for the area e.g. England's is E92000001
         sa.Column("geographic_id", sa.String(), nullable=False),
         sa.Column("name", sa.String(), nullable=False),
         sa.Column("geometry", Geometry("GEOMETRY", srid=4326), nullable=False),
