@@ -4,7 +4,6 @@ from sqlalchemy.dialects.postgresql import aggregate_order_by
 from sqlalchemy.orm import aliased
 
 from app import db
-from app.areas.utils import COUNTRIES, LOCAL_AUTHORITIES, WARDS
 from app.models import GeographyPolygons, GeographyType, GeographyVersion
 
 
@@ -113,10 +112,10 @@ def dao_get_child_areas_for_parent_geography_id(parent_geography_id):
     # Note: REPPIR sites also have parent_geography_id but we don't
     # want them rendered as children for selection
     latest_la_version_id, latest_ward_version_id, version_ids = None, None, []
-    if latest_la_version := dao_get_latest_active_version_for_type_route(LOCAL_AUTHORITIES):
+    if latest_la_version := dao_get_latest_active_version_for_type_route("local_authorities"):
         latest_la_version_id = latest_la_version.id
         version_ids.append(latest_la_version_id)
-    if latest_ward_version := dao_get_latest_active_version_for_type_route(WARDS):
+    if latest_ward_version := dao_get_latest_active_version_for_type_route("wards"):
         latest_ward_version_id = latest_ward_version.id
         version_ids.append(latest_ward_version_id)
 
@@ -137,8 +136,8 @@ def dao_get_child_areas_for_parent_geography_id(parent_geography_id):
 
 def dao_get_grandparent_areas():
     """Returns list of areas that have child areas that are parent areas"""
-    latest_la_version_id = dao_get_latest_active_version_for_type_route(LOCAL_AUTHORITIES).id
-    latest_ward_version_id = dao_get_latest_active_version_for_type_route(WARDS).id
+    latest_la_version_id = dao_get_latest_active_version_for_type_route("local_authorities").id
+    latest_ward_version_id = dao_get_latest_active_version_for_type_route("wards").id
 
     version_ids = [latest_la_version_id, latest_ward_version_id]
 
@@ -365,7 +364,7 @@ def dao_check_coordinates_valid(first, second, coordinate_type):
 
     # Retrieve the country area IDs as these will be the basis for
     # checking whether or not coordinates are within UK
-    country_areas = dao_get_areas_for_geography_type(COUNTRIES)
+    country_areas = dao_get_areas_for_geography_type("countries")
     area_ids = [str(area.id) for area in country_areas]
 
     sql = text("""
@@ -391,14 +390,14 @@ def dao_check_coordinates_valid(first, second, coordinate_type):
     return bool(result)
 
 
-def dao_get_dominant_parent_geography_id(area_wkt, parent_type_name=LOCAL_AUTHORITIES):
+def dao_get_dominant_parent_geography_id(area_wkt, parent_type_name="local_authorities"):
     """
     Given an area geometry in WKT, return the ID of the parent GeographyPolygons
     of type `parent_type_name` that overlaps it the most (by intersection area),
     or None.
 
     `parent_type_name` should match GeographyType.route, e.g. "local_authorities"
-    or "wards" depending on your data.
+    or "local-authorities" depending on your data.
     """
 
     # Look up the GeographyType id for the requested parent type (by route)

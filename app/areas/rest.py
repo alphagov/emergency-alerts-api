@@ -4,10 +4,6 @@ from flask import Blueprint, jsonify, request
 from geoalchemy2.shape import to_shape
 
 from app.areas.utils import (
-    COORDINATES,
-    FLOOD_WARNING_AREAS,
-    LOCAL_AUTHORITIES,
-    POSTCODES,
     add_custom_area_to_existing_areas,
     area_response_json,
     build_circle_area,
@@ -107,10 +103,10 @@ def get_areas():
     legacy_ids = []  # IDs starting with legacy_prefixes
 
     for area_id in area_ids:
-        if area_id.startswith(POSTCODES):
-            circle_ids.append((area_id, POSTCODES))
-        elif area_id.startswith(COORDINATES):
-            circle_ids.append((area_id, COORDINATES))
+        if area_id.startswith("postcodes"):
+            circle_ids.append((area_id, "postcodes"))
+        elif area_id.startswith("coordinates"):
+            circle_ids.append((area_id, "coordinates"))
         elif area_id.startswith(legacy_prefixes):
             legacy_ids.append(area_id)
         else:
@@ -211,7 +207,7 @@ def get_postcode_centroid():
     data = request.get_json() or {}
     postcode = data.get("postcode")
 
-    postcode_area = dao_get_latest_area_by_geographic_id(postcode, POSTCODES)
+    postcode_area = dao_get_latest_area_by_geographic_id(postcode, "postcodes")
     if not postcode_area:
         return jsonify({"message": "Enter a postcode within the UK"}), 400
 
@@ -262,7 +258,7 @@ def get_areas_by_names(type_name):
     for name in area_names:
         if name not in found_by_name:
             message = (
-                f"Local authority '{name}' not found" if type_name == LOCAL_AUTHORITIES else error_messages["invalid"]
+                f"Local authority '{name}' not found" if type_name == "local_authorities" else error_messages["invalid"]
             )
             return jsonify({"message": message}), 400
 
@@ -279,7 +275,7 @@ def create_postcode_area():
     postcode = data.get("postcode")
     if not radius or not postcode:
         return jsonify({"message": "Enter postcode and radius to create postcode area"}), 400
-    postcode_area_id = dao_get_latest_area_by_geographic_id(postcode, POSTCODES).id
+    postcode_area_id = dao_get_latest_area_by_geographic_id(postcode, "postcodes").id
     centroid = dao_get_area_centroid(postcode_area_id)
     circle = dao_create_circle_area(centroid, radius)
     centroid_wkt = shapely.wkt.loads(centroid)
@@ -348,9 +344,9 @@ def build_alert_area_for_ids():
 
     # Splits specified area IDs into appropriate lists, to be processed accordingly
     for area_id in area_ids:
-        if area_id.startswith(POSTCODES):
+        if area_id.startswith("postcodes"):
             postcode_ids.append(area_id)
-        elif area_id.startswith(COORDINATES):
+        elif area_id.startswith("coordinates"):
             coordinate_ids.append(area_id)
         else:
             predefined_area_ids.append(area_id)
@@ -447,7 +443,7 @@ def add_areas(service_id, message_id, message_type):
         error_messages = bulk_input_error_messages_by_geography_type(type_name)
 
         flood_warning_area_ids = area_ids
-        if type_name == FLOOD_WARNING_AREAS:
+        if type_name == "flood_warning_areas":
             flood_warning_area_ids, error_response, status = process_flood_warning_area_ids(
                 area_ids, existing_ids, error_messages
             )
@@ -478,7 +474,7 @@ def add_areas(service_id, message_id, message_type):
         error_messages = bulk_input_error_messages_by_geography_type(type_name)
 
         flood_ids = area_ids
-        if type_name == FLOOD_WARNING_AREAS:
+        if type_name == "flood_warning_areas":
             flood_ids, error_response, status = process_flood_warning_area_ids(area_ids, existing_ids, error_messages)
             if error_response:
                 return error_response, status

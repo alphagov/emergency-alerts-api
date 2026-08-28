@@ -15,17 +15,6 @@ from app.dao.areas_dao import (
     dao_get_latest_area_by_geographic_id,
 )
 
-# Geography types and their respective routes,
-# set here and referenced to ensure consistency
-LOCAL_AUTHORITIES = "local_authorities"
-WARDS = "wards"
-REPPIR_SITES = "reppir_sites"
-TEST = "test"
-FLOOD_WARNING_AREAS = "flood_warning_areas"
-COUNTRIES = "countries"
-POSTCODES = "postcodes"
-COORDINATES = "coordinates"
-
 
 def area_response_json(area_object):
     return {
@@ -73,7 +62,7 @@ def build_circle_area(area_id, geography_type, id_to_name):
     }
 
 
-def get_parent_geography_id(area_wkt, parent_type_name=LOCAL_AUTHORITIES):
+def get_parent_geography_id(area_wkt, parent_type_name="local_authorities"):
     """Retrieves the parent geography ID either from DB, if exists, or by
     calculating the most intersecting area from areas with specified type"""
     return dao_get_dominant_parent_geography_id(area_wkt, parent_type_name)
@@ -88,15 +77,15 @@ def add_custom_area_to_existing_areas(message, type_name, data):
     existing_ids, existing_names, existing_polygons = get_existing_area_data(message)
 
     # Build centroid, area_id and name based on type
-    if type_name == POSTCODES:
+    if type_name == "postcodes":
         postcode = data.get("postcode")
-        postcode_area_id = dao_get_latest_area_by_geographic_id(postcode, POSTCODES).id
+        postcode_area_id = dao_get_latest_area_by_geographic_id(postcode, "postcodes").id
         centroid = dao_get_area_centroid(postcode_area_id)
         centroid_wkt = shapely.wkt.loads(centroid)
         area_id = f"postcodes_{centroid_wkt.x}_{centroid_wkt.y}_{radius}_{postcode}"
         name = f"{radius:g}km around the postcode {postcode}"
 
-    elif type_name == COORDINATES:
+    elif type_name == "coordinates":
         first_coordinate = data.get("first_coordinate")
         second_coordinate = data.get("second_coordinate")
         coordinate_type = data.get("coordinate_type")
@@ -179,7 +168,7 @@ def bulk_input_error_messages_by_geography_type(type_name):
     """
     Stored error messages for bulk area input by type_name.
     """
-    if type_name == FLOOD_WARNING_AREAS:
+    if type_name == "flood_warning_areas":
         return {
             "missing_data": "Enter at least 1 Flood Warning TA code",
             "duplicates": "All Flood Warning TA codes must be unique",
@@ -187,7 +176,7 @@ def bulk_input_error_messages_by_geography_type(type_name):
             "exceeds_limit": "Maximum of 25 TA codes in an emergency alert",
             "already_selected": "Flood Warning TA code already selected",
         }
-    elif type_name == LOCAL_AUTHORITIES:
+    elif type_name == "local_authorities":
         return {
             "missing_data": "Enter at least 1 local authority",
             "duplicates": "All local authorities must be unique",
@@ -256,13 +245,14 @@ def build_remaining_area_wkt(existing_ids, area_id_to_remove):
     remaining_ids = [
         area_id
         for area_id in existing_ids
-        if area_id != area_id_to_remove and (not area_id.startswith(POSTCODES) and not area_id.startswith(COORDINATES))
+        if area_id != area_id_to_remove
+        and (not area_id.startswith("postcodes") and not area_id.startswith("coordinates"))
     ]
     remaining_postcode_ids = [
-        area_id for area_id in existing_ids if area_id != area_id_to_remove and area_id.startswith(POSTCODES)
+        area_id for area_id in existing_ids if area_id != area_id_to_remove and area_id.startswith("postcodes")
     ]
     remaining_coordinates_ids = [
-        area_id for area_id in existing_ids if area_id != area_id_to_remove and area_id.startswith(COORDINATES)
+        area_id for area_id in existing_ids if area_id != area_id_to_remove and area_id.startswith("coordinates")
     ]
 
     if not remaining_ids and not remaining_postcode_ids and not remaining_coordinates_ids:
