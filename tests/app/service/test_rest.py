@@ -753,6 +753,28 @@ def test_get_email_by_service_multiple_email_contact(notify_api, sample_service)
             assert result["data"][1]["email_address"] == "test2@test.com"
 
 
+def test_update_service_alert_notification_addresses(client, sample_service):
+    auth_header = create_admin_authorization_header()
+
+    data = {"alert_notification_addresses": ["a@test.com", "b@test.com"]}
+
+    resp = client.post(
+        f"/service/{sample_service.id}",
+        data=json.dumps(data),
+        headers=[("Content-Type", "application/json"), auth_header],
+    )
+    result = resp.json
+
+    assert resp.status_code == 200
+
+    expected = [
+        {"service_id": str(sample_service.id), "email_address": "a@test.com"},
+        {"service_id": str(sample_service.id), "email_address": "b@test.com"},
+    ]
+
+    assert result["data"]["alert_notification_addresses"] == expected
+
+
 def test_default_permissions_are_added_for_user_service(notify_api, notify_db_session, sample_service, sample_user):
     with notify_api.test_request_context():
         with notify_api.test_client() as client:
