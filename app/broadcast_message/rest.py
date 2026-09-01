@@ -138,13 +138,24 @@ def get_broadcast_provider_statuses(service_id, broadcast_message_id):
     messages = dao_get_broadcast_provider_messages_by_broadcast_message_id(broadcast_message_id)
 
     # Create a structure like:
-    # { "<mno>": { "alert": [{}], "cancel": [{}] } }
+    # { "<mno>": {
+    #   "alertBroadcastEventId": "", "alertBroadcastProviderMessageId": "", "alert": [{}],
+    #   "cancelBroadcastEventId": "", "cancelBroadcastProviderMessageId", "", "cancel": [{}]
+    # } }
+    # (yes, the broadcast event ID will be the same for each MNO - it's to keep the data structure backwards compatible)
 
     result = {}
     for broadcast_provider_message, broadcast_event_message_type in messages:
         result.setdefault(
             broadcast_provider_message.provider,
-            {BroadcastEventMessageType.ALERT: [], BroadcastEventMessageType.CANCEL: []},
+            {
+                "alertBroadcastEventId": None,
+                "alertBroadcastProviderMessageId": None,
+                BroadcastEventMessageType.ALERT: [],
+                "cancelBroadcastEventId": None,
+                "cancelBroadcastProviderMessageId": None,
+                BroadcastEventMessageType.CANCEL: [],
+            },
         )
 
         # This relationship has an order_by and thus should be in old to new order
@@ -157,11 +168,29 @@ def get_broadcast_provider_statuses(service_id, broadcast_message_id):
             for status_db in broadcast_provider_message.statuses
         ]
 
+        if broadcast_event_message_type == "alert":
+            result[broadcast_provider_message.provider][
+                "alertBroadcastEventId"
+            ] = broadcast_provider_message.broadcast_event_id
+
+            result[broadcast_provider_message.provider][
+                "alertBroadcastProviderMessageId"
+            ] = broadcast_provider_message.id
+        elif broadcast_event_message_type == "cancel":
+            result[broadcast_provider_message.provider][
+                "cancelBroadcastEventId"
+            ] = broadcast_provider_message.broadcast_event_id
+
+            result[broadcast_provider_message.provider][
+                "cancelBroadcastProviderMessageId"
+            ] = broadcast_provider_message.id
+
         result[broadcast_provider_message.provider][broadcast_event_message_type] = statuses
 
     return jsonify(result)
 
 
+# Deprecated: Only used by functional tests prior to migration to provider-statuses
 @broadcast_message_blueprint.route("/<uuid:broadcast_message_id>/provider-messages", methods=["GET"])
 def get_broadcast_provider_messages(service_id, broadcast_message_id):
     messages = dao_get_broadcast_provider_messages_by_broadcast_message_id(broadcast_message_id)
