@@ -333,15 +333,8 @@ def dao_mark_all_as_govuk_acknowledged():
 
 
 def dao_purge_old_broadcast_messages(service, days_older_than=30, dry_run=False):
-    if service is None:
-        raise ValueError("Service ID is required")
-
-    service_id = _resolve_service_id(service)
-    if service_id is None:
-        raise ValueError("Unable to find service ID")
-
-    print(f"Purging alerts for service {service_id}")
-    message_ids = _get_broadcast_messages(days_older_than, service_id)
+    print(f"Purging alerts for service {service if service else "all services"}")
+    message_ids = _get_broadcast_messages(days_older_than, service)
 
     counter = Counter()
     for message_id in message_ids:
@@ -474,17 +467,18 @@ def _resolve_service_id(service):
 
 
 def _get_broadcast_messages(days_older_than, service_id):
-    messages = (
-        db.session.query(
-            BroadcastMessage.id,
-        )
-        .filter(
-            BroadcastMessage.service_id == service_id,
-            BroadcastMessage.created_at <= datetime.now() - timedelta(days=days_older_than),
-            BroadcastMessage.status.in_(BroadcastStatusType.PRE_BROADCAST_STATUSES + BroadcastStatusType.LIVE_STATUSES),
-        )
-        .all()
+    query = db.session.query(
+        BroadcastMessage.id,
+    ).filter(
+        BroadcastMessage.created_at
+        <= datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=days_older_than),
+        BroadcastMessage.status.in_(BroadcastStatusType.PRE_BROADCAST_STATUSES + BroadcastStatusType.LIVE_STATUSES),
     )
+
+    if service_id is not None:
+        query = query.filter(BroadcastMessage.service_id == service_id)
+
+    messages = query.all()
     return [str(row[0]) for row in messages]
 
 
