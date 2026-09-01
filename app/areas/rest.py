@@ -9,6 +9,7 @@ from app.areas.utils import (
     build_circle_area,
     build_remaining_area_wkt,
     bulk_input_error_messages_by_geography_type,
+    convert_lat_long_to_long_lat,
     create_alert_area_dict,
     ensure_valid_wkt,
     generate_centroid_for_coordinate_area,
@@ -17,6 +18,7 @@ from app.areas.utils import (
     parse_coordinate_id,
     parse_postcode_id,
     validate_bulk_area_input,
+    wkt_geometry_to_alert_polygons,
 )
 from app.dao.areas_dao import (
     dao_check_coordinates_valid,
@@ -381,8 +383,9 @@ def build_alert_area_for_ids():
     combined_wkt = dao_create_area(geometries_wkt)
     combined_wkt = ensure_valid_wkt(combined_wkt)
 
-    # From WKT, Polygons object (from emergency-alerts-utils) returned
-    polygons = Polygons.from_wkt(combined_wkt, utm_crs="EPSG:4326")
+    # Combined WKT converted to alert area dict to be returned
+    alert_polygons = wkt_geometry_to_alert_polygons(combined_wkt)
+    polygons = Polygons(polygons=alert_polygons)
     alert_area = create_alert_area_dict(area_ids, names, polygons.polygons)
     return jsonify(alert_area), 200
 
@@ -417,19 +420,22 @@ def add_areas(service_id, message_id, message_type):
     def build_combined_alert_area(existing_ids, existing_names, existing_polygons, new_area_ids):
         # Combines the existing areas and the new areas, by sourcing the WKT for
         # each new area and combining with existing alert area WKT
+
+        # First converts existing polygons to long lat, then retrieves WKT string for the area
+        existing_polygons_lon_lat = convert_lat_long_to_long_lat(existing_polygons)
+        existing_wkt = Polygons(polygons=existing_polygons_lon_lat).as_wkt
+
         areas = dao_get_areas_by_ids(set(new_area_ids))
         names = [area.name for area in areas]
         new_area_wkts = [to_shape(area.geometry).wkt for area in areas]
         new_areas_combined_wkt = dao_create_area(new_area_wkts)
 
-        # Reversed as utils requires the area polygons to be long, lat NOT lat, long
-        reversed_polygons = [[[coord[1], coord[0]] for coord in polygon] for polygon in existing_polygons]
-        existing_wkt = Polygons(polygons=reversed_polygons).as_wkt
-
         combined_wkt = dao_combine_geometries(existing_wkt, new_areas_combined_wkt)
         combined_wkt = ensure_valid_wkt(combined_wkt)
 
-        polygons = Polygons.from_wkt(combined_wkt, utm_crs="EPSG:4326")
+        # Combined WKT converted to alert area dict to be returned
+        alert_polygons = wkt_geometry_to_alert_polygons(combined_wkt)
+        polygons = Polygons(polygons=alert_polygons)
 
         combined_ids = existing_ids + new_area_ids
         combined_names = existing_names + names

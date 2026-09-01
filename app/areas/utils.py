@@ -76,6 +76,10 @@ def add_custom_area_to_existing_areas(message, type_name, data):
 
     existing_ids, existing_names, existing_polygons = get_existing_area_data(message)
 
+    # First converts existing polygons to long lat, then retrieves WKT string for the area
+    existing_polygons_lon_lat = convert_lat_long_to_long_lat(existing_polygons)
+    existing_wkt = Polygons(polygons=existing_polygons_lon_lat).as_wkt
+
     # Build centroid, area_id and name based on type
     if type_name == "postcodes":
         postcode = data.get("postcode")
@@ -102,14 +106,13 @@ def add_custom_area_to_existing_areas(message, type_name, data):
 
     circle_wkt = dao_create_circle_area(centroid, radius)
 
-    reversed_polygons = [[[coord[1], coord[0]] for coord in polygon] for polygon in existing_polygons]
-    existing_wkt = Polygons(polygons=reversed_polygons).as_wkt
-
     new_areas = dao_create_area([circle_wkt])
     combined_wkt = dao_combine_geometries(existing_wkt, new_areas)
     combined_wkt = ensure_valid_wkt(combined_wkt)
 
-    polygons = Polygons.from_wkt(combined_wkt, utm_crs="EPSG:4326")
+    # Combined WKT converted to alert area dict to be returned
+    alert_polygons = wkt_geometry_to_alert_polygons(combined_wkt)
+    polygons = Polygons(polygons=alert_polygons)
 
     combined_ids = existing_ids + [area_id]
     combined_names = existing_names + [name]
@@ -282,7 +285,29 @@ def build_remaining_area_wkt(existing_ids, area_id_to_remove):
     remaining_combined_wkt = dao_create_area(remaining_wkts)
     remaining_combined_wkt = ensure_valid_wkt(remaining_combined_wkt)
 
-    polygons = Polygons.from_wkt(remaining_combined_wkt, utm_crs="EPSG:4326")
+    # Combined WKT converted to alert area dict to be returned
+    alert_polygons = wkt_geometry_to_alert_polygons(remaining_combined_wkt)
+    polygons = Polygons(polygons=alert_polygons)
 
     new_area_ids = [id for id in existing_ids if id != area_id_to_remove]
     return new_area_ids, polygons.polygons, remaining_ids or remaining_postcode_ids or remaining_coordinates_ids
+
+
+def wkt_geometry_to_alert_polygons(area_wkt):
+    remaining_geometry = shapely.wkt.loads(area_wkt)
+    if remaining_geometry.geom_type == "Polygon":
+        remaining_polygons = [remaining_geometry.exterior.coords]
+    elif remaining_geometry.geom_type == "MultiPolygon":
+        remaining_polygons = [polygon.exterior.coords for polygon in remaining_geometry.geoms]
+    else:
+        remaining_polygons = []
+
+    return [[[coordinate[1], coordinate[0]] for coordinate in polygon] for polygon in remaining_polygons]
+
+
+def convert_lat_long_to_long_lat(existing_polygons):
+    # Reverses as utils requires the area polygons to be long, lat NOT lat, long
+    existing_polygons_lon_lat = [
+        [[longitude, latitude] for latitude, longitude in polygon] for polygon in existing_polygons
+    ]
+    return existing_polygons_lon_lat
