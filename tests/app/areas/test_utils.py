@@ -12,6 +12,7 @@ from app.areas.utils import (
     get_parent_area_name,
     get_parent_geography_id,
     validate_bulk_area_input,
+    wkt_geometry_to_alert_polygons,
 )
 from app.dao.areas_dao import (
     dao_get_area_centroid,
@@ -81,7 +82,11 @@ def test_get_parent_geography_id_returns_None_if_unable_to_source_parent_area(no
 def test_add_custom_area_to_existing_areas_returns_expected_area(notify_db_session, sample_broadcast_service):
     # Create an existing area and use its geometry for the initial polygons
     area, _, _ = create_area_with_version_and_type()
-    polygons = Polygons.from_wkt(to_shape(area.geometry).wkt, utm_crs="EPSG:4326")
+    existing_wkt = to_shape(area.geometry).wkt
+
+    alert_polygons = wkt_geometry_to_alert_polygons(existing_wkt)
+    polygons = Polygons(polygons=alert_polygons)
+
     existing = {
         "ids": [str(area.id)],
         "names": [area.name],
