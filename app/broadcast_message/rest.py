@@ -190,25 +190,6 @@ def get_broadcast_provider_statuses(service_id, broadcast_message_id):
     return jsonify(result)
 
 
-# Deprecated: Only used by functional tests prior to migration to provider-statuses
-@broadcast_message_blueprint.route("/<uuid:broadcast_message_id>/provider-messages", methods=["GET"])
-def get_broadcast_provider_messages(service_id, broadcast_message_id):
-    messages = dao_get_broadcast_provider_messages_by_broadcast_message_id(broadcast_message_id)
-
-    messages_dict = {
-        "messages": [
-            {
-                "id": message.id,
-                "provider": message.provider,
-                "status": message.get_latest_status_entry().status,
-            }
-            for message, _message_type in messages
-        ]
-    }
-
-    return jsonify(messages_dict)
-
-
 @broadcast_message_blueprint.route("", methods=["POST"])
 def create_broadcast_message(service_id):
     data = request.get_json()
