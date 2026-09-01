@@ -452,25 +452,29 @@ def return_broadcast_message_for_edit(service_id, broadcast_message_id):
 
 
 @broadcast_message_blueprint.route("/purge/<int:older_than>", methods=["DELETE"])
-def purge_broadcast_messages(service_id, older_than):
+def purge_service_broadcast_messages(service_id, older_than):
     if is_public_environment():
         raise InvalidRequest("Endpoint not found", status_code=404)
+    return purge_broadcast_messages(service_id=service_id, older_than=older_than)
 
+
+def purge_broadcast_messages(service_id=None, older_than=365):
     result_message = (
-        "Purged {0} BroadcastMessage items, {1} BroadcastEvent items and {2} S3 objects, created more than {3} days ago"
+        "Purged {0} ({1}) BroadcastMessage items, {2} BroadcastEvent items "
+        "and {3} S3 objects, created more than {4} days ago"
     )
 
     try:
         bucket = current_app.config["GOVUK_ALERTS_S3_BUCKET_NAME"]
         s3 = boto3.client("s3")
         counter = Counter()
-        messages = _generate_s3_keys(dao_get_public_messages_older_than(older_than))
+        messages = _generate_s3_keys(dao_get_public_messages_older_than(service_id, older_than))
 
         current_app.logger.info(
             "purge_broadcast_messages",
             extra={
                 "python_module": __name__,
-                "service_id": service_id,
+                "service_id": service_id if service_id else "all services",
                 "bucket": bucket,
                 "older_than": older_than,
                 "messages": messages,
@@ -519,24 +523,36 @@ def purge_broadcast_messages(service_id, older_than):
                         counter["s3_deletion_errors"] += len(s3_result.get("Errors", []))
 
                 # delete database records associated with this message
-                counter += dao_delete_records_for_broadcast(service_id, message[0])
+                counter += dao_delete_records_for_broadcast(message[0])
 
             current_app.logger.info(
-                result_message.format(counter["msgs"], counter["events"], counter["s3_objects"], older_than)
+                result_message.format(
+                    counter["msgs"],
+                    service_id if service_id else "all services",
+                    counter["events"],
+                    counter["s3_objects"],
+                    older_than,
+                )
             )
 
     except Exception as e:
         return jsonify(result="error", message=f"Unable to purge old alert items: {e}"), 500
 
-    # Also remove things exclusively from the DB (rejected, draft, etc)
-    db_purge = dao_purge_old_broadcast_messages(service_id, older_than)
-    current_app.logger.info("Additional removed DB items: %s", db_purge)
+    # Also remove alerts not broadcast (rejected, draft, etc)
+    non_public_messages_purged = dao_purge_old_broadcast_messages(service_id, older_than)
+    current_app.logger.info("Additional purged items: %s", non_public_messages_purged)
 
     return (
         jsonify(
             {
-                "message": result_message.format(counter["msgs"], counter["events"], counter["s3_objects"], older_than),
-                "additional_db_purge": db_purge,
+                "message": result_message.format(
+                    counter["msgs"],
+                    service_id if service_id else "all services",
+                    counter["events"],
+                    counter["s3_objects"],
+                    older_than,
+                ),
+                "additional_messages_purged": non_public_messages_purged,
             }
         ),
         200,
