@@ -201,6 +201,29 @@ def get_child_areas_for_parent(parent_geography_id):
     return jsonify({"data": areas})
 
 
+@areas_blueprint.route("/polygons", methods=["POST"])
+def get_area_polygons_wkt_for_custom_area():
+    """
+    Retrieves geometry as WKT from area ID.
+    """
+    data = request.get_json() or {}
+    area_id = data.get("area_id")
+
+    if not area_id:
+        return jsonify({"message": "area_id is required"}), 400
+
+    if area_id.startswith("postcodes"):
+        # create postcode area WKT
+        x, y, radius, postcode = parse_postcode_id(area_id)
+        centroid = shapely.Point(x, y).wkt
+    elif area_id.startswith("coordinates"):
+        # create coordinate area WKT
+        x, y, radius, coordinate_type = parse_coordinate_id(area_id)
+        centroid = generate_centroid_for_coordinate_area(x, y, coordinate_type)
+    circle_wkt = dao_create_circle_area(centroid, radius)
+    return jsonify({"data": circle_wkt})
+
+
 @areas_blueprint.route("/postcodes/get-centroid", methods=["POST"])
 def get_postcode_centroid():
     """

@@ -254,6 +254,54 @@ def test_get_postcode_centroid_returns_error_for_invalid_postcode(
     assert resp == {"message": "Enter a postcode within the UK"}
 
 
+def test_get_area_polygons_wkt_for_custom_area_returns_valid_wkt_for_postcode_area_id(
+    notify_db_session, admin_request, sample_broadcast_service
+):
+    postcode = "test postcode"
+    radius = 5
+    area_id = f"postcodes_-1.2_53_{radius}_{postcode}"
+
+    resp = admin_request.post(
+        "areas.get_area_polygons_wkt_for_custom_area",
+        _data={"area_id": area_id},
+        _expected_status=200,
+    )
+
+    assert resp["data"].startswith("POLYGON((")
+
+
+@pytest.mark.parametrize(
+    "area_id",
+    [
+        "coordinates_51_-0.3_5_latitude_longitude",
+        "coordinates_528000_178000_5_easting_northing",
+    ],
+)
+def test_get_area_polygons_wkt_for_custom_area_returns_valid_wkt_for_coordinate_area_id(
+    notify_db_session, admin_request, sample_broadcast_service, area_id
+):
+    resp = admin_request.post(
+        "areas.get_area_polygons_wkt_for_custom_area",
+        _data={"area_id": area_id},
+        _expected_status=200,
+    )
+
+    assert resp["data"].startswith("POLYGON((")
+
+
+@pytest.mark.parametrize("data", [{}, {"area_id": None}, {"area_id": ""}])
+def test_get_area_polygons_wkt_for_custom_area_returns_error_without_area_id(
+    notify_db_session, admin_request, sample_broadcast_service, data
+):
+    resp = admin_request.post(
+        "areas.get_area_polygons_wkt_for_custom_area",
+        _data=data,
+        _expected_status=400,
+    )
+
+    assert resp == {"message": "area_id is required"}
+
+
 @pytest.mark.parametrize(
     "data, expected_wkt",
     [
