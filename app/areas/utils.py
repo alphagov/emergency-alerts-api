@@ -23,6 +23,7 @@ def area_response_json(area_object):
         "parent": area_object.parent_geography_id,
         "geographic_id": area_object.geographic_id,
         "geography_type": area_object.geography_type_name,
+        "geometry_wkt": to_shape(area_object.geometry).wkt if area_object.geometry else None,
     }
 
 
