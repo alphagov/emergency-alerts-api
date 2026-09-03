@@ -25,6 +25,7 @@ def test_assert_get_area_returns_area_for_id(admin_request, sample_broadcast_ser
         "id": str(area1_id),
         "name": area1.name,
         "parent": area1.parent_geography_id,
+        "geometry_wkt": "POLYGON ((-2.65 53.2, 0.25 53.2, 0.25 54.65, -2.65 54.65, -2.65 53.2))",
     }
 
 
@@ -52,6 +53,7 @@ def test_assert_get_area_by_geographic_id_returns_area_with_geographic_id(
         "id": str(area1.id),
         "name": area1.name,
         "parent": area1.parent_geography_id,
+        "geometry_wkt": "POLYGON ((-2.65 53.2, 0.25 53.2, 0.25 54.65, -2.65 54.65, -2.65 53.2))",
     }
 
 

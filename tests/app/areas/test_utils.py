@@ -28,12 +28,13 @@ from tests.app.db import (
 
 class TestAreaObject:
     # Dummy Area object necessary for some tests asserting how object processed
-    def __init__(self, id, name, parent_geography_id, geographic_id, geography_type_name):
+    def __init__(self, id, name, parent_geography_id, geographic_id, geography_type_name, geometry):
         self.id = id
         self.name = name
         self.parent_geography_id = parent_geography_id
         self.geographic_id = geographic_id
         self.geography_type_name = geography_type_name
+        self.geometry = geometry
 
 
 def test_area_response_json_returns_expected_json_for_area_object(notify_db_session):
@@ -44,6 +45,7 @@ def test_area_response_json_returns_expected_json_for_area_object(notify_db_sess
         parent_geography_id=area.parent_geography_id,
         geographic_id=area.geographic_id,
         geography_type_name=geography_type.name,
+        geometry=area.geometry,
     )
     result = area_response_json(area_object)
 
@@ -53,6 +55,7 @@ def test_area_response_json_returns_expected_json_for_area_object(notify_db_sess
         "parent": area.parent_geography_id,
         "geographic_id": area.geographic_id,
         "geography_type": geography_type.name,
+        "geometry_wkt": "POLYGON ((-2.65 53.2, 0.25 53.2, 0.25 54.65, -2.65 54.65, -2.65 53.2))",
     }
 
 
