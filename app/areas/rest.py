@@ -120,6 +120,10 @@ def get_areas():
 
     if predefined_area_ids:
         predefined_results = dao_get_areas_by_ids(predefined_area_ids)
+
+        if len(predefined_results) != len(predefined_area_ids):
+            return jsonify({"message": "No area could be found for one or more area IDs"}), 400
+
         data.extend(area_response_json(row) for row in predefined_results)
 
     for legacy_id in legacy_ids:
