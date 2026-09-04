@@ -15,6 +15,7 @@ from app.areas.utils import (
     wkt_geometry_to_alert_polygons,
 )
 from app.dao.areas_dao import (
+    dao_get_area_by_id,
     dao_get_area_centroid,
 )
 from tests.app.db import (
@@ -26,27 +27,13 @@ from tests.app.db import (
 )
 
 
-class TestAreaObject:
-    # Dummy Area object necessary for some tests asserting how object processed
-    def __init__(self, id, name, parent_geography_id, geographic_id, geography_type_name, geometry):
-        self.id = id
-        self.name = name
-        self.parent_geography_id = parent_geography_id
-        self.geographic_id = geographic_id
-        self.geography_type_name = geography_type_name
-        self.geometry = geometry
-
-
 def test_area_response_json_returns_expected_json_for_area_object(notify_db_session):
-    area, _, geography_type = create_area_with_version_and_type(geography_type_name="TEST")
-    area_object = TestAreaObject(
-        id=area.id,
-        name=area.name,
-        parent_geography_id=area.parent_geography_id,
-        geographic_id=area.geographic_id,
-        geography_type_name=geography_type.name,
-        geometry=area.geometry,
+    area, _, geography_type = create_area_with_version_and_type(
+        geography_type_name="TEST",
+        geography_type_route="TEST",
     )
+    area_object = dao_get_area_by_id(area.id)
+
     result = area_response_json(area_object)
 
     assert result == {
