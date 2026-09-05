@@ -15,6 +15,7 @@ from app.areas.utils import (
     generate_centroid_for_coordinate_area,
     generate_coordinate_area_name,
     get_existing_area_data,
+    get_parent_area_name,
     parse_coordinate_id,
     parse_postcode_id,
     validate_bulk_area_input,
@@ -395,7 +396,7 @@ def build_alert_area_for_ids():
         centroid = shapely.Point(x, y).wkt
         circle_wkt = dao_create_circle_area(centroid, radius)
         geometries_wkt.append(circle_wkt)
-        names.append(f"{radius}km around the postcode {postcode}")
+        name = f"{radius}km around the postcode {postcode}"
 
     for coordinate_id in coordinate_ids:
         # Split the coordinate ID into centroid coordinates and radius of area
@@ -404,7 +405,10 @@ def build_alert_area_for_ids():
         name = generate_coordinate_area_name(x, y, radius, coordinate_type)
         circle_wkt = dao_create_circle_area(centroid, radius)
         geometries_wkt.append(circle_wkt)
-        names.append(name)
+
+    if parent_area := get_parent_area_name(centroid):
+        name = f"{name} in {parent_area}"
+    names.append(name)
 
     # Combine all of the geometries then validate the combined WKT
     combined_wkt = dao_create_area(geometries_wkt)

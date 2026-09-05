@@ -96,10 +96,11 @@ def add_custom_area_to_existing_areas(message, type_name, data):
         coordinate_type = data.get("coordinate_type")
         centroid = generate_centroid_for_coordinate_area(first_coordinate, second_coordinate, coordinate_type)
         name = generate_coordinate_area_name(first_coordinate, second_coordinate, radius, coordinate_type)
-        if parent_area := get_parent_area_name(centroid):
-            name = f"{name} in {parent_area}"
         centroid_wkt = shapely.wkt.loads(centroid)
         area_id = f"coordinates_{centroid_wkt.y}_{centroid_wkt.x}_{radius}_{coordinate_type}"
+
+    if parent_area := get_parent_area_name(centroid):
+        name = f"{name} in {parent_area}"
 
     # Prevent duplicate areas: if area_id already exists, return unchanged
     if area_id and area_id in existing_ids:
@@ -139,6 +140,7 @@ def get_parent_area_name(centroid):
         return f"City of {name[:-9]}"
     if name.endswith(", County of"):
         return f"County of {name[:-11]}"
+    return name
 
 
 def generate_centroid_for_coordinate_area(first_coordinate, second_coordinate, coordinate_type):
