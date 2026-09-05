@@ -429,7 +429,7 @@ def test_get_local_authorities_areas_by_names_returns_expected_error_for_invalid
         # duplicates
         (
             {"area_names": ["Flood Warning TA code 1", "Flood Warning TA code 1"]},
-            "All Flood Warning TA codes must be unique",
+            "Flood Warning TA code 'Flood Warning TA code 1' appears in the list more than once",
         ),
         # invalid
         (
