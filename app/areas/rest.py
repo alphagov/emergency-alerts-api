@@ -397,18 +397,21 @@ def build_alert_area_for_ids():
         circle_wkt = dao_create_circle_area(centroid, radius)
         geometries_wkt.append(circle_wkt)
         name = f"{radius}km around the postcode {postcode}"
+        if parent_area := get_parent_area_name(centroid):
+            name = f"{name} in {parent_area}"
+        names.append(name)
 
     for coordinate_id in coordinate_ids:
         # Split the coordinate ID into centroid coordinates and radius of area
         x, y, radius, coordinate_type = parse_coordinate_id(coordinate_id)
         centroid = generate_centroid_for_coordinate_area(x, y, coordinate_type)
-        name = generate_coordinate_area_name(x, y, radius, coordinate_type)
         circle_wkt = dao_create_circle_area(centroid, radius)
         geometries_wkt.append(circle_wkt)
 
-    if parent_area := get_parent_area_name(centroid):
-        name = f"{name} in {parent_area}"
-    names.append(name)
+        name = generate_coordinate_area_name(x, y, radius, coordinate_type)
+        if parent_area := get_parent_area_name(centroid):
+            name = f"{name} in {parent_area}"
+        names.append(name)
 
     # Combine all of the geometries then validate the combined WKT
     combined_wkt = dao_create_area(geometries_wkt)
