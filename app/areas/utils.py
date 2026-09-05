@@ -176,6 +176,7 @@ def bulk_input_error_messages_by_geography_type(type_name):
         return {
             "missing_data": "Enter at least 1 Flood Warning TA code",
             "exceeds_limit": "Maximum of 25 TA codes in an emergency alert",
+            "invalid": "Flood Warning TA code not found",
         }
     elif type_name == "local_authorities":
         return {
