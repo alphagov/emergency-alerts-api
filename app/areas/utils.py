@@ -175,10 +175,7 @@ def bulk_input_error_messages_by_geography_type(type_name):
     if type_name == "flood_warning_areas":
         return {
             "missing_data": "Enter at least 1 Flood Warning TA code",
-            "duplicates": "All Flood Warning TA codes must be unique",
-            "invalid": "Flood Warning TA code not found",
             "exceeds_limit": "Maximum of 25 TA codes in an emergency alert",
-            "already_selected": "Flood Warning TA code already selected",
         }
     elif type_name == "local_authorities":
         return {
@@ -186,7 +183,6 @@ def bulk_input_error_messages_by_geography_type(type_name):
             "duplicates": "All local authorities must be unique",
             "invalid": "Local authority not found",
             "exceeds_limit": "Maximum of 25 local authorities allowed as a list in one emergency alert",
-            "already_selected": "Local authority already selected",
         }
     else:
         return {
@@ -194,7 +190,6 @@ def bulk_input_error_messages_by_geography_type(type_name):
             "duplicates": "Area names must be unique",
             "invalid": "Area not found",
             "exceeds_limit": "You can add no more than 25 areas",
-            "already_selected": "Area already selected",
         }
 
 
@@ -208,8 +203,20 @@ def validate_bulk_area_input(area_names, type_name):
     if not area_names:
         return error_messages["missing_data"]
 
-    # If duplicate area names posted
-    if len(area_names) != len(set(area_names)):
+    # If duplicate area names posted, return the first duplicate value
+    seen_area_names = set()
+    duplicate_area_name = None
+
+    for area_name in area_names:
+        if area_name in seen_area_names:
+            duplicate_area_name = area_name
+            break
+        seen_area_names.add(area_name)
+
+    if duplicate_area_name is not None:
+        if type_name == "flood_warning_areas":
+            return f"Flood Warning TA code '{duplicate_area_name}' appears in the list more than once"
+
         return error_messages["duplicates"]
 
     # We can't add more than 25 areas at a time for bulk input
