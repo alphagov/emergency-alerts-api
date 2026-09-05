@@ -151,7 +151,7 @@ def generate_centroid_for_coordinate_area(first_coordinate, second_coordinate, c
     elif coordinate_type == "easting_northing":
         # Transforms eastings northings to latitude and longitude for centroid query
         transformer = Transformer.from_crs("EPSG:27700", "EPSG:4326", always_xy=True)
-        longitude, latitude = transformer.transform(first_coordinate, second_coordinate)
+        latitude, longitude = transformer.transform(first_coordinate, second_coordinate)
         centroid = shapely.Point(float(longitude), float(latitude)).wkt
     return centroid
 
