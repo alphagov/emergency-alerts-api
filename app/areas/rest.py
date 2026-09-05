@@ -434,12 +434,13 @@ def add_areas(service_id, message_id, message_type):
         for original_id in raw_ids:
             area = dao_get_latest_area_by_geographic_id(original_id)
             if area is None:
-                return None, jsonify({"message": error_messages["invalid"]}), 400
+                return (
+                    None,
+                    jsonify({"message": f"Flood Warning TA code '{original_id}' not found"}),
+                    400,
+                )
 
             area_id = str(area.id)
-            if area_id in existing_ids:
-                return None, jsonify({"message": error_messages["already_selected"]}), 400
-
             sourced_ids.append(area_id)
 
         return sourced_ids, None, None
