@@ -29,9 +29,9 @@ def area_response_json(area_object):
 
 def generate_coordinate_area_name(x, y, radius, coordinate_type):
     if coordinate_type == "latitude_longitude":
-        name = f"{radius:g}km around {x} latitude, {y} longitude"
+        name = f"{radius:g}km around {x:g} latitude, {y:g} longitude"
     elif coordinate_type == "easting_northing":
-        name = f"{radius:g}km around {x} easting, {y} northing"
+        name = f"{radius:g}km around {x:g} easting, {y:g} northing"
     return name
 
 
@@ -151,8 +151,8 @@ def generate_centroid_for_coordinate_area(first_coordinate, second_coordinate, c
     elif coordinate_type == "easting_northing":
         # Transforms eastings northings to latitude and longitude for centroid query
         transformer = Transformer.from_crs("EPSG:27700", "EPSG:4326", always_xy=True)
-        latitude, longitude = transformer.transform(first_coordinate, second_coordinate)
-        centroid = shapely.Point(float(longitude), float(latitude)).wkt
+        longitude, latitude = transformer.transform(float(first_coordinate), float(second_coordinate))
+        centroid = shapely.Point(longitude, latitude).wkt
     return centroid
 
 
@@ -285,7 +285,11 @@ def build_remaining_area_wkt(existing_ids, area_id_to_remove):
 
     for coordinate_id in remaining_coordinates_ids:
         x, y, radius, coordinate_type = parse_coordinate_id(coordinate_id)
-        centroid = generate_centroid_for_coordinate_area(x, y, coordinate_type)
+        if coordinate_type == "easting_northing":
+            # Coordinate IDs store converted values as latitude, longitude
+            centroid = shapely.Point(y, x).wkt
+        else:
+            centroid = generate_centroid_for_coordinate_area(x, y, coordinate_type)
         circle_wkt = dao_create_circle_area(centroid, radius)
         coordinate_areas.append(circle_wkt)
 
