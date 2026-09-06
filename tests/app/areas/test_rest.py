@@ -785,8 +785,8 @@ def test_add_custom_coordinate_area_to_broadcast_message(notify_db_session, admi
 
     response_areas = resp["areas"]
     assert response_areas["ids"] == ["Starting area", "coordinates_54.0_-2.0_10.0_latitude_longitude"]
-    assert response_areas["aggregate_names"] == ["Starting area", "10km around 54.0 latitude, -2.0 longitude"]
-    assert response_areas["names"] == ["Starting area", "10km around 54.0 latitude, -2.0 longitude"]
+    assert response_areas["aggregate_names"] == ["Starting area", "10km around 54 latitude, -2 longitude"]
+    assert response_areas["names"] == ["Starting area", "10km around 54 latitude, -2 longitude"]
 
 
 def test_add_custom_coordinate_area_to_template(notify_db_session, admin_request, sample_broadcast_service):
@@ -839,11 +839,11 @@ def test_add_custom_coordinate_area_to_template(notify_db_session, admin_request
     ]
     assert response_areas["aggregate_names"] == [
         "Starting area",
-        f"{radius:g}km around {first_coordinate} latitude, {second_coordinate} longitude",
+        f"{radius:g}km around {first_coordinate:g} latitude, {second_coordinate:g} longitude",
     ]
     assert response_areas["names"] == [
         "Starting area",
-        f"{radius:g}km around {first_coordinate} latitude, {second_coordinate} longitude",
+        f"{radius:g}km around {first_coordinate:g} latitude, {second_coordinate:g} longitude",
     ]
 
 
