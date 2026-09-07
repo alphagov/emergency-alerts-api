@@ -1,6 +1,5 @@
 from geoalchemy2.shape import to_shape
-from sqlalchemy import desc, func, text
-from sqlalchemy.dialects.postgresql import aggregate_order_by
+from sqlalchemy import desc, text
 from sqlalchemy.orm import aliased
 
 from app import db
@@ -233,52 +232,57 @@ def dao_get_areas_by_names(area_names, type_name):
     )
 
 
-def dao_get_latest_geography_types_with_count_and_examples():
-    """Returns the types from geography_type table, with latest version IDs,
-    with the result being a list of elements with structure;
-    - type ID
-    - type name
-    - type route
-    - count of areas for the type
-    - first 4 areas for the type
-    - type's name_singular (how singular areas of this type are referred to)
-    """
+def dao_get_latest_geography_types():
+    """Returns geography types that have a latest active geography version."""
     latest_geography_version = dao_get_latest_geography_version_number()
+
+    if latest_geography_version is None:
+        return []
+
     query = (
         db.session.query(
             GeographyType.id,
             GeographyType.name.label("geography_type_name"),
             GeographyType.route,
-            func.count(GeographyPolygons.id).label("area_count"),
-            func.array_agg(
-                aggregate_order_by(
-                    GeographyPolygons.name,
-                    GeographyPolygons.name,
-                )
-            )[
-                1:4
-            ].label("areas"),
             GeographyType.name_singular,
         )
         .join(
             GeographyVersion,
             GeographyVersion.geography_type_id == GeographyType.id,
         )
-        .outerjoin(
-            GeographyPolygons,
-            (GeographyPolygons.geography_type_id == GeographyType.id)
-            & (GeographyPolygons.geography_version_id == GeographyVersion.id),
+        .filter(
+            GeographyVersion.version == latest_geography_version,
+            GeographyVersion.state == "active",
         )
-        .filter(GeographyVersion.version == latest_geography_version)
-        .group_by(
-            GeographyType.id,
-            GeographyType.name,
-            GeographyType.route,
-            GeographyType.name_singular,
-        )
+        .distinct()
+        .order_by(GeographyType.name)
     )
 
     return query.all()
+
+
+def dao_get_geography_type_examples(type_name):
+    """Returns the area count and first four area names for a geography type."""
+    latest_version = dao_get_latest_active_version_for_type_route(type_name)
+
+    if latest_version is None:
+        return {
+            "count": 0,
+            "examples": [],
+        }
+
+    area_query = GeographyPolygons.query.filter_by(
+        geography_version_id=latest_version.id,
+    )
+
+    count = area_query.count()
+
+    examples = [area.name for area in area_query.order_by(GeographyPolygons.name).limit(4).all()]
+
+    return {
+        "count": count,
+        "examples": examples,
+    }
 
 
 def dao_create_area(geometries):

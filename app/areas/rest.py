@@ -32,9 +32,10 @@ from app.dao.areas_dao import (
     dao_get_areas_by_names,
     dao_get_areas_for_geography_type,
     dao_get_child_areas_for_parent_geography_id,
+    dao_get_geography_type_examples,
     dao_get_grandparent_areas,
     dao_get_latest_area_by_geographic_id,
-    dao_get_latest_geography_types_with_count_and_examples,
+    dao_get_latest_geography_types,
 )
 from app.dao.broadcast_message_dao import (
     dao_get_broadcast_message_by_id_and_service_id,
@@ -151,36 +152,39 @@ def is_grandparent(area_id):
 
 
 @areas_blueprint.route("/geography-types", methods=["GET"])
-def get_geography_types_and_examples():
-    """Returns a list of geography types/libraries (dicts), for rendering in Admin application"""
-    results = dao_get_latest_geography_types_with_count_and_examples()
-    data = []
-
-    for row in results:
-        # For each geography type (library)
-        area_names = list(row.areas or [])  # Geography type's areas
-        count = int(row.area_count or 0)  # Count of areas for geography type
-
-        # Generates examples string to be displayed on Admin
-        # applications 'libraries' page
-        if count <= 4:
-            examples = ", ".join(area_names)
-        else:
-            shown = area_names[:3]
-            remaining = count - 3
-            examples = f"{', '.join(shown)} and {remaining} more..."
-
-        data.append(
-            {
-                "id": row.id,
-                "name": row.geography_type_name,
-                "name_singular": row.name_singular,
-                "route": row.route,
-                "examples": examples,
-            }
-        )
+def get_geography_types():
+    """Returns a list of geography types/libraries."""
+    results = dao_get_latest_geography_types()
+    data = [
+        {
+            "id": row.id,
+            "name": row.geography_type_name,
+            "name_singular": row.name_singular,
+            "route": row.route,
+        }
+        for row in results
+    ]
 
     return jsonify({"data": data})
+
+
+@areas_blueprint.route("/geography-types/<type_name>/examples", methods=["GET"])
+def get_geography_type_examples(type_name):
+    """Returns the example hint text for a geography type/library."""
+    data = dao_get_geography_type_examples(type_name)
+    count = data["count"]
+    example_areas = data["examples"]
+
+    # Generates examples string to be displayed on Admin
+    # applications 'libraries' page
+    if count <= 4:
+        examples = ", ".join(example_areas)
+    else:
+        shown = example_areas[:3]
+        remaining = count - 3
+        examples = f"{', '.join(shown)} and {remaining} more..."
+
+    return jsonify({"data": examples})
 
 
 @areas_blueprint.route("/geography-types/<type_name>/areas", methods=["GET"])
