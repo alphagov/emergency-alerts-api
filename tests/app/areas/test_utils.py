@@ -103,9 +103,9 @@ def test_add_custom_area_to_existing_areas_returns_expected_area(notify_db_sessi
     )
 
     assert updated_message.areas == {
-        "aggregate_names": ["Test name", "5km around 54.0 latitude, -2.0 longitude"],
+        "aggregate_names": ["Test name", "5km around 54 latitude, -2 longitude"],
         "ids": [str(area.id), "coordinates_54.0_-2.0_5.0_latitude_longitude"],
-        "names": ["Test name", "5km around 54.0 latitude, -2.0 longitude"],
+        "names": ["Test name", "5km around 54 latitude, -2 longitude"],
         "simple_polygons": [[[54.65, -2.65], [54.65, 0.25], [53.2, 0.25], [53.2, -2.65], [54.65, -2.65]]],
     }
 
