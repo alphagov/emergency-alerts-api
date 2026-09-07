@@ -127,26 +127,40 @@ def test_assert_area_is_grandparent_returns_bool_value(notify_db_session, admin_
     assert resp_false["data"] is False
 
 
-def test_asserts_get_geography_types_and_examples_returns_valid_response_for_type(
+def test_asserts_get_geography_types_returns_valid_response_for_type(
     notify_db_session, admin_request, sample_broadcast_service
 ):
     area, geography_version, geography_type = create_area_with_version_and_type(geography_type_name="Local authorities")
 
     response = admin_request.get(
-        "areas.get_geography_types_and_examples",
+        "areas.get_geography_types",
         service_id=sample_broadcast_service.id,
         _expected_status=200,
     )
 
     assert response["data"] == [
         {
-            "examples": area.name,  # only the 1 area so 1 name
             "id": geography_type.id,
             "name": geography_type.name,
             "name_singular": geography_type.name_singular,
             "route": geography_type.route,
         }
     ]
+
+
+def test_asserts_get_geography_type_examples_returns_valid_response_for_type(
+    notify_db_session, admin_request, sample_broadcast_service
+):
+    area, geography_version, geography_type = create_area_with_version_and_type(geography_type_name="Local authorities")
+
+    response = admin_request.get(
+        "areas.get_geography_type_examples",
+        service_id=sample_broadcast_service.id,
+        type_route=geography_type.route,
+        _expected_status=200,
+    )
+
+    assert response["data"] == "Test name"
 
 
 def test_get_areas_for_type_returns_all_areas_for_valid_type(

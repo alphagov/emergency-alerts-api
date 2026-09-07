@@ -15,10 +15,11 @@ from app.dao.areas_dao import (
     dao_get_areas_for_geography_type,
     dao_get_child_areas_for_parent_geography_id,
     dao_get_dominant_parent_geography_id,
+    dao_get_geography_type_examples,
     dao_get_grandparent_areas,
     dao_get_latest_active_version_for_type_route,
     dao_get_latest_area_by_geographic_id,
-    dao_get_latest_geography_types_with_count_and_examples,
+    dao_get_latest_geography_types,
     dao_get_latest_geography_version_number,
     dao_get_latest_geography_versions,
 )
@@ -252,7 +253,25 @@ def test_dao_get_areas_by_ids_returns_expected_areas(notify_db_session):
     assert set(ids) == {area1.id, area2.id}
 
 
-def test_dao_get_latest_geography_types_with_count_and_examples_returns_expected_data_for_type(
+def test_dao_get_latest_geography_types_returns_expected_data_for_type(
+    notify_db_session,
+):
+    la_type = create_geography_type(route="local_authorities")
+    create_geography_version(geography_type_id=la_type.id, version="1.0.0", state="active")
+
+    ward_type = create_geography_type(route="wards", name="Wards")
+    create_geography_version(geography_type_id=ward_type.id, version="1.0.0", state="active")
+
+    results = dao_get_latest_geography_types()
+    assert len(results) == 2
+
+    row = results[0]
+    assert row.id == la_type.id
+    assert row.geography_type_name == la_type.name
+    assert row.route == la_type.route
+
+
+def test_dao_get_geography_type_examples_expected_data_for_type(
     notify_db_session,
 ):
     area, geography_version, geography_type = create_area_with_version_and_type(
@@ -260,15 +279,9 @@ def test_dao_get_latest_geography_types_with_count_and_examples_returns_expected
         geography_type_route="local_authorities",
     )
 
-    results = dao_get_latest_geography_types_with_count_and_examples()
-    assert len(results) == 1
+    results = dao_get_geography_type_examples("local_authorities")
 
-    row = results[0]
-    assert row.id == geography_type.id
-    assert row.geography_type_name == geography_type.name
-    assert row.route == geography_type.route
-    assert int(row.area_count) == 1
-    assert list(row.areas) == [area.name]
+    assert results == {"count": 1, "examples": ["Test name"]}
 
 
 def test_dao_create_area_returns_expected_area_wkt(notify_db_session):

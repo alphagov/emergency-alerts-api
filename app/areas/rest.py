@@ -168,10 +168,10 @@ def get_geography_types():
     return jsonify({"data": data})
 
 
-@areas_blueprint.route("/geography-types/<type_name>/examples", methods=["GET"])
-def get_geography_type_examples(type_name):
+@areas_blueprint.route("/geography-types/<type_route>/examples", methods=["GET"])
+def get_geography_type_examples(type_route):
     """Returns the example hint text for a geography type/library."""
-    data = dao_get_geography_type_examples(type_name)
+    data = dao_get_geography_type_examples(type_route)
     count = data["count"]
     example_areas = data["examples"]
 
