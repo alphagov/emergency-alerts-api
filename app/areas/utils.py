@@ -31,7 +31,7 @@ def generate_coordinate_area_name(x, y, radius, coordinate_type):
     if coordinate_type == "latitude_longitude":
         name = f"{radius:g}km around {x:g} latitude, {y:g} longitude"
     elif coordinate_type == "easting_northing":
-        name = f"{radius:g}km around {x:g} easting, {y:g} northing"
+        name = f"{radius:g}km around the easting of {x:g} and the northing of {y:g}"
     return name
 
 
