@@ -219,6 +219,8 @@ def validate_bulk_area_input(area_names, type_name):
     if duplicate_area_name is not None:
         if type_name == "flood_warning_areas":
             return f"Flood Warning TA code '{duplicate_area_name}' appears in the list more than once"
+        elif type_name == "local_authorities":
+            return f"Local authority '{duplicate_area_name}' currently appears in the list more than once"
 
         return error_messages["duplicates"]
 
