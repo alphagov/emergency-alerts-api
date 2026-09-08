@@ -403,7 +403,7 @@ def test_get_areas_by_names_returns_expected_areas(notify_db_session, admin_requ
         # duplicates
         (
             {"area_names": ["Local authority 1", "Local authority 1"]},
-            "All local authorities must be unique",
+            "Local authority 'Local authority 1' currently appears in the list more than once",
         ),
         # invalid
         (

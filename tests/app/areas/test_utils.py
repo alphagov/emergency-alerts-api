@@ -168,7 +168,10 @@ def test_validate_bulk_area_input_returns_correct_error_message_for_input():
     assert validate_bulk_area_input([], "local_authorities") == "Enter at least 1 local authority"
 
     # duplicates
-    assert validate_bulk_area_input(["Area 1", "Area 1"], "local_authorities") == "All local authorities must be unique"
+    assert (
+        validate_bulk_area_input(["Area 1", "Area 1"], "local_authorities")
+        == "Local authority 'Area 1' currently appears in the list more than once"
+    )
 
     # exceeds limit
     too_many = [f"Area {i}" for i in range(26)]
