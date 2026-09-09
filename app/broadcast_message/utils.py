@@ -81,7 +81,7 @@ def _validate_broadcast_update(broadcast_message, new_status, updating_user):
                 "You cannot approve an alert that you submitted for approval.",
                 status_code=400,
             )
-        elif len(broadcast_message.areas["simple_polygons"]) == 0:
+        elif len((broadcast_message.areas or {}).get("simple_polygons", [])) == 0:
             raise InvalidRequest(
                 f"broadcast_message {broadcast_message.id} has no selected areas and so cannot be broadcasted.",
                 status_code=400,
@@ -98,12 +98,15 @@ def _create_p1_zendesk_alert(broadcast_message):
     if broadcast_message.stubbed:
         return
 
+    # Admin-created alerts store areas as {"ids": [...], "simple_polygons": [...]},
+    # API-created alerts as {"names": [...], "simple_polygons": [...]} - accept both.
+    area_names = (broadcast_message.areas or {}).get("names") or (broadcast_message.areas or {}).get("ids", "?")
     message = inspect.cleandoc(f"""
         Broadcast Sent
 
         https://www.notifications.service.gov.uk/services/{broadcast_message.service_id}/current-alerts/{broadcast_message.id}
 
-        Sent on channel {broadcast_message.service.broadcast_channel} to {broadcast_message.areas["names"]}.
+        Sent on channel {broadcast_message.service.broadcast_channel} to {area_names}.
 
         Content starts "{broadcast_message.content[:100]}".
     """)

@@ -246,6 +246,57 @@ def test_update_broadcast_message_status_rejects_approval_of_broadcast_with_no_a
     assert f"broadcast_message {broadcast.id} has no selected areas and so cannot be broadcasted." in str(e.value)
 
 
+def test_update_broadcast_message_status_approves_admin_shaped_areas_without_names_on_prod(
+    admin_request, notify_api, sample_broadcast_service, mocker
+):
+    # Admin-created alerts store areas as {"ids": [...], "simple_polygons": [...]} with no "names"
+    # key (unlike API-created alerts). Approving one in production must not raise KeyError after
+    # the status has been saved - otherwise the alert is stuck as broadcasting and never sent.
+    template = create_template(sample_broadcast_service, BROADCAST_TYPE, content="emergency broadcast")
+    broadcast_message = create_broadcast_message(
+        template,
+        status=BroadcastStatusType.PENDING_APPROVAL,
+        areas={"ids": ["london"], "simple_polygons": [[[51.30, 0.7], [51.28, 0.8], [51.25, -0.7]]]},
+    )
+    assert "names" not in broadcast_message.areas
+    approver = create_user(email="approver@gov.uk")
+    sample_broadcast_service.users.append(approver)
+    mock_task = mocker.patch("app.tasks.broadcast_message_tasks.send_broadcast_event.send")
+    mock_send_ticket_to_zendesk = mocker.patch(
+        "app.broadcast_message.utils.zendesk_client.send_ticket_to_zendesk",
+        autospec=True,
+    )
+
+    with set_config(notify_api, "HOST", "production"):
+        update_broadcast_message_status(broadcast_message, BroadcastStatusType.BROADCASTING, approver)
+
+    assert broadcast_message.status == BroadcastStatusType.BROADCASTING
+    assert len(broadcast_message.events) == 1
+    mock_task.assert_called_once_with(broadcast_event_id=str(broadcast_message.events[0].id))
+    mock_send_ticket_to_zendesk.assert_called_once()
+
+
+def test_update_broadcast_message_status_rejects_approval_when_areas_has_no_polygons_key(
+    admin_request, sample_broadcast_service, mocker
+):
+    # Rows migrated to an empty areas object ({}) must get a clean 400, not a KeyError (500).
+    template = create_template(sample_broadcast_service, BROADCAST_TYPE)
+    broadcast_message = create_broadcast_message(
+        template, status=BroadcastStatusType.PENDING_APPROVAL, areas={}
+    )
+    approver = create_user(email="approver@gov.uk")
+    sample_broadcast_service.users.append(approver)
+    mock_task = mocker.patch("app.tasks.broadcast_message_tasks.send_broadcast_event.send")
+
+    with pytest.raises(expected_exception=InvalidRequest) as e:
+        update_broadcast_message_status(broadcast_message, BroadcastStatusType.BROADCASTING, approver)
+
+    assert mock_task.called is False
+    assert f"broadcast_message {broadcast_message.id} has no selected areas and so cannot be broadcasted." in str(
+        e.value
+    )
+
+
 def test_update_broadcast_message_status_allows_trial_mode_services_to_approve_own_message(
     sample_broadcast_service, mocker
 ):
