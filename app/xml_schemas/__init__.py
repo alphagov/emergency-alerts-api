@@ -15,6 +15,13 @@ def validate_xml(document: bytes, schema_file_name):
     if doc_length > max_length:
         return f"XML must be {max_length} characters or fewer"
 
+    # CAP documents never legitimately contain a DOCTYPE, and one with
+    # internal entity definitions makes the downstream BeautifulSoup parse
+    # produce an empty tree (crashing with AttributeError -> 500). Reject
+    # up front so it surfaces as a 400 instead.
+    if b"<!DOCTYPE" in document:
+        return "XML must not contain a DOCTYPE declaration"
+
     path = Path(__file__).resolve().parent / schema_file_name
     contents = path.read_text()
 

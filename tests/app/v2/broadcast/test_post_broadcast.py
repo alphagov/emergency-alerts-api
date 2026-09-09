@@ -71,6 +71,24 @@ def test_post_broadcast_non_cap_xml_returns_415(
     }
 
 
+def test_post_broadcast_xml_with_doctype_returns_400(
+    client,
+    sample_broadcast_service,
+):
+    auth_header = create_service_authorization_header(service_id=sample_broadcast_service.id)
+
+    xml_with_doctype = '<!DOCTYPE alert [<!ENTITY x "boom">]>' + sample_cap_xml_documents.WAINFLEET
+
+    response = client.post(
+        path="/v2/broadcast",
+        data=xml_with_doctype,
+        headers=[("Content-Type", "application/cap+xml"), auth_header],
+    )
+
+    assert response.status_code == 400
+    assert "DOCTYPE" in response.get_json()["errors"][0]["message"]
+
+
 def test_valid_post_cap_xml_broadcast_returns_201(
     client,
     sample_broadcast_service,
