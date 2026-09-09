@@ -92,15 +92,17 @@ def get_areas():
 
     # Areas from alerts, created prior to this change, will have area IDs that we don't store
     legacy_prefixes = (
+        "Flood_Warning_Target_Areas-",
         "test-",
         "ctry19-",
-        "Flood_Warning_Target_Areas-",
-        "wd25-",
-        "lad25-",
-        "ctyua25-",
+        "wd21-",
         "wd23-",
+        "wd25-",
+        "lad21-",
         "lad23-",
+        "lad25-",
         "ctyua23-",
+        "ctyua25-",
     )
 
     id_to_name = dict(zip(area_ids, area_names))
