@@ -68,26 +68,26 @@ def test_dao_get_latest_geography_versions_returns_empty_list_if_no_active_versi
 def test_dao_get_latest_active_version_for_type_route_returns_expected_version_for_type(notify_db_session):
     geography_type = create_geography_type(route="local_authorities")
     create_geography_version(geography_type_id=geography_type.id, version="1.0.0", state="active")
-    v_latest = create_geography_version(geography_type_id=geography_type.id, version="2.0.0", state="active")
+    latest_version = create_geography_version(geography_type_id=geography_type.id, version="2.0.0", state="active")
 
-    found = dao_get_latest_active_version_for_type_route("local_authorities")
-    assert found.id == v_latest.id
+    latest_la_version = dao_get_latest_active_version_for_type_route("local_authorities")
+    assert latest_la_version.id == latest_version.id
 
 
 def test_dao_get_areas_for_geography_type_returns_all_expected_areas_for_type(notify_db_session):
     geography_type = create_geography_type(name="Local authorities", route="local_authorities")
-    gv1 = create_geography_version(geography_type_id=geography_type.id, version="1.0.0", state="active")
-    gv0 = create_geography_version(geography_type_id=geography_type.id, version="0.9.0", state="active")
+    latest_version = create_geography_version(geography_type_id=geography_type.id, version="1.0.0", state="active")
+    old_version = create_geography_version(geography_type_id=geography_type.id, version="0.9.0", state="active")
 
-    area_latest1 = create_area(geography_type_id=geography_type.id, geography_version_id=gv1.id, name="Area A")
-    area_latest2 = create_area(geography_type_id=geography_type.id, geography_version_id=gv1.id, name="Area B")
-    create_area(geography_type_id=geography_type.id, geography_version_id=gv0.id, name="Area Old")
+    area1 = create_area(geography_type_id=geography_type.id, geography_version_id=latest_version.id, name="Area A")
+    area2 = create_area(geography_type_id=geography_type.id, geography_version_id=latest_version.id, name="Area B")
+    create_area(geography_type_id=geography_type.id, geography_version_id=old_version.id, name="Area Old")
 
     areas = dao_get_areas_for_geography_type("local_authorities")
 
-    # Only latest version's areas, ordered by name
+    # Only latest version's areas are returned, ordered by name
     assert [a.name for a in areas] == ["Area A", "Area B"]
-    assert {a.id for a in areas} == {area_latest1.id, area_latest2.id}
+    assert {a.id for a in areas} == {area1.id, area2.id}
 
 
 def test_dao_get_areas_for_geography_type_returns_empty_list_if_no_active_versions(notify_db_session):
@@ -230,15 +230,15 @@ def test_dao_get_areas_by_names_returns_expected_areas(notify_db_session):
 
 def test_dao_get_area_by_id_returns_expected_area_or_None(notify_db_session):
     area, _, geography_type = create_area_with_version_and_type()
-    found = dao_get_area_by_id(area.id)
+    sourced_area = dao_get_area_by_id(area.id)
 
-    assert found is not None
-    assert found.id == area.id
-    assert found.geographic_id == area.geographic_id
-    assert found.geography_type_name == geography_type.route
+    assert sourced_area is not None
+    assert sourced_area.id == area.id
+    assert sourced_area.geographic_id == area.geographic_id
+    assert sourced_area.geography_type_name == geography_type.route
 
-    missing = dao_get_area_by_id(uuid.uuid4())
-    assert missing is None
+    non_existent_area = dao_get_area_by_id(uuid.uuid4())
+    assert non_existent_area is None
 
 
 def test_dao_get_areas_by_ids_returns_expected_areas(notify_db_session):
