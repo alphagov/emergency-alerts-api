@@ -272,7 +272,7 @@ def dao_get_all_finished_broadcast_messages_with_outstanding_actions() -> list[B
     """
 
     now = datetime.now(timezone.utc)
-    cancelled_grace_cutoff = now - CANCELLED_PUBLISH_GRACE_PERIOD
+    cancelled_grace_cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - CANCELLED_PUBLISH_GRACE_PERIOD
     return (
         BroadcastMessage.query.join(Service)
         .filter(
