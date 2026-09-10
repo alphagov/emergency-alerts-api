@@ -11,6 +11,14 @@ from tests.app.db import (
     create_template,
 )
 
+# Country geometry so coordinate validity works and parent lookup is possible,
+# stored here for multiple tests to reference
+COUNTRY_GEOMETRY = (
+    "0103000020E61000000100000005000000CDCCCCCCCC4C21",
+    "C0CDCCCCCCCCEC48407B14AE47E17AFC3FCDCCCCCCCCEC48407B14AE47E17AFC3FAE",
+    "47E17A146E4E40CDCCCCCCCC4C21C0AE47E17A146E4E40CDCCCCCCCC4C21C0CDCCCCCCCCEC4840",
+)
+
 
 def test_assert_get_area_returns_area_for_id(admin_request, sample_broadcast_service):
     area1_id = uuid.uuid4()
@@ -332,13 +340,9 @@ def test_get_area_polygons_wkt_for_custom_area_returns_error_without_area_id(
 def test_get_coordinate_centroid_returns_expected_centroid_for_area(
     notify_db_session, admin_request, sample_broadcast_service, data, expected_wkt
 ):
-    country_geometry = (
-        "0103000020E61000000100000005000000CDCCCCCCCC4C21",
-        "C0CDCCCCCCCCEC48407B14AE47E17AFC3FCDCCCCCCCCEC48407B14AE47E17AFC3FAE",
-        "47E17A146E4E40CDCCCCCCCC4C21C0AE47E17A146E4E40CDCCCCCCCC4C21C0CDCCCCCCCCEC4840",
-    )
+
     area, geography_version, geography_type = create_area_with_version_and_type(
-        geography_type_route="countries", geometry="".join(country_geometry)
+        geography_type_route="countries", geometry="".join(COUNTRY_GEOMETRY)
     )
 
     resp = admin_request.post(
@@ -353,13 +357,9 @@ def test_get_coordinate_centroid_returns_expected_centroid_for_area(
 def test_get_coordinates_centroid_returns_error_for_invalid_geometry(
     notify_db_session, admin_request, sample_broadcast_service
 ):
-    country_geometry = (
-        "0103000020E61000000100000005000000CDCCCCCCCC4C21",
-        "C0CDCCCCCCCCEC48407B14AE47E17AFC3FCDCCCCCCCCEC48407B14AE47E17AFC3FAE",
-        "47E17A146E4E40CDCCCCCCCC4C21C0AE47E17A146E4E40CDCCCCCCCC4C21C0CDCCCCCCCCEC4840",
-    )
+
     area, geography_version, geography_type = create_area_with_version_and_type(
-        geography_type_route="countries", geometry="".join(country_geometry)
+        geography_type_route="countries", geometry="".join(COUNTRY_GEOMETRY)
     )
 
     resp = admin_request.post(
@@ -510,13 +510,9 @@ def test_create_postcode_area_returns_error_for_missing_postcode_or_radius(
 def test_create_coordinate_area_creates_valid_area_for_input(
     notify_db_session, admin_request, sample_broadcast_service
 ):
-    country_geometry = (
-        "0103000020E61000000100000005000000CDCCCCCCCC4C21",
-        "C0CDCCCCCCCCEC48407B14AE47E17AFC3FCDCCCCCCCCEC48407B14AE47E17AFC3FAE",
-        "47E17A146E4E40CDCCCCCCCC4C21C0AE47E17A146E4E40CDCCCCCCCC4C21C0CDCCCCCCCCEC4840",
-    )
+
     area, geography_version, geography_type = create_area_with_version_and_type(
-        geography_type_route="countries", geometry="".join(country_geometry)
+        geography_type_route="countries", geometry="".join(COUNTRY_GEOMETRY)
     )
     resp = admin_request.post(
         "areas.create_coordinate_area",
@@ -534,13 +530,9 @@ def test_create_coordinate_area_creates_valid_area_for_input(
 def test_create_coordinate_area_returns_error_for_external_coordinates(
     notify_db_session, admin_request, sample_broadcast_service
 ):
-    country_geometry = (
-        "0103000020E61000000100000005000000CDCCCCCCCC4C21",
-        "C0CDCCCCCCCCEC48407B14AE47E17AFC3FCDCCCCCCCCEC48407B14AE47E17AFC3FAE",
-        "47E17A146E4E40CDCCCCCCCC4C21C0AE47E17A146E4E40CDCCCCCCCC4C21C0CDCCCCCCCCEC4840",
-    )
+
     area, geography_version, geography_type = create_area_with_version_and_type(
-        geography_type_route="countries", geometry="".join(country_geometry)
+        geography_type_route="countries", geometry="".join(COUNTRY_GEOMETRY)
     )
     resp = admin_request.post(
         "areas.create_coordinate_area",
@@ -588,13 +580,9 @@ def test_create_coordinate_area_returns_error_for_external_coordinates(
 def test_check_coordinates_valid_returns_whether_coordinates_valid_or_not(
     notify_db_session, admin_request, sample_broadcast_service, data, expected_bool
 ):
-    country_geometry = (
-        "0103000020E61000000100000005000000CDCCCCCCCC4C21",
-        "C0CDCCCCCCCCEC48407B14AE47E17AFC3FCDCCCCCCCCEC48407B14AE47E17AFC3FAE",
-        "47E17A146E4E40CDCCCCCCCC4C21C0AE47E17A146E4E40CDCCCCCCCC4C21C0CDCCCCCCCCEC4840",
-    )
+
     area, geography_version, geography_type = create_area_with_version_and_type(
-        geography_type_route="countries", geometry="".join(country_geometry)
+        geography_type_route="countries", geometry="".join(COUNTRY_GEOMETRY)
     )
 
     resp_valid = admin_request.post(
@@ -757,15 +745,10 @@ def test_add_custom_postcode_area_to_template(notify_db_session, admin_request, 
 
 
 def test_add_custom_coordinate_area_to_broadcast_message(notify_db_session, admin_request, sample_broadcast_service):
-    # Country geometry so coordinate validity works and parent lookup is possible
-    country_geometry = (
-        "0103000020E61000000100000005000000CDCCCCCCCC4C21",
-        "C0CDCCCCCCCCEC48407B14AE47E17AFC3FCDCCCCCCCCEC48407B14AE47E17AFC3FAE",
-        "47E17A146E4E40CDCCCCCCCC4C21C0AE47E17A146E4E40CDCCCCCCCC4C21C0CDCCCCCCCCEC4840",
-    )
+
     create_area_with_version_and_type(
         geography_type_route="countries",
-        geometry="".join(country_geometry),
+        geometry="".join(COUNTRY_GEOMETRY),
     )
 
     radius = 10.0
@@ -804,15 +787,10 @@ def test_add_custom_coordinate_area_to_broadcast_message(notify_db_session, admi
 
 
 def test_add_custom_coordinate_area_to_template(notify_db_session, admin_request, sample_broadcast_service):
-    # Country geometry so coordinate validity works and parent lookup is possible
-    country_geometry = (
-        "0103000020E61000000100000005000000CDCCCCCCCC4C21",
-        "C0CDCCCCCCCCEC48407B14AE47E17AFC3FCDCCCCCCCCEC48407B14AE47E17AFC3FAE",
-        "47E17A146E4E40CDCCCCCCCC4C21C0AE47E17A146E4E40CDCCCCCCCC4C21C0CDCCCCCCCCEC4840",
-    )
+
     create_area_with_version_and_type(
         geography_type_route="countries",
-        geometry="".join(country_geometry),
+        geometry="".join(COUNTRY_GEOMETRY),
     )
 
     first_coordinate = 54.0
