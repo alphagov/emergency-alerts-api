@@ -281,8 +281,8 @@ def test_dao_get_all_finished_broadcast_messages_with_outstanding_actions(sample
     create_broadcast_message(
         # Cancelled with the grace period, not picked up by the scheduled task yet
         t,
-        created_at=datetime(2024, 12, 12, 12, 10, 0),
-        cancelled_at=datetime(2024, 12, 12, 12, 10, 0),
+        created_at=datetime(2024, 12, 12, 12, 12, 12),
+        cancelled_at=datetime(2024, 12, 12, 12, 12, 12),
         starts_at=datetime.now(),
         status=BroadcastStatusType.CANCELLED,
     )
