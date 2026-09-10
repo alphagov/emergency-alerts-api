@@ -97,7 +97,7 @@ def add_custom_area_to_existing_areas(message, type_name, data):
         centroid = generate_centroid_for_coordinate_area(first_coordinate, second_coordinate, coordinate_type)
         name = generate_coordinate_area_name(first_coordinate, second_coordinate, radius, coordinate_type)
         centroid_wkt = shapely.wkt.loads(centroid)
-        area_id = f"coordinates_{centroid_wkt.y}_{centroid_wkt.x}_{radius}_{coordinate_type}"
+        area_id = f"coordinates_{first_coordinate}_{second_coordinate}_{radius}_{coordinate_type}"
 
     if parent_area := get_parent_area_name(centroid):
         name = f"{name} in {parent_area}"
@@ -288,8 +288,10 @@ def build_remaining_area_wkt(existing_ids, area_id_to_remove):
     for coordinate_id in remaining_coordinates_ids:
         x, y, radius, coordinate_type = parse_coordinate_id(coordinate_id)
         if coordinate_type == "easting_northing":
-            # Coordinate IDs store converted values as latitude, longitude
-            centroid = shapely.Point(y, x).wkt
+            # Transform coordinates from eastings northings to lat long
+            transformer = Transformer.from_crs("EPSG:27700", "EPSG:4326", always_xy=True)
+            longitude, latitude = transformer.transform(float(x), float(y))
+            centroid = shapely.Point(longitude, latitude).wkt
         else:
             centroid = generate_centroid_for_coordinate_area(x, y, coordinate_type)
         circle_wkt = dao_create_circle_area(centroid, radius)
