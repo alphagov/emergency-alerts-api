@@ -273,9 +273,18 @@ def test_dao_get_all_finished_broadcast_messages_with_outstanding_actions(sample
         # Cancelled, but already actioned
         t,
         created_at=datetime(2023, 10, 12, 12, 0, 0),
+        cancelled_at=datetime(2023, 10, 12, 12, 0, 0),
         starts_at=datetime.now(),
         status=BroadcastStatusType.CANCELLED,
         finished_govuk_acknowledged=True,
+    )
+    create_broadcast_message(
+        # Cancelled with the grace period, not picked up by the scheduled task yet
+        t,
+        created_at=datetime(2024, 12, 12, 12, 10, 0),
+        cancelled_at=datetime(2024, 12, 12, 12, 10, 0),
+        starts_at=datetime.now(),
+        status=BroadcastStatusType.CANCELLED,
     )
 
     # --- Should be picked up (all in 2024) ---
@@ -284,6 +293,7 @@ def test_dao_get_all_finished_broadcast_messages_with_outstanding_actions(sample
         # Cancelled, should be picked up
         t,
         created_at=datetime(2024, 10, 12, 12, 0, 0),
+        cancelled_at=datetime(2024, 10, 12, 12, 0, 0),
         starts_at=datetime.now(),
         status=BroadcastStatusType.CANCELLED,
     )
@@ -303,13 +313,19 @@ def test_dao_get_all_finished_broadcast_messages_with_outstanding_actions(sample
         status=BroadcastStatusType.BROADCASTING,
     )
 
-    oustanding_action_broadcast_messages = dao_get_all_finished_broadcast_messages_with_outstanding_actions()
+    outstanding_action_broadcast_messagescast_messages = dao_get_all_finished_broadcast_messages_with_outstanding_actions()
 
-    assert len(oustanding_action_broadcast_messages) == 3
+    assert len(outstanding_action_broadcast_messagescast_messages) == 3
 
-    # All ones to *not* pickup are in 2023
-    assert not any([x.created_at < datetime(2024, 1, 1, 0, 0) for x in oustanding_action_broadcast_messages])
-    assert not any([x.finished_govuk_acknowledged for x in oustanding_action_broadcast_messages])
+    # All ones to *not* pickup are in 2023 (or the recently-cancelled 2024-12-12 one)
+    assert not any([x.created_at < datetime(2024, 1, 1, 0, 0) for x in outstanding_action_broadcast_messagescast_messages])
+    assert not any([x.finished_govuk_acknowledged for x in outstanding_action_broadcast_messagescast_messages])
+    assert not any(
+        [
+            x.cancelled_at is not None and x.cancelled_at > datetime(2024, 12, 12, 12, 2, 12)
+            for x in outstanding_action_broadcast_messages
+        ]
+    )
 
 
 @freeze_time("2024-12-12 12:12:12")
@@ -338,9 +354,10 @@ def test_dao_get_only_relevant_broadcast_messages_with_outstanding_actions(sampl
 
     # --- Should be picked up (all have been published) ---
     create_broadcast_message(
-        # Cancelled, should be picked up
+        # Cancelled longer ago than the grace period, should be picked up
         t,
         created_at=datetime(2024, 10, 12, 12, 0, 0),
+        cancelled_at=datetime(2024, 10, 12, 12, 0, 0),
         starts_at=datetime.now(),
         status=BroadcastStatusType.CANCELLED,
     )
@@ -360,15 +377,15 @@ def test_dao_get_only_relevant_broadcast_messages_with_outstanding_actions(sampl
         status=BroadcastStatusType.BROADCASTING,
     )
 
-    oustanding_action_broadcast_messages = dao_get_all_finished_broadcast_messages_with_outstanding_actions()
+    outstanding_action_broadcast_messagescast_messages = dao_get_all_finished_broadcast_messages_with_outstanding_actions()
 
-    assert len(oustanding_action_broadcast_messages) == 3
+    assert len(outstanding_action_broadcast_messagescast_messages) == 3
 
     # All ones to *not* pickup have pre-broadcast status
     assert not any(
-        [x.status in BroadcastStatusType.PRE_BROADCAST_STATUSES for x in oustanding_action_broadcast_messages]
+        [x.status in BroadcastStatusType.PRE_BROADCAST_STATUSES for x in outstanding_action_broadcast_messagescast_messages]
     )
-    assert not any([x.finished_govuk_acknowledged for x in oustanding_action_broadcast_messages])
+    assert not any([x.finished_govuk_acknowledged for x in outstanding_action_broadcast_messagescast_messages])
 
 
 @freeze_time("2024-12-12 12:12:12")
@@ -409,9 +426,10 @@ def test_dao_get_only_broadcast_messages_with_outstanding_actions_from_live_serv
 
     # --- Should be picked up ---
     create_broadcast_message(
-        # Cancelled, should be picked up
+        # Cancelled longer ago than the grace period, should be picked up
         t,
         created_at=datetime(2024, 10, 12, 12, 0, 0),
+        cancelled_at=datetime(2024, 10, 12, 12, 0, 0),
         starts_at=datetime.now(),
         status=BroadcastStatusType.CANCELLED,
     )
@@ -423,13 +441,13 @@ def test_dao_get_only_broadcast_messages_with_outstanding_actions_from_live_serv
         status=BroadcastStatusType.COMPLETED,
     )
 
-    oustanding_action_broadcast_messages = dao_get_all_finished_broadcast_messages_with_outstanding_actions()
+    outstanding_action_broadcast_messagescast_messages = dao_get_all_finished_broadcast_messages_with_outstanding_actions()
 
-    assert len(oustanding_action_broadcast_messages) == 2
+    assert len(outstanding_action_broadcast_messagescast_messages) == 2
 
     # All ones to *not* pickup are not in live services
-    assert not any([x.service.restricted for x in oustanding_action_broadcast_messages])
-    assert not any([x.finished_govuk_acknowledged for x in oustanding_action_broadcast_messages])
+    assert not any([x.service.restricted for x in outstanding_action_broadcast_messagescast_messages])
+    assert not any([x.finished_govuk_acknowledged for x in outstanding_action_broadcast_messagescast_messages])
 
 
 def test_dao_purge_old_broadcast_messages(sample_broadcast_service):

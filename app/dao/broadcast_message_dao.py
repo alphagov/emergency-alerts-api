@@ -262,6 +262,9 @@ def dao_get_all_pre_broadcast_messages():
     )
 
 
+CANCELLED_PUBLISH_GRACE_PERIOD = timedelta(minutes=10)
+
+
 def dao_get_all_finished_broadcast_messages_with_outstanding_actions() -> list[BroadcastMessage]:
     """
     Find all BroadcastMessages that have finished (either expired or been cancelled)
@@ -269,11 +272,16 @@ def dao_get_all_finished_broadcast_messages_with_outstanding_actions() -> list[B
     """
 
     now = datetime.now(timezone.utc)
+    cancelled_grace_cutoff = now - CANCELLED_PUBLISH_GRACE_PERIOD
     return (
         BroadcastMessage.query.join(Service)
         .filter(
             and_(
                 or_(
+                    and_(
+                        BroadcastMessage.status == BroadcastStatusType.CANCELLED,
+                        BroadcastMessage.cancelled_at < cancelled_grace_cutoff,
+                    ),
                     # Get those recently cancelled
                     BroadcastMessage.status == BroadcastStatusType.CANCELLED,
                     # Or have COMPLETED or are BROADCASTING and have naturally finished
