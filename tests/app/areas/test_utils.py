@@ -126,23 +126,25 @@ def test_get_parent_area_name_returns_expected_string(notify_db_session):
 
 
 def test_generate_centroid_for_coordinate_area_returns_expected_geometry():
-    centroid_latlon = generate_centroid_for_coordinate_area(
+    centroid_long_lat = generate_centroid_for_coordinate_area(
         first_coordinate=54.0,
         second_coordinate=-2.0,
         coordinate_type="latitude_longitude",
     )
-    geom = shapely.wkt.loads(centroid_latlon)
-    assert geom.geom_type == "Point"
-    assert pytest.approx(geom.y, rel=1e-6) == 54.0
-    assert pytest.approx(geom.x, rel=1e-6) == -2.0
+    centroid_geometry = shapely.wkt.loads(centroid_long_lat)
+    assert centroid_geometry.geom_type == "Point"
+    assert centroid_geometry.y == 54.0
+    assert centroid_geometry.x == -2.0
 
-    centroid_en = generate_centroid_for_coordinate_area(
-        first_coordinate=528000,
-        second_coordinate=178000,
+    centroid_eastings_northings = generate_centroid_for_coordinate_area(
+        first_coordinate=601409,
+        second_coordinate=348952,
         coordinate_type="easting_northing",
     )
-    geom_en = shapely.wkt.loads(centroid_en)
-    assert geom_en.geom_type == "Point"
+    centroid_geometry = shapely.wkt.loads(centroid_eastings_northings)
+    assert centroid_geometry.geom_type == "Point"
+    assert pytest.approx(centroid_geometry.y, rel=1e-6) == 53.0
+    assert pytest.approx(centroid_geometry.x, rel=1e-6) == 1.0
 
 
 def test_ensure_valid_wkt_validates_wkt_correctly():
@@ -152,15 +154,16 @@ def test_ensure_valid_wkt_validates_wkt_correctly():
     assert isinstance(result, str)
     assert result == valid_wkt
 
-    # deliberately construct an invalid self‑intersecting polygon and ensure it is repaired
+    # deliberately construct an invalid self‑intersecting polygon
+    # and ensure it is closed by addition of 0 buffer (ensure_valid_wkt)
     coords = [(0, 0), (1, 1), (1, 0), (0, 1), (0, 0)]
     invalid_geom = shapely.Polygon(coords)
     assert not invalid_geom.is_valid
     fixed = ensure_valid_wkt(invalid_geom.wkt)
     # ensure_valid_wkt returns either wkt string or (response, status)
     assert isinstance(fixed, str)
-    repaired_geom = shapely.wkt.loads(fixed)
-    assert repaired_geom.is_valid
+    closed_geom = shapely.wkt.loads(fixed)
+    assert closed_geom.is_valid
 
 
 def test_validate_bulk_area_input_returns_correct_error_message_for_input():
