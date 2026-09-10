@@ -93,6 +93,7 @@ def get_areas():
     # Areas from alerts, created prior to this change, will have area IDs that we don't store
     legacy_prefixes = (
         "Flood_Warning_Target_Areas-",
+        "REPPIR_DEPZ_sites-",
         "test-",
         "ctry19-",
         "wd21-",
