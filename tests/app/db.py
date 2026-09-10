@@ -327,6 +327,7 @@ def create_broadcast_message(
     stubbed=False,
     cap_event=None,
     created_at=None,  # only used for testing
+    cancelled_at=None,
     reference=None,
     submitted_by=None,
     extra_content=None,
@@ -360,6 +361,7 @@ def create_broadcast_message(
         stubbed=stubbed,
         cap_event=cap_event,
         created_at=created_at,
+        cancelled_at=cancelled_at,
         reference=reference,
         submitted_by=submitted_by,
         submitted_at=datetime.now(),
