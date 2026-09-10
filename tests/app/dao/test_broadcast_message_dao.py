@@ -273,24 +273,16 @@ def test_dao_get_all_finished_broadcast_messages_with_outstanding_actions(sample
         # Cancelled, but already actioned
         t,
         created_at=datetime(2023, 10, 12, 12, 0, 0),
-        cancelled_at=datetime(2023, 10, 12, 12, 0, 0),
+        cancelled_at=datetime(2023, 10, 12, 12, 30, 0),
         starts_at=datetime.now(),
         status=BroadcastStatusType.CANCELLED,
         finished_govuk_acknowledged=True,
-    )
-    create_broadcast_message(
-        # Cancelled with the grace period, not picked up by the scheduled task yet
-        t,
-        created_at=datetime(2024, 12, 12, 12, 12, 12),
-        cancelled_at=datetime(2024, 12, 12, 12, 12, 12),
-        starts_at=datetime.now(),
-        status=BroadcastStatusType.CANCELLED,
     )
 
     # --- Should be picked up (all in 2024) ---
 
     create_broadcast_message(
-        # Cancelled, should be picked up
+        # Cancelled more than 10 minutes ago, should be picked up
         t,
         created_at=datetime(2024, 10, 12, 12, 0, 0),
         cancelled_at=datetime(2024, 10, 12, 12, 0, 0),
@@ -317,15 +309,47 @@ def test_dao_get_all_finished_broadcast_messages_with_outstanding_actions(sample
 
     assert len(outstanding_action_broadcast_messages) == 3
 
-    # All ones to *not* pickup are in 2023 (or the recently-cancelled 2024-12-12 one)
+    # All ones to *not* pickup are in 2023
     assert not any([x.created_at < datetime(2024, 1, 1, 0, 0) for x in outstanding_action_broadcast_messages])
     assert not any([x.finished_govuk_acknowledged for x in outstanding_action_broadcast_messages])
-    assert not any(
-        [
-            x.cancelled_at is not None and x.cancelled_at > datetime(2024, 12, 12, 12, 2, 12)
-            for x in outstanding_action_broadcast_messages
-        ]
+
+
+@freeze_time("2024-12-12 12:12:12")
+def test_dao_applies_grace_period_to_recently_cancelled_broadcast_messages(sample_broadcast_service):
+    t = create_template(sample_broadcast_service, BROADCAST_TYPE)
+
+    now = datetime(2024, 12, 12, 12, 12, 12)
+
+    create_broadcast_message(
+        # Cancelled just now - within the grace period, shouldn't be picked up yet
+        t,
+        created_at=now - timedelta(hours=1),
+        cancelled_at=now - timedelta(minutes=2),
+        starts_at=now - timedelta(hours=1),
+        status=BroadcastStatusType.CANCELLED,
     )
+    create_broadcast_message(
+        # Cancelled just inside the grace period boundary, shouldn't be picked up
+        t,
+        created_at=now - timedelta(hours=1),
+        cancelled_at=now - timedelta(minutes=9, seconds=59),
+        starts_at=now - timedelta(hours=1),
+        status=BroadcastStatusType.CANCELLED,
+    )
+    create_broadcast_message(
+        # Cancelled more than 10 minutes ago, should be picked up
+        t,
+        created_at=now - timedelta(hours=1),
+        cancelled_at=now - timedelta(minutes=11),
+        starts_at=now - timedelta(hours=1),
+        status=BroadcastStatusType.CANCELLED,
+    )
+
+    outstanding_action_broadcast_messages = dao_get_all_finished_broadcast_messages_with_outstanding_actions()
+
+    # Only the one cancelled more than 10 minutes ago should be returned
+    assert len(outstanding_action_broadcast_messages) == 1
+    assert outstanding_action_broadcast_messages[0].cancelled_at == now - timedelta(minutes=11)
 
 
 @freeze_time("2024-12-12 12:12:12")
@@ -354,7 +378,7 @@ def test_dao_get_only_relevant_broadcast_messages_with_outstanding_actions(sampl
 
     # --- Should be picked up (all have been published) ---
     create_broadcast_message(
-        # Cancelled longer ago than the grace period, should be picked up
+        # Cancelled more than 10 minutes ago, should be picked up
         t,
         created_at=datetime(2024, 10, 12, 12, 0, 0),
         cancelled_at=datetime(2024, 10, 12, 12, 0, 0),
@@ -426,7 +450,7 @@ def test_dao_get_only_broadcast_messages_with_outstanding_actions_from_live_serv
 
     # --- Should be picked up ---
     create_broadcast_message(
-        # Cancelled longer ago than the grace period, should be picked up
+        # Cancelled more than 10 minutes ago, should be picked up
         t,
         created_at=datetime(2024, 10, 12, 12, 0, 0),
         cancelled_at=datetime(2024, 10, 12, 12, 0, 0),

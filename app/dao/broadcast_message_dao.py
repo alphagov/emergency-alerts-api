@@ -262,9 +262,6 @@ def dao_get_all_pre_broadcast_messages():
     )
 
 
-CANCELLED_PUBLISH_GRACE_PERIOD = timedelta(minutes=10)
-
-
 def dao_get_all_finished_broadcast_messages_with_outstanding_actions() -> list[BroadcastMessage]:
     """
     Find all BroadcastMessages that have finished (either expired or been cancelled)
@@ -272,20 +269,19 @@ def dao_get_all_finished_broadcast_messages_with_outstanding_actions() -> list[B
     """
 
     now = datetime.now(timezone.utc)
-    cancelled_grace_cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - CANCELLED_PUBLISH_GRACE_PERIOD
     return (
         BroadcastMessage.query.join(Service)
         .filter(
             and_(
                 or_(
+                    # Pick up cancelled alerts after a grace period of 10 minutes,
+                    # to prevent double-republishes when queue_after_alert_activities runs.
                     and_(
                         BroadcastMessage.status == BroadcastStatusType.CANCELLED,
-                        BroadcastMessage.cancelled_at < cancelled_grace_cutoff,
+                        BroadcastMessage.cancelled_at < now - timedelta(minutes=10),
                     ),
-                    # Get those recently cancelled
-                    BroadcastMessage.status == BroadcastStatusType.CANCELLED,
-                    # Or have COMPLETED or are BROADCASTING and have naturally finished
-                    # (Transitioning to COMPLETED occurs as a background activity)
+                    # Completed or naturally-finished BROADCASTING alerts have no other
+                    # publish trigger, so are picked up immediately.
                     BroadcastMessage.status == BroadcastStatusType.COMPLETED,
                     and_(
                         BroadcastMessage.finishes_at < now,
