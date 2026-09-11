@@ -264,8 +264,8 @@ def dao_get_all_pre_broadcast_messages():
 
 def dao_get_all_finished_broadcast_messages_with_outstanding_actions() -> list[BroadcastMessage]:
     """
-    Find all BroadcastMessages that have finished (either expired or been cancelled)
-    and have one or more flags indicating actions due.
+    Find all BroadcastMessages that have finished by natural expiry and still have an
+    action due (i.e., GOV.UK/Alerts has not been asked to republish for them yet).
     """
 
     now = datetime.now(timezone.utc)
@@ -274,15 +274,10 @@ def dao_get_all_finished_broadcast_messages_with_outstanding_actions() -> list[B
         .filter(
             and_(
                 or_(
-                    # Pick up cancelled alerts after a grace period of 10 minutes,
-                    # to prevent double-republishes when queue_after_alert_activities runs.
-                    and_(
-                        BroadcastMessage.status == BroadcastStatusType.CANCELLED,
-                        BroadcastMessage.cancelled_at < now - timedelta(minutes=10),
-                    ),
-                    # Completed or naturally-finished BROADCASTING alerts have no other
-                    # publish trigger, so are picked up immediately.
+                    # Naturally-completed alerts have no other publish trigger.
                     BroadcastMessage.status == BroadcastStatusType.COMPLETED,
+                    # BROADCASTING alerts whose end time has passed but that have not yet
+                    # been swept into COMPLETED.
                     and_(
                         BroadcastMessage.finishes_at < now,
                         BroadcastMessage.status == BroadcastStatusType.BROADCASTING,
