@@ -17,6 +17,30 @@ def dao_get_all_in_progress_publish_tasks():
     return PublishTaskProgress.query.filter_by(finished_at=None).all()
 
 
+def dao_get_live_in_progress_publish_tasks(stale_after_seconds):
+    """
+    In-progress publish tasks (finished_at IS NULL) that are still 'live',
+    i.e., that have shown activity within stale_after_seconds.
+    Tasks that have gone quiet for longer are deliberately excluded.
+    """
+    cutoff = datetime.utcnow() - timedelta(seconds=stale_after_seconds)
+    return PublishTaskProgress.query.filter(
+        PublishTaskProgress.finished_at.is_(None),
+        PublishTaskProgress.last_activity_at >= cutoff,
+    ).all()
+
+
+def dao_get_publish_tasks_finished_within(within_seconds):
+    """
+    Publish tasks that finished within the last within_seconds.
+    """
+    cutoff = datetime.utcnow() - timedelta(seconds=within_seconds)
+    return PublishTaskProgress.query.filter(
+        PublishTaskProgress.finished_at.isnot(None),
+        PublishTaskProgress.finished_at >= cutoff,
+    ).all()
+
+
 def dao_get_all_publish_tasks():
     return PublishTaskProgress.query.all()
 

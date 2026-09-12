@@ -8,7 +8,9 @@ from app.dao.publish_task_progress_dao import (
     dao_get_all_in_progress_publish_tasks,
     dao_get_all_publish_tasks,
     dao_get_all_publish_tasks_older_than,
+    dao_get_live_in_progress_publish_tasks,
     dao_get_publish_task,
+    dao_get_publish_tasks_finished_within,
     dao_purge_old_publish_tasks,
     dao_update_publish,
 )
@@ -32,6 +34,36 @@ def test_dao_get_all_in_progress_publish_tasks(notify_db_session):
 
     results = [task.id for task in dao_get_all_in_progress_publish_tasks()]
     assert results.sort() == [str(task1.id), str(task2.id), str(task3.id)].sort()
+
+
+def test_dao_get_live_in_progress_publish_tasks_excludes_stale(notify_db_session):
+    now = datetime.utcnow()
+
+    live = PublishTaskProgress(task_id="live", finished_at=None, last_activity_at=now - timedelta(seconds=10))
+    stale = PublishTaskProgress(task_id="stale", finished_at=None, last_activity_at=now - timedelta(seconds=120))
+    finished = PublishTaskProgress(task_id="finished", finished_at=now, last_activity_at=now - timedelta(seconds=5))
+    db.session.add_all([live, stale, finished])
+    db.session.commit()
+
+    results = dao_get_live_in_progress_publish_tasks(stale_after_seconds=30)
+
+    task_ids = [task.task_id for task in results]
+    assert task_ids == ["live"]
+
+
+def test_dao_get_publish_tasks_finished_within(notify_db_session):
+    now = datetime.utcnow()
+
+    recently_finished = PublishTaskProgress(task_id="recent", finished_at=now - timedelta(seconds=30))
+    finished_long_ago = PublishTaskProgress(task_id="old", finished_at=now - timedelta(seconds=120))
+    still_in_progress = PublishTaskProgress(task_id="ongoing", finished_at=None)
+    db.session.add_all([recently_finished, finished_long_ago, still_in_progress])
+    db.session.commit()
+
+    results = dao_get_publish_tasks_finished_within(within_seconds=60)
+
+    task_ids = [task.task_id for task in results]
+    assert task_ids == ["recent"]
 
 
 def test_dao_get_all_publish_tasks_older_than(notify_db_session):

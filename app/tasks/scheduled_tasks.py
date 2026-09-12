@@ -17,6 +17,10 @@ from app.dao.invited_org_user_dao import (
 from app.dao.invited_user_dao import (
     delete_invitations_created_more_than_two_days_ago,
 )
+from app.dao.publish_task_progress_dao import (
+    dao_get_live_in_progress_publish_tasks,
+    dao_get_publish_tasks_finished_within,
+)
 from app.dao.users_dao import (
     delete_codes_older_created_more_than_a_day_ago,
     get_user_by_email,
@@ -182,6 +186,26 @@ def validate_functional_test_account_emails():
         )
 
 
+# If a publish is currently running, or finished within this many seconds,
+# `QUEUE_AFTER_ALERT_ACTIVITIES` job defers rather than requesting its own publish.
+# A running publish reads the current alert list when it loads, so it sweeps up expired alerts anyway.
+# A just-finished publish may still be awaiting its acknowledgement callback, hence the below.
+AFTER_ALERT_PUBLISH_DEFER_SECONDS = 60
+
+
+def _publish_recently_happened_or_in_progress():
+    """
+    True if a GOV.UK publish is currently in progress,
+    or finished within AFTER_ALERT_PUBLISH_DEFER_SECONDS.
+    """
+    stale_after = current_app.config.get("GOVUK_PUBLISH_CHECKS_FAILED_INTERVAL")
+
+    live_in_progress = dao_get_live_in_progress_publish_tasks(stale_after_seconds=stale_after)
+    recently_finished = dao_get_publish_tasks_finished_within(within_seconds=AFTER_ALERT_PUBLISH_DEFER_SECONDS)
+
+    return len(live_in_progress) > 0 or len(recently_finished) > 0
+
+
 @dramatiq.actor(
     actor_name=TaskNames.QUEUE_AFTER_ALERT_ACTIVITIES, queue_name=QueueNames.PERIODIC, periodic=cron("*/1 * * * *")
 )
@@ -194,16 +218,22 @@ def queue_after_alert_activities():
     expired_and_pending_alerts = dao_get_all_finished_broadcast_messages_with_outstanding_actions()
 
     current_app.logger.info(
-        "There are %d recently expired/cancelled alerts with pending activities", len(expired_and_pending_alerts)
+        "There are %d recently expired alerts with pending activities", len(expired_and_pending_alerts)
     )
 
     if len(expired_and_pending_alerts) > 0:
         if any(not x.finished_govuk_acknowledged for x in expired_and_pending_alerts):
-            # This need not be idempotent as any regeneration is 'free', and we rely upon
-            # GovUK calling us back to mark the action as 'done' instead of just assuming.
-            current_app.logger.info("Requesting GovUK publish")
-            publish_task = publish_govuk_alerts.send()
-            current_app.logger.info("Enqueued publish GOV UK Alerts: %s", publish_task.asdict())
+            if _publish_recently_happened_or_in_progress():
+                current_app.logger.info(
+                    "Skipping GovUK publish request: a publish is in progress or finished within the last %ds",
+                    AFTER_ALERT_PUBLISH_DEFER_SECONDS,
+                )
+            else:
+                # This need not be idempotent as any regeneration is 'free', and we rely upon
+                # GovUK calling us back to mark the action as 'done' instead of just assuming.
+                current_app.logger.info("Requesting GovUK publish")
+                publish_task = publish_govuk_alerts.send()
+                current_app.logger.info("Enqueued publish GOV UK Alerts: %s", publish_task.asdict())
 
         # Down the line we will look to request logs from MNOs
 

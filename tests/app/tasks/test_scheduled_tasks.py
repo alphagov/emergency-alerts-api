@@ -209,6 +209,10 @@ def test_queue_after_alert_activities_does_govuk_refresh(notify_api, mocker, fin
         "app.tasks.scheduled_tasks.dao_get_all_finished_broadcast_messages_with_outstanding_actions",
         return_value=[BroadcastMessage(finished_govuk_acknowledged=finished_govuk_acknowledged)],
     )
+    mocker.patch(
+        "app.tasks.scheduled_tasks._publish_recently_happened_or_in_progress",
+        return_value=False,
+    )
 
     queue_after_alert_activities()
 
@@ -217,3 +221,21 @@ def test_queue_after_alert_activities_does_govuk_refresh(notify_api, mocker, fin
         task_mock.assert_called_once_with()
     else:
         task_mock.assert_not_called()
+
+
+def test_queue_after_alert_activities_defers_when_publish_recent_or_in_progress(notify_api, mocker):
+    task_mock = mocker.patch(
+        "app.tasks.broadcast_message_tasks.publish_govuk_alerts.send",
+    )
+    mocker.patch(
+        "app.tasks.scheduled_tasks.dao_get_all_finished_broadcast_messages_with_outstanding_actions",
+        return_value=[BroadcastMessage(finished_govuk_acknowledged=False)],
+    )
+    mocker.patch(
+        "app.tasks.scheduled_tasks._publish_recently_happened_or_in_progress",
+        return_value=True,
+    )
+
+    queue_after_alert_activities()
+
+    task_mock.assert_not_called()
