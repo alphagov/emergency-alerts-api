@@ -1,37 +1,32 @@
 import os
 import uuid
 from datetime import datetime, timezone
-import pandas as pd
 
 from utils import (
-    copy_dataframe_to_table,
     create_db_connection,
     get_source_data,
     insert_data_into_table,
+    split_into_chunks_and_insert_into_db,
 )
 
 VERSION = "1.0.0"
 AREAS_SOURCE_BUCKET = os.environ.get("AREAS_SOURCE_BUCKET_NAME")
 
-AREAS = [
-    "postcodes",
-    "countries",
-    "counties_and_unitary_authorities",
-    "reppir_sites",
-    "test",
-    "local_authority_districts",
-    "flood_warning_areas",
-    "wards",
-]
-
-GEOGRAPHY_POLYGON_COLUMNS = [
-    "id",
-    "name",
-    "geometry",
-    "parent_geography_id",
-    "geography_version_id",
-    "geography_type_id",
-]
+AREAS = {
+    "postcodes": {"display_name": "Postcode areas", "name_singular": "postcode area"},
+    "countries": {"display_name": "Countries", "name_singular": "country"},
+    "reppir_sites": {"display_name": "REPPIR DEPZ sites", "name_singular": "REPPIR DEPZ site"},
+    "test": {"display_name": "Test areas", "name_singular": "test area"},
+    "flood_warning_areas": {
+        "display_name": "Flood Warning Target Areas (TA code)",
+        "name_singular": "Flood Warning Target Area",
+    },
+    "wards": {"display_name": "Wards", "name_singular": "ward"},
+    "local_authorities": {
+        "display_name": "Local authorities",
+        "name_singular": "local authority",
+    },
+}
 
 
 def insert_geography_version(conn, area, geography_type_id):
@@ -58,32 +53,30 @@ def insert_geography_version(conn, area, geography_type_id):
 def insert_geography_type(conn, area):
     # Inserts geography_type row for a given area
     geography_type_id = str(uuid.uuid4())
+    geography_name = AREAS[area]["display_name"]
+    name_singular = AREAS[area]["name_singular"]
     insert_data_into_table(
         conn,
         "geography_type",
-        ("id", "name", "route"),
-        [(geography_type_id, area, area)],
+        ("id", "name", "route", "name_singular"),
+        [(geography_type_id, geography_name, area, name_singular)],
     )
     return geography_type_id
 
 
 def insert_geography_polygons(conn, area, geography_version_id, geography_type_id):
     # Insert geography_polygons rows for a given area
-    data = get_source_data(f"{VERSION}/{area}.csv")
-    # Splits CSV into chunks for chunk/batch processing
-    csv_data_chunks = pd.read_csv(data, index_col=False, chunksize=100000)
-    current_chunk = 1
-    for chunk in csv_data_chunks:
-        # Adds columns for geography_version_id & geography_type_id, values are generated within this script
-        chunk["geography_version_id"] = geography_version_id
-        chunk["geography_type_id"] = geography_type_id
-
-        try:
-            copy_dataframe_to_table(conn, "geography_polygons", GEOGRAPHY_POLYGON_COLUMNS, chunk)
-            print(f"{area} geography_polygons data has been added to the table - chunk #{current_chunk}")
-            current_chunk += 1
-        except Exception as exc:
-            print(f"Could not add {area} data to geography_polygons table: {exc}")
+    if area == "local_authorities":
+        # If the area is local_authorities, these are made up of counties_and_unitary_authorities
+        # and local_authority_districts
+        for sub_area in ["counties_and_unitary_authorities", "local_authority_districts"]:
+            data = get_source_data(f"{VERSION}/{sub_area}.csv")
+            # Splits CSV into chunks for chunk/batch processing
+            split_into_chunks_and_insert_into_db(conn, area, geography_version_id, geography_type_id, data)
+    else:
+        data = get_source_data(f"{VERSION}/{area}.csv")
+        # Splits CSV into chunks for chunk/batch processing
+        split_into_chunks_and_insert_into_db(conn, area, geography_version_id, geography_type_id, data)
 
 
 def main():
