@@ -1023,7 +1023,6 @@ def test_send_alert_summary_email_wkt(admin_request, sample_broadcast_service, m
                 {"error": "ValidationError", "message": "created_by is a required property"},
                 {"error": "ValidationError", "message": "geojson is a required property"},
                 {"error": "ValidationError", "message": "alert_summary is a required property"},
-                {"error": "ValidationError", "message": "phone_estimate is a required property"},
                 {"error": "ValidationError", "message": "duration is a required property"},
                 {"error": "ValidationError", "message": "wkt is a required property"},
                 {"error": "ValidationError", "message": "areas is a required property"},
@@ -1053,7 +1052,7 @@ def test_send_alert_summary_email_wkt(admin_request, sample_broadcast_service, m
             {
                 "geojson": json.loads('{"type": "Point", "coordinates": [0, 0]}'),
                 "alert_summary": "summary",
-                "phone_estimate": "more than 1 million",
+                "phone_estimate": "",
                 "duration": "30 minutes",
                 "created_by": str(uuid.uuid4()),
                 "wkt": "",
