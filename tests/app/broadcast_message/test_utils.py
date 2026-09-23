@@ -1,6 +1,10 @@
+import json
+
 import pytest
 
 from app.broadcast_message.utils import (
+    _build_alert_summary_email_attachments,
+    _build_alert_summary_email_bodies,
     _create_p1_zendesk_alert,
     update_broadcast_message_status,
 )
@@ -527,3 +531,67 @@ def test_update_broadcast_message_status_for_rejecting_broadcast_message_with_re
 
     assert not mock_task.called
     assert len(broadcast_message.events) == 0
+
+
+def test_build_alert_summary_email_attachments_all_present():
+    data = {
+        "geojson": {"type": "FeatureCollection"},
+        "cap_xml": "<cap></cap>",
+        "ibag_xml": "<ibag></ibag>",
+    }
+    attachments = _build_alert_summary_email_attachments(data)
+    assert len(attachments) == 3
+    assert attachments[0] == (
+        "areas.geojson",
+        json.dumps({"type": "FeatureCollection"}),
+        "application/geo+json",
+    )
+    assert attachments[1] == (
+        "areas.cap.xml",
+        "<cap></cap>",
+        "application/xml",
+    )
+    assert attachments[2] == (
+        "areas.ibag.xml",
+        "<ibag></ibag>",
+        "application/xml",
+    )
+
+
+def test_build_alert_summary_email_attachments_none_present():
+    attachments = _build_alert_summary_email_attachments({})
+    assert attachments == []
+
+
+def test_build_alert_summary_email_attachments_geojson_only():
+    data = {
+        "geojson": {"type": "FeatureCollection"},
+    }
+    attachments = _build_alert_summary_email_attachments(data)
+    assert attachments == [
+        (
+            "areas.geojson",
+            json.dumps({"type": "FeatureCollection"}),
+            "application/geo+json",
+        )
+    ]
+
+
+def test_build_alert_summary_email_bodies(
+    mocker,
+):
+    srcenv = mocker.patch("app.broadcast_message.utils.Environment")
+    html_template = mocker.MagicMock()
+    html_template.render.return_value = "<html>Hello</html>"
+    text_template = mocker.MagicMock()
+    text_template.render.return_value = "line1\nline2"
+    env = mocker.MagicMock()
+    env.get_template.side_effect = [
+        html_template,
+        text_template,
+    ]
+    srcenv.return_value = env
+    text_body, html_body = _build_alert_summary_email_bodies({"example": "data"})
+
+    assert html_body == "<html>Hello</html>"
+    assert text_body == "line1\r\nline2\r\n"

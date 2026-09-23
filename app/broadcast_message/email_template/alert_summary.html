@@ -19,9 +19,11 @@
         <strong>Alert Message</strong><br>{{ broadcast_message.content }}
       </p>
 
-      <p style="font-size:16px; color:#0b0c0c;">
-        <strong>Phone Estimate</strong><br>{{ data.phone_estimate }}
-      </p>
+      {% if data.phone_estimate %}
+        <p style="font-size:16px; color:#0b0c0c;">
+          <strong>Phone Estimate</strong><br>{{ data.phone_estimate }}
+        </p>
+      {% endif %}
 
       {% if broadcast_message.extra_content %}
       <p style="font-size:16px; color:#0b0c0c;">

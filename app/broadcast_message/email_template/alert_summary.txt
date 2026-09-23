@@ -8,10 +8,12 @@ Alert Message
 ----------------------------------------
 {{ broadcast_message.content }}
 
+{% if data.phone_estimate %}
 Phone Estimate
 ----------------------------------------
 {{ data.phone_estimate }}
 
+{% endif %}
 {% if broadcast_message.extra_content %}
 Additional Info
 ----------------------------------------
