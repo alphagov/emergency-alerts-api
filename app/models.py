@@ -916,8 +916,8 @@ class BroadcastMessage(db.Model):
     _personalisation = db.Column(db.String, nullable=True)
     content = db.Column(db.String, nullable=False)
     rejection_reason = db.Column(db.String, nullable=True)
-    # defaults to empty list
-    areas = db.Column(JSONB(none_as_null=True), nullable=False, default=list)
+    # defaults to empty dict
+    areas = db.Column(JSONB(none_as_null=True), nullable=False, default=dict)
 
     status = db.Column(
         db.String, db.ForeignKey("broadcast_status_type.name"), nullable=False, default=BroadcastStatusType.DRAFT

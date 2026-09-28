@@ -247,14 +247,6 @@ def update_broadcast_message(service_id, broadcast_message_id):
             status_code=400,
         )
 
-    areas = data.get("areas", {})
-
-    if ("ids" in areas and "simple_polygons" not in areas) or ("ids" not in areas and "simple_polygons" in areas):
-        raise InvalidRequest(
-            f"Cannot update broadcast_message {broadcast_message.id}, area IDs or polygons are missing.",
-            status_code=400,
-        )
-
     if "personalisation" in data:
         broadcast_message.personalisation = data["personalisation"]
     if "reference" in data:
@@ -267,8 +259,8 @@ def update_broadcast_message(service_id, broadcast_message_id):
         broadcast_message.starts_at = _parse_nullable_datetime(data["starts_at"])
     if "finishes_at" in data:
         broadcast_message.finishes_at = _parse_nullable_datetime(data["finishes_at"])
-    if "ids" in areas and "simple_polygons" in areas:
-        broadcast_message.areas = areas
+    if "areas" in data:
+        broadcast_message.areas = data["areas"]
     if "extra_content" in data:
         broadcast_message.extra_content = data["extra_content"]
 

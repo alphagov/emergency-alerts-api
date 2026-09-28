@@ -305,7 +305,11 @@ def test_create_broadcast_message(admin_request, sample_broadcast_service, train
             "content": "Some content\r\n€ŷŵ~\r\n‘’“”—–-",
             "service_id": str(t.service_id),
             "created_by": str(t.created_by_id),
-            "areas": {"ids": ["manchester"], "simple_polygons": [[[50.12, 1.2], [50.13, 1.2], [50.14, 1.21]]]},
+            "areas": {
+                "ids": ["manchester"],
+                "names": ["Manchester"],
+                "simple_polygons": [[[50.12, 1.2], [50.13, 1.2], [50.14, 1.21], [50.12, 1.2]]],
+            },
         },
         service_id=t.service_id,
         _expected_status=201,
@@ -318,7 +322,8 @@ def test_create_broadcast_message(admin_request, sample_broadcast_service, train
     assert response["personalisation"] == {}
     assert response["areas"] == {
         "ids": ["manchester"],
-        "simple_polygons": [[[50.12, 1.2], [50.13, 1.2], [50.14, 1.21]]],
+        "names": ["Manchester"],
+        "simple_polygons": [[[50.12, 1.2], [50.13, 1.2], [50.14, 1.21], [50.12, 1.2]]],
     }
     assert response["content"] == "Some content\r\n€ŷŵ~\r\n‘’“”—–-"
 
@@ -334,7 +339,8 @@ def test_create_broadcast_message(admin_request, sample_broadcast_service, train
     assert broadcast_message_version.created_at is not None
     assert broadcast_message_version.areas == {
         "ids": ["manchester"],
-        "simple_polygons": [[[50.12, 1.2], [50.13, 1.2], [50.14, 1.21]]],
+        "names": ["Manchester"],
+        "simple_polygons": [[[50.12, 1.2], [50.13, 1.2], [50.14, 1.21], [50.12, 1.2]]],
     }
     assert broadcast_message_version.content == response["content"]
 
@@ -543,7 +549,11 @@ def test_update_broadcast_message_allows_edit_while_not_yet_live(admin_request, 
             "reference": "Emergency broadcast",
             "content": "emergency broadcast content",
             "starts_at": "2020-06-01 20:00:01",
-            "areas": {"ids": ["london", "glasgow"], "simple_polygons": [[[51.12, 0.2], [50.13, 0.4], [50.14, 0.45]]]},
+            "areas": {
+                "ids": ["london", "glasgow"],
+                "names": ["London", "Glasgow"],
+                "simple_polygons": [[[51.12, 0.2], [50.13, 0.4], [50.14, 0.45], [51.12, 0.2]]],
+            },
         },
         service_id=t.service_id,
         broadcast_message_id=bm.id,
@@ -554,7 +564,8 @@ def test_update_broadcast_message_allows_edit_while_not_yet_live(admin_request, 
     assert response["content"] == "emergency broadcast content"
     assert response["starts_at"] == "2020-06-01T20:00:01.000000Z"
     assert response["areas"]["ids"] == ["london", "glasgow"]
-    assert response["areas"]["simple_polygons"] == [[[51.12, 0.2], [50.13, 0.4], [50.14, 0.45]]]
+    assert response["areas"]["names"] == ["London", "Glasgow"]
+    assert response["areas"]["simple_polygons"] == [[[51.12, 0.2], [50.13, 0.4], [50.14, 0.45], [51.12, 0.2]]]
     assert response["updated_at"] is not None
 
 
@@ -579,7 +590,11 @@ def test_update_broadcast_message_doesnt_allow_edits_after_broadcast_goes_live(
             "reference": "Emergency broadcast",
             "content": "emergency broadcast content",
             "starts_at": "2020-06-01 20:00:01",
-            "areas": {"ids": ["london", "glasgow"], "simple_polygons": [[[51.12, 0.2], [50.13, 0.4], [50.14, 0.45]]]},
+            "areas": {
+                "ids": ["london", "glasgow"],
+                "names": ["London", "Glasgow"],
+                "simple_polygons": [[[51.12, 0.2], [50.13, 0.4], [50.14, 0.45], [51.12, 0.2]]],
+            },
         },
         service_id=t.service_id,
         broadcast_message_id=bm.id,
@@ -643,7 +658,8 @@ def test_update_broadcast_message_doesnt_let_you_update_status(admin_request, sa
         _data={
             "areas": {
                 "ids": ["glasgow"],
-                "simple_polygons": [[[55.86, -4.25], [55.85, -4.25], [55.87, -4.24]]],
+                "names": ["Glasgow"],
+                "simple_polygons": [[[55.86, -4.25], [55.85, -4.25], [55.87, -4.24], [55.86, -4.25]]],
             },
             "status": BroadcastStatusType.BROADCASTING,
         },
@@ -657,31 +673,100 @@ def test_update_broadcast_message_doesnt_let_you_update_status(admin_request, sa
     ]
 
 
+CARDIFF_POLYGON = [[51.28, -3.11], [51.29, -3.12], [51.27, -3.10], [51.28, -3.11]]
+
+
 @pytest.mark.parametrize(
-    "incomplete_area_data",
+    "areas, expected_messages",
     [
-        {"areas": {"ids": ["cardiff"]}},
-        {"areas": {"simple_polygons": [[[51.28, -3.11], [51.29, -3.12], [51.27, -3.10]]]}},
+        (
+            {"ids": ["cardiff"]},
+            ["areas names is a required property", "areas simple_polygons is a required property"],
+        ),
+        (
+            {"ids": ["cardiff"], "simple_polygons": [CARDIFF_POLYGON]},
+            ["areas names is a required property"],
+        ),
+        (
+            ["cardiff"],
+            ["areas [cardiff] is not of type object"],
+        ),
+        (
+            {"names": "Cardiff", "simple_polygons": [CARDIFF_POLYGON]},
+            ["areas Cardiff is not of type array"],
+        ),
+        (
+            {"names": [123], "simple_polygons": [CARDIFF_POLYGON]},
+            ["areas 123 is not of type string"],
+        ),
+        (
+            {"names": ["Cardiff"], "simple_polygons": [CARDIFF_POLYGON[:3]]},
+            ["areas [[51.28, -3.11], [51.29, -3.12], [51.27, -3.1]] is too short"],
+        ),
+        (
+            {"names": ["Cardiff"], "simple_polygons": [[[51.28, -3.11, 0]] + CARDIFF_POLYGON[1:]]},
+            ["areas [51.28, -3.11, 0] is too long"],
+        ),
+        (
+            {"names": ["Cardiff"], "simple_polygons": [[["51.28", -3.11]] + CARDIFF_POLYGON[1:]]},
+            ["areas 51.28 is not of type number"],
+        ),
     ],
 )
-def test_update_broadcast_message_doesnt_let_you_update_areas_but_not_polygons(
-    admin_request, sample_broadcast_service, incomplete_area_data
+@pytest.mark.parametrize("endpoint", ["create", "update"])
+def test_create_or_update_broadcast_message_rejects_invalid_areas(
+    admin_request, sample_broadcast_service, areas, expected_messages, endpoint
 ):
     template = create_template(sample_broadcast_service, BROADCAST_TYPE)
-    broadcast_message = create_broadcast_message(template)
+
+    if endpoint == "create":
+        response = admin_request.post(
+            "broadcast_message.create_broadcast_message",
+            _data={
+                "reference": template.reference,
+                "content": template.content,
+                "service_id": str(template.service_id),
+                "created_by": str(template.created_by_id),
+                "areas": areas,
+            },
+            service_id=template.service_id,
+            _expected_status=400,
+        )
+    else:
+        broadcast_message = create_broadcast_message(template)
+        response = admin_request.post(
+            "broadcast_message.update_broadcast_message",
+            _data={"areas": areas},
+            service_id=template.service_id,
+            broadcast_message_id=broadcast_message.id,
+            _expected_status=400,
+        )
+
+    assert [error["message"] for error in response["errors"]] == expected_messages
+
+
+def test_update_broadcast_message_allows_all_areas_to_be_removed_from_a_draft(admin_request, sample_broadcast_service):
+    template = create_template(sample_broadcast_service, BROADCAST_TYPE)
+    broadcast_message = create_broadcast_message(
+        template,
+        areas={
+            "ids": ["cardiff"],
+            "names": ["Cardiff"],
+            "aggregate_names": ["Cardiff"],
+            "simple_polygons": [CARDIFF_POLYGON],
+        },
+    )
+    no_areas = {"ids": [], "names": [], "aggregate_names": [], "simple_polygons": []}
 
     response = admin_request.post(
         "broadcast_message.update_broadcast_message",
-        _data=incomplete_area_data,
+        _data={"areas": no_areas},
         service_id=template.service_id,
         broadcast_message_id=broadcast_message.id,
-        _expected_status=400,
+        _expected_status=200,
     )
 
-    assert (
-        response["message"]
-        == f"Cannot update broadcast_message {broadcast_message.id}, area IDs or polygons are missing."
-    )
+    assert response["areas"] == no_areas
 
 
 def test_update_broadcast_message_status(admin_request, sample_broadcast_service):

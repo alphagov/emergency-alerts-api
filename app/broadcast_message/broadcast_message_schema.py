@@ -1,5 +1,5 @@
 from app.models import BroadcastStatusType
-from app.schema_validation.definitions import uuid
+from app.schema_validation.definitions import broadcast_areas, uuid
 
 create_broadcast_message_schema = {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -14,7 +14,7 @@ create_broadcast_message_schema = {
         "duration": {"type": "string", "format": "duration"},
         "starts_at": {"type": "string", "format": "datetime"},
         "finishes_at": {"type": "string", "format": "datetime"},
-        "areas": {"type": "object"},
+        "areas": broadcast_areas,
         "content": {"type": "string", "minLength": 1},
         "reference": {"type": "string", "minLength": 1, "maxLength": 255},
     },
@@ -34,7 +34,7 @@ update_broadcast_message_schema = {
         "duration": {"type": "string", "format": "duration"},
         "starts_at": {"type": "string", "format": "datetime"},
         "finishes_at": {"type": "string", "format": "datetime"},
-        "areas": {"type": "object"},
+        "areas": broadcast_areas,
         "created_by": uuid,
         "extra_content": {"type": "string"},
     },
