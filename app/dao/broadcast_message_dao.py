@@ -395,7 +395,7 @@ def dao_delete_records_for_broadcast(message_id, dry_run=False):
     return counter
 
 
-def get_earlier_events_for_broadcast_event(broadcast_event_id) -> list[BroadcastEvent]:
+def get_earlier_events_for_broadcast_event(broadcast_event_id):
     """
     This is used to build up the references list.
     """
