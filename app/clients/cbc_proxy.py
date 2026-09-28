@@ -318,7 +318,7 @@ class CBCProxyOne2ManyClient(CBCProxyClientBase):
             "identifier": identifier,
             "message_format": "cap",
             "references": [
-                {"message_id": str(event.id), "sent": event.created_at.strftime(DATETIME_FORMAT)}
+                {"message_id": str(event.id), "sent": event.sent_at.strftime(DATETIME_FORMAT)}
                 for event in previous_events
             ],
             "sent": sent,

@@ -181,11 +181,10 @@ def test_cbc_proxy_one_2_many_cancel_invokes_function(mocker, cbc_proxy_client, 
     cbc_proxy = cbc_proxy_client.get_proxy(cbc)
 
     identifier = "my-identifier"
-    MockBroadcastEvent = namedtuple("BroadcastEvent", ["id", "created_at"])
 
     previous_events = [
-        MockBroadcastEvent(uuid.uuid4(), datetime(2020, 12, 16)),
-        MockBroadcastEvent(uuid.uuid4(), datetime(2020, 12, 17)),
+        BroadcastEvent(id=uuid.uuid4(), sent_at=datetime(2020, 12, 16)),
+        BroadcastEvent(id=uuid.uuid4(), sent_at=datetime(2020, 12, 17)),
     ]
     sent = "2020-12-17 14:19:44.130585"
 
@@ -216,8 +215,8 @@ def test_cbc_proxy_one_2_many_cancel_invokes_function(mocker, cbc_proxy_client, 
     assert payload["message_format"] == "cap"
     assert payload["message_type"] == "cancel"
     assert payload["references"] == [
-        {"message_id": str(previous_events[0].id), "sent": previous_events[0].created_at.strftime(DATETIME_FORMAT)},
-        {"message_id": str(previous_events[1].id), "sent": previous_events[1].created_at.strftime(DATETIME_FORMAT)},
+        {"message_id": str(previous_events[0].id), "sent": previous_events[0].sent_at.strftime(DATETIME_FORMAT)},
+        {"message_id": str(previous_events[1].id), "sent": previous_events[1].sent_at.strftime(DATETIME_FORMAT)},
     ]
     assert payload["sent"] == sent
 
