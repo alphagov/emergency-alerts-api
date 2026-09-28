@@ -2,6 +2,7 @@ import json
 import os
 import uuid
 from collections import namedtuple
+from dataclasses import dataclass
 from datetime import datetime
 from io import BytesIO
 from unittest.mock import Mock, call
@@ -39,7 +40,7 @@ os.environ["AWS_SECRET_ACCESS_KEY"] = "cbc-proxy-aws-secret-access-key"
 
 
 @pytest.fixture(scope="function")
-def cbc_proxy_client(client, mocker):
+def cbc_proxy_client(notify_db_session, client, mocker):
     client = CBCProxyClient()
     current_app = mocker.Mock(
         config={
@@ -179,11 +180,11 @@ def test_cbc_proxy_one_2_many_cancel_invokes_function(mocker, cbc_proxy_client, 
     cbc_proxy = cbc_proxy_client.get_proxy(cbc)
 
     identifier = "my-identifier"
-    MockProviderMessage = namedtuple("BroadcastProviderMessage", ["id", "message_number", "created_at"])
+    MockBroadcastEvent = namedtuple("BroadcastEvent", ["id", "created_at"])
 
-    provider_messages = [
-        MockProviderMessage(uuid.uuid4(), "0000007b", datetime(2020, 12, 16)),
-        MockProviderMessage(uuid.uuid4(), "0000004e", datetime(2020, 12, 17)),
+    previous_events = [
+        MockBroadcastEvent(uuid.uuid4(), datetime(2020, 12, 16)),
+        MockBroadcastEvent(uuid.uuid4(), datetime(2020, 12, 17)),
     ]
     sent = "2020-12-17 14:19:44.130585"
 
@@ -197,9 +198,7 @@ def test_cbc_proxy_one_2_many_cancel_invokes_function(mocker, cbc_proxy_client, 
         "StatusCode": 200,
     }
 
-    cbc_proxy.cancel_broadcast(
-        identifier=identifier, message_number="00000050", previous_provider_messages=provider_messages, sent=sent
-    )
+    cbc_proxy.cancel_broadcast(identifier=identifier, message_number=None, previous_events=previous_events, sent=sent)
 
     ld_client_mock.invoke.assert_called_once_with(
         FunctionName=f"{cbc}-1-proxy",
@@ -216,8 +215,8 @@ def test_cbc_proxy_one_2_many_cancel_invokes_function(mocker, cbc_proxy_client, 
     assert payload["message_format"] == "cap"
     assert payload["message_type"] == "cancel"
     assert payload["references"] == [
-        {"message_id": str(provider_messages[0].id), "sent": provider_messages[0].created_at.strftime(DATETIME_FORMAT)},
-        {"message_id": str(provider_messages[1].id), "sent": provider_messages[1].created_at.strftime(DATETIME_FORMAT)},
+        {"message_id": str(previous_events[0].id), "sent": previous_events[0].created_at.strftime(DATETIME_FORMAT)},
+        {"message_id": str(previous_events[1].id), "sent": previous_events[1].created_at.strftime(DATETIME_FORMAT)},
     ]
     assert payload["sent"] == sent
 
@@ -288,10 +287,21 @@ def test_cbc_proxy_vodafone_create_and_send_invokes_function(
 def test_cbc_proxy_vodafone_cancel_invokes_function(mocker, cbc_proxy_vodafone):
     identifier = "my-identifier"
     MockProviderMessage = namedtuple("BroadcastProviderMessage", ["id", "message_number", "created_at"])
+    # 123 = 0000007b
+    previous_provider_message = MockProviderMessage(uuid.uuid4(), 123, datetime(2020, 12, 15))
 
-    provider_messages = [
-        MockProviderMessage(uuid.uuid4(), 78, datetime(2020, 12, 16)),
-        MockProviderMessage(uuid.uuid4(), 123, datetime(2020, 12, 17)),
+    @dataclass
+    class MockBroadcastEvent:
+        id: uuid.UUID
+        created_at: datetime
+
+        def get_provider_message(self, provider: str):
+            if provider == "vodafone":
+                return previous_provider_message
+
+    previous_events = [
+        MockBroadcastEvent(uuid.uuid4(), datetime(2020, 12, 16)),
+        MockBroadcastEvent(uuid.uuid4(), datetime(2020, 12, 17)),
     ]
     sent = "2020-12-18 14:19:44.130585"
 
@@ -306,7 +316,7 @@ def test_cbc_proxy_vodafone_cancel_invokes_function(mocker, cbc_proxy_vodafone):
     }
 
     cbc_proxy_vodafone.cancel_broadcast(
-        identifier=identifier, message_number="00000050", previous_provider_messages=provider_messages, sent=sent
+        identifier=identifier, message_number="00000050", previous_events=previous_events, sent=sent
     )
 
     ld_client_mock.invoke.assert_called_once_with(
@@ -325,14 +335,14 @@ def test_cbc_proxy_vodafone_cancel_invokes_function(mocker, cbc_proxy_vodafone):
     assert payload["message_type"] == "cancel"
     assert payload["references"] == [
         {
-            "message_id": str(provider_messages[0].id),
-            "message_number": "0000004e",
-            "sent": provider_messages[0].created_at.strftime(DATETIME_FORMAT),
+            "message_id": str(previous_events[0].id),
+            "message_number": "0000007b",
+            "sent": previous_events[0].created_at.strftime(DATETIME_FORMAT),
         },
         {
-            "message_id": str(provider_messages[1].id),
-            "message_number": "0000007b",
-            "sent": provider_messages[1].created_at.strftime(DATETIME_FORMAT),
+            "message_id": str(previous_events[1].id),
+            "message_number": "0000007b",  # As a result of mocking, but would be different in practice
+            "sent": previous_events[1].created_at.strftime(DATETIME_FORMAT),
         },
     ]
     assert payload["sent"] == sent
