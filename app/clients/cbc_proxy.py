@@ -3,7 +3,6 @@ import os
 import uuid
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING
 
 import boto3
 import botocore
@@ -13,9 +12,6 @@ from sqlalchemy.schema import Sequence
 
 from app.config import BroadcastProvider
 from app.utils import DATETIME_FORMAT, format_sequential_number
-
-if TYPE_CHECKING:
-    from app.models import BroadcastEvent
 
 # The variable names in this file have specific meaning in a CAP message
 #
@@ -29,10 +25,9 @@ if TYPE_CHECKING:
 # * description is a string which populates the areaDesc field
 # * polygon is a list of lat/long pairs
 #
-# previous_events is a list of previous events (models.py::BroadcastEvent)
+# previous_provider_messages is a list of previous events (models.py::BroadcastProviderMessage)
 # ie a Cancel message would have a unique event but have the event of
-#    the preceeding Alert message in the previous_events field
-#    so that it can report the ID of the alert it's cancelling
+#    the preceeding Alert message in the previous_provider_messages field
 
 aws_region = os.environ.get("AWS_REGION", "eu-west-2")
 
@@ -51,7 +46,7 @@ class CBCProxyClient:
                 self._arn_prefix = app.config.get("CBC_ACCOUNT_NUMBER") + ":function:"
             self._lambda_client = boto3.client("lambda", region_name=aws_region)
 
-    def get_proxy(self, provider) -> "CBCProxyClientBase":
+    def get_proxy(self, provider):
         proxy_classes = {
             BroadcastProvider.EE: CBCProxyEE,
             BroadcastProvider.THREE: CBCProxyThree,
@@ -126,7 +121,7 @@ class CBCProxyClientBase(ABC):
     def update_and_send_broadcast(
         self,
         identifier,
-        previous_events: list["BroadcastEvent"],
+        previous_provider_messages,
         headline,
         description,
         areas,
@@ -139,15 +134,7 @@ class CBCProxyClientBase(ABC):
 
     @abstractmethod
     def cancel_broadcast(
-        self,
-        identifier,
-        previous_events: list["BroadcastEvent"],
-        headline,
-        description,
-        areas,
-        sent,
-        expires,
-        message_number=None,
+        self, identifier, previous_provider_messages, headline, description, areas, sent, expires, message_number=None
     ):
         pass
 
@@ -312,14 +299,14 @@ class CBCProxyOne2ManyClient(CBCProxyClientBase):
         }
         self._invoke_lambdas_with_routing(payload=payload)
 
-    def cancel_broadcast(self, identifier, previous_events: list["BroadcastEvent"], sent, message_number=None):
+    def cancel_broadcast(self, identifier, previous_provider_messages, sent, message_number=None):
         payload = {
             "message_type": "cancel",
             "identifier": identifier,
             "message_format": "cap",
             "references": [
-                {"message_id": str(event.id), "sent": event.created_at.strftime(DATETIME_FORMAT)}
-                for event in previous_events
+                {"message_id": str(message.id), "sent": message.created_at.strftime(DATETIME_FORMAT)}
+                for message in previous_provider_messages
             ],
             "sent": sent,
         }
@@ -328,7 +315,7 @@ class CBCProxyOne2ManyClient(CBCProxyClientBase):
     def update_and_send_broadcast(
         self,
         identifier,
-        previous_events: list["BroadcastEvent"],
+        previous_provider_messages,
         headline,
         description,
         areas,
@@ -406,7 +393,7 @@ class CBCProxyVodafone(CBCProxyClientBase):
         }
         self._invoke_lambdas_with_routing(payload=payload)
 
-    def cancel_broadcast(self, identifier, previous_events: list["BroadcastEvent"], sent, message_number):
+    def cancel_broadcast(self, identifier, previous_provider_messages, sent, message_number):
         payload = {
             "message_type": "cancel",
             "identifier": identifier,
@@ -414,13 +401,11 @@ class CBCProxyVodafone(CBCProxyClientBase):
             "message_format": "ibag",
             "references": [
                 {
-                    "message_id": str(event.id),
-                    "message_number": format_sequential_number(
-                        event.get_provider_message(BroadcastProvider.VODAFONE).message_number
-                    ),
-                    "sent": event.created_at.strftime(DATETIME_FORMAT),
+                    "message_id": str(message.id),
+                    "message_number": format_sequential_number(message.message_number),
+                    "sent": message.created_at.strftime(DATETIME_FORMAT),
                 }
-                for event in previous_events
+                for message in previous_provider_messages
             ],
             "sent": sent,
         }
@@ -429,7 +414,7 @@ class CBCProxyVodafone(CBCProxyClientBase):
     def update_and_send_broadcast(
         self,
         identifier,
-        previous_events: list["BroadcastEvent"],
+        previous_provider_messages,
         headline,
         description,
         areas,
