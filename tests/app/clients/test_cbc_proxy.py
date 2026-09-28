@@ -19,6 +19,7 @@ from app.clients.cbc_proxy import (
     CBCProxyThree,
     CBCProxyVodafone,
 )
+from app.models import BroadcastEvent
 from app.utils import DATETIME_FORMAT
 
 EXAMPLE_AREAS = [
@@ -291,17 +292,17 @@ def test_cbc_proxy_vodafone_cancel_invokes_function(mocker, cbc_proxy_vodafone):
     previous_provider_message = MockProviderMessage(uuid.uuid4(), 123, datetime(2020, 12, 15))
 
     @dataclass
-    class MockBroadcastEvent:
+    class MockBroadcastEvent(BroadcastEvent):
         id: uuid.UUID
-        created_at: datetime
+        sent_at: datetime
 
         def get_provider_message(self, provider: str):
             if provider == "vodafone":
                 return previous_provider_message
 
     previous_events = [
-        MockBroadcastEvent(uuid.uuid4(), datetime(2020, 12, 16)),
-        MockBroadcastEvent(uuid.uuid4(), datetime(2020, 12, 17)),
+        MockBroadcastEvent(id=uuid.uuid4(), sent_at=datetime(2020, 12, 16)),
+        MockBroadcastEvent(id=uuid.uuid4(), sent_at=datetime(2020, 12, 17)),
     ]
     sent = "2020-12-18 14:19:44.130585"
 
@@ -337,12 +338,12 @@ def test_cbc_proxy_vodafone_cancel_invokes_function(mocker, cbc_proxy_vodafone):
         {
             "message_id": str(previous_events[0].id),
             "message_number": "0000007b",
-            "sent": previous_events[0].created_at.strftime(DATETIME_FORMAT),
+            "sent": previous_events[0].sent_at.strftime(DATETIME_FORMAT),
         },
         {
             "message_id": str(previous_events[1].id),
             "message_number": "0000007b",  # As a result of mocking, but would be different in practice
-            "sent": previous_events[1].created_at.strftime(DATETIME_FORMAT),
+            "sent": previous_events[1].sent_at.strftime(DATETIME_FORMAT),
         },
     ]
     assert payload["sent"] == sent

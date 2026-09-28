@@ -418,7 +418,7 @@ class CBCProxyVodafone(CBCProxyClientBase):
                     "message_number": format_sequential_number(
                         event.get_provider_message(BroadcastProvider.VODAFONE).message_number
                     ),
-                    "sent": event.created_at.strftime(DATETIME_FORMAT),
+                    "sent": event.sent_at.strftime(DATETIME_FORMAT),
                 }
                 for event in previous_events
             ],
