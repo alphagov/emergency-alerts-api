@@ -608,16 +608,19 @@ def add_custom_areas(service_id, message_id, message_type, type_name):
 def remove_area(service_id, message_id, message_type):
     """Identifies the area IDs remaining once specified area IDs are removed,
     then with these calculates the remaining area for the alert"""
-    data = request.get_json() or {}
-    area_id_to_remove = data.get("area_id") or []
 
     def build_remaining_alert_areas(area_id_to_remove, existing_ids, existing_names):
+        # Inner function, that builds the remaining area WKT and returns the alert area dict for the remaining areas
+        # Created here as only used within remove_area function, but called for both broadcast messages and templates
         new_ids, new_polygons, any_remaining = build_remaining_area_wkt(existing_ids, area_id_to_remove)
         if not any_remaining:
             return create_alert_area_dict()
 
         new_names = [name for id, name in zip(existing_ids, existing_names) if id != area_id_to_remove]
         return create_alert_area_dict(new_ids, new_names, new_polygons)
+
+    data = request.get_json() or {}
+    area_id_to_remove = data.get("area_id") or []
 
     if message_type == "broadcast":
         broadcast_message = dao_get_broadcast_message_by_id_and_service_id(message_id, service_id)
@@ -632,7 +635,6 @@ def remove_area(service_id, message_id, message_type):
             broadcast_message.updated_by_id,
         )
         return jsonify(broadcast_message.serialize()), 200
-
     elif message_type == "templates":
         template = dao_get_template_by_id_and_service_id(message_id, service_id)
         existing_ids, existing_names, existing_polygons = get_existing_area_data(template)
