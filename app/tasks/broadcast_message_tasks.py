@@ -11,7 +11,6 @@ from app.dao.broadcast_message_dao import (
     add_broadcast_provider_message_status,
     create_broadcast_provider_message,
     dao_get_broadcast_event_by_id,
-    get_earlier_events_for_broadcast_event,
 )
 from app.models import (
     BROADCAST_PROVIDER_STATUS_ACK,
@@ -198,7 +197,7 @@ def send_broadcast_provider_message(*, broadcast_event_id, provider):
         if not is_local_host():
             if broadcast_event.message_type == BroadcastEventMessageType.ALERT:
                 cbc_proxy_provider_client.create_and_send_broadcast(
-                    identifier=str(broadcast_event.id),
+                    identifier=str(broadcast_provider_message.id),
                     message_number=formatted_message_number,
                     headline=HEADLINE,
                     description=broadcast_event.transmitted_content["body"],
@@ -209,12 +208,12 @@ def send_broadcast_provider_message(*, broadcast_event_id, provider):
                 )
             elif broadcast_event.message_type == BroadcastEventMessageType.UPDATE:
                 cbc_proxy_provider_client.update_and_send_broadcast(
-                    identifier=str(broadcast_event.id),
+                    identifier=str(broadcast_provider_message.id),
                     message_number=formatted_message_number,
                     headline=HEADLINE,
                     description=broadcast_event.transmitted_content["body"],
                     areas=areas,
-                    previous_events=get_earlier_events_for_broadcast_event(broadcast_event.id),
+                    previous_provider_messages=broadcast_event.get_earlier_provider_messages(provider),
                     sent=broadcast_event.sent_at_as_cap_datetime_string,
                     expires=broadcast_event.transmitted_finishes_at_as_cap_datetime_string,
                     # We think an alert update should always go out on the same channel that created the alert
@@ -227,9 +226,9 @@ def send_broadcast_provider_message(*, broadcast_event_id, provider):
                 )
             elif broadcast_event.message_type == BroadcastEventMessageType.CANCEL:
                 cbc_proxy_provider_client.cancel_broadcast(
-                    identifier=str(broadcast_event.id),
+                    identifier=str(broadcast_provider_message.id),
                     message_number=formatted_message_number,
-                    previous_events=get_earlier_events_for_broadcast_event(broadcast_event.id),
+                    previous_provider_messages=broadcast_event.get_earlier_provider_messages(provider),
                     sent=broadcast_event.sent_at_as_cap_datetime_string,
                 )
 
