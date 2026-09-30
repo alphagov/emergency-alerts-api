@@ -92,7 +92,6 @@ send_alert_summary_email_schema = {
         "created_by",
         "geojson",
         "alert_summary",
-        "phone_estimate",
         "duration",
         "wkt",
         "areas",

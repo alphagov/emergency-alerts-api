@@ -152,23 +152,17 @@ def delete_old_records_from_events_table():
     periodic=cron("0 0 1 * *"),
 )
 def validate_functional_test_account_emails():
+    emails = []
+    for i in range(1, 7):  # 1-6
+        emails.append(f"emergency-alerts-tests+user{i}@digital.cabinet-office.gov.uk")
+    emails.append("emergency-alerts-tests+webauthn@digital.cabinet-office.gov.uk")
+    emails.append("emergency-alerts-tests-admin@digital.cabinet-office.gov.uk")
+    emails.append("emergency-alerts-tests-admin+2@digital.cabinet-office.gov.uk")
+
     try:
-        user1 = get_user_by_email("emergency-alerts-tests+user1@digital.cabinet-office.gov.uk")
-        save_model_user(user1, validated_email_access=True)
-        user2 = get_user_by_email("emergency-alerts-tests+user2@digital.cabinet-office.gov.uk")
-        save_model_user(user2, validated_email_access=True)
-        user3 = get_user_by_email("emergency-alerts-tests+user3@digital.cabinet-office.gov.uk")
-        save_model_user(user3, validated_email_access=True)
-        user4 = get_user_by_email("emergency-alerts-tests+user4@digital.cabinet-office.gov.uk")
-        save_model_user(user4, validated_email_access=True)
-        user5 = get_user_by_email("emergency-alerts-tests+user5@digital.cabinet-office.gov.uk")
-        save_model_user(user5, validated_email_access=True)
-        user6 = get_user_by_email("emergency-alerts-tests+user6@digital.cabinet-office.gov.uk")
-        save_model_user(user6, validated_email_access=True)
-        admin = get_user_by_email("emergency-alerts-tests-admin@digital.cabinet-office.gov.uk")
-        save_model_user(admin, validated_email_access=True)
-        admin2 = get_user_by_email("emergency-alerts-tests-admin+2@digital.cabinet-office.gov.uk")
-        save_model_user(admin2, validated_email_access=True)
+        for email in emails:
+            user = get_user_by_email(email)
+            save_model_user(user, validated_email_access=True)
     except SQLAlchemyError as e:
         current_app.logger.exception(e)
     else:

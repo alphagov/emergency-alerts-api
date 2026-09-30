@@ -264,8 +264,8 @@ def dao_get_all_pre_broadcast_messages():
 
 def dao_get_all_finished_broadcast_messages_with_outstanding_actions() -> list[BroadcastMessage]:
     """
-    Find all BroadcastMessages that have finished (either expired or been cancelled)
-    and have one or more flags indicating actions due.
+    Find all BroadcastMessages that have finished by natural expiry and still have an
+    action due (i.e., GOV.UK/Alerts has not been asked to republish for them yet).
     """
 
     now = datetime.now(timezone.utc)
@@ -274,15 +274,10 @@ def dao_get_all_finished_broadcast_messages_with_outstanding_actions() -> list[B
         .filter(
             and_(
                 or_(
-                    # Pick up cancelled alerts after a grace period of 10 minutes,
-                    # to prevent double-republishes when queue_after_alert_activities runs.
-                    and_(
-                        BroadcastMessage.status == BroadcastStatusType.CANCELLED,
-                        BroadcastMessage.cancelled_at < now - timedelta(minutes=10),
-                    ),
-                    # Completed or naturally-finished BROADCASTING alerts have no other
-                    # publish trigger, so are picked up immediately.
+                    # Naturally-completed alerts have no other publish trigger.
                     BroadcastMessage.status == BroadcastStatusType.COMPLETED,
+                    # BROADCASTING alerts whose end time has passed but that have not yet
+                    # been swept into COMPLETED.
                     and_(
                         BroadcastMessage.finishes_at < now,
                         BroadcastMessage.status == BroadcastStatusType.BROADCASTING,
@@ -337,15 +332,8 @@ def dao_mark_all_as_govuk_acknowledged():
 
 
 def dao_purge_old_broadcast_messages(service, days_older_than=30, dry_run=False):
-    if service is None:
-        raise ValueError("Service ID is required")
-
-    service_id = _resolve_service_id(service)
-    if service_id is None:
-        raise ValueError("Unable to find service ID")
-
-    print(f"Purging alerts for service {service_id}")
-    message_ids = _get_broadcast_messages(days_older_than, service_id)
+    print(f"Purging alerts for service {service if service else "all services"}")
+    message_ids = _get_broadcast_messages(days_older_than, service)
 
     counter = Counter()
     for message_id in message_ids:
@@ -478,17 +466,18 @@ def _resolve_service_id(service):
 
 
 def _get_broadcast_messages(days_older_than, service_id):
-    messages = (
-        db.session.query(
-            BroadcastMessage.id,
-        )
-        .filter(
-            BroadcastMessage.service_id == service_id,
-            BroadcastMessage.created_at <= datetime.now() - timedelta(days=days_older_than),
-            BroadcastMessage.status.in_(BroadcastStatusType.PRE_BROADCAST_STATUSES + BroadcastStatusType.LIVE_STATUSES),
-        )
-        .all()
+    query = db.session.query(
+        BroadcastMessage.id,
+    ).filter(
+        BroadcastMessage.created_at
+        <= datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=days_older_than),
+        BroadcastMessage.status.in_(BroadcastStatusType.PRE_BROADCAST_STATUSES + BroadcastStatusType.LIVE_STATUSES),
     )
+
+    if service_id is not None:
+        query = query.filter(BroadcastMessage.service_id == service_id)
+
+    messages = query.all()
     return [str(row[0]) for row in messages]
 
 
