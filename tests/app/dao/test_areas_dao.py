@@ -17,11 +17,9 @@ from app.dao.areas_dao import (
     dao_get_dominant_parent_geography_id,
     dao_get_geography_type_examples,
     dao_get_grandparent_areas,
+    dao_get_latest_active_geography_types,
     dao_get_latest_active_version_for_type_route,
     dao_get_latest_area_by_geographic_id,
-    dao_get_latest_geography_types,
-    dao_get_latest_geography_version_number,
-    dao_get_latest_geography_versions,
 )
 from tests.app.db import (
     create_area,
@@ -38,30 +36,29 @@ def test_dao_get_latest_geography_version_number_returns_expected_version(notify
     # inactive shouldn't be returned
     create_geography_version(geography_type_id=geography_type.id, version="3.0.0", state="inactive")
 
-    version_number = dao_get_latest_geography_version_number()
+    version_number = dao_get_latest_active_version_for_type_route("local_authorities").version
 
     assert version_number == newer.version
 
 
-def test_dao_get_latest_geography_versions_returns_latest_versions(notify_db_session):
+def test_dao_get_latest_active_geography_types_returns_latest_types(notify_db_session):
     type1 = create_geography_type(route="local_authorities", name="Local authorities")
     type2 = create_geography_type(route="wards", name="Wards")
 
     create_geography_version(geography_type_id=type1.id, version="1.0.0", state="active")
     version1_new = create_geography_version(geography_type_id=type1.id, version="2.0.0", state="active")
-    version2_new = create_geography_version(geography_type_id=type2.id, version="2.0.0", state="active")
+    version2_new = create_geography_version(geography_type_id=type2.id, version="3.0.0", state="active")
 
-    # Latest version number across all active types is 2.0.0
-    latest_versions = dao_get_latest_geography_versions()
+    latest_versions = dao_get_latest_active_geography_types()
 
-    assert {v.id for v in latest_versions} == {version1_new.id, version2_new.id}
+    assert {v.version_id for v in latest_versions} == {version1_new.id, version2_new.id}
 
 
 def test_dao_get_latest_geography_versions_returns_empty_list_if_no_active_versions(notify_db_session):
     type1 = create_geography_type(route="local_authorities")
     create_geography_version(geography_type_id=type1.id, version="1.0.0", state="inactive")
 
-    result = dao_get_latest_geography_versions()
+    result = dao_get_latest_active_geography_types()
     assert result == []
 
 
@@ -253,7 +250,7 @@ def test_dao_get_areas_by_ids_returns_expected_areas(notify_db_session):
     assert set(ids) == {area1.id, area2.id}
 
 
-def test_dao_get_latest_geography_types_returns_expected_data_for_type(
+def test_dao_get_latest_active_geography_types_returns_expected_data_for_type(
     notify_db_session,
 ):
     la_type = create_geography_type(route="local_authorities")
@@ -262,13 +259,12 @@ def test_dao_get_latest_geography_types_returns_expected_data_for_type(
     ward_type = create_geography_type(route="wards", name="Wards")
     create_geography_version(geography_type_id=ward_type.id, version="1.0.0", state="active")
 
-    results = dao_get_latest_geography_types()
+    results = dao_get_latest_active_geography_types()
     assert len(results) == 2
-
-    row = results[0]
-    assert row.id == la_type.id
-    assert row.geography_type_name == la_type.name
-    assert row.route == la_type.route
+    assert {(result.geography_type_name, result.route) for result in results} == {
+        (la_type.name, la_type.route),
+        (ward_type.name, ward_type.route),
+    }
 
 
 def test_dao_get_geography_type_examples_expected_data_for_type(
