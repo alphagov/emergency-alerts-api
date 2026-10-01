@@ -5,6 +5,7 @@ from sqlalchemy.orm import aliased
 from app import db
 from app.models import GeographyPolygons, GeographyType, GeographyVersion
 
+
 def geography_version_ordering():
     """Returns expressions for ordering geography versions semantically"""
     major = func.split_part(GeographyVersion.version, ".", 1).cast(Integer)
@@ -33,10 +34,7 @@ def dao_get_latest_active_geography_types():
         )
         .filter(GeographyVersion.state == "active")
         .distinct(GeographyVersion.geography_type_id)
-        .order_by(
-            GeographyVersion.geography_type_id,
-            *geography_version_ordering()
-        )
+        .order_by(GeographyVersion.geography_type_id, *geography_version_ordering())
         .all()
     )
 
@@ -53,9 +51,7 @@ def dao_get_latest_active_version_for_type_route(type_name):
             GeographyType.route == type_name,
             GeographyVersion.state == "active",
         )
-        .order_by(
-            *geography_version_ordering()
-        )
+        .order_by(*geography_version_ordering())
         .first()
     )
 
