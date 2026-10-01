@@ -50,7 +50,23 @@ def insert_geography_version(conn, area, geography_type_id):
     return geography_version_id
 
 
-def insert_geography_type(conn, area):
+def get_geography_type(conn, area):
+    query = """
+        SELECT id FROM geography_type WHERE route = %s
+    """
+    with conn, conn.cursor() as curr:
+        curr.execute(query, (area,))
+        result = curr.fetchone()
+        if result:
+            return result[0]
+        else:
+            return None
+
+
+def get_or_insert_geography_type(conn, area):
+    if geography_type_id := get_geography_type(conn, area):
+        return geography_type_id
+
     # Inserts geography_type row for a given area
     geography_type_id = str(uuid.uuid4())
     geography_name = AREAS[area]["display_name"]
@@ -69,14 +85,23 @@ def insert_geography_polygons(conn, area, geography_version_id, geography_type_i
     if area == "local_authorities":
         # If the area is local_authorities, these are made up of counties_and_unitary_authorities
         # and local_authority_districts
-        for sub_area in ["counties_and_unitary_authorities", "local_authority_districts"]:
-            data = get_source_data(f"{VERSION}/{sub_area}.csv")
-            # Splits CSV into chunks for chunk/batch processing
-            split_into_chunks_and_insert_into_db(conn, area, geography_version_id, geography_type_id, data)
+        source_areas = [
+            "counties_and_unitary_authorities",
+            "local_authority_districts",
+        ]
     else:
-        data = get_source_data(f"{VERSION}/{area}.csv")
+        source_areas = [area]
+
+    for source_area in source_areas:
+        data = get_source_data(f"{VERSION}/{source_area}.csv")
         # Splits CSV into chunks for chunk/batch processing
-        split_into_chunks_and_insert_into_db(conn, area, geography_version_id, geography_type_id, data)
+        split_into_chunks_and_insert_into_db(
+            conn,
+            area,
+            geography_version_id,
+            geography_type_id,
+            data,
+        )
 
 
 def main():
@@ -88,7 +113,7 @@ def main():
             print(f"Processing {area} data")
             # We have 3 tables; geography_type, geography_version, geography_polygons
             # For each area we populate them with relevant data
-            geography_type_id = insert_geography_type(conn, area)
+            geography_type_id = get_or_insert_geography_type(conn, area)
             geography_version_id = insert_geography_version(conn, area, geography_type_id)
             insert_geography_polygons(conn, area, geography_version_id, geography_type_id)
     finally:
