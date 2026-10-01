@@ -58,23 +58,21 @@ def dao_get_latest_active_version_for_type_route(type_name):
 
 def dao_get_areas_for_geography_type(type_name):
     latest_active_version = dao_get_latest_active_version_for_type_route(type_name)
-    if latest_active_version:
-        latest_active_version_id = latest_active_version.id
-        query = (
-            GeographyPolygons.query.with_entities(
-                GeographyPolygons.id,
-                GeographyPolygons.geographic_id,
-                GeographyPolygons.name,
-                GeographyPolygons.parent_geography_id,
-            )
-            .filter_by(
-                geography_version_id=latest_active_version_id,
-            )
-            .order_by(GeographyPolygons.name)
-        )
-        return query.all()
-    else:
+
+    if latest_active_version is None:
         return []
+
+    return (
+        GeographyPolygons.query.with_entities(
+            GeographyPolygons.id,
+            GeographyPolygons.geographic_id,
+            GeographyPolygons.name,
+            GeographyPolygons.parent_geography_id,
+        )
+        .filter_by(geography_version_id=latest_active_version.id)
+        .order_by(GeographyPolygons.name)
+        .all()
+    )
 
 
 def dao_get_area_by_id(area_id):
@@ -123,35 +121,38 @@ def dao_get_child_areas_for_parent_geography_id(parent_geography_id):
     # as these are the only child areas we are interested in currently
     # Note: REPPIR sites also have parent_geography_id but we don't
     # want them rendered as children for selection
-    latest_la_version_id, latest_ward_version_id, version_ids = None, None, []
-    if latest_la_version := dao_get_latest_active_version_for_type_route("local_authorities"):
-        latest_la_version_id = latest_la_version.id
-        version_ids.append(latest_la_version_id)
-    if latest_ward_version := dao_get_latest_active_version_for_type_route("wards"):
-        latest_ward_version_id = latest_ward_version.id
-        version_ids.append(latest_ward_version_id)
+    version_ids = []
 
-    query = (
+    for type_name in ("local_authorities", "wards"):
+        latest_version = dao_get_latest_active_version_for_type_route(type_name)
+        if latest_version:
+            version_ids.append(latest_version.id)
+
+    return (
         GeographyPolygons.query.with_entities(
             GeographyPolygons.id,
             GeographyPolygons.geographic_id,
             GeographyPolygons.name,
             GeographyPolygons.parent_geography_id,
         )
-        .filter(GeographyPolygons.geography_version_id.in_(version_ids))
-        .filter_by(parent_geography_id=parent_geography_id)
+        .filter(
+            GeographyPolygons.geography_version_id.in_(version_ids),
+            GeographyPolygons.parent_geography_id == parent_geography_id,
+        )
         .order_by(GeographyPolygons.name)
+        .all()
     )
-
-    return query.all()
 
 
 def dao_get_grandparent_areas():
     """Returns list of areas that have child areas that are parent areas"""
-    latest_la_version_id = dao_get_latest_active_version_for_type_route("local_authorities").id
-    latest_ward_version_id = dao_get_latest_active_version_for_type_route("wards").id
 
-    version_ids = [latest_la_version_id, latest_ward_version_id]
+    version_ids = []
+    for type_name in ("local_authorities", "wards"):
+        latest_version = dao_get_latest_active_version_for_type_route(type_name)
+
+        if latest_version is not None:
+            version_ids.append(latest_version.id)
 
     # Use aliases of GeographyPolygons so we can join the table to itself:
     #   GeographyPolygons = grandparent
