@@ -9,7 +9,7 @@ def test_postgis_version_returns_version(
     notify_db_session,
 ):
     result = notify_db_session.execute("SELECT postgis_version()").one()
-    assert "3.5 " in result[0]  # Asserts that PostGIS version is same as specified in docker-compose-tests.yml
+    assert "3.6 " in result[0]  # Asserts that PostGIS version is same as specified in docker-compose-tests.yml
 
 
 def test_st_astext_returns_point_wkt(
