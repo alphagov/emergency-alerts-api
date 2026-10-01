@@ -134,6 +134,36 @@ def get_areas():
     return jsonify({"data": data})
 
 
+@areas_blueprint.route("/get-<type_name>-by-names", methods=["POST"])
+def get_areas_by_names(type_name):
+    """Returns a list of areas that have the names provided for the provided type,
+    or error response with custom error messages set for local_authorities
+    and flood_warning_areas areas."""
+    data = request.get_json() or {}
+    area_names = data.get("area_names") or []
+
+    # Filters possible error messages by geography type
+    error_messages = bulk_input_error_messages_by_geography_type(type_name)
+
+    if error_response := validate_bulk_area_input(area_names, type_name):
+        return jsonify({"message": error_response}), 400
+
+    areas = AreasDAO.get_areas_by_names(area_names, type_name)
+    found_by_name = {area.name: area.id for area in areas}
+
+    # Returns 400 error for a missing name - error to then be
+    # rendered as is in Admin application
+    for name in area_names:
+        if name not in found_by_name:
+            message = (
+                f"Local authority '{name}' not found" if type_name == "local_authorities" else error_messages["invalid"]
+            )
+            return jsonify({"message": message}), 400
+
+    ids = [found_by_name[name] for name in area_names]
+    return jsonify({"data": ids})
+
+
 @areas_blueprint.route("/<area_id>/is-grandparent", methods=["GET"])
 def is_grandparent(area_id):
     """Returns bool for whether or not an area is a grandparent area, i.e.
@@ -243,6 +273,23 @@ def get_postcode_centroid():
     return jsonify({"data": centroid})
 
 
+@areas_blueprint.route("/postcode-area", methods=["POST"])
+def create_postcode_area():
+    """Returns WKT string of created postcode area, created using radius and
+    centroid of the latest polygon for the specified postcode boundary"""
+    data = request.get_json()
+    radius = data.get("radius")
+    postcode = data.get("postcode")
+    if not radius or not postcode:
+        return jsonify({"message": "Enter postcode and radius to create postcode area"}), 400
+    postcode_area_id = AreasDAO.get_latest_area_by_geographic_id(postcode, "postcodes").id
+    centroid = AreasDAO.get_area_centroid(postcode_area_id)
+    circle = AreasDAO.create_circle_area(centroid, radius)
+    centroid_wkt = shapely.wkt.loads(centroid)
+    id = f"postcodes_{centroid_wkt.x}_{centroid_wkt.y}_{radius}_{postcode}"
+    return jsonify({"circle": circle, "id": id})
+
+
 @areas_blueprint.route("/coordinates/get-centroid", methods=["POST"])
 def get_coordinates_centroid():
     """
@@ -259,53 +306,6 @@ def get_coordinates_centroid():
     centroid = generate_centroid_for_coordinate_area(first_coordinate, second_coordinate, coordinate_type)
 
     return jsonify({"data": centroid})
-
-
-@areas_blueprint.route("/get-<type_name>-by-names", methods=["POST"])
-def get_areas_by_names(type_name):
-    """Returns a list of areas that have the names provided for the provided type,
-    or error response with custom error messages set for local_authorities
-    and flood_warning_areas areas."""
-    data = request.get_json() or {}
-    area_names = data.get("area_names") or []
-
-    # Filters possible error messages by geography type
-    error_messages = bulk_input_error_messages_by_geography_type(type_name)
-
-    if error_response := validate_bulk_area_input(area_names, type_name):
-        return jsonify({"message": error_response}), 400
-
-    areas = AreasDAO.get_areas_by_names(area_names, type_name)
-    found_by_name = {area.name: area.id for area in areas}
-
-    # Returns 400 error for a missing name - error to then be
-    # rendered as is in Admin application
-    for name in area_names:
-        if name not in found_by_name:
-            message = (
-                f"Local authority '{name}' not found" if type_name == "local_authorities" else error_messages["invalid"]
-            )
-            return jsonify({"message": message}), 400
-
-    ids = [found_by_name[name] for name in area_names]
-    return jsonify({"data": ids})
-
-
-@areas_blueprint.route("/postcode-area", methods=["POST"])
-def create_postcode_area():
-    """Returns WKT string of created postcode area, created using radius and
-    centroid of the latest polygon for the specified postcode boundary"""
-    data = request.get_json()
-    radius = data.get("radius")
-    postcode = data.get("postcode")
-    if not radius or not postcode:
-        return jsonify({"message": "Enter postcode and radius to create postcode area"}), 400
-    postcode_area_id = AreasDAO.get_latest_area_by_geographic_id(postcode, "postcodes").id
-    centroid = AreasDAO.get_area_centroid(postcode_area_id)
-    circle = AreasDAO.create_circle_area(centroid, radius)
-    centroid_wkt = shapely.wkt.loads(centroid)
-    id = f"postcodes_{centroid_wkt.x}_{centroid_wkt.y}_{radius}_{postcode}"
-    return jsonify({"circle": circle, "id": id})
 
 
 @areas_blueprint.route("/coordinate-area", methods=["POST"])
