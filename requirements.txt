@@ -86,7 +86,7 @@ dramatiq-sqs==0.3.1
     # via
     #   -r requirements.in
     #   emergency-alerts-utils
-# DO NOT COMMIT: Commented out for parent requirements.txt: emergency-alerts-utils @ git+https://github.com/alphagov/emergency-alerts-utils.git
+emergency-alerts-utils @ git+https://github.com/alphagov/emergency-alerts-utils.git
     # via -r requirements.in
 execnet==2.1.2
     # via pytest-xdist
