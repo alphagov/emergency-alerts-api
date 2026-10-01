@@ -7,6 +7,171 @@ from app.models import GeographyPolygons, GeographyType, GeographyVersion
 
 
 class AreasDAO:
+
+    @staticmethod
+    def get_area_by_id(area_id):
+        """Returns the area, from geography_polygons, with specified area ID (UUID)"""
+        return (
+            db.session.query(
+                GeographyPolygons.id,
+                GeographyPolygons.geographic_id,
+                GeographyPolygons.name,
+                GeographyPolygons.parent_geography_id,
+                GeographyType.route.label("geography_type_name"),
+                GeographyPolygons.geometry,
+            )
+            .join(
+                GeographyType,
+                GeographyPolygons.geography_type_id == GeographyType.id,
+            )
+            .filter(GeographyPolygons.id == area_id)
+            .one_or_none()
+        )
+
+    @staticmethod
+    def get_latest_area_by_geographic_id(geographic_id, type_name=None):
+        """
+        Returns the latest active GeographyPolygons for a given geographic_id
+        """
+
+        if type_name is not None:
+            latest_version = AreasDAO.get_latest_active_version_for_type_route(type_name)
+            if latest_version is None:
+                return None
+
+            version_ids = [latest_version.id]
+        else:
+            latest_types = AreasDAO.get_active_geography_types_with_version()
+            if not latest_types:
+                return None
+
+            version_ids = [geography_type.version_id for geography_type in latest_types]
+
+        return (
+            db.session.query(
+                GeographyPolygons.id,
+                GeographyPolygons.geographic_id,
+                GeographyPolygons.name,
+                GeographyPolygons.parent_geography_id,
+                GeographyType.route.label("geography_type_name"),
+                GeographyPolygons.geometry,
+            )
+            .join(
+                GeographyType,
+                GeographyPolygons.geography_type_id == GeographyType.id,
+            )
+            .filter(
+                GeographyPolygons.geographic_id == geographic_id,
+                GeographyPolygons.geography_version_id.in_(version_ids),
+            )
+            .one_or_none()
+        )
+
+    @staticmethod
+    def get_areas_by_ids(area_ids):
+        """Returns list of areas for the specified area IDs"""
+        return (
+            db.session.query(
+                GeographyPolygons.id,
+                GeographyPolygons.geographic_id,
+                GeographyPolygons.name,
+                GeographyPolygons.parent_geography_id,
+                GeographyType.route.label("geography_type_name"),
+                GeographyPolygons.geometry,
+            )
+            .join(
+                GeographyType,
+                GeographyPolygons.geography_type_id == GeographyType.id,
+            )
+            .filter(GeographyPolygons.id.in_(area_ids))
+            .order_by(GeographyPolygons.name)
+            .all()
+        )
+
+    @staticmethod
+    def get_areas_by_names(area_names, type_name):
+        """Returns the areas from geography_polygons, with latest version ID"""
+        latest_version = AreasDAO.get_latest_active_version_for_type_route(type_name)
+
+        if latest_version is None:
+            return []
+
+        return GeographyPolygons.query.filter(
+            GeographyPolygons.name.in_(area_names),
+            GeographyPolygons.geography_version_id == latest_version.id,
+        ).all()
+
+    @staticmethod
+    def get_areas_for_geography_type(type_name):
+        latest_active_version = AreasDAO.get_latest_active_version_for_type_route(type_name)
+        if latest_active_version is None:
+            return []
+
+        return (
+            GeographyPolygons.query.with_entities(
+                GeographyPolygons.id,
+                GeographyPolygons.geographic_id,
+                GeographyPolygons.name,
+                GeographyPolygons.parent_geography_id,
+            )
+            .filter_by(geography_version_id=latest_active_version.id)
+            .order_by(GeographyPolygons.name)
+            .all()
+        )
+
+    @staticmethod
+    def get_child_areas_for_parent_geography_id(parent_geography_id):
+        """Return active areas belonging to the specified parent area."""
+        active_geography_types = AreasDAO.get_active_geography_types_with_version()
+        active_version_ids = [geography_type.version_id for geography_type in active_geography_types]
+
+        return (
+            GeographyPolygons.query.with_entities(
+                GeographyPolygons.id,
+                GeographyPolygons.geographic_id,
+                GeographyPolygons.name,
+                GeographyPolygons.parent_geography_id,
+            )
+            .filter(
+                GeographyPolygons.geography_version_id.in_(active_version_ids),
+                GeographyPolygons.parent_geography_id == parent_geography_id,
+            )
+            .order_by(GeographyPolygons.name)
+            .all()
+        )
+
+    @staticmethod
+    def get_grandparent_areas():
+        """Returns list of areas that have child areas that are parent areas"""
+
+        version_ids = []
+        for type_name in ("local_authorities", "wards"):
+            latest_version = AreasDAO.get_latest_active_version_for_type_route(type_name)
+
+            if latest_version is not None:
+                version_ids.append(latest_version.id)
+
+        # Use aliases of GeographyPolygons so we can join the table to itself:
+        #   GeographyPolygons = grandparent
+        #   parent_area      = child of grandparent
+        #   child_area       = child of parent_area (grandchild of grandparent)
+        parent_area = aliased(GeographyPolygons)
+        child_area = aliased(GeographyPolygons)
+
+        return (
+            db.session.query(
+                GeographyPolygons.id,  # Grandparent area IDs
+            )
+            # Finds parent areas by choosing those that are stored as parent_geography_id
+            .join(parent_area, parent_area.parent_geography_id == GeographyPolygons.geographic_id)
+            # Finds child areas of those parent areas
+            .join(child_area, child_area.parent_geography_id == parent_area.geographic_id)
+            .filter(GeographyPolygons.geography_version_id.in_(version_ids))
+            .distinct()
+            .order_by(GeographyPolygons.name)
+            .all()
+        )
+
     @staticmethod
     def geography_version_ordering():
         """Returns expressions for ordering geography versions semantically"""
@@ -17,9 +182,9 @@ class AreasDAO:
         return major.desc(), minor.desc(), patch.desc()
 
     @staticmethod
-    def get_latest_active_geography_types():
+    def get_active_geography_types_with_version():
         """
-        Returns the latest active geography types and their versions
+        Returns the active geography types and their latest versions
         """
 
         return (
@@ -61,175 +226,6 @@ class AreasDAO:
         )
 
     @staticmethod
-    def get_areas_for_geography_type(type_name):
-        latest_active_version = AreasDAO.get_latest_active_version_for_type_route(type_name)
-
-        if latest_active_version is None:
-            return []
-
-        return (
-            GeographyPolygons.query.with_entities(
-                GeographyPolygons.id,
-                GeographyPolygons.geographic_id,
-                GeographyPolygons.name,
-                GeographyPolygons.parent_geography_id,
-            )
-            .filter_by(geography_version_id=latest_active_version.id)
-            .order_by(GeographyPolygons.name)
-            .all()
-        )
-
-    @staticmethod
-    def get_area_by_id(area_id):
-        """Returns the area, from geography_polygons, with specified area ID (UUID)"""
-        return (
-            db.session.query(
-                GeographyPolygons.id,
-                GeographyPolygons.geographic_id,
-                GeographyPolygons.name,
-                GeographyPolygons.parent_geography_id,
-                GeographyType.route.label("geography_type_name"),
-                GeographyPolygons.geometry,
-            )
-            .join(
-                GeographyType,
-                GeographyPolygons.geography_type_id == GeographyType.id,
-            )
-            .filter(GeographyPolygons.id == area_id)
-            .one_or_none()
-        )
-
-    @staticmethod
-    def get_areas_by_ids(area_ids):
-        """Returns list of areas for the specified area IDs"""
-        return (
-            db.session.query(
-                GeographyPolygons.id,
-                GeographyPolygons.geographic_id,
-                GeographyPolygons.name,
-                GeographyPolygons.parent_geography_id,
-                GeographyType.route.label("geography_type_name"),
-                GeographyPolygons.geometry,
-            )
-            .join(
-                GeographyType,
-                GeographyPolygons.geography_type_id == GeographyType.id,
-            )
-            .filter(GeographyPolygons.id.in_(area_ids))
-            .order_by(GeographyPolygons.name)
-            .all()
-        )
-
-    @staticmethod
-    def get_child_areas_for_parent_geography_id(parent_geography_id):
-        # Only areas with latest local authority or ward version to be retrieved,
-        # as these are the only child areas we are interested in currently
-        # Note: REPPIR sites also have parent_geography_id but we don't
-        # want them rendered as children for selection
-        version_ids = []
-
-        for type_name in ("local_authorities", "wards"):
-            latest_version = AreasDAO.get_latest_active_version_for_type_route(type_name)
-            if latest_version:
-                version_ids.append(latest_version.id)
-
-        return (
-            GeographyPolygons.query.with_entities(
-                GeographyPolygons.id,
-                GeographyPolygons.geographic_id,
-                GeographyPolygons.name,
-                GeographyPolygons.parent_geography_id,
-            )
-            .filter(
-                GeographyPolygons.geography_version_id.in_(version_ids),
-                GeographyPolygons.parent_geography_id == parent_geography_id,
-            )
-            .order_by(GeographyPolygons.name)
-            .all()
-        )
-
-    @staticmethod
-    def get_grandparent_areas():
-        """Returns list of areas that have child areas that are parent areas"""
-
-        version_ids = []
-        for type_name in ("local_authorities", "wards"):
-            latest_version = AreasDAO.get_latest_active_version_for_type_route(type_name)
-
-            if latest_version is not None:
-                version_ids.append(latest_version.id)
-
-        # Use aliases of GeographyPolygons so we can join the table to itself:
-        #   GeographyPolygons = grandparent
-        #   parent_area      = child of grandparent
-        #   child_area       = child of parent_area (grandchild of grandparent)
-        parent_area = aliased(GeographyPolygons)
-        child_area = aliased(GeographyPolygons)
-
-        return (
-            db.session.query(
-                GeographyPolygons.id,  # Grandparent area IDs
-            )
-            # Finds parent areas by choosing those that are stored as parent_geography_id
-            .join(parent_area, parent_area.parent_geography_id == GeographyPolygons.geographic_id)
-            # Finds child areas of those parent areas
-            .join(child_area, child_area.parent_geography_id == parent_area.geographic_id)
-            .filter(GeographyPolygons.geography_version_id.in_(version_ids))
-            .distinct()
-            .order_by(GeographyPolygons.name)
-            .all()
-        )
-
-    @staticmethod
-    def get_latest_area_by_geographic_id(area_id, type_name=None):
-        """
-        Returns the latest active GeographyPolygons for a given geographic_id
-        """
-
-        if type_name is not None:
-            latest_version = AreasDAO.get_latest_active_version_for_type_route(type_name)
-            if latest_version is None:
-                return None
-
-            version_ids = [latest_version.id]
-        else:
-            latest_types = AreasDAO.get_latest_active_geography_types()
-            if not latest_types:
-                return None
-
-            version_ids = [geography_type.version_id for geography_type in latest_types]
-
-        return (
-            db.session.query(
-                GeographyPolygons.id,
-                GeographyPolygons.geographic_id,
-                GeographyPolygons.name,
-                GeographyPolygons.parent_geography_id,
-                GeographyType.route.label("geography_type_name"),
-                GeographyPolygons.geometry,
-            )
-            .join(
-                GeographyType,
-                GeographyPolygons.geography_type_id == GeographyType.id,
-            )
-            .filter(
-                GeographyPolygons.geographic_id == area_id,
-                GeographyPolygons.geography_version_id.in_(version_ids),
-            )
-            .one_or_none()
-        )
-
-    @staticmethod
-    def get_areas_by_names(area_names, type_name):
-        """Returns the areas from geography_polygons, with latest version ID"""
-        latest_version_id = AreasDAO.get_latest_active_version_for_type_route(type_name).id
-        return (
-            GeographyPolygons.query.filter(GeographyPolygons.name.in_(area_names))
-            .filter_by(geography_version_id=latest_version_id)
-            .all()
-        )
-
-    @staticmethod
     def get_geography_type_examples(type_name):
         """Returns the area count and first four area names for a geography type."""
         latest_version = AreasDAO.get_latest_active_version_for_type_route(type_name)
@@ -254,19 +250,6 @@ class AreasDAO:
         }
 
     @staticmethod
-    def create_area(geometries):
-        """Combines multiple geometries and returns the combined area as WKT string"""
-        sql = text("""
-            SELECT ST_ASText(
-                ST_UnaryUnion(
-                    ST_Collect(geom)
-                )
-            )
-            FROM unnest(:geometries) AS geom
-            """)
-        return db.session.execute(sql, {"geometries": geometries}).scalar()
-
-    @staticmethod
     def get_area_centroid(area_id):
         """Returns the WKT string for centroid calculated for area"""
         area = AreasDAO.get_area_by_id(area_id)
@@ -278,6 +261,19 @@ class AreasDAO:
             FROM ST_GeomFromText(:geometry, 4326) AS g;
         """
         return db.session.execute(query, {"geometry": geometry}).scalar()
+
+    @staticmethod
+    def create_area(geometries):
+        """Combines multiple geometries and returns the combined area as WKT string"""
+        sql = text("""
+            SELECT ST_ASText(
+                ST_UnaryUnion(
+                    ST_Collect(geom)
+                )
+            )
+            FROM unnest(:geometries) AS geom
+            """)
+        return db.session.execute(sql, {"geometries": geometries}).scalar()
 
     @staticmethod
     def create_circle_area(centroid, radius):
