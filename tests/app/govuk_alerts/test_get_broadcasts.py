@@ -7,6 +7,13 @@ from app.models import BROADCAST_TYPE
 from tests import create_internal_authorization_header
 from tests.app.db import create_broadcast_message, create_template
 
+VALID_AREAS = {
+    "ids": ["manchester"],
+    "names": ["Manchester"],
+    "aggregate_names": ["Manchester"],
+    "simple_polygons": [[[53.48, -2.24], [53.49, -2.24], [53.49, -2.23], [53.48, -2.24]]],
+}
+
 
 @pytest.mark.parametrize("channel", ["severe", "government"])
 def test_get_filtered_broadcasts_returns_list_of_public_broadcasts_and_200(
@@ -27,11 +34,11 @@ def test_get_filtered_broadcasts_returns_list_of_public_broadcasts_and_200(
     template_1 = create_template(sample_broadcast_service, BROADCAST_TYPE)
 
     broadcast_message_1 = create_broadcast_message(
-        template_1, starts_at=datetime(2021, 6, 15, 12, 0, 0), status="cancelled"
+        template_1, areas=VALID_AREAS, starts_at=datetime(2021, 6, 15, 12, 0, 0), status="cancelled"
     )
 
     broadcast_message_2 = create_broadcast_message(
-        template_1, starts_at=datetime(2021, 6, 22, 12, 0, 0), status="broadcasting"
+        template_1, areas=VALID_AREAS, starts_at=datetime(2021, 6, 22, 12, 0, 0), status="broadcasting"
     )
 
     jwt_client_id = current_app.config["GOVUK_ALERTS_CLIENT_ID"]
@@ -71,8 +78,12 @@ def test_get_filtered_broadcasts_returns_non_public_broadcasts_and_200(
     older_alert_date = datetime.now(timezone.utc) - timedelta(hours=49)
     newer_alert_date = datetime.now(timezone.utc) - timedelta(hours=47)
 
-    broadcast_message_1 = create_broadcast_message(template_1, starts_at=older_alert_date, status="cancelled")
-    broadcast_message_2 = create_broadcast_message(template_1, starts_at=newer_alert_date, status="broadcasting")
+    broadcast_message_1 = create_broadcast_message(
+        template_1, areas=VALID_AREAS, starts_at=older_alert_date, status="cancelled"
+    )
+    broadcast_message_2 = create_broadcast_message(
+        template_1, areas=VALID_AREAS, starts_at=newer_alert_date, status="broadcasting"
+    )
 
     jwt_client_id = current_app.config["GOVUK_ALERTS_CLIENT_ID"]
     header = create_internal_authorization_header(jwt_client_id)
@@ -123,13 +134,17 @@ def test_get_all_broadcasts_returns_all_broadcasts_and_200(
     newer_alert_date = datetime.now(timezone.utc) - timedelta(hours=47)
 
     broadcast_message_1 = create_broadcast_message(
-        template_1, starts_at=datetime(2021, 6, 15, 12, 0, 0), status="cancelled"
+        template_1, areas=VALID_AREAS, starts_at=datetime(2021, 6, 15, 12, 0, 0), status="cancelled"
     )
     broadcast_message_2 = create_broadcast_message(
-        template_1, starts_at=datetime(2021, 6, 22, 12, 0, 0), status="broadcasting"
+        template_1, areas=VALID_AREAS, starts_at=datetime(2021, 6, 22, 12, 0, 0), status="broadcasting"
     )
-    broadcast_message_3 = create_broadcast_message(template_2, starts_at=older_alert_date, status="cancelled")
-    broadcast_message_4 = create_broadcast_message(template_2, starts_at=newer_alert_date, status="broadcasting")
+    broadcast_message_3 = create_broadcast_message(
+        template_2, areas=VALID_AREAS, starts_at=older_alert_date, status="cancelled"
+    )
+    broadcast_message_4 = create_broadcast_message(
+        template_2, areas=VALID_AREAS, starts_at=newer_alert_date, status="broadcasting"
+    )
 
     jwt_client_id = current_app.config["GOVUK_ALERTS_CLIENT_ID"]
     header = create_internal_authorization_header(jwt_client_id)
@@ -150,3 +165,43 @@ def test_get_all_broadcasts_returns_all_broadcasts_and_200(
     assert json_response["alerts"][2]["finishes_at"] is None
     assert json_response["alerts"][3]["id"] == str(broadcast_message_1.id)
     assert json_response["alerts"][3]["starts_at"] == "2021-06-15T12:00:00.000000Z"
+
+
+@pytest.mark.parametrize(
+    "invalid_areas",
+    [
+        {"ids": [], "simple_polygons": []},
+        {"names": ["Manchester"], "simple_polygons": []},
+        {"ids": ["manchester"], "simple_polygons": VALID_AREAS["simple_polygons"]},
+        {"names": ["Manchester"], "simple_polygons": [[[53.48, -2.24], [53.49, -2.24]]]},
+    ],
+)
+@pytest.mark.parametrize("path", ["/govuk-alerts", "/govuk-alerts/all"])
+def test_get_broadcasts_skips_and_logs_broadcasts_with_invalid_areas(
+    admin_request, client, sample_broadcast_service, mocker, invalid_areas, path
+):
+    admin_request.post(
+        "service.set_as_broadcast_service",
+        service_id=sample_broadcast_service.id,
+        _data={
+            "broadcast_channel": "severe",
+            "service_mode": "live",
+            "provider_restriction": ["ee", "o2", "three", "vodafone"],
+        },
+    )
+    template = create_template(sample_broadcast_service, BROADCAST_TYPE)
+    valid_broadcast = create_broadcast_message(
+        template, areas=VALID_AREAS, starts_at=datetime(2021, 6, 15, 12, 0, 0), status="completed"
+    )
+    invalid_broadcast = create_broadcast_message(
+        template, areas=invalid_areas, starts_at=datetime(2021, 6, 22, 12, 0, 0), status="completed"
+    )
+    mock_log_exception = mocker.patch.object(current_app.logger, "exception")
+
+    header = create_internal_authorization_header(current_app.config["GOVUK_ALERTS_CLIENT_ID"])
+    response = client.get(path, headers=[header])
+
+    assert response.status_code == 200
+    assert [alert["id"] for alert in response.get_json()["alerts"]] == [str(valid_broadcast.id)]
+    mock_log_exception.assert_called_once()
+    assert mock_log_exception.call_args.kwargs["extra"]["broadcast_message_id"] == invalid_broadcast.id

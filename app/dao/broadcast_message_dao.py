@@ -236,6 +236,22 @@ def dao_get_filtered_broadcast_messages():
     )
 
 
+def dao_get_live_broadcast_message_areas():
+    return (
+        db.session.query(
+            BroadcastMessage.id,
+            BroadcastMessage.status,
+            BroadcastMessage.stubbed,
+            BroadcastMessage.exclude,
+            BroadcastMessage.starts_at,
+            BroadcastMessage.areas,
+        )
+        .filter(BroadcastMessage.status.in_(BroadcastStatusType.LIVE_STATUSES))
+        .order_by(asc(BroadcastMessage.starts_at))
+        .all()
+    )
+
+
 def dao_get_all_pre_broadcast_messages():
     return (
         db.session.query(

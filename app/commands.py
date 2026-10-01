@@ -6,10 +6,15 @@ import uuid
 import click
 import flask
 from flask import current_app, json
+from jsonschema import Draft7Validator
 from sqlalchemy.exc import IntegrityError
 
 from app import db
-from app.dao.broadcast_message_dao import dao_purge_old_broadcast_messages
+from app.dao.broadcast_message_dao import (
+    dao_get_all_broadcast_messages,
+    dao_get_live_broadcast_message_areas,
+    dao_purge_old_broadcast_messages,
+)
 from app.dao.invited_user_dao import delete_invitations_sent_by_user
 from app.dao.organisation_dao import (
     dao_add_service_to_organisation,
@@ -26,6 +31,7 @@ from app.dao.template_folder_dao import dao_purge_template_folders_for_service
 from app.dao.templates_dao import dao_purge_templates_for_service
 from app.dao.users_dao import delete_model_user, delete_user_verify_codes
 from app.models import Domain, Organisation, Permission, Service, User
+from app.schema_validation.definitions import live_broadcast_areas
 from app.utils import is_public_environment
 
 
@@ -330,3 +336,37 @@ def purge_services_created_by_functional_test_admin():
     delete_invitations_sent_by_user(user_id=platform_admin)
 
     print("Successfully purged services created by functional tests")
+
+
+@notify_command(name="audit-broadcast-areas")
+def audit_broadcast_areas():
+    """
+    Check every live (broadcasting, completed or cancelled) alert against the schema.
+    Reports alert IDs and schema errors only.
+    """
+    validator = Draft7Validator(live_broadcast_areas)
+    # Use the gov.uk/alerts query itself, so the count matches the alerts that publishing would skip
+    published_ids = {message.id for message in dao_get_all_broadcast_messages()}
+    checked = failed = failed_and_published = 0
+
+    for message in dao_get_live_broadcast_message_areas():
+        checked += 1
+        errors = list(validator.iter_errors(message.areas))
+        if not errors:
+            continue
+
+        failed += 1
+        published = message.id in published_ids
+        if published:
+            failed_and_published += 1
+
+        print(
+            f"{message.id} status={message.status} stubbed={message.stubbed} exclude={message.exclude} "
+            f"starts_at={message.starts_at} published={published}"
+        )
+        for error in errors:
+            path = "/".join(str(part) for part in error.absolute_path) or "(root)"
+            # Messages can quote the failing value, which may be a large list of polygons
+            print(f"    {path}: {error.message[:200]}")
+
+    print(f"Checked {checked} live alerts: {failed} failed, {failed_and_published} of them published to gov.uk/alerts")

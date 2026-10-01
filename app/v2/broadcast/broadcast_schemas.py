@@ -1,3 +1,5 @@
+from app.schema_validation.definitions import polygon
+
 post_broadcast_schema = {
     "$schema": "http://json-schema.org/draft-07/schema",
     "type": "object",
@@ -104,19 +106,8 @@ post_broadcast_schema = {
                 },
             },
         },
-        "polygon": {
-            "type": "array",
-            "minItems": 4,
-            "items": {
-                "$ref": "#/definitions/coordinatePair",
-            },
-        },
-        "coordinatePair": {
-            "type": "array",
-            "items": {"type": "number"},
-            "minItems": 2,
-            "maxItems": 2,
-        },
+        # Shared with the schema for the areas stored on a BroadcastMessage
+        "polygon": polygon,
     },
 }
 
