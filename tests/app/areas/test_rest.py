@@ -49,7 +49,7 @@ def test_assert_get_area_by_geographic_id_returns_area_with_geographic_id(
 ):
     area1, geography_version, geography_type = create_area_with_version_and_type()
     response = admin_request.get(
-        "areas.get_area_by_geographic_id_endpoint",
+        "areas.get_area_by_geographic_id",
         geographic_id=str(area1.geographic_id),
         service_id=sample_broadcast_service.id,
         _expected_status=200,
@@ -69,7 +69,7 @@ def test_assert_get_area_by_geographic_id_returns_None_if_incorrect_area_id(
     notify_db_session, admin_request, sample_broadcast_service
 ):
     response = admin_request.get(
-        "areas.get_area_by_geographic_id_endpoint",
+        "areas.get_area_by_geographic_id",
         geographic_id="fake-geographic-id",
         service_id=sample_broadcast_service.id,
         _expected_status=400,
