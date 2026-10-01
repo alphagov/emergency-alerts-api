@@ -8,7 +8,7 @@ from app.dao.broadcast_message_dao import (
     dao_get_broadcast_message_by_id_and_service_id,
 )
 from app.dao.service_permissions_dao import dao_remove_service_permission
-from app.models import BROADCAST_TYPE
+from app.models import BROADCAST_TYPE, BroadcastMessage
 from tests import create_service_authorization_header
 from tests.app.db import create_api_key
 
@@ -617,6 +617,27 @@ def test_content_too_long_returns_400(
         ],
         "status_code": 400,
     }
+
+
+def test_derived_areas_are_validated_before_the_broadcast_is_saved(client, sample_broadcast_service, mocker):
+    mocker.patch(
+        "app.v2.broadcast.post_broadcast.Polygons.as_coordinate_pairs_lat_long",
+        new_callable=mocker.PropertyMock,
+        return_value=[[[53.10569, 0.24453]]],
+    )
+    auth_header = create_service_authorization_header(service_id=sample_broadcast_service.id)
+
+    response = client.post(
+        path="/v2/broadcast",
+        data=sample_cap_xml_documents.WAINFLEET,
+        headers=[("Content-Type", "application/cap+xml"), auth_header],
+    )
+
+    assert response.status_code == 400
+    assert response.get_json()["errors"] == [
+        {"error": "ValidationError", "message": "simple_polygons [[53.10569, 0.24453]] is too short"}
+    ]
+    assert BroadcastMessage.query.count() == 0
 
 
 def test_invalid_areas_returns_400(client, sample_broadcast_service):

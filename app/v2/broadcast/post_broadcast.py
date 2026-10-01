@@ -18,6 +18,7 @@ from app.dao.broadcast_message_dao import (
 from app.dao.dao_utils import dao_save_object
 from app.models import BROADCAST_TYPE, BroadcastMessage, BroadcastStatusType
 from app.schema_validation import validate
+from app.schema_validation.definitions import live_broadcast_areas
 from app.v2.broadcast import v2_broadcast_blueprint
 from app.v2.broadcast.broadcast_schemas import (
     cancel_broadcast_schema,
@@ -99,15 +100,19 @@ def create_broadcast():
             "Polygon complexity (%d polygons / %d points)", len(simple_polygons), simple_polygons.point_count
         )
 
+        areas = {
+            "names": [area["name"] for area in broadcast_json["areas"]],
+            "simple_polygons": simple_polygons.as_coordinate_pairs_lat_long,
+        }
+        # The input has been validated, but check what we derived from it before storing it
+        validate(areas, live_broadcast_areas)
+
         broadcast_message = BroadcastMessage(
             service_id=authenticated_service.id,
             content=broadcast_json["content"],
             reference=broadcast_json["reference"],
             cap_event=broadcast_json["cap_event"],
-            areas={
-                "names": [area["name"] for area in broadcast_json["areas"]],
-                "simple_polygons": simple_polygons.as_coordinate_pairs_lat_long,
-            },
+            areas=areas,
             status=BroadcastStatusType.PENDING_APPROVAL,
             created_by_api_key_id=api_user.id,
             stubbed=authenticated_service.restricted or api_user.key_type == KEY_TYPE_TEST,
