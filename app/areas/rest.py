@@ -145,7 +145,7 @@ def is_grandparent(area_id):
 @areas_blueprint.route("/geography-types", methods=["GET"])
 def get_geography_types():
     """Returns a list of geography types/libraries."""
-    results = AreasDAO.get_latest_active_geography_types()
+    results = AreasDAO.get_active_geography_types_with_version()
     data = [
         {
             "id": row.geography_type_id,
