@@ -3,24 +3,7 @@ import uuid
 import pytest
 from geoalchemy2.shape import to_shape
 
-from app.dao.areas_dao import (
-    dao_check_coordinates_valid,
-    dao_combine_geometries,
-    dao_create_area,
-    dao_create_circle_area,
-    dao_get_area_by_id,
-    dao_get_area_centroid,
-    dao_get_areas_by_ids,
-    dao_get_areas_by_names,
-    dao_get_areas_for_geography_type,
-    dao_get_child_areas_for_parent_geography_id,
-    dao_get_dominant_parent_geography_id,
-    dao_get_geography_type_examples,
-    dao_get_grandparent_areas,
-    dao_get_latest_active_geography_types,
-    dao_get_latest_active_version_for_type_route,
-    dao_get_latest_area_by_geographic_id,
-)
+from app.dao.areas_dao import AreasDAO
 from tests.app.db import (
     create_area,
     create_area_with_version_and_type,
@@ -36,7 +19,7 @@ def test_dao_get_latest_geography_version_number_returns_expected_version(notify
     # inactive shouldn't be returned
     create_geography_version(geography_type_id=geography_type.id, version="3.0.0", state="inactive")
 
-    version_number = dao_get_latest_active_version_for_type_route("local_authorities").version
+    version_number = AreasDAO.get_latest_active_version_for_type_route("local_authorities").version
 
     assert version_number == newer.version
 
@@ -49,7 +32,7 @@ def test_dao_get_latest_active_geography_types_returns_latest_types(notify_db_se
     version1_new = create_geography_version(geography_type_id=type1.id, version="2.0.0", state="active")
     version2_new = create_geography_version(geography_type_id=type2.id, version="3.0.0", state="active")
 
-    latest_versions = dao_get_latest_active_geography_types()
+    latest_versions = AreasDAO.get_latest_active_geography_types()
 
     assert {v.version_id for v in latest_versions} == {version1_new.id, version2_new.id}
 
@@ -58,7 +41,7 @@ def test_dao_get_latest_geography_versions_returns_empty_list_if_no_active_versi
     type1 = create_geography_type(route="local_authorities")
     create_geography_version(geography_type_id=type1.id, version="1.0.0", state="inactive")
 
-    result = dao_get_latest_active_geography_types()
+    result = AreasDAO.get_latest_active_geography_types()
     assert result == []
 
 
@@ -67,7 +50,7 @@ def test_dao_get_latest_active_version_for_type_route_returns_expected_version_f
     create_geography_version(geography_type_id=geography_type.id, version="1.0.0", state="active")
     latest_version = create_geography_version(geography_type_id=geography_type.id, version="2.0.0", state="active")
 
-    latest_la_version = dao_get_latest_active_version_for_type_route("local_authorities")
+    latest_la_version = AreasDAO.get_latest_active_version_for_type_route("local_authorities")
     assert latest_la_version.id == latest_version.id
 
 
@@ -80,7 +63,7 @@ def test_dao_get_areas_for_geography_type_returns_all_expected_areas_for_type(no
     area2 = create_area(geography_type_id=geography_type.id, geography_version_id=latest_version.id, name="Area B")
     create_area(geography_type_id=geography_type.id, geography_version_id=old_version.id, name="Area Old")
 
-    areas = dao_get_areas_for_geography_type("local_authorities")
+    areas = AreasDAO.get_areas_for_geography_type("local_authorities")
 
     # Only latest version's areas are returned, ordered by name
     assert [a.name for a in areas] == ["Area A", "Area B"]
@@ -92,7 +75,7 @@ def test_dao_get_areas_for_geography_type_returns_empty_list_if_no_active_versio
     geography_type = create_geography_type(name="Local authorities", route="local_authorities")
     create_geography_version(geography_type_id=geography_type.id, version="1.0.0", state="inactive")
 
-    areas = dao_get_areas_for_geography_type("local_authorities")
+    areas = AreasDAO.get_areas_for_geography_type("local_authorities")
     assert areas == []
 
 
@@ -118,7 +101,7 @@ def test_dao_get_child_areas_for_parent_geography_id_returns_all_expected_child_
         geographic_id="child-ward",
     )
 
-    children = dao_get_child_areas_for_parent_geography_id(parent.geographic_id)
+    children = AreasDAO.get_child_areas_for_parent_geography_id(parent.geographic_id)
 
     assert [area.geographic_id for area in children] == [child_la.geographic_id, child_ward.geographic_id]
 
@@ -135,7 +118,7 @@ def test_dao_get_child_areas_for_parent_geography_id_returns_empty_list_if_no_ac
         geographic_id="child-id",
     )
 
-    children = dao_get_child_areas_for_parent_geography_id(parent.geographic_id)
+    children = AreasDAO.get_child_areas_for_parent_geography_id(parent.geographic_id)
     assert children == []
 
 
@@ -171,14 +154,14 @@ def test_dao_get_grandparent_areas_returns_only_areas_that_are_grandparents(noti
         geography_version_id=la_version.id,
     )
 
-    grandparent_ids = [row[0] for row in dao_get_grandparent_areas()]
+    grandparent_ids = [row[0] for row in AreasDAO.get_grandparent_areas()]
     assert str(grandparent_area.id) in {str(i) for i in grandparent_ids}
     assert str(non_grandparent_area.id) not in {str(i) for i in grandparent_ids}
 
 
 def test_dao_get_latest_area_by_geographic_id_returns_expected_area(notify_db_session):
     area, geography_version, geography_type = create_area_with_version_and_type()
-    result = dao_get_latest_area_by_geographic_id(area.geographic_id)
+    result = AreasDAO.get_latest_area_by_geographic_id(area.geographic_id)
 
     assert result is not None
     assert result.id == area.id
@@ -192,13 +175,13 @@ def test_dao_get_latest_area_by_geographic_id_returns_None_if_no_active_area_exi
     gv_inactive = create_geography_version(geography_type_id=geography_type.id, version="1.0.0", state="inactive")
     area = create_area(geography_type_id=geography_type.id, geography_version_id=gv_inactive.id)
 
-    result = dao_get_latest_area_by_geographic_id(area.geographic_id)
+    result = AreasDAO.get_latest_area_by_geographic_id(area.geographic_id)
     assert result is None
 
 
 def test_dao_get_latest_area_by_geographic_id_with_type_returns_expected_area(notify_db_session):
     area, geography_version, geography_type = create_area_with_version_and_type(geography_type_route="postcodes")
-    result = dao_get_latest_area_by_geographic_id(area.geographic_id, type_name="postcodes")
+    result = AreasDAO.get_latest_area_by_geographic_id(area.geographic_id, type_name="postcodes")
 
     assert result is not None
     assert result.id == area.id
@@ -220,21 +203,21 @@ def test_dao_get_areas_by_names_returns_expected_areas(notify_db_session):
         name="Local authority 2",
     )
 
-    areas = dao_get_areas_by_names(["Local authority 1", "Local authority 2"], "local_authorities")
+    areas = AreasDAO.get_areas_by_names(["Local authority 1", "Local authority 2"], "local_authorities")
 
     assert {a.id for a in areas} == {area1.id, area2.id}
 
 
 def test_dao_get_area_by_id_returns_expected_area_or_None(notify_db_session):
     area, _, geography_type = create_area_with_version_and_type()
-    sourced_area = dao_get_area_by_id(area.id)
+    sourced_area = AreasDAO.get_area_by_id(area.id)
 
     assert sourced_area is not None
     assert sourced_area.id == area.id
     assert sourced_area.geographic_id == area.geographic_id
     assert sourced_area.geography_type_name == geography_type.route
 
-    non_existent_area = dao_get_area_by_id(uuid.uuid4())
+    non_existent_area = AreasDAO.get_area_by_id(uuid.uuid4())
     assert non_existent_area is None
 
 
@@ -244,7 +227,7 @@ def test_dao_get_areas_by_ids_returns_expected_areas(notify_db_session):
     )
     area2, _, _ = create_area_with_version_and_type()
 
-    areas = dao_get_areas_by_ids([str(area1.id), str(area2.id)])
+    areas = AreasDAO.get_areas_by_ids([str(area1.id), str(area2.id)])
     ids = [a.id for a in areas]
 
     assert set(ids) == {area1.id, area2.id}
@@ -259,7 +242,7 @@ def test_dao_get_latest_active_geography_types_returns_expected_data_for_type(
     ward_type = create_geography_type(route="wards", name="Wards")
     create_geography_version(geography_type_id=ward_type.id, version="1.0.0", state="active")
 
-    results = dao_get_latest_active_geography_types()
+    results = AreasDAO.get_latest_active_geography_types()
     assert len(results) == 2
     assert {(result.geography_type_name, result.route) for result in results} == {
         (la_type.name, la_type.route),
@@ -275,7 +258,7 @@ def test_dao_get_geography_type_examples_expected_data_for_type(
         geography_type_route="local_authorities",
     )
 
-    results = dao_get_geography_type_examples("local_authorities")
+    results = AreasDAO.get_geography_type_examples("local_authorities")
 
     assert results == {"count": 1, "examples": ["Test name"]}
 
@@ -289,7 +272,7 @@ def test_dao_create_area_returns_expected_area_wkt(notify_db_session):
     wkt1 = to_shape(area1.geometry).wkt
     wkt2 = to_shape(area2.geometry).wkt
 
-    combined = dao_create_area([wkt1, wkt2])
+    combined = AreasDAO.create_area([wkt1, wkt2])
 
     assert isinstance(combined, str)
     assert combined.startswith("POLYGON(")
@@ -297,7 +280,7 @@ def test_dao_create_area_returns_expected_area_wkt(notify_db_session):
 
 def test_dao_get_area_centroid_returns_expected_wkt(notify_db_session):
     area, _, _ = create_area_with_version_and_type()
-    centroid = dao_get_area_centroid(area.id)
+    centroid = AreasDAO.get_area_centroid(area.id)
 
     # matches what the REST tests expect for the default geometry
     assert centroid == "POINT(-1.2 53.925000000000004)"
@@ -308,16 +291,16 @@ def test_dao_get_area_centroid_returns_None_if_no_area_id_provided(notify_db_ses
     geography_version = create_geography_version(geography_type_id=geography_type.id)
     create_area(geography_type_id=geography_type.id, geography_version_id=geography_version.id)
 
-    centroid = dao_get_area_centroid(None)
+    centroid = AreasDAO.get_area_centroid(None)
     assert centroid is None
 
 
 def test_dao_create_circle_area_returns_expected_wkt(notify_db_session):
     # use a simple point centroid from the default area
     area, _, _ = create_area_with_version_and_type()
-    centroid = dao_get_area_centroid(area.id)
+    centroid = AreasDAO.get_area_centroid(area.id)
 
-    circle_wkt = dao_create_circle_area(centroid, radius=5)
+    circle_wkt = AreasDAO.create_circle_area(centroid, radius=5)
 
     assert isinstance(circle_wkt, str)
     assert circle_wkt.startswith("POLYGON((")
@@ -332,7 +315,7 @@ def test_dao_combine_geometries_returns_expected_wkt(notify_db_session):
     wkt1 = to_shape(area1.geometry).wkt
     wkt2 = to_shape(area2.geometry).wkt
 
-    combined = dao_combine_geometries(wkt1, wkt2)
+    combined = AreasDAO.combine_geometries(wkt1, wkt2)
 
     assert isinstance(combined, str)
     assert combined.startswith("POLYGON(") or combined.startswith("MULTIPOLYGON(")
@@ -363,7 +346,7 @@ def test_dao_check_coordinates_valid_returns_expected_bool_for_centroid(
         geometry=country_geometry,
     )
 
-    valid = dao_check_coordinates_valid(data["first"], data["second"], data["coordinate_type"])
+    valid = AreasDAO.check_coordinates_valid(data["first"], data["second"], data["coordinate_type"])
     assert valid is expected_bool
 
 
@@ -388,6 +371,6 @@ def test_dao_get_dominant_parent_geography_id_returns_expected_parent_area_geogr
     # Use geometry of parent1 as the child area WKT so it should overlap parent1 most
     parent1_wkt = to_shape(parent1.geometry).wkt
 
-    dominant_id = dao_get_dominant_parent_geography_id(parent1_wkt, parent_type_name="local_authorities")
+    dominant_id = AreasDAO.get_dominant_parent_geography_id(parent1_wkt, parent_type_name="local_authorities")
 
     assert dominant_id == parent1.id

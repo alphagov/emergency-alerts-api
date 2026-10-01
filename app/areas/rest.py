@@ -21,22 +21,7 @@ from app.areas.utils import (
     validate_bulk_area_input,
     wkt_geometry_to_alert_polygons,
 )
-from app.dao.areas_dao import (
-    dao_check_coordinates_valid,
-    dao_combine_geometries,
-    dao_create_area,
-    dao_create_circle_area,
-    dao_get_area_by_id,
-    dao_get_area_centroid,
-    dao_get_areas_by_ids,
-    dao_get_areas_by_names,
-    dao_get_areas_for_geography_type,
-    dao_get_child_areas_for_parent_geography_id,
-    dao_get_geography_type_examples,
-    dao_get_grandparent_areas,
-    dao_get_latest_active_geography_types,
-    dao_get_latest_area_by_geographic_id,
-)
+from app.dao.areas_dao import AreasDAO
 from app.dao.broadcast_message_dao import (
     dao_get_broadcast_message_by_id_and_service_id,
 )
@@ -62,7 +47,7 @@ def get_area(area_id):
     """
     Retrieves area from area ID.
     """
-    result = dao_get_area_by_id(area_id)
+    result = AreasDAO.get_area_by_id(area_id)
     if result is None:
         return jsonify({"message": "No area with this ID"}), 400
     data = area_response_json(result)
@@ -75,7 +60,7 @@ def get_area_by_geographic_id(geographic_id):
     """
     Returns the latest area for a certain geographic ID.
     """
-    result = dao_get_latest_area_by_geographic_id(geographic_id)
+    result = AreasDAO.get_latest_area_by_geographic_id(geographic_id)
     if result is None:
         return jsonify({"message": "No area retrieved for this geographic ID."}), 400
 
@@ -127,7 +112,7 @@ def get_areas():
     data = []
 
     if predefined_area_ids:
-        predefined_results = dao_get_areas_by_ids(predefined_area_ids)
+        predefined_results = AreasDAO.get_areas_by_ids(predefined_area_ids)
 
         if len(predefined_results) != len(predefined_area_ids):
             return jsonify({"message": "No area could be found for one or more area IDs"}), 400
@@ -137,7 +122,7 @@ def get_areas():
     for legacy_id in legacy_ids:
         # Removes legacy prefix and uses the remainder (geographic ID) to source area
         _, geographic_id = legacy_id.split("-", 1)
-        row = dao_get_latest_area_by_geographic_id(geographic_id)
+        row = AreasDAO.get_latest_area_by_geographic_id(geographic_id)
         if row is None:
             return jsonify({"message": "No area could be found for this geographic ID"}), 400
         data.append(area_response_json(row))
@@ -153,14 +138,14 @@ def get_areas():
 def is_grandparent(area_id):
     """Returns bool for whether or not an area is a grandparent area, i.e.
     is a parent of an area that is also a parent"""
-    grandparent_areas = [str(i[0]) for i in dao_get_grandparent_areas()]
+    grandparent_areas = [str(i[0]) for i in AreasDAO.get_grandparent_areas()]
     return jsonify({"data": area_id in grandparent_areas})
 
 
 @areas_blueprint.route("/geography-types", methods=["GET"])
 def get_geography_types():
     """Returns a list of geography types/libraries."""
-    results = dao_get_latest_active_geography_types()
+    results = AreasDAO.get_latest_active_geography_types()
     data = [
         {
             "id": row.geography_type_id,
@@ -177,7 +162,7 @@ def get_geography_types():
 @areas_blueprint.route("/geography-types/<type_route>/examples", methods=["GET"])
 def get_geography_type_examples(type_route):
     """Returns the example hint text for a geography type/library."""
-    data = dao_get_geography_type_examples(type_route)
+    data = AreasDAO.get_geography_type_examples(type_route)
     count = data["count"]
     example_areas = data["examples"]
 
@@ -196,7 +181,7 @@ def get_geography_type_examples(type_route):
 @areas_blueprint.route("/geography-types/<type_name>/areas", methods=["GET"])
 def get_areas_for_type(type_name):
     """Returns list of areas for a geography type/library"""
-    results = dao_get_areas_for_geography_type(type_name)
+    results = AreasDAO.get_areas_for_geography_type(type_name)
     areas = [
         {"id": row.id, "geographic_id": row.geographic_id, "name": row.name, "parent": row.parent_geography_id}
         for row in results
@@ -207,7 +192,7 @@ def get_areas_for_type(type_name):
 @areas_blueprint.route("/<parent_geography_id>/sub-areas", methods=["GET"])
 def get_child_areas_for_parent(parent_geography_id):
     """Returns list of areas with specified parent_geography_id"""
-    results = dao_get_child_areas_for_parent_geography_id(parent_geography_id)
+    results = AreasDAO.get_child_areas_for_parent_geography_id(parent_geography_id)
     areas = [
         {"id": row.id, "geographic_id": row.geographic_id, "name": row.name, "is_parent": row.parent_geography_id}
         for row in results
@@ -235,7 +220,7 @@ def get_area_polygons_wkt_for_custom_area():
         # create coordinate area WKT
         x, y, radius, coordinate_type = parse_coordinate_id(area_id)
         centroid = generate_centroid_for_coordinate_area(x, y, coordinate_type)
-    circle_wkt = dao_create_circle_area(centroid, radius)
+    circle_wkt = AreasDAO.create_circle_area(centroid, radius)
     return jsonify({"data": circle_wkt})
 
 
@@ -247,11 +232,11 @@ def get_postcode_centroid():
     data = request.get_json() or {}
     postcode = data.get("postcode")
 
-    postcode_area = dao_get_latest_area_by_geographic_id(postcode, "postcodes")
+    postcode_area = AreasDAO.get_latest_area_by_geographic_id(postcode, "postcodes")
     if not postcode_area:
         return jsonify({"message": "Enter a postcode within the UK"}), 400
 
-    centroid = dao_get_area_centroid(postcode_area.id)
+    centroid = AreasDAO.get_area_centroid(postcode_area.id)
     if centroid is None:
         return jsonify({"message": "Area has no geometry"}), 400
 
@@ -268,7 +253,7 @@ def get_coordinates_centroid():
     second_coordinate = data.get("second_coordinate")
     coordinate_type = data.get("coordinate_type")
 
-    if not dao_check_coordinates_valid(first_coordinate, second_coordinate, coordinate_type):
+    if not AreasDAO.check_coordinates_valid(first_coordinate, second_coordinate, coordinate_type):
         return jsonify({"message": "Enter coordinates within the UK"}), 400
 
     centroid = generate_centroid_for_coordinate_area(first_coordinate, second_coordinate, coordinate_type)
@@ -290,7 +275,7 @@ def get_areas_by_names(type_name):
     if error_response := validate_bulk_area_input(area_names, type_name):
         return jsonify({"message": error_response}), 400
 
-    areas = dao_get_areas_by_names(area_names, type_name)
+    areas = AreasDAO.get_areas_by_names(area_names, type_name)
     found_by_name = {area.name: area.id for area in areas}
 
     # Returns 400 error for a missing name - error to then be
@@ -315,9 +300,9 @@ def create_postcode_area():
     postcode = data.get("postcode")
     if not radius or not postcode:
         return jsonify({"message": "Enter postcode and radius to create postcode area"}), 400
-    postcode_area_id = dao_get_latest_area_by_geographic_id(postcode, "postcodes").id
-    centroid = dao_get_area_centroid(postcode_area_id)
-    circle = dao_create_circle_area(centroid, radius)
+    postcode_area_id = AreasDAO.get_latest_area_by_geographic_id(postcode, "postcodes").id
+    centroid = AreasDAO.get_area_centroid(postcode_area_id)
+    circle = AreasDAO.create_circle_area(centroid, radius)
     centroid_wkt = shapely.wkt.loads(centroid)
     id = f"postcodes_{centroid_wkt.x}_{centroid_wkt.y}_{radius}_{postcode}"
     return jsonify({"circle": circle, "id": id})
@@ -333,11 +318,11 @@ def create_coordinate_area():
     coordinate_type = data.get("coordinate_type")
     radius = float(data.get("radius"))
 
-    if not dao_check_coordinates_valid(first_coordinate, second_coordinate, coordinate_type):
+    if not AreasDAO.check_coordinates_valid(first_coordinate, second_coordinate, coordinate_type):
         return jsonify({"message": "Enter coordinates within the UK"}), 400
 
     centroid = generate_centroid_for_coordinate_area(first_coordinate, second_coordinate, coordinate_type)
-    circle = dao_create_circle_area(centroid, radius)
+    circle = AreasDAO.create_circle_area(centroid, radius)
     return jsonify(
         {
             "data": circle,
@@ -353,7 +338,7 @@ def check_coordinates_valid():
     first = data.get("first_coordinate")
     second = data.get("second_coordinate")
     coordinate_type = data.get("coordinate_type")
-    valid = dao_check_coordinates_valid(first, second, coordinate_type)
+    valid = AreasDAO.check_coordinates_valid(first, second, coordinate_type)
     return jsonify(
         {
             "data": valid,
@@ -396,7 +381,7 @@ def build_alert_area_for_ids():
 
     # For predefined areas, source area polygons and append to list of geometries
     if predefined_area_ids:
-        predefined_areas = dao_get_areas_by_ids(set(predefined_area_ids))
+        predefined_areas = AreasDAO.get_areas_by_ids(set(predefined_area_ids))
         geometries_wkt.extend([to_shape(a.geometry).wkt for a in predefined_areas])
         names.extend([a.name for a in predefined_areas])
 
@@ -404,7 +389,7 @@ def build_alert_area_for_ids():
         # Split the postcode ID into centroid coordinates and radius of area
         x, y, radius, postcode = parse_postcode_id(postcode_id)
         centroid = shapely.Point(x, y).wkt
-        circle_wkt = dao_create_circle_area(centroid, radius)
+        circle_wkt = AreasDAO.create_circle_area(centroid, radius)
         geometries_wkt.append(circle_wkt)
         name = f"{radius}km around the postcode {postcode}"
         if parent_area := get_parent_area_name(centroid):
@@ -415,7 +400,7 @@ def build_alert_area_for_ids():
         # Split the coordinate ID into centroid coordinates and radius of area
         x, y, radius, coordinate_type = parse_coordinate_id(coordinate_id)
         centroid = generate_centroid_for_coordinate_area(x, y, coordinate_type)
-        circle_wkt = dao_create_circle_area(centroid, radius)
+        circle_wkt = AreasDAO.create_circle_area(centroid, radius)
         geometries_wkt.append(circle_wkt)
 
         name = generate_coordinate_area_name(x, y, radius, coordinate_type)
@@ -424,7 +409,7 @@ def build_alert_area_for_ids():
         names.append(name)
 
     # Combine all of the geometries then validate the combined WKT
-    combined_wkt = dao_create_area(geometries_wkt)
+    combined_wkt = AreasDAO.create_area(geometries_wkt)
     combined_wkt = ensure_valid_wkt(combined_wkt)
 
     # Combined WKT converted to alert area dict to be returned
@@ -449,7 +434,7 @@ def add_areas(service_id, message_id, message_type):
 
         sourced_ids = []
         for original_id in raw_ids:
-            area = dao_get_latest_area_by_geographic_id(original_id)
+            area = AreasDAO.get_latest_area_by_geographic_id(original_id)
             if area is None:
                 return (
                     None,
@@ -470,12 +455,12 @@ def add_areas(service_id, message_id, message_type):
         existing_polygons_lon_lat = convert_lat_long_to_long_lat(existing_polygons)
         existing_wkt = Polygons(polygons=existing_polygons_lon_lat).as_wkt
 
-        areas = dao_get_areas_by_ids(set(new_area_ids))
+        areas = AreasDAO.get_areas_by_ids(set(new_area_ids))
         names = [area.name for area in areas]
         new_area_wkts = [to_shape(area.geometry).wkt for area in areas]
-        new_areas_combined_wkt = dao_create_area(new_area_wkts)
+        new_areas_combined_wkt = AreasDAO.create_area(new_area_wkts)
 
-        combined_wkt = dao_combine_geometries(existing_wkt, new_areas_combined_wkt)
+        combined_wkt = AreasDAO.combine_geometries(existing_wkt, new_areas_combined_wkt)
         combined_wkt = ensure_valid_wkt(combined_wkt)
 
         # Combined WKT converted to alert area dict to be returned

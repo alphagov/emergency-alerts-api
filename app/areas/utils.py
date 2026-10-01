@@ -4,16 +4,7 @@ from flask import jsonify
 from geoalchemy2.shape import to_shape
 from pyproj import Transformer
 
-from app.dao.areas_dao import (
-    dao_combine_geometries,
-    dao_create_area,
-    dao_create_circle_area,
-    dao_get_area_by_id,
-    dao_get_area_centroid,
-    dao_get_areas_by_ids,
-    dao_get_dominant_parent_geography_id,
-    dao_get_latest_area_by_geographic_id,
-)
+from app.dao.areas_dao import AreasDAO
 
 
 def area_response_json(area_object):
@@ -66,7 +57,7 @@ def build_circle_area(area_id, geography_type, id_to_name):
 def get_parent_geography_id(area_wkt, parent_type_name="local_authorities"):
     """Retrieves the parent geography ID either from DB, if exists, or by
     calculating the most intersecting area from areas with specified type"""
-    return dao_get_dominant_parent_geography_id(area_wkt, parent_type_name)
+    return AreasDAO.get_dominant_parent_geography_id(area_wkt, parent_type_name)
 
 
 def add_custom_area_to_existing_areas(message, type_name, data):
@@ -84,8 +75,8 @@ def add_custom_area_to_existing_areas(message, type_name, data):
     # Build centroid, area_id and name based on type
     if type_name == "postcodes":
         postcode = data.get("postcode")
-        postcode_area_id = dao_get_latest_area_by_geographic_id(postcode, "postcodes").id
-        centroid = dao_get_area_centroid(postcode_area_id)
+        postcode_area_id = AreasDAO.get_latest_area_by_geographic_id(postcode, "postcodes").id
+        centroid = AreasDAO.get_area_centroid(postcode_area_id)
         centroid_wkt = shapely.wkt.loads(centroid)
         area_id = f"postcodes_{centroid_wkt.x}_{centroid_wkt.y}_{radius}_{postcode}"
         name = f"{radius:g}km around the postcode {postcode}"
@@ -106,10 +97,10 @@ def add_custom_area_to_existing_areas(message, type_name, data):
     if area_id and area_id in existing_ids:
         return message, None, None
 
-    circle_wkt = dao_create_circle_area(centroid, radius)
+    circle_wkt = AreasDAO.create_circle_area(centroid, radius)
 
-    new_areas = dao_create_area([circle_wkt])
-    combined_wkt = dao_combine_geometries(existing_wkt, new_areas)
+    new_areas = AreasDAO.create_area([circle_wkt])
+    combined_wkt = AreasDAO.combine_geometries(existing_wkt, new_areas)
     combined_wkt = ensure_valid_wkt(combined_wkt)
 
     # Combined WKT converted to alert area dict to be returned
@@ -132,7 +123,7 @@ def get_parent_area_name(centroid):
     parent_id = get_parent_geography_id(centroid)
     if not parent_id:
         return None
-    parent = dao_get_area_by_id(parent_id)
+    parent = AreasDAO.get_area_by_id(parent_id)
     if not parent:
         return None
     name = parent.name
@@ -274,7 +265,7 @@ def build_remaining_area_wkt(existing_ids, area_id_to_remove):
     if not remaining_ids and not remaining_postcode_ids and not remaining_coordinates_ids:
         return [], [], None
 
-    remaining_areas = dao_get_areas_by_ids(set(remaining_ids))
+    remaining_areas = AreasDAO.get_areas_by_ids(set(remaining_ids))
 
     postcode_areas = []
     coordinate_areas = []
@@ -282,7 +273,7 @@ def build_remaining_area_wkt(existing_ids, area_id_to_remove):
     for postcode_id in remaining_postcode_ids:
         x, y, radius, postcode = parse_postcode_id(postcode_id)
         centroid = shapely.Point(x, y).wkt
-        circle_wkt = dao_create_circle_area(centroid, radius)
+        circle_wkt = AreasDAO.create_circle_area(centroid, radius)
         postcode_areas.append(circle_wkt)
 
     for coordinate_id in remaining_coordinates_ids:
@@ -294,14 +285,14 @@ def build_remaining_area_wkt(existing_ids, area_id_to_remove):
             centroid = shapely.Point(longitude, latitude).wkt
         else:
             centroid = generate_centroid_for_coordinate_area(x, y, coordinate_type)
-        circle_wkt = dao_create_circle_area(centroid, radius)
+        circle_wkt = AreasDAO.create_circle_area(centroid, radius)
         coordinate_areas.append(circle_wkt)
 
     remaining_db_wkts = [to_shape(area.geometry).wkt for area in remaining_areas]
     circle_wkts = postcode_areas + coordinate_areas
     remaining_wkts = remaining_db_wkts + circle_wkts
 
-    remaining_combined_wkt = dao_create_area(remaining_wkts)
+    remaining_combined_wkt = AreasDAO.create_area(remaining_wkts)
     remaining_combined_wkt = ensure_valid_wkt(remaining_combined_wkt)
 
     # Combined WKT converted to alert area dict to be returned

@@ -14,10 +14,7 @@ from app.areas.utils import (
     validate_bulk_area_input,
     wkt_geometry_to_alert_polygons,
 )
-from app.dao.areas_dao import (
-    dao_get_area_by_id,
-    dao_get_area_centroid,
-)
+from app.dao.areas_dao import AreasDAO
 from tests.app.db import (
     create_area,
     create_area_with_version_and_type,
@@ -32,7 +29,7 @@ def test_area_response_json_returns_expected_json_for_area_object(notify_db_sess
         geography_type_name="TEST",
         geography_type_route="TEST",
     )
-    area_object = dao_get_area_by_id(area.id)
+    area_object = AreasDAO.get_area_by_id(area.id)
 
     result = area_response_json(area_object)
 
@@ -119,7 +116,7 @@ def test_get_parent_area_name_returns_expected_string(notify_db_session):
         name="Leeds, City of",
     )
 
-    centroid = dao_get_area_centroid(parent_area.id)
+    centroid = AreasDAO.get_area_centroid(parent_area.id)
     parent_area_name = get_parent_area_name(centroid)
 
     assert parent_area_name == "City of Leeds"
