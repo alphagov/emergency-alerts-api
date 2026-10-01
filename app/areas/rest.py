@@ -71,7 +71,7 @@ def get_area(area_id):
 
 
 @areas_blueprint.route("/geographic_id/<geographic_id>", methods=["GET"])
-def get_area_by_geographic_id_endpoint(geographic_id):
+def get_area_by_geographic_id(geographic_id):
     """
     Returns the latest area for a certain geographic ID.
     """
@@ -163,7 +163,7 @@ def get_geography_types():
     results = dao_get_latest_active_geography_types()
     data = [
         {
-            "id": row.id,
+            "id": row.geography_type_id,
             "name": row.geography_type_name,
             "name_singular": row.name_singular,
             "route": row.route,
