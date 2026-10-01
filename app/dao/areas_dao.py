@@ -22,7 +22,7 @@ def dao_get_latest_active_geography_types():
 
     return (
         db.session.query(
-            GeographyVersion.id,
+            GeographyVersion.id.label("version_id"),
             GeographyVersion.geography_type_id,
             GeographyType.name.label("geography_type_name"),
             GeographyType.name_singular,
@@ -42,7 +42,7 @@ def dao_get_latest_active_geography_types():
 def dao_get_latest_active_version_for_type_route(type_name):
     """Returns the latest active version for a geography type"""
     return (
-        db.session.query(GeographyVersion.id)
+        db.session.query(GeographyVersion)
         .join(
             GeographyType,
             GeographyVersion.geography_type_id == GeographyType.id,
@@ -187,11 +187,11 @@ def dao_get_latest_area_by_geographic_id(area_id, type_name=None):
 
         version_ids = [latest_version.id]
     else:
-        latest_versions = dao_get_latest_active_geography_types()
-        if not latest_versions:
+        latest_types = dao_get_latest_active_geography_types()
+        if not latest_types:
             return None
 
-        version_ids = [version.id for version in latest_versions]
+        version_ids = [geography_type.version_id for geography_type in latest_types]
 
     return (
         db.session.query(
