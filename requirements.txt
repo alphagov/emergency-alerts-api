@@ -552,7 +552,7 @@ pyflakes==3.4.0
     # via flake8
 pygments==2.20.0
     # via pytest
-pyjwt==2.13.0
+pyjwt==2.15.0
     # via
     #   -r requirements.in
     #   notifications-python-client
@@ -629,7 +629,7 @@ six==1.17.0
     #   rfc3339-validator
 smartypants==2.0.2
     # via emergency-alerts-utils
-soupsieve==2.8.4
+soupsieve==2.9
     # via beautifulsoup4
 sqlalchemy==1.4.54
     # via
