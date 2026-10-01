@@ -24,7 +24,7 @@ def test_dao_get_latest_geography_version_number_returns_expected_version(notify
     assert version_number == newer.version
 
 
-def test_dao_get_latest_active_geography_types_returns_latest_types(notify_db_session):
+def test_dao_get_active_geography_types_with_version_returns_active_types(notify_db_session):
     type1 = create_geography_type(route="local_authorities", name="Local authorities")
     type2 = create_geography_type(route="wards", name="Wards")
 
@@ -32,16 +32,16 @@ def test_dao_get_latest_active_geography_types_returns_latest_types(notify_db_se
     version1_new = create_geography_version(geography_type_id=type1.id, version="2.0.0", state="active")
     version2_new = create_geography_version(geography_type_id=type2.id, version="3.0.0", state="active")
 
-    latest_versions = AreasDAO.get_latest_active_geography_types()
+    latest_versions = AreasDAO.get_active_geography_types_with_version()
 
     assert {v.version_id for v in latest_versions} == {version1_new.id, version2_new.id}
 
 
-def test_dao_get_latest_geography_versions_returns_empty_list_if_no_active_versions(notify_db_session):
+def test_dao_get_active_geography_types_with_version_returns_empty_list_if_no_active_versions(notify_db_session):
     type1 = create_geography_type(route="local_authorities")
     create_geography_version(geography_type_id=type1.id, version="1.0.0", state="inactive")
 
-    result = AreasDAO.get_latest_active_geography_types()
+    result = AreasDAO.get_active_geography_types_with_version()
     assert result == []
 
 
@@ -231,23 +231,6 @@ def test_dao_get_areas_by_ids_returns_expected_areas(notify_db_session):
     ids = [a.id for a in areas]
 
     assert set(ids) == {area1.id, area2.id}
-
-
-def test_dao_get_latest_active_geography_types_returns_expected_data_for_type(
-    notify_db_session,
-):
-    la_type = create_geography_type(route="local_authorities")
-    create_geography_version(geography_type_id=la_type.id, version="1.0.0", state="active")
-
-    ward_type = create_geography_type(route="wards", name="Wards")
-    create_geography_version(geography_type_id=ward_type.id, version="1.0.0", state="active")
-
-    results = AreasDAO.get_latest_active_geography_types()
-    assert len(results) == 2
-    assert {(result.geography_type_name, result.route) for result in results} == {
-        (la_type.name, la_type.route),
-        (ward_type.name, ward_type.route),
-    }
 
 
 def test_dao_get_geography_type_examples_expected_data_for_type(
