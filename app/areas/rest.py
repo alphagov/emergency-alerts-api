@@ -34,8 +34,8 @@ from app.dao.areas_dao import (
     dao_get_child_areas_for_parent_geography_id,
     dao_get_geography_type_examples,
     dao_get_grandparent_areas,
+    dao_get_latest_active_geography_types,
     dao_get_latest_area_by_geographic_id,
-    dao_get_latest_geography_types,
 )
 from app.dao.broadcast_message_dao import (
     dao_get_broadcast_message_by_id_and_service_id,
@@ -160,7 +160,7 @@ def is_grandparent(area_id):
 @areas_blueprint.route("/geography-types", methods=["GET"])
 def get_geography_types():
     """Returns a list of geography types/libraries."""
-    results = dao_get_latest_geography_types()
+    results = dao_get_latest_active_geography_types()
     data = [
         {
             "id": row.id,
