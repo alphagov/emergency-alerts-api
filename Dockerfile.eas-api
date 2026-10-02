@@ -48,7 +48,7 @@ RUN apt-get install lsb-release -y && \
     echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list && \
     apt update
 
-RUN apt -y install postgresql-client-14 && \
+RUN apt -y install postgresql-client-18 && \
     echo "POSTGRESQL/PG_DUMP VERSION:" && pg_dump --version
 
 USER easuser
