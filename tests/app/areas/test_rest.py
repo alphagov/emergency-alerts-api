@@ -98,6 +98,22 @@ def test_get_areas_returns_areas(notify_db_session, admin_request, sample_broadc
     assert [area.get("id") for area in response["data"]] == [str(area1.id), str(area2.id)]
 
 
+def test_get_areas_returns_400_for_unknown_legacy_geographic_id(
+    notify_db_session, admin_request, sample_broadcast_service
+):
+    response = admin_request.post(
+        "areas.get_areas",
+        service_id=sample_broadcast_service.id,
+        _data={
+            "area_ids": [str(uuid.uuid4())],  # uuid for area that doesn't exist
+            "area_names": ["Not real area"],
+        },
+        _expected_status=400,
+    )
+
+    assert response == {"message": "No area could be found for one or more area IDs"}
+
+
 def test_assert_area_is_grandparent_returns_bool_value(notify_db_session, admin_request, sample_broadcast_service):
     geography_type = create_geography_type(route="local_authorities")
     geography_version = create_geography_version(geography_type_id=geography_type.id)
@@ -180,27 +196,27 @@ def test_get_areas_for_type_returns_all_areas_for_valid_type(
     area1 = create_area(geography_type_id=geography_type.id, geography_version_id=geography_version.id)
     area2 = create_area(geography_type_id=geography_type.id, geography_version_id=geography_version.id)
 
-    resp = admin_request.get(
+    response = admin_request.get(
         "areas.get_areas_for_type",
         type_name="local_authorities",
         service_id=sample_broadcast_service.id,
         _expected_status=200,
     )
 
-    assert [a["geographic_id"] for a in resp["data"]] == [area1.geographic_id, area2.geographic_id]
+    assert [a["geographic_id"] for a in response["data"]] == [area1.geographic_id, area2.geographic_id]
 
 
 def test_get_areas_for_type_returns_empty_list_for_invalid_type(
     notify_db_session, admin_request, sample_broadcast_service
 ):
-    resp = admin_request.get(
+    response = admin_request.get(
         "areas.get_areas_for_type",
         type_name="not-a-real-type",
         service_id=sample_broadcast_service.id,
         _expected_status=200,
     )
 
-    assert resp["data"] == []
+    assert response["data"] == []
 
 
 def test_get_child_areas_for_parent_returns_all_child_areas_for_valid_parent(
@@ -221,14 +237,14 @@ def test_get_child_areas_for_parent_returns_all_child_areas_for_valid_parent(
         geography_version_id=geography_version.id,
     )
 
-    resp = admin_request.get(
+    response = admin_request.get(
         "areas.get_child_areas_for_parent",
         parent_geography_id=str(parent.geographic_id),
         service_id=sample_broadcast_service.id,
         _expected_status=200,
     )
 
-    assert {a["geographic_id"] for a in resp["data"]} == {child1.geographic_id, child2.geographic_id}
+    assert {a["geographic_id"] for a in response["data"]} == {child1.geographic_id, child2.geographic_id}
 
 
 def test_get_child_areas_for_parent_returns_empty_list_for_area_with_no_children(
@@ -239,14 +255,14 @@ def test_get_child_areas_for_parent_returns_empty_list_for_area_with_no_children
 
     parent = create_area(geography_type_id=geography_type.id, geography_version_id=geography_version.id)
 
-    resp = admin_request.get(
+    response = admin_request.get(
         "areas.get_child_areas_for_parent",
         parent_geography_id=str(parent.geographic_id),
         service_id=sample_broadcast_service.id,
         _expected_status=200,
     )
 
-    assert resp["data"] == []
+    assert response["data"] == []
 
 
 def test_get_postcode_centroid_returns_expected_centroid_for_area(
@@ -254,13 +270,13 @@ def test_get_postcode_centroid_returns_expected_centroid_for_area(
 ):
     area, _, _ = create_area_with_version_and_type(geographic_id="Test Postcode", geography_type_route="postcodes")
 
-    resp = admin_request.post(
+    response = admin_request.post(
         "areas.get_postcode_centroid",
         _data={"postcode": area.geographic_id},
         _expected_status=200,
     )
 
-    assert resp["data"] == "POINT(-1.2 53.925000000000004)"  # Centroid WKT for default geometry
+    assert response["data"] == "POINT(-1.2 53.925000000000004)"  # Centroid WKT for default geometry
 
 
 def test_get_postcode_centroid_returns_error_for_invalid_postcode(
@@ -268,12 +284,12 @@ def test_get_postcode_centroid_returns_error_for_invalid_postcode(
 ):
     area, _, _ = create_area_with_version_and_type(geography_type_route="postcodes")
 
-    resp = admin_request.post(
+    response = admin_request.post(
         "areas.get_postcode_centroid",
         _data={"postcode": "NOT A REAL POSTCODE"},
         _expected_status=400,
     )
-    assert resp == {"message": "Enter a postcode within the UK"}
+    assert response == {"message": "Enter a postcode within the UK"}
 
 
 def test_get_area_polygons_wkt_for_custom_area_returns_valid_wkt_for_postcode_area_id(
@@ -283,13 +299,13 @@ def test_get_area_polygons_wkt_for_custom_area_returns_valid_wkt_for_postcode_ar
     radius = 5
     area_id = f"postcodes_-1.2_53_{radius}_{postcode}"
 
-    resp = admin_request.post(
+    response = admin_request.post(
         "areas.get_area_polygons_wkt_for_custom_area",
         _data={"area_id": area_id},
         _expected_status=200,
     )
 
-    assert resp["data"].startswith("POLYGON((")
+    assert response["data"].startswith("POLYGON((")
 
 
 @pytest.mark.parametrize(
@@ -302,26 +318,26 @@ def test_get_area_polygons_wkt_for_custom_area_returns_valid_wkt_for_postcode_ar
 def test_get_area_polygons_wkt_for_custom_area_returns_valid_wkt_for_coordinate_area_id(
     notify_db_session, admin_request, sample_broadcast_service, area_id
 ):
-    resp = admin_request.post(
+    response = admin_request.post(
         "areas.get_area_polygons_wkt_for_custom_area",
         _data={"area_id": area_id},
         _expected_status=200,
     )
 
-    assert resp["data"].startswith("POLYGON((")
+    assert response["data"].startswith("POLYGON((")
 
 
 @pytest.mark.parametrize("data", [{}, {"area_id": None}, {"area_id": ""}])
 def test_get_area_polygons_wkt_for_custom_area_returns_error_without_area_id(
     notify_db_session, admin_request, sample_broadcast_service, data
 ):
-    resp = admin_request.post(
+    response = admin_request.post(
         "areas.get_area_polygons_wkt_for_custom_area",
         _data=data,
         _expected_status=400,
     )
 
-    assert resp == {"message": "area_id is required"}
+    assert response == {"message": "area_id is required"}
 
 
 @pytest.mark.parametrize(
@@ -345,13 +361,13 @@ def test_get_coordinate_centroid_returns_expected_centroid_for_area(
         geography_type_route="countries", geometry="".join(COUNTRY_GEOMETRY)
     )
 
-    resp = admin_request.post(
+    response = admin_request.post(
         "areas.get_coordinates_centroid",
         _data=data,
         _expected_status=200,
     )
 
-    assert resp["data"] == expected_wkt  # Centroid WKT
+    assert response["data"] == expected_wkt  # Centroid WKT
 
 
 def test_get_coordinates_centroid_returns_error_for_invalid_geometry(
@@ -362,14 +378,14 @@ def test_get_coordinates_centroid_returns_error_for_invalid_geometry(
         geography_type_route="countries", geometry="".join(COUNTRY_GEOMETRY)
     )
 
-    resp = admin_request.post(
+    response = admin_request.post(
         "areas.get_coordinates_centroid",
         area_id=area.id,
         _data={"first_coordinate": 0, "second_coordinate": 0, "coordinate_type": "latitude_longitude"},
         _expected_status=400,
     )
 
-    assert resp == {"message": "Enter coordinates within the UK"}
+    assert response == {"message": "Enter coordinates within the UK"}
 
 
 def test_get_areas_by_names_returns_expected_areas(notify_db_session, admin_request, sample_broadcast_service):
@@ -383,13 +399,13 @@ def test_get_areas_by_names_returns_expected_areas(notify_db_session, admin_requ
         geography_type_id=geography_type.id, geography_version_id=geography_version.id, name="Local authority 2"
     )
 
-    resp = admin_request.post(
+    response = admin_request.post(
         "areas.get_areas_by_names",
         type_name="local_authorities",
         _data={"area_names": ["Local authority 1", "Local authority 2"]},
         _expected_status=200,
     )
-    assert resp["data"] == [str(area1.id), str(area2.id)]
+    assert response["data"] == [str(area1.id), str(area2.id)]
 
 
 @pytest.mark.parametrize(
@@ -422,14 +438,14 @@ def test_get_local_authorities_areas_by_names_returns_expected_error_for_invalid
 ):
     geography_type = create_geography_type(name="Local authorities", route="local_authorities")
     create_geography_version(geography_type_id=geography_type.id)
-    resp = admin_request.post(
+    response = admin_request.post(
         "areas.get_areas_by_names",
         type_name="local_authorities",
         _data=data,
         _expected_status=400,
     )
 
-    assert resp == {"message": expected_error_message}
+    assert response == {"message": expected_error_message}
 
 
 @pytest.mark.parametrize(
@@ -462,14 +478,14 @@ def test_get_flood_warning_areas_by_names_returns_expected_error_for_invalid_inp
 ):
     geography_type = create_geography_type(name="Flood Warning areas", route="flood_warning_areas")
     create_geography_version(geography_type_id=geography_type.id)
-    resp = admin_request.post(
+    response = admin_request.post(
         "areas.get_areas_by_names",
         type_name="flood_warning_areas",
         _data=data,
         _expected_status=400,
     )
 
-    assert resp == {"message": expected_error_message}
+    assert response == {"message": expected_error_message}
 
 
 def test_create_postcode_area_creates_valid_area_for_input(notify_db_session, admin_request, sample_broadcast_service):
@@ -478,33 +494,33 @@ def test_create_postcode_area_creates_valid_area_for_input(notify_db_session, ad
         geography_type_route="postcodes",
     )
 
-    resp = admin_request.post(
+    response = admin_request.post(
         "areas.create_postcode_area",
         _data={"postcode": "Test Postcode", "radius": 5},
         _expected_status=200,
     )
-    assert "circle" in resp
-    assert resp["id"] == "postcodes_-1.2_53.925000000000004_5_Test Postcode"
+    assert "circle" in response
+    assert response["id"] == "postcodes_-1.2_53.925000000000004_5_Test Postcode"
 
 
 def test_create_postcode_area_returns_error_for_missing_postcode_or_radius(
     notify_db_session, admin_request, sample_broadcast_service
 ):
     # Missing postcode
-    resp = admin_request.post(
+    response = admin_request.post(
         "areas.create_postcode_area",
         _data={"radius": 5},
         _expected_status=400,
     )
-    assert resp == {"message": "Enter postcode and radius to create postcode area"}
+    assert response == {"message": "Enter postcode and radius to create postcode area"}
 
     # Missing radius
-    resp = admin_request.post(
+    response = admin_request.post(
         "areas.create_postcode_area",
         _data={"postcode": "Test Postcode"},
         _expected_status=400,
     )
-    assert resp == {"message": "Enter postcode and radius to create postcode area"}
+    assert response == {"message": "Enter postcode and radius to create postcode area"}
 
 
 def test_create_coordinate_area_creates_valid_area_for_input(
@@ -514,7 +530,7 @@ def test_create_coordinate_area_creates_valid_area_for_input(
     area, geography_version, geography_type = create_area_with_version_and_type(
         geography_type_route="countries", geometry="".join(COUNTRY_GEOMETRY)
     )
-    resp = admin_request.post(
+    response = admin_request.post(
         "areas.create_coordinate_area",
         _data={
             "first_coordinate": 528000,
@@ -524,7 +540,7 @@ def test_create_coordinate_area_creates_valid_area_for_input(
         },
         _expected_status=200,
     )
-    assert resp["data"].startswith("POLYGON((")  # Returns POLYGON WKT string
+    assert response["data"].startswith("POLYGON((")  # Returns POLYGON WKT string
 
 
 def test_create_coordinate_area_returns_error_for_external_coordinates(
@@ -534,7 +550,7 @@ def test_create_coordinate_area_returns_error_for_external_coordinates(
     area, geography_version, geography_type = create_area_with_version_and_type(
         geography_type_route="countries", geometry="".join(COUNTRY_GEOMETRY)
     )
-    resp = admin_request.post(
+    response = admin_request.post(
         "areas.create_coordinate_area",
         _data={
             "first_coordinate": 0,
@@ -545,7 +561,7 @@ def test_create_coordinate_area_returns_error_for_external_coordinates(
         _expected_status=400,
     )
 
-    assert resp == {"message": "Enter coordinates within the UK"}
+    assert response == {"message": "Enter coordinates within the UK"}
 
 
 @pytest.mark.parametrize(
@@ -601,14 +617,14 @@ def test_build_alert_area_for_ids_returns_expected_area_dict(
     )
     area2, _, _ = create_area_with_version_and_type()
 
-    resp = admin_request.post(
+    response = admin_request.post(
         "areas.build_alert_area_for_ids",
         service_id=sample_broadcast_service.id,
         _data={"area_ids": [str(area1.id), str(area2.id)]},
         _expected_status=200,
     )
 
-    assert resp == {
+    assert response == {
         "aggregate_names": [area1.name, area2.name],
         "ids": [str(area1.id), str(area2.id)],
         "names": [area1.name, area2.name],
@@ -634,7 +650,7 @@ def test_add_areas_to_broadcast_message_returns_expected_dict(
             "aggregate_names": ["Starting area"],
         },
     )
-    resp = admin_request.post(
+    response = admin_request.post(
         "areas.add_areas",
         service_id=sample_broadcast_service.id,
         message_id=message.id,
@@ -643,7 +659,7 @@ def test_add_areas_to_broadcast_message_returns_expected_dict(
         _expected_status=200,
     )
 
-    assert resp["areas"] == {
+    assert response["areas"] == {
         "aggregate_names": ["Starting area", area2.name],
         "ids": ["Starting area ID", str(area2.id)],
         "names": ["Starting area", area2.name],
@@ -661,7 +677,7 @@ def test_add_areas_to_template_returns_expected_dict(notify_db_session, admin_re
         template_name="Template Name",
         template_type="broadcast",
     )
-    resp = admin_request.post(
+    response = admin_request.post(
         "areas.add_areas",
         service_id=sample_broadcast_service.id,
         message_id=template.id,
@@ -670,7 +686,7 @@ def test_add_areas_to_template_returns_expected_dict(notify_db_session, admin_re
         _expected_status=200,
     )
 
-    assert resp["data"].get("areas") == {
+    assert response["data"].get("areas") == {
         "aggregate_names": [area2.name],
         "ids": [str(area2.id)],
         "names": [area2.name],
@@ -696,7 +712,7 @@ def test_add_custom_postcode_area_to_broadcast_message(notify_db_session, admin_
         },
     )
 
-    resp = admin_request.post(
+    response = admin_request.post(
         "areas.add_custom_areas",
         service_id=sample_broadcast_service.id,
         message_id=message.id,
@@ -705,7 +721,7 @@ def test_add_custom_postcode_area_to_broadcast_message(notify_db_session, admin_
         _data={"postcode": "Test Postcode", "radius": radius},
         _expected_status=200,
     )
-    response_areas = resp["areas"]
+    response_areas = response["areas"]
     assert response_areas["ids"] == ["Starting area ID", "postcodes_-1.2_53.925000000000004_5.0_Test Postcode"]
     assert response_areas["aggregate_names"] == ["Starting area", f"{radius:g}km around the postcode {area.name}"]
     assert response_areas["names"] == ["Starting area", f"{radius:g}km around the postcode {area.name}"]
@@ -729,7 +745,7 @@ def test_add_custom_postcode_area_to_template(notify_db_session, admin_request, 
         },
     )
 
-    resp = admin_request.post(
+    response = admin_request.post(
         "areas.add_custom_areas",
         service_id=sample_broadcast_service.id,
         message_id=template.id,
@@ -738,7 +754,7 @@ def test_add_custom_postcode_area_to_template(notify_db_session, admin_request, 
         _data={"postcode": "Template Postcode", "radius": radius},
         _expected_status=200,
     )
-    response_areas = resp.get("areas")
+    response_areas = response.get("areas")
     assert response_areas["ids"] == ["Starting area ID", "postcodes_-1.2_53.925000000000004_3.0_Template Postcode"]
     assert response_areas["aggregate_names"] == ["Starting area", f"{radius:g}km around the postcode {area.name}"]
     assert response_areas["names"] == ["Starting area", f"{radius:g}km around the postcode {area.name}"]
@@ -765,7 +781,7 @@ def test_add_custom_coordinate_area_to_broadcast_message(notify_db_session, admi
         },
     )
 
-    resp = admin_request.post(
+    response = admin_request.post(
         "areas.add_custom_areas",
         service_id=sample_broadcast_service.id,
         message_id=message.id,
@@ -780,7 +796,7 @@ def test_add_custom_coordinate_area_to_broadcast_message(notify_db_session, admi
         _expected_status=200,
     )
 
-    response_areas = resp["areas"]
+    response_areas = response["areas"]
     assert response_areas["ids"] == ["Starting area", "coordinates_54.0_-2.0_10.0_latitude_longitude"]
     assert response_areas["aggregate_names"] == ["Starting area", "10km around 54 latitude, -2 longitude"]
     assert response_areas["names"] == ["Starting area", "10km around 54 latitude, -2 longitude"]
@@ -809,7 +825,7 @@ def test_add_custom_coordinate_area_to_template(notify_db_session, admin_request
         },
     )
 
-    resp = admin_request.post(
+    response = admin_request.post(
         "areas.add_custom_areas",
         service_id=sample_broadcast_service.id,
         message_id=template.id,
@@ -824,7 +840,7 @@ def test_add_custom_coordinate_area_to_template(notify_db_session, admin_request
         _expected_status=200,
     )
 
-    response_areas = resp.get("areas")
+    response_areas = response.get("areas")
     assert response_areas["ids"] == [
         "Starting area",
         f"coordinates_{first_coordinate}_{second_coordinate}_{radius}_latitude_longitude",
@@ -859,7 +875,7 @@ def test_remove_area_from_broadcast_message_returns_expected_area_dict(
         },
     )
 
-    resp = admin_request.post(
+    response = admin_request.post(
         "areas.remove_area",
         service_id=sample_broadcast_service.id,
         message_id=message.id,
@@ -868,7 +884,7 @@ def test_remove_area_from_broadcast_message_returns_expected_area_dict(
         _expected_status=200,
     )
 
-    assert resp["areas"] == {
+    assert response["areas"] == {
         "aggregate_names": [area2.name],
         "ids": [str(area2.id)],
         "names": [area2.name],
