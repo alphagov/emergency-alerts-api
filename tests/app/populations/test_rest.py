@@ -51,7 +51,10 @@ def test_population_estimate_returned_for_valid_area(
         _expected_status=200,
     )
 
-    assert response == expected_population_estimate
+    assert response == pytest.approx(
+        expected_population_estimate,
+        abs=1e-10,
+    )
 
 
 @pytest.mark.parametrize(

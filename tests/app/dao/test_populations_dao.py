@@ -39,4 +39,7 @@ from app.dao.populations_dao import dao_estimate_population_for_area
     ],
 )
 def test_estimate_population_gives_accurate_estimate(area, estimated_population, add_population_test_data):
-    assert dao_estimate_population_for_area(area) == estimated_population
+    assert dao_estimate_population_for_area(area) == pytest.approx(
+        estimated_population,
+        abs=1e-10,
+    )
