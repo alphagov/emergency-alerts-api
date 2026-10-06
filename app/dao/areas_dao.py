@@ -7,6 +7,8 @@ from app.models import GeographyPolygons, GeographyType, GeographyVersion
 
 
 class AreasDAO:
+    """Data access object for querying and manipulating geographic areas,
+    using GeographyPolygons, GeographyType and GeographyVersion models"""
 
     @staticmethod
     def get_area_by_id(area_id):
@@ -34,6 +36,8 @@ class AreasDAO:
         Returns the latest active GeographyPolygons for a given geographic_id
         """
 
+        # If geography type specified, get latest version for that type,
+        # otherwise return all latest geography types' versions to filter the results by
         if type_name is not None:
             latest_version = AreasDAO.get_latest_active_version_for_type_route(type_name)
             if latest_version is None:
@@ -324,11 +328,13 @@ class AreasDAO:
             lat = first_val
             lon = second_val
             point_wkt = f"POINT({lon} {lat})"
+            # Spatial Reference Identifier (SRID) for latitude and longitude coordinates
             srid_in = 4326
         elif coordinate_type == "easting_northing":
             easting = first_val
             northing = second_val
             point_wkt = f"POINT({easting} {northing})"
+            # Spatial Reference Identifier (SRID) for Cartesian - eastings and northings coordinates
             srid_in = 27700
 
         # Retrieve the country area IDs as these will be the basis for
