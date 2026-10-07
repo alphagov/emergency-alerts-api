@@ -6,11 +6,8 @@ Create Date: 2026-08-05 14:22:30
 
 """
 
-import uuid
-
 import sqlalchemy as sa
 from alembic import op
-from geoalchemy2 import Geometry
 from sqlalchemy.dialects import postgresql
 
 revision = "0431_adjust_area_tables.py"
@@ -26,121 +23,214 @@ def upgrade():
     # How a single area from this library is referred to in Admin application
     op.add_column("geography_type", sa.Column("name_singular", sa.Text(), nullable=True))
 
-    op.drop_table("geography_polygons")
-
-    op.create_table(
+    #  geographic_id stores the Office for National Statistics (ONS) and Government 
+    # Statistical Service (GSS) code for the area
+    op.add_column(
         "geography_polygons",
-        sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False, unique=True, default=uuid.uuid4),
-        #  Office for National Statistics (ONS) and Government Statistical Service (GSS) code for the area e.g. England's is E92000001
         sa.Column("geographic_id", sa.String(), nullable=False),
-        sa.Column("name", sa.String(), nullable=False),
-        sa.Column("geometry", Geometry("GEOMETRY", srid=4326), nullable=False),
-        sa.Column("parent_geography_id", sa.String(), nullable=True),
-        sa.Column("geography_version_id", sa.String(), nullable=False),
-        # Stored for optimisation purposes - not strictly necessary as we can retrieve
-        # geography_type_id from geography_version relation in first instance
-        sa.Column("geography_type_id", sa.String(), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["geography_version_id"],
-            ["geography_version.id"],
-        ),
-        sa.ForeignKeyConstraint(
-            ["geography_type_id"],
-            ["geography_type.id"],
-        ),
-        sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(
-        "ix_geography_polygons_id",
+
+    # Drop the existing foreign keys before changing the geography_type 
+    # and geography_version ID column types to uuid
+    op.drop_constraint(
+        "geography_version_geography_type_id_fkey",
+        "geography_version",
+        type_="foreignkey",
+    )
+    op.drop_constraint(
+        "geography_polygons_geography_type_id_fkey",
         "geography_polygons",
+        type_="foreignkey",
+    )
+    op.drop_constraint(
+        "geography_polygons_geography_version_id_fkey",
+        "geography_polygons",
+        type_="foreignkey",
+    )
+
+    # geography_type id type becomes uuid
+    op.alter_column(
+        "geography_type",
+        "id",
+        existing_type=sa.String(),
+        type_=postgresql.UUID(as_uuid=True),
+        existing_nullable=False,
+        postgresql_using="id::uuid",
+    )
+    # geography_type_id type becomes uuid
+    op.alter_column(
+        "geography_version",
+        "geography_type_id",
+        existing_type=sa.String(),
+        type_=postgresql.UUID(as_uuid=True),
+        existing_nullable=False,
+        postgresql_using="geography_type_id::uuid",
+    )
+    op.alter_column(
+        "geography_polygons",
+        "geography_type_id",
+        existing_type=sa.String(),
+        type_=postgresql.UUID(as_uuid=True),
+        existing_nullable=False,
+        postgresql_using="geography_type_id::uuid",
+    )
+
+    # geography_version id type becomes uuid
+    op.alter_column(
+        "geography_version",
+        "id",
+        existing_type=sa.String(),
+        type_=postgresql.UUID(as_uuid=True),
+        existing_nullable=False,
+        postgresql_using="id::uuid",
+    )
+    # geography_version_id type becomes uuid
+    op.alter_column(
+        "geography_polygons",
+        "geography_version_id",
+        existing_type=sa.String(),
+        type_=postgresql.UUID(as_uuid=True),
+        existing_nullable=False,
+        postgresql_using="geography_version_id::uuid",
+    )
+
+    # geography_polygons id type becomes uuid
+    op.alter_column(
+        "geography_polygons",
+        "id",
+        existing_type=sa.String(),
+        type_=postgresql.UUID(as_uuid=True),
+        existing_nullable=False,
+        postgresql_using="id::uuid",
+    )
+
+    # Adds back foreign keys and relevant index
+    op.create_foreign_key(
+        "geography_version_geography_type_id_fkey",
+        "geography_version",
+        "geography_type",
+        ["geography_type_id"],
         ["id"],
     )
+    op.create_foreign_key(
+        "geography_polygons_geography_version_id_fkey",
+        "geography_polygons",
+        "geography_version",
+        ["geography_version_id"],
+        ["id"],
+    )
+    op.create_foreign_key(
+        "geography_polygons_geography_type_id_fkey",
+        "geography_polygons",
+        "geography_type",
+        ["geography_type_id"],
+        ["id"],
+    )
+
     op.create_index(
         "ix_geography_polygons_geographic_id",
         "geography_polygons",
         ["geographic_id"],
     )
-    op.create_index(
-        "ix_geography_polygons_name",
-        "geography_polygons",
-        ["name"],
-    )
-    op.create_index(
-        "ix_geography_polygons_parent_geography_id",
-        "geography_polygons",
-        ["parent_geography_id"],
-    )
-    op.create_index(
-        "ix_geography_polygons_geography_version_id",
-        "geography_polygons",
-        ["geography_version_id"],
-    )
-    op.create_index(
-        "ix_geography_polygons_geography_type_id",
-        "geography_polygons",
-        ["geography_type_id"],
-    )
-    op.create_index(
-        "ix_geography_polygons_geometry",
-        "geography_polygons",
-        ["geometry"],
-        postgresql_using="gist",
-    )
 
 
 def downgrade():
-    # Dropping everything related to geography_polygons table before we re-add with adjustments
-    op.drop_column("geography_type", "name_singular")
-    op.drop_table("geography_polygons")
-
-    op.create_table(
-        "geography_polygons",
-        sa.Column("id", sa.String(), nullable=False),
-        sa.Column("name", sa.String(), nullable=False),
-        sa.Column("geometry", Geometry("GEOMETRY", srid=4326), nullable=False),
-        sa.Column("parent_geography_id", sa.String(), nullable=True),
-        sa.Column("geography_version_id", sa.String(), nullable=False),
-        # Stored for optimisation purposes - not strictly necessary as we can retrieve
-        # geography_type_id from geography_version relation in first instance
-        sa.Column("geography_type_id", sa.String(), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["geography_version_id"],
-            ["geography_version.id"],
-        ),
-        sa.ForeignKeyConstraint(
-            ["geography_type_id"],
-            ["geography_type.id"],
-        ),
-        sa.PrimaryKeyConstraint("id"),
+    # Dropping relevant index and foreign key constraints, before reverting relevant column data types
+    op.drop_index(
+        "ix_geography_polygons_geographic_id",
+        table_name="geography_polygons",
     )
-    op.create_index(
-        "ix_geography_polygons_id",
+    op.drop_constraint(
+        "geography_polygons_geography_type_id_fkey",
         "geography_polygons",
+        type_="foreignkey",
+    )
+    op.drop_constraint(
+        "geography_polygons_geography_version_id_fkey",
+        "geography_polygons",
+        type_="foreignkey",
+    )
+    op.drop_constraint(
+        "geography_version_geography_type_id_fkey",
+        "geography_version",
+        type_="foreignkey",
+    )
+
+    # Setting GeographyType id data type back to String & adjusting all reference columns also
+    op.alter_column(
+        "geography_type",
+        "id",
+        existing_type=postgresql.UUID(as_uuid=True),
+        type_=sa.String(),
+        existing_nullable=False,
+        postgresql_using="id::text",
+    )
+    op.alter_column(
+        "geography_polygons",
+        "geography_type_id",
+        existing_type=postgresql.UUID(as_uuid=True),
+        type_=sa.String(),
+        existing_nullable=False,
+        postgresql_using="geography_type_id::text",
+    )
+    # Setting GeographyVersion id data type back to String & adjusting all reference columns also
+    op.alter_column(
+        "geography_version",
+        "geography_type_id",
+        existing_type=postgresql.UUID(as_uuid=True),
+        type_=sa.String(),
+        existing_nullable=False,
+        postgresql_using="geography_type_id::text",
+    )
+    op.alter_column(
+        "geography_version",
+        "id",
+        existing_type=postgresql.UUID(as_uuid=True),
+        type_=sa.String(),
+        existing_nullable=False,
+        postgresql_using="id::text",
+    )
+    op.alter_column(
+        "geography_polygons",
+        "geography_version_id",
+        existing_type=postgresql.UUID(as_uuid=True),
+        type_=sa.String(),
+        existing_nullable=False,
+        postgresql_using="geography_version_id::text",
+    )
+    # Setting GeographyPolygons id data type back to String
+    op.alter_column(
+        "geography_polygons",
+        "id",
+        existing_type=postgresql.UUID(as_uuid=True),
+        type_=sa.String(),
+        existing_nullable=False,
+        postgresql_using="id::text",
+    )
+
+    # Recreating foreign key constraints now data types have been reverted
+    op.create_foreign_key(
+        "geography_version_geography_type_id_fkey",
+        "geography_version",
+        "geography_type",
+        ["geography_type_id"],
         ["id"],
     )
-    op.create_index(
-        "ix_geography_polygons_name",
+    op.create_foreign_key(
+        "geography_polygons_geography_version_id_fkey",
         "geography_polygons",
-        ["name"],
-    )
-    op.create_index(
-        "ix_geography_polygons_parent_geography_id",
-        "geography_polygons",
-        ["parent_geography_id"],
-    )
-    op.create_index(
-        "ix_geography_polygons_geography_version_id",
-        "geography_polygons",
+        "geography_version",
         ["geography_version_id"],
+        ["id"],
     )
-    op.create_index(
-        "ix_geography_polygons_geography_type_id",
+    op.create_foreign_key(
+        "geography_polygons_geography_type_id_fkey",
         "geography_polygons",
+        "geography_type",
         ["geography_type_id"],
+        ["id"],
     )
-    op.create_index(
-        "ix_geography_polygons_geometry",
-        "geography_polygons",
-        ["geometry"],
-        postgresql_using="gist",
-    )
+
+    # Dropping the additional columns
+    op.drop_column("geography_type", "name_singular")
+    op.drop_column("geography_polygons", "geographic_id")
