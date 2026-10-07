@@ -10,7 +10,7 @@ services:
       - test-network
 
   pg:
-    image: postgis/postgis:14-3.5
+    image: postgis/postgis:18-3.6
     platform: linux/amd64
     container_name: postgres-for-api-tests
     restart: no
