@@ -1,5 +1,9 @@
+import uuid
+
+import pandas as pd
+from geoalchemy2 import WKTElement
 from geoalchemy2.shape import to_shape
-from sqlalchemy import Integer, func, text
+from sqlalchemy import Integer, func, insert, text
 from sqlalchemy.orm import aliased
 
 from app import db
@@ -206,8 +210,7 @@ class AreasDAO:
             .filter(GeographyVersion.state == "active")
             .distinct(GeographyVersion.geography_type_id)
             .order_by(
-                GeographyVersion.geography_type_id,
-                *AreasDAO.geography_version_ordering(),
+                GeographyVersion.geography_type_id, *AreasDAO.geography_version_ordering(), GeographyVersion.id.desc()
             )
             .all()
         )
@@ -225,7 +228,7 @@ class AreasDAO:
                 GeographyType.route == type_name,
                 GeographyVersion.state == "active",
             )
-            .order_by(*AreasDAO.geography_version_ordering())
+            .order_by(*AreasDAO.geography_version_ordering(), GeographyVersion.id.desc())
             .first()
         )
 
@@ -252,6 +255,46 @@ class AreasDAO:
             "count": count,
             "examples": examples,
         }
+
+    @staticmethod
+    def get_dominant_parent_geography_id(
+        area_wkt,
+        parent_type_name="local_authorities",
+    ):
+        """
+        Given an area geometry in WKT, return the ID of the parent GeographyPolygons
+        of type `parent_type_name` that overlaps it the most (by intersection area),
+        or None.
+
+        `parent_type_name` should match GeographyType.route, e.g. "local_authorities"
+        or "local-authorities" depending on your data.
+        """
+
+        # Look up the GeographyType id for the requested parent type (by route)
+        parent_type = db.session.query(GeographyType.id).filter(GeographyType.route == parent_type_name).first()
+        if not parent_type:
+            return None
+
+        parent_type_id = parent_type.id
+
+        sql = text("""
+            SELECT parent.id
+            FROM geography_polygons AS parent
+            JOIN (
+                SELECT ST_GeomFromText(:area_wkt, 4326) AS geom
+            ) AS child
+            ON ST_Intersects(child.geom, parent.geometry)
+            WHERE parent.geography_type_id = :parent_type_id
+            ORDER BY ST_Area(ST_Intersection(child.geom, parent.geometry)) DESC
+            LIMIT 1
+            """)
+
+        result = db.session.execute(
+            sql,
+            {"area_wkt": area_wkt, "parent_type_id": parent_type_id},
+        ).first()
+
+        return result[0] if result else None
 
     @staticmethod
     def get_area_centroid(area_id):
@@ -365,41 +408,50 @@ class AreasDAO:
         return bool(result)
 
     @staticmethod
-    def get_dominant_parent_geography_id(
-        area_wkt,
-        parent_type_name="local_authorities",
-    ):
-        """
-        Given an area geometry in WKT, return the ID of the parent GeographyPolygons
-        of type `parent_type_name` that overlaps it the most (by intersection area),
-        or None.
+    def add_geography_version(geography_type_id, VERSION, source_url, state="active"):
+        geography_version = GeographyVersion(
+            geography_type_id=geography_type_id,
+            version=VERSION,
+            source_url=source_url,
+            state=state,
+        )
+        db.session.add(geography_version)
+        db.session.flush()
+        return geography_version
 
-        `parent_type_name` should match GeographyType.route, e.g. "local_authorities"
-        or "local-authorities" depending on your data.
-        """
+    @staticmethod
+    def add_geography_type_if_not_already_stored(name, route, name_singular):
+        # Check that type isn't already stored
+        geography_type = GeographyType.query.filter_by(name=name).one_or_none()
+        if not geography_type:
+            geography_type = GeographyType(name=name, route=route, name_singular=name_singular)
+            db.session.add(geography_type)
+        db.session.flush()
+        return geography_type
 
-        # Look up the GeographyType id for the requested parent type (by route)
-        parent_type = db.session.query(GeographyType.id).filter(GeographyType.route == parent_type_name).first()
-        if not parent_type:
-            return None
+    @staticmethod
+    def add_geography_polygons(rows, geography_type_id, geography_version_id):
+        """Bulk insert a dataframe chunk using SQLAlchemy's insert to GeographyPolygons"""
+        if rows.empty:
+            return
 
-        parent_type_id = parent_type.id
+        geography_polygons_list = []
+        for row in rows.to_dict(orient="records"):
+            parent_geography_id = row["parent_geography_id"]
 
-        sql = text("""
-            SELECT parent.id
-            FROM geography_polygons AS parent
-            JOIN (
-                SELECT ST_GeomFromText(:area_wkt, 4326) AS geom
-            ) AS child
-            ON ST_Intersects(child.geom, parent.geometry)
-            WHERE parent.geography_type_id = :parent_type_id
-            ORDER BY ST_Area(ST_Intersection(child.geom, parent.geometry)) DESC
-            LIMIT 1
-            """)
+            if pd.isna(parent_geography_id):
+                parent_geography_id = None
 
-        result = db.session.execute(
-            sql,
-            {"area_wkt": area_wkt, "parent_type_id": parent_type_id},
-        ).first()
-
-        return result[0] if result else None
+            geography_polygons_list.append(
+                {
+                    "id": uuid.uuid4(),
+                    "geographic_id": row["geographic_id"],
+                    "name": row["name"],
+                    "geometry": WKTElement(row["geometry"], srid=4326),
+                    "parent_geography_id": parent_geography_id,
+                    "geography_version_id": geography_version_id,
+                    "geography_type_id": geography_type_id,
+                }
+            )
+        db.session.execute(insert(GeographyPolygons), geography_polygons_list)
+        db.session.flush()
