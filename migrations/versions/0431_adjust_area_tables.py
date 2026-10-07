@@ -23,14 +23,14 @@ def upgrade():
     # How a single area from this library is referred to in Admin application
     op.add_column("geography_type", sa.Column("name_singular", sa.Text(), nullable=True))
 
-    #  geographic_id stores the Office for National Statistics (ONS) and Government 
+    #  geographic_id stores the Office for National Statistics (ONS) and Government
     # Statistical Service (GSS) code for the area
     op.add_column(
         "geography_polygons",
         sa.Column("geographic_id", sa.String(), nullable=False),
     )
 
-    # Drop the existing foreign keys before changing the geography_type 
+    # Drop the existing foreign keys before changing the geography_type
     # and geography_version ID column types to uuid
     op.drop_constraint(
         "geography_version_geography_type_id_fkey",
