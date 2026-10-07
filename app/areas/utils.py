@@ -1,3 +1,4 @@
+import pandas as pd
 import shapely
 from emergency_alerts_utils.polygons import Polygons
 from flask import jsonify
@@ -321,3 +322,16 @@ def convert_lat_long_to_long_lat(existing_polygons):
         [[longitude, latitude] for latitude, longitude in polygon] for polygon in existing_polygons
     ]
     return existing_polygons_lon_lat
+
+
+def split_into_chunks_and_insert_into_db(area, geography_version_id, geography_type_id, data):
+    csv_data_chunks = pd.read_csv(data, index_col=False, chunksize=100_000)
+    current_chunk = 1
+    for chunk in csv_data_chunks:
+        try:
+            AreasDAO.add_geography_polygons(chunk, geography_type_id, geography_version_id)
+            print(f"{area} geography_polygons data has been added to the table - chunk #{current_chunk}")
+            current_chunk += 1
+        except Exception as e:
+            print(f"Could not add {area} data to geography_polygons table: {e}")
+            raise
