@@ -387,18 +387,28 @@ def add_areas():
         "local_authorities": {
             "display_name": "Local authorities",
             "name_singular": "local authority",
+            "parent_geography_type_route": None,
         },
-        "postcodes": {"display_name": "Postcode areas", "name_singular": "postcode area"},
-        "countries": {"display_name": "Countries", "name_singular": "country"},
-        "reppir_sites": {"display_name": "REPPIR DEPZ sites", "name_singular": "REPPIR DEPZ site"},
-        "test": {"display_name": "Test areas", "name_singular": "test area"},
+        "postcodes": {
+            "display_name": "Postcode areas",
+            "name_singular": "postcode area",
+            "parent_geography_type_route": None,
+        },
+        "countries": {"display_name": "Countries", "name_singular": "country", "parent_geography_type_route": None},
+        "reppir_sites": {
+            "display_name": "REPPIR DEPZ sites",
+            "name_singular": "REPPIR DEPZ site",
+            "parent_geography_type_route": "local_authorities",
+        },
+        "test": {"display_name": "Test areas", "name_singular": "test area", "parent_geography_type_route": None},
         "flood_warning_areas": {
             "display_name": "Flood Warning Target Areas (TA code)",
             "name_singular": "Flood Warning Target Area",
+            "parent_geography_type_route": None,
         },
-        "wards": {"display_name": "Wards", "name_singular": "ward"},
+        "wards": {"display_name": "Wards", "name_singular": "ward", "parent_geography_type_route": "local_authorities"},
     }
-
+    parent_areas = {area: set() for area in AREAS if AREAS[area]["parent_geography_type_route"] is not None}
     for area in AREAS:
         try:
             print(f"Processing {area} data")
@@ -426,11 +436,23 @@ def add_areas():
 
             for source_area in source_areas:
                 data = get_source_data(f"{VERSION}/{source_area}.csv", AREAS_SOURCE_BUCKET, s3)
+                parent_geography_type_route = AREAS[area]["parent_geography_type_route"]
                 # Splits CSV into chunks for chunk/batch processing
-                split_into_chunks_and_insert_into_db(area, geography_version.id, geography_type.id, data)
-
+                parent_areas = split_into_chunks_and_insert_into_db(
+                    area, geography_version.id, geography_type.id, data, parent_areas, parent_geography_type_route
+                )
             # Commits all previous transactions to the database
             db.session.commit()
         except Exception as e:
             db.session.rollback()
-            print(f"Unable to add {area} data: {e}")
+            raise click.ClickException(f"Unable to add {area} areas data: {e}") from e
+
+    try:
+        print("Adding parent areas to DB")
+        # Adds the stored parent areas to the database using the child
+        # area's geography type and version
+        AreasDAO.add_parent_areas(parent_areas)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        raise click.ClickException(f"Unable to add parent areas: {e}") from e
