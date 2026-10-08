@@ -133,3 +133,8 @@ def calculate_delay_period(failed_login_count):
 
 def check_request_within_throttle_period(login_attempt, delay_period):
     return datetime.now() - login_attempt.attempted_at < timedelta(seconds=delay_period)
+
+
+def get_source_data(filename, bucket, s3):
+    file = s3.get_object(Bucket=bucket, Key=filename)
+    return file["Body"]

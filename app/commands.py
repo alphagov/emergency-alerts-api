@@ -3,6 +3,7 @@ import itertools
 import os
 import uuid
 
+import boto3
 import click
 import flask
 from flask import current_app, json
@@ -10,6 +11,8 @@ from jsonschema import Draft7Validator
 from sqlalchemy.exc import IntegrityError
 
 from app import db
+from app.areas.utils import split_into_chunks_and_insert_into_db
+from app.dao.areas_dao import AreasDAO
 from app.dao.broadcast_message_dao import (
     dao_get_all_broadcast_messages,
     dao_get_live_broadcast_message_areas,
@@ -32,7 +35,7 @@ from app.dao.templates_dao import dao_purge_templates_for_service
 from app.dao.users_dao import delete_model_user, delete_user_verify_codes
 from app.models import Domain, Organisation, Permission, Service, User
 from app.schema_validation.definitions import live_broadcast_areas
-from app.utils import is_public_environment
+from app.utils import get_source_data, is_public_environment
 
 
 @click.group(name="command", help="Additional commands")
@@ -370,3 +373,86 @@ def audit_broadcast_areas():
             print(f"    {path}: {error.message[:200]}")
 
     print(f"Checked {checked} live alerts: {failed} failed, {failed_and_published} of them published to gov.uk/alerts")
+
+
+@notify_command(name="add-areas")
+def add_areas():
+    s3 = boto3.client("s3")
+    VERSION = "3.0.0"
+    AREAS_SOURCE_BUCKET = os.environ.get("AREAS_SOURCE_BUCKET_NAME")
+    if not AREAS_SOURCE_BUCKET:
+        raise click.ClickException("AREAS_SOURCE_BUCKET_NAME is not set")
+
+    AREAS = {
+        "local_authorities": {
+            "display_name": "Local authorities",
+            "name_singular": "local authority",
+            "parent_geography_type_route": None,
+        },
+        "postcodes": {
+            "display_name": "Postcode areas",
+            "name_singular": "postcode area",
+            "parent_geography_type_route": None,
+        },
+        "countries": {"display_name": "Countries", "name_singular": "country", "parent_geography_type_route": None},
+        "reppir_sites": {
+            "display_name": "REPPIR DEPZ sites",
+            "name_singular": "REPPIR DEPZ site",
+            "parent_geography_type_route": "local_authorities",
+        },
+        "test": {"display_name": "Test areas", "name_singular": "test area", "parent_geography_type_route": None},
+        "flood_warning_areas": {
+            "display_name": "Flood Warning Target Areas (TA code)",
+            "name_singular": "Flood Warning Target Area",
+            "parent_geography_type_route": None,
+        },
+        "wards": {"display_name": "Wards", "name_singular": "ward", "parent_geography_type_route": "local_authorities"},
+    }
+    parent_areas = {area: set() for area in AREAS if AREAS[area]["parent_geography_type_route"] is not None}
+    for area in AREAS:
+        try:
+            print(f"Processing {area} data")
+
+            print(f"Adding {area} geography type")
+            geography_type = AreasDAO.add_geography_type_if_not_already_stored(
+                AREAS[area]["display_name"], area, AREAS[area]["name_singular"]
+            )
+
+            print(f"Adding {area} geography version")
+            geography_version = AreasDAO.add_geography_version(
+                geography_type.id, VERSION, f"s3://{AREAS_SOURCE_BUCKET}/{VERSION}/{area}.csv"
+            )
+
+            print(f"Adding {area} geography polygons")
+            if area == "local_authorities":
+                # If the area is local_authorities, these are made up of counties_and_unitary_authorities
+                # and local_authority_districts
+                source_areas = [
+                    "counties_and_unitary_authorities",
+                    "local_authority_districts",
+                ]
+            else:
+                source_areas = [area]
+
+            for source_area in source_areas:
+                data = get_source_data(f"{VERSION}/{source_area}.csv", AREAS_SOURCE_BUCKET, s3)
+                parent_geography_type_route = AREAS[area]["parent_geography_type_route"]
+                # Splits CSV into chunks for chunk/batch processing
+                parent_areas = split_into_chunks_and_insert_into_db(
+                    area, geography_version.id, geography_type.id, data, parent_areas, parent_geography_type_route
+                )
+            # Commits all previous transactions to the database
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            raise click.ClickException(f"Unable to add {area} areas data: {e}") from e
+
+    try:
+        print("Adding parent areas to DB")
+        # Adds the stored parent areas to the database using the child
+        # area's geography type and version
+        AreasDAO.add_parent_areas(parent_areas)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        raise click.ClickException(f"Unable to add parent areas: {e}") from e

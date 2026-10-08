@@ -1,10 +1,23 @@
-from io import StringIO
 import os
+import uuid
+from io import StringIO
+
 import boto3
+import pandas as pd
 import psycopg2
 
 s3 = boto3.client("s3")
 AREAS_SOURCE_BUCKET = os.environ.get("AREAS_SOURCE_BUCKET_NAME")
+
+GEOGRAPHY_POLYGON_COLUMNS = [
+    "id",
+    "geographic_id",
+    "name",
+    "geometry",
+    "parent_geography_id",
+    "geography_version_id",
+    "geography_type_id",
+]
 
 
 def get_source_data(filename):
@@ -64,3 +77,20 @@ def insert_data_into_table(conn, table_name, columns, values):
         print(f"{table_name} data has been added to the table")
     except Exception as e:
         print(f"Could not add data to {table_name} table as {e}")
+
+
+def split_into_chunks_and_insert_into_db(conn, area, geography_version_id, geography_type_id, data):
+    csv_data_chunks = pd.read_csv(data, index_col=False, chunksize=100000)
+    current_chunk = 1
+    for chunk in csv_data_chunks:
+        # Adds columns for geography_version_id & geography_type_id, values are generated within this script
+        chunk["id"] = [uuid.uuid4() for _ in range(len(chunk))]
+        chunk["geography_version_id"] = geography_version_id
+        chunk["geography_type_id"] = geography_type_id
+
+        try:
+            copy_dataframe_to_table(conn, "geography_polygons", GEOGRAPHY_POLYGON_COLUMNS, chunk)
+            print(f"{area} geography_polygons data has been added to the table - chunk #{current_chunk}")
+            current_chunk += 1
+        except Exception as exc:
+            print(f"Could not add {area} data to geography_polygons table: {exc}")
