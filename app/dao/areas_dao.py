@@ -407,6 +407,19 @@ class AreasDAO:
 
         return bool(result)
 
+    # -------------------------------------
+    # The following methods are solely for inserting data into database, with add-areas command
+
+    @staticmethod
+    def add_geography_type_if_not_already_stored(name, route, name_singular):
+        # Check that type isn't already stored
+        geography_type = GeographyType.query.filter_by(name=name).one_or_none()
+        if not geography_type:
+            geography_type = GeographyType(name=name, route=route, name_singular=name_singular)
+            db.session.add(geography_type)
+        db.session.flush()
+        return geography_type
+
     @staticmethod
     def add_geography_version(geography_type_id, VERSION, source_url, state="active"):
         geography_version = GeographyVersion(
@@ -420,17 +433,9 @@ class AreasDAO:
         return geography_version
 
     @staticmethod
-    def add_geography_type_if_not_already_stored(name, route, name_singular):
-        # Check that type isn't already stored
-        geography_type = GeographyType.query.filter_by(name=name).one_or_none()
-        if not geography_type:
-            geography_type = GeographyType(name=name, route=route, name_singular=name_singular)
-            db.session.add(geography_type)
-        db.session.flush()
-        return geography_type
-
-    @staticmethod
-    def add_geography_polygons(rows, geography_type_id, geography_version_id):
+    def add_geography_polygons(
+        rows, geography_type_id, geography_version_id, parent_areas, geography_type, parent_geography_type_route
+    ):
         """Bulk insert a dataframe chunk using SQLAlchemy's insert to GeographyPolygons"""
         if rows.empty:
             return
@@ -440,7 +445,20 @@ class AreasDAO:
             parent_geography_id = row["parent_geography_id"]
 
             if pd.isna(parent_geography_id):
+                # So that when inserted, it shall be null
                 parent_geography_id = None
+
+            if parent_geography_type_route and parent_geography_id:
+                # Only begin to find parent area IF we know the parent area
+                # type and we have the geographic ID
+                parent_area = AreasDAO.get_latest_area_by_geographic_id(
+                    parent_geography_id,
+                    type_name=parent_geography_type_route,
+                )
+                if parent_area is not None:
+                    parent_areas[geography_type].add(parent_area.id)
+                else:
+                    print(f"No parent area found for geographic ID {parent_geography_id}")
 
             geography_polygons_list.append(
                 {
@@ -455,3 +473,45 @@ class AreasDAO:
             )
         db.session.execute(insert(GeographyPolygons), geography_polygons_list)
         db.session.flush()
+        return parent_areas
+
+    @staticmethod
+    def add_parent_areas(parent_areas):
+        """Copies immediate parent areas into the child area's geography type and version."""
+        for child_geography_type_route, parent_area_ids in parent_areas.items():
+            print(f"Adding {child_geography_type_route} parent areas")
+
+            if not parent_area_ids:
+                continue
+
+            child_version = AreasDAO.get_latest_active_version_for_type_route(child_geography_type_route)
+            if child_version is None:
+                continue
+
+            parent_areas = AreasDAO.get_areas_by_ids(parent_area_ids)
+            rows = []
+            added_geographic_ids = set()
+
+            for parent_area in parent_areas:
+                if parent_area.geographic_id in added_geographic_ids:
+                    # Skip as its already been added
+                    continue
+
+                rows.append(
+                    {
+                        "id": uuid.uuid4(),
+                        "geographic_id": parent_area.geographic_id,
+                        "name": parent_area.name,
+                        "parent_geography_id": parent_area.parent_geography_id,
+                        "geometry": parent_area.geometry,
+                        # Use the child area's version and type, not the
+                        # parent areas's geography version and type
+                        "geography_version_id": child_version.id,
+                        "geography_type_id": child_version.geography_type_id,
+                    }
+                )
+                added_geographic_ids.add(parent_area.geographic_id)
+
+            if rows:
+                db.session.execute(insert(GeographyPolygons), rows)
+                db.session.flush()
