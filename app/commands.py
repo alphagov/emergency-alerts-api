@@ -3,6 +3,7 @@ import itertools
 import os
 import uuid
 
+import boto3
 import click
 import flask
 from flask import current_app, json
@@ -10,6 +11,8 @@ from jsonschema import Draft7Validator
 from sqlalchemy.exc import IntegrityError
 
 from app import db
+from app.areas.utils import split_into_chunks_and_insert_into_db
+from app.dao.areas_dao import AreasDAO
 from app.dao.broadcast_message_dao import (
     dao_get_all_broadcast_messages,
     dao_get_live_broadcast_message_areas,
@@ -33,6 +36,7 @@ from app.dao.users_dao import delete_model_user, delete_user_verify_codes
 from app.models import Domain, Organisation, Permission, Service, User
 from app.schema_validation.definitions import live_broadcast_areas
 from app.utils import is_public_environment
+from scripts.adding_area_data.utils import get_source_data
 
 
 @click.group(name="command", help="Additional commands")
@@ -370,3 +374,78 @@ def audit_broadcast_areas():
             print(f"    {path}: {error.message[:200]}")
 
     print(f"Checked {checked} live alerts: {failed} failed, {failed_and_published} of them published to gov.uk/alerts")
+
+
+@notify_command(name="add-areas")
+def add_areas():
+    s3 = boto3.client("s3")
+    VERSION = "1.0.0"
+    AREAS_SOURCE_BUCKET = os.environ.get("AREAS_SOURCE_BUCKET_NAME")
+    if not AREAS_SOURCE_BUCKET:
+        raise click.ClickException("AREAS_SOURCE_BUCKET_NAME is not set")
+
+    AREAS = {
+        "countries": {
+            "display_name": "Countries",
+            "name_singular": "country",
+            "sub_geography_types": [],
+        },
+        "counties_and_unitary_authorities": {
+            "display_name": "Counties and Unitary Authorities",
+            "name_singular": "county or unitary authority",
+            "sub_geography_types": ["local_authority_districts", "wards"],
+        },
+        "local_authority_districts": {
+            "display_name": "Local Authority districts",
+            "name_singular": "local authority district",
+            "sub_geography_types": ["wards"],
+        },
+        "postcodes": {
+            "display_name": "Postcode areas",
+            "name_singular": "postcode area",
+            "sub_geography_types": [],
+        },
+        "reppir_sites": {
+            "display_name": "REPPIR DEPZ sites",
+            "name_singular": "REPPIR DEPZ site",
+            "parent_geography_type_route": "local_authorities",
+            "sub_geography_types": [],
+        },
+        "flood_warning_areas": {
+            "display_name": "Flood Warning Target Areas (TA code)",
+            "name_singular": "Flood Warning Target Area",
+            "sub_geography_types": [],
+        },
+        "test": {"display_name": "Test areas", "name_singular": "test area", "sub_geography_types": []},
+    }
+    for area in AREAS:
+        try:
+            parent_areas = {}
+
+            print(f"Adding {area} geography type")
+            geography_type = AreasDAO.add_geography_type_if_not_already_stored(
+                AREAS[area]["display_name"], area, AREAS[area]["name_singular"]
+            )
+
+            print(f"Adding {area} geography version")
+            geography_version = AreasDAO.add_geography_version(
+                geography_type.id, VERSION, f"s3://{AREAS_SOURCE_BUCKET}/{VERSION}/{area}.csv"
+            )
+
+            print(f"Adding {area} geography polygons")
+            data = get_source_data(f"{VERSION}/{area}.csv", AREAS_SOURCE_BUCKET, s3)
+            parent_areas = split_into_chunks_and_insert_into_db(
+                area, geography_version.id, geography_type.id, data, parent_areas
+            )
+
+            if AREAS[area]["sub_geography_types"]:
+                for source_area in AREAS[area]["sub_geography_types"]:
+                    print(source_area)
+                    data = get_source_data(f"{VERSION}/{source_area}.csv", AREAS_SOURCE_BUCKET, s3)
+                    parent_areas = split_into_chunks_and_insert_into_db(
+                        area, geography_version.id, geography_type.id, data, parent_areas, sub_area=True
+                    )
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            raise click.ClickException(f"Unable to add {area} areas data: {e}") from e
