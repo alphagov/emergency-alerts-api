@@ -416,6 +416,11 @@ def add_areas():
             "name_singular": "Flood Warning Target Area",
             "sub_geography_types": [],
         },
+        "police_force_areas": {
+            "display_name": "Police forces in England and Wales",
+            "name_singular": "police force in England and Wales",
+            "sub_geography_types": [],
+        },
         "test": {"display_name": "Test areas", "name_singular": "test area", "sub_geography_types": []},
     }
     for area in AREAS:
@@ -434,16 +439,38 @@ def add_areas():
 
             print(f"Adding {area} geography polygons")
             data = get_source_data(f"{VERSION}/{area}.csv", AREAS_SOURCE_BUCKET, s3)
+
+            if not AREAS[area]["sub_geography_types"]:
+                is_selectable = True
+            else:
+                is_selectable = False
+
             parent_areas = split_into_chunks_and_insert_into_db(
-                area, geography_version.id, geography_type.id, data, parent_areas
+                area,
+                geography_version.id,
+                geography_type.id,
+                data,
+                parent_areas,
+                sub_area=False,
+                is_selectable=is_selectable,
             )
 
             if AREAS[area]["sub_geography_types"]:
                 for source_area in AREAS[area]["sub_geography_types"]:
-                    print(source_area)
+                    is_selectable = False
+                    # if sub area is final subarea AKA leaf nodes -> set is_selectable to True
+                    if AREAS[area]["sub_geography_types"][-1] == source_area:
+                        is_selectable = True
+
                     data = get_source_data(f"{VERSION}/{source_area}.csv", AREAS_SOURCE_BUCKET, s3)
                     parent_areas = split_into_chunks_and_insert_into_db(
-                        area, geography_version.id, geography_type.id, data, parent_areas, sub_area=True
+                        area,
+                        geography_version.id,
+                        geography_type.id,
+                        data,
+                        parent_areas,
+                        sub_area=True,
+                        is_selectable=is_selectable,
                     )
             db.session.commit()
         except Exception as e:
