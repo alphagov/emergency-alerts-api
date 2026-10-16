@@ -2,7 +2,7 @@ import uuid
 
 import pandas as pd
 from geoalchemy2 import WKTElement
-from sqlalchemy import Integer, func, insert
+from sqlalchemy import Integer, and_, bindparam, case, func, insert, text
 
 from app import db
 from app.models import GeographyPolygons, GeographyType, GeographyVersion
@@ -39,7 +39,7 @@ class AreasDAO:
         return geography_version
 
     @staticmethod
-    def add_geography_polygons(rows, geography_type_id, geography_version_id, parent_areas, sub_area):
+    def add_geography_polygons(rows, geography_type_id, geography_version_id, parent_areas, sub_area, is_selectable):
         """Bulk insert a dataframe chunk using SQLAlchemy's insert to GeographyPolygons"""
         parent_id = None
         if rows.empty:
@@ -53,9 +53,6 @@ class AreasDAO:
             if pd.isna(parent_geography_id):
                 # So that when inserted, it shall be null
                 parent_geography_id = None
-
-            if row["geographic_id"] == "E07000070":
-                print(row)
 
             # If the data to be added belongs to child area type (sub area),
             # retrieve parent ID from dictionary
@@ -72,6 +69,7 @@ class AreasDAO:
                     "parent_geography_id": parent_id if sub_area else None,
                     "geography_version_id": geography_version_id,
                     "geography_type_id": geography_type_id,
+                    "is_selectable": is_selectable,
                 }
             )
         db.session.execute(insert(GeographyPolygons), geography_polygons_list)
@@ -79,6 +77,45 @@ class AreasDAO:
         return parent_areas
 
     # -------------------------------
+    @staticmethod
+    def get_area(area_id):
+        """Return an area and its geography type route."""
+        area_result = (
+            db.session.query(
+                GeographyPolygons,
+                GeographyType.route.label("geography_type_name"),
+            )
+            .join(
+                GeographyVersion,
+                GeographyPolygons.geography_version_id == GeographyVersion.id,
+            )
+            .join(
+                GeographyType,
+                GeographyVersion.geography_type_id == GeographyType.id,
+            )
+            .filter(GeographyPolygons.id == area_id)
+            .one_or_none()
+        )
+
+        if area_result is None:
+            return None
+
+        area, geography_type_name = area_result
+
+        return {
+            "area": area,
+            "geography_type_name": geography_type_name,
+        }
+
+    @staticmethod
+    def get_area_by_geographic_id_and_type_route(geographic_id, type_route):
+        geography_type = AreasDAO.get_geography_type(type_route)
+
+        area_query = GeographyPolygons.query.filter_by(
+            geography_version_id=geography_type[0], geographic_id=geographic_id
+        )
+        return area_query.one_or_none()
+
     @staticmethod
     def geography_version_ordering():
         """Returns expressions for ordering geography versions semantically"""
@@ -132,7 +169,10 @@ class AreasDAO:
     def get_geography_type_examples(type_name):
         """Returns the area count and first four area names for a geography type."""
         if type_name == "local_authorities":
-            local_authority_routes = ["counties_and_unitary_authorities", "local_authority_districts"]
+            local_authority_routes = [
+                "counties_and_unitary_authorities",
+                "local_authority_districts",
+            ]
             latest_versions = []
             for route in local_authority_routes:
                 latest_version = AreasDAO.get_geography_type(route)[0]
@@ -140,7 +180,19 @@ class AreasDAO:
 
             area_query = GeographyPolygons.query.filter(
                 GeographyPolygons.geography_version_id.in_(latest_versions),
+                GeographyPolygons.parent_geography_id.is_(None),
+                GeographyPolygons.is_selectable.is_(False),
             )
+
+            areas = area_query.order_by(GeographyPolygons.id).all()
+
+            unique_areas = {}
+            for area in areas:
+                unique_areas.setdefault(area.name, area)
+
+            areas = sorted(unique_areas.values(), key=lambda area: area.name)
+            count = len(unique_areas)
+            examples = [area.name for area in areas[:4]]
 
         else:
             geography_type = AreasDAO.get_geography_type(type_name)
@@ -156,11 +208,337 @@ class AreasDAO:
                 geography_version_id=latest_version,
             )
 
-        count = area_query.count()
+            count = area_query.count()
 
-        examples = [area.name for area in area_query.order_by(GeographyPolygons.name).limit(4).all()]
+            examples = [area.name for area in area_query.order_by(GeographyPolygons.name).limit(4).all()]
 
         return {
             "count": count,
             "examples": examples,
         }
+
+    @staticmethod
+    def get_areas(version_id, parent_id=None):
+        # Returns dict for each area
+        if version_id == "local_authorities":
+            local_authority_routes = [
+                "counties_and_unitary_authorities",
+                "local_authority_districts",
+            ]
+            latest_versions = []
+            for route in local_authority_routes:
+                latest_version = AreasDAO.get_geography_type(route)[0]
+                latest_versions.append(latest_version)
+
+            area_query = GeographyPolygons.query.filter(
+                GeographyPolygons.geography_version_id.in_(latest_versions),
+            )
+        else:
+            area_query = GeographyPolygons.query.filter(
+                GeographyPolygons.geography_version_id == version_id,
+            )
+
+        if parent_id is not None:
+            area_query = area_query.filter(
+                GeographyPolygons.parent_geography_id == parent_id,
+            )
+        else:
+            area_query = area_query.filter(
+                GeographyPolygons.parent_geography_id.is_(None),
+            )
+
+        areas = area_query.order_by(GeographyPolygons.id).all()
+
+        unique_areas = {}
+        for area in areas:
+            unique_areas.setdefault(area.name, area)
+
+        return list(unique_areas.values())
+
+    @staticmethod
+    def get_areas_by_ids(area_ids, version_id=None):
+        geography_type_name = GeographyType.route
+
+        geography_type_name = case(
+            (
+                and_(
+                    GeographyType.route.in_(
+                        [
+                            "counties_and_unitary_authorities",
+                            "local_authority_districts",
+                        ]
+                    ),
+                    GeographyPolygons.is_selectable.is_(True),
+                ),
+                "wards",
+            ),
+            else_=GeographyType.route,
+        )
+
+        area_query = (
+            db.session.query(
+                GeographyPolygons,
+                geography_type_name.label("geography_type_name"),
+            )
+            .join(
+                GeographyVersion,
+                GeographyPolygons.geography_version_id == GeographyVersion.id,
+            )
+            .join(
+                GeographyType,
+                GeographyVersion.geography_type_id == GeographyType.id,
+            )
+        )
+
+        if version_id == "local_authorities":
+            local_authority_routes = [
+                "counties_and_unitary_authorities",
+                "local_authority_districts",
+            ]
+            latest_versions = []
+
+            for route in local_authority_routes:
+                geography_type = AreasDAO.get_geography_type(route)
+                if geography_type:
+                    latest_versions.append(geography_type[0])
+
+            if not latest_versions:
+                return []
+
+            area_query = area_query.filter(
+                GeographyPolygons.geography_version_id.in_(latest_versions),
+            )
+        elif version_id:
+            area_query = area_query.filter(
+                GeographyPolygons.geography_version_id == version_id,
+            )
+
+        areas = area_query.filter(
+            GeographyPolygons.id.in_(area_ids),
+        ).all()
+
+        return [
+            {
+                "area": area,
+                "geography_type_name": geography_type_name,
+            }
+            for area, geography_type_name in areas
+        ]
+
+    @staticmethod
+    def get_areas_by_names(area_names, type_name=None):
+        area_query = GeographyPolygons.query
+
+        if type_name == "local_authorities":
+            local_authority_routes = [
+                "counties_and_unitary_authorities",
+                "local_authority_districts",
+            ]
+            latest_versions = []
+
+            for route in local_authority_routes:
+                geography_type = AreasDAO.get_geography_type(route)
+                if geography_type:
+                    latest_versions.append(geography_type[0])
+
+            if not latest_versions:
+                return []
+
+            area_query = area_query.filter(
+                GeographyPolygons.geography_version_id.in_(latest_versions),
+                GeographyPolygons.is_selectable.is_(False),
+            )
+        elif type_name:
+            geography_type = AreasDAO.get_geography_type(type_name)
+            if not geography_type:
+                return []
+
+            area_query = area_query.filter(
+                GeographyPolygons.geography_version_id == geography_type[0],
+            )
+
+        return area_query.filter(
+            GeographyPolygons.name.in_(area_names),
+        ).all()
+
+    @staticmethod
+    def get_areas_by_geographic_ids(geographic_ids, type_name=None):
+        """Return areas matching geographic IDs and geography type."""
+        if not geographic_ids:
+            return []
+
+        area_query = GeographyPolygons.query
+
+        if type_name == "local_authorities":
+            local_authority_routes = [
+                "counties_and_unitary_authorities",
+                "local_authority_districts",
+            ]
+            latest_versions = []
+
+            for route in local_authority_routes:
+                geography_type = AreasDAO.get_geography_type(route)
+                if geography_type:
+                    latest_versions.append(geography_type[0])
+
+            if not latest_versions:
+                return []
+
+            area_query = area_query.filter(
+                GeographyPolygons.geography_version_id.in_(latest_versions),
+            )
+
+        elif type_name:
+            geography_type = AreasDAO.get_geography_type(type_name)
+            if not geography_type:
+                return []
+
+            area_query = area_query.filter(
+                GeographyPolygons.geography_version_id == geography_type[0],
+            )
+
+        return area_query.filter(
+            GeographyPolygons.geographic_id.in_(geographic_ids),
+        ).all()
+
+    @staticmethod
+    def check_coordinates_valid(first, second, coordinate_type):
+        if first is None or second is None:
+            return False
+
+        try:
+            first_val = float(first)
+            second_val = float(second)
+        except (TypeError, ValueError):
+            return False
+
+        if coordinate_type == "latitude_longitude":
+            lat = first_val
+            lon = second_val
+            point_wkt = f"POINT({lon} {lat})"
+            # Spatial Reference Identifier (SRID) for latitude and longitude coordinates
+            srid_in = 4326
+        elif coordinate_type == "easting_northing":
+            easting = first_val
+            northing = second_val
+            point_wkt = f"POINT({easting} {northing})"
+            # Spatial Reference Identifier (SRID) for Cartesian - eastings and northings coordinates
+            srid_in = 27700
+
+        # Retrieve the country area IDs as these will be the basis for
+        # checking whether or not coordinates are within UK
+        country_geography = AreasDAO.get_geography_type("countries")
+        if country_geography:
+            country_areas = AreasDAO.get_areas(country_geography[0])
+        else:
+            country_areas = []
+
+        area_ids = [str(area.id) for area in country_areas]
+
+        sql = text("""
+            SELECT EXISTS (
+                SELECT 1
+                FROM geography_polygons gp
+                WHERE gp.id IN :boundary_area_ids
+                AND ST_Contains(
+                    gp.geometry,
+                    ST_Transform(
+                        ST_GeomFromText(:point_wkt, :srid_in),
+                        4326
+                    )
+                )
+            );
+            """)
+
+        result = db.session.execute(
+            sql,
+            {"point_wkt": point_wkt, "srid_in": srid_in, "boundary_area_ids": tuple(area_ids)},
+        ).scalar()
+
+        return bool(result)
+
+    @staticmethod
+    def create_area(geometries):
+        """Combines multiple geometries and returns the combined area as WKT string"""
+        sql = text("""
+            SELECT ST_ASText(
+                ST_UnaryUnion(
+                    ST_Collect(geom)
+                )
+            )
+            FROM unnest(:geometries) AS geom
+            """)
+        return db.session.execute(sql, {"geometries": geometries}).scalar()
+
+    @staticmethod
+    def create_circle_area(centroid, radius):
+        """Returns the area as WKT string for the 'circle' area generated using centroid and radius as buffer"""
+        radius = radius * 1000
+        query = """
+            SELECT
+                ST_AsText(
+                    ST_Transform(
+                        ST_Buffer(
+                            ST_Transform(
+                                ST_GeomFromText(:centroid, 4326),
+                                27700
+                            ),
+                            :radius
+                        ),
+                        4326
+                    )
+                );
+        """
+        return db.session.execute(query, {"centroid": centroid, "radius": radius}).scalar()
+
+    @staticmethod
+    def get_dominant_parent_geography_id(area_wkt, type_name="local_authorities"):
+        """Return the ID of the area intersecting the largest part of area_wkt."""
+
+        parent_type_version_ids = []
+
+        if type_name == "local_authorities":
+            geography_routes = [
+                "counties_and_unitary_authorities",
+                "local_authority_districts",
+            ]
+
+            for route in geography_routes:
+                geography_type = AreasDAO.get_geography_type(route)
+                if geography_type:
+                    parent_type_version_ids.append(geography_type[0])
+        else:
+            geography_type = AreasDAO.get_geography_type(type_name)
+            if geography_type:
+                parent_type_version_ids.append(geography_type[0])
+
+        if not parent_type_version_ids:
+            return None
+
+        sql = text("""
+            WITH child AS (
+                SELECT ST_GeomFromText(:area_wkt, 4326) AS geometry
+            )
+            SELECT parent.id
+            FROM geography_polygons AS parent
+            CROSS JOIN child
+            WHERE parent.geography_version_id IN :parent_type_version_ids
+              AND ST_Intersects(child.geometry, parent.geometry)
+            ORDER BY ST_Area(
+                ST_Transform(
+                    ST_Intersection(child.geometry, parent.geometry),
+                    27700
+                )
+            ) DESC
+            LIMIT 1
+        """).bindparams(bindparam("parent_type_version_ids", expanding=True))
+
+        result = db.session.execute(
+            sql,
+            {
+                "area_wkt": area_wkt,
+                "parent_type_version_ids": parent_type_version_ids,
+            },
+        ).first()
+
+        return result[0] if result else None
