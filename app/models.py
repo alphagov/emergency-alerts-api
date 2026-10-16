@@ -1578,6 +1578,7 @@ class GeographyPolygons(db.Model):
         db.ForeignKey("geography_version.id"),
         nullable=False,
     )
+    is_selectable = db.Column(db.Boolean, nullable=False, default=False)
 
     geography_version = db.relationship("GeographyVersion", back_populates="polygons")
 
@@ -1589,4 +1590,5 @@ class GeographyPolygons(db.Model):
             "name": self.name,
             "geography_version_id": self.geography_version_id,
             "parent_geography_id": self.parent_geography_id,
+            "is_selectable": self.is_selectable,
         }
