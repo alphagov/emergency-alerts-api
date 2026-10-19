@@ -1,5 +1,6 @@
 import pandas as pd
 import shapely
+from pyproj import Transformer
 
 from app.dao.areas_dao import AreasDAO
 
@@ -35,12 +36,36 @@ def wkt_geometry_to_alert_polygons(area_wkt):
     return [[[coordinate[1], coordinate[0]] for coordinate in polygon] for polygon in remaining_polygons]
 
 
-def convert_lat_long_to_long_lat(existing_polygons):
+def reorder_polygons_to_long_lat(existing_polygons):
     # Reverses as utils requires the area polygons to be long, lat NOT lat, long
     existing_polygons_lon_lat = [
         [[longitude, latitude] for latitude, longitude in polygon] for polygon in existing_polygons
     ]
     return existing_polygons_lon_lat
+
+
+def convert_to_long_lat_coordinates(first_coordinate, second_coordinate, coordinate_type):
+    """Transforms eastings, northings coordinates from British National Grid
+    (EPSG:27700) to WGS84 (EPSG:4326). Coordinates supplied as
+    latitude/longitude are just reordered"""
+
+    if coordinate_type == "easting_northing":
+        # Transform coordinates from eastings northings to lat long
+        # always_xy=True ensures the transformer
+        # receives and returns coordinates in correct order
+        transformer = Transformer.from_crs(
+            "EPSG:27700",
+            "EPSG:4326",
+            always_xy=True,
+        )
+        longitude, latitude = transformer.transform(
+            first_coordinate,
+            second_coordinate,
+        )
+    elif coordinate_type == "latitude_longitude":
+        latitude = first_coordinate
+        longitude = second_coordinate
+    return longitude, latitude
 
 
 def get_parent_area_name(area_wkt):
