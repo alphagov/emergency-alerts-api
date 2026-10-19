@@ -504,6 +504,7 @@ class AreasDAO:
             CROSS JOIN child
             WHERE parent.geography_version_id IN :parent_type_version_ids
               AND ST_Intersects(child.geometry, parent.geometry)
+              AND parent.parent_geography_id IS NULL
             ORDER BY ST_Area(
                 ST_Transform(
                     ST_Intersection(child.geometry, parent.geometry),
