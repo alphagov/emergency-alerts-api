@@ -77,7 +77,6 @@ def get_parent_area_name(area_wkt):
     if not parent_id:
         return None
     parent = AreasDAO.get_area(parent_id)["area"]
-    print("parent", parent.name)
     if not parent:
         return None
     name = parent.name
