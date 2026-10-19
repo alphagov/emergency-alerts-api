@@ -390,6 +390,11 @@ def add_areas():
             "name_singular": "country",
             "sub_geography_types": [],
         },
+        "fire_region_nations": {
+            "display_name": "Fire Regions",
+            "name_singular": "fire region",
+            "sub_geography_types": ["fire_regions"],
+        },
         "counties_and_unitary_authorities": {
             "display_name": "Counties and Unitary Authorities",
             "name_singular": "county or unitary authority",
@@ -440,6 +445,7 @@ def add_areas():
             print(f"Adding {area} geography polygons")
             data = get_source_data(f"{VERSION}/{area}.csv", AREAS_SOURCE_BUCKET, s3)
 
+            # If area doesn't have subareas, it's areas are `is_selectable` as they are the leaf nodes
             if not AREAS[area]["sub_geography_types"]:
                 is_selectable = True
             else:
