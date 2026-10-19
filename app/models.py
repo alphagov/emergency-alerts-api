@@ -1578,6 +1578,8 @@ class GeographyPolygons(db.Model):
         db.ForeignKey("geography_version.id"),
         nullable=False,
     )
+    # Stores whether or not this area is a leaf node and thus has no areas,
+    # required for rendering differently in Admin application
     is_selectable = db.Column(db.Boolean, nullable=False, default=False)
 
     geography_version = db.relationship("GeographyVersion", back_populates="polygons")
