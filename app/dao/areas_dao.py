@@ -13,7 +13,7 @@ class AreasDAO:
     using GeographyPolygons, GeographyType and GeographyVersion models"""
 
     # -------------------------------------
-    # The following methods are solely for inserting data into database, with add-areas command
+    # The following methods are for inserting data into database, with add-areas command
 
     @staticmethod
     def add_geography_type_if_not_already_stored(name, route, name_singular):
@@ -79,7 +79,7 @@ class AreasDAO:
     # -------------------------------
     @staticmethod
     def get_area(area_id):
-        """Return an area and its geography type route."""
+        """Return an area and its geography type route"""
         area_result = (
             db.session.query(
                 GeographyPolygons,
@@ -109,6 +109,7 @@ class AreasDAO:
 
     @staticmethod
     def get_area_by_geographic_id_and_type_route(geographic_id, type_route):
+        """Returns an area with the specified geographic id and geography type, or None"""
         geography_type = AreasDAO.get_geography_type(type_route)
 
         area_query = GeographyPolygons.query.filter_by(
@@ -148,7 +149,7 @@ class AreasDAO:
     @staticmethod
     def get_geography_type(type_route):
         """
-        Returns the active geography types and their latest versions
+        Returns geography type for the specified route, with its latest version_id, or None
         """
 
         return (
@@ -166,17 +167,11 @@ class AreasDAO:
         )
 
     @staticmethod
-    def get_geography_type_examples(type_name):
-        """Returns the area count and first four area names for a geography type."""
-        if type_name == "local_authorities":
-            local_authority_routes = [
-                "counties_and_unitary_authorities",
-                "local_authority_districts",
-            ]
-            latest_versions = []
-            for route in local_authority_routes:
-                latest_version = AreasDAO.get_geography_type(route)[0]
-                latest_versions.append(latest_version)
+    def get_geography_type_examples(type_route):
+        """Returns the area count and first four area names for a
+        geography type with specified route"""
+        if type_route == "local_authorities":
+            latest_versions = AreasDAO.get_latest_versions_for_local_authorities()
 
             area_query = GeographyPolygons.query.filter(
                 GeographyPolygons.geography_version_id.in_(latest_versions),
@@ -195,7 +190,7 @@ class AreasDAO:
             examples = [area.name for area in areas[:4]]
 
         else:
-            geography_type = AreasDAO.get_geography_type(type_name)
+            geography_type = AreasDAO.get_geography_type(type_route)
             latest_version = geography_type[0] if geography_type else None
 
             if latest_version is None:
@@ -219,16 +214,12 @@ class AreasDAO:
 
     @staticmethod
     def get_areas(version_id, parent_id=None):
-        # Returns dict for each area
+        """Returns unique list of areas either with specified parent_id,
+        or without parent, for specified geography type route"""
         if version_id == "local_authorities":
-            local_authority_routes = [
-                "counties_and_unitary_authorities",
-                "local_authority_districts",
-            ]
-            latest_versions = []
-            for route in local_authority_routes:
-                latest_version = AreasDAO.get_geography_type(route)[0]
-                latest_versions.append(latest_version)
+            # This is the "ID" we made for the merged type for those types
+            # so really we just want to retrieve latest areas for both types
+            latest_versions = AreasDAO.get_latest_versions_for_local_authorities()
 
             area_query = GeographyPolygons.query.filter(
                 GeographyPolygons.geography_version_id.in_(latest_versions),
@@ -256,10 +247,26 @@ class AreasDAO:
         return list(unique_areas.values())
 
     @staticmethod
-    def get_areas_by_ids(area_ids, version_id=None):
-        geography_type_name = GeographyType.route
+    def get_latest_versions_for_local_authorities():
+        """Returns the latest versions for local authority routes"""
+        local_authority_routes = [
+            "counties_and_unitary_authorities",
+            "local_authority_districts",
+        ]
+        latest_versions = []
+        for route in local_authority_routes:
+            latest_version = AreasDAO.get_geography_type(route)[0]
+            latest_versions.append(latest_version)
+        return latest_versions
 
-        geography_type_name = case(
+    @staticmethod
+    def get_areas_by_ids(area_ids, version_id=None):
+        """Returns the area for the specified area IDs (uuids) and version_id"""
+
+        # If the geography type route is either one of those that we combine for 'local_authorities',
+        # and `is_selectable` is True then we can deduce it's an electoral ward and set the type for this accordingly,
+        # so that in Admin application, the electoral ward descriptor displays the ward alongside parent in it's name
+        geography_type_route = case(
             (
                 and_(
                     GeographyType.route.in_(
@@ -278,7 +285,7 @@ class AreasDAO:
         area_query = (
             db.session.query(
                 GeographyPolygons,
-                geography_type_name.label("geography_type_name"),
+                geography_type_route.label("geography_type_name"),
             )
             .join(
                 GeographyVersion,
@@ -291,31 +298,20 @@ class AreasDAO:
         )
 
         if version_id == "local_authorities":
-            local_authority_routes = [
-                "counties_and_unitary_authorities",
-                "local_authority_districts",
-            ]
-            latest_versions = []
+            version_ids = AreasDAO.get_latest_versions_for_local_authorities()
 
-            for route in local_authority_routes:
-                geography_type = AreasDAO.get_geography_type(route)
-                if geography_type:
-                    latest_versions.append(geography_type[0])
-
-            if not latest_versions:
+            if not version_ids:
                 return []
 
             area_query = area_query.filter(
-                GeographyPolygons.geography_version_id.in_(latest_versions),
+                GeographyPolygons.geography_version_id.in_(version_ids),
             )
         elif version_id:
             area_query = area_query.filter(
                 GeographyPolygons.geography_version_id == version_id,
             )
 
-        areas = area_query.filter(
-            GeographyPolygons.id.in_(area_ids),
-        ).all()
+        areas = area_query.filter(GeographyPolygons.id.in_(area_ids)).all()
 
         return [
             {
@@ -326,20 +322,11 @@ class AreasDAO:
         ]
 
     @staticmethod
-    def get_areas_by_names(area_names, type_name=None):
+    def get_areas_by_names(area_names, type_route=None):
         area_query = GeographyPolygons.query
 
-        if type_name == "local_authorities":
-            local_authority_routes = [
-                "counties_and_unitary_authorities",
-                "local_authority_districts",
-            ]
-            latest_versions = []
-
-            for route in local_authority_routes:
-                geography_type = AreasDAO.get_geography_type(route)
-                if geography_type:
-                    latest_versions.append(geography_type[0])
+        if type_route == "local_authorities":
+            latest_versions = AreasDAO.get_latest_versions_for_local_authorities()
 
             if not latest_versions:
                 return []
@@ -348,8 +335,8 @@ class AreasDAO:
                 GeographyPolygons.geography_version_id.in_(latest_versions),
                 GeographyPolygons.is_selectable.is_(False),
             )
-        elif type_name:
-            geography_type = AreasDAO.get_geography_type(type_name)
+        elif type_route:
+            geography_type = AreasDAO.get_geography_type(type_route)
             if not geography_type:
                 return []
 
@@ -362,24 +349,15 @@ class AreasDAO:
         ).all()
 
     @staticmethod
-    def get_areas_by_geographic_ids(geographic_ids, type_name=None):
+    def get_areas_by_geographic_ids(geographic_ids, type_route=None):
         """Return areas matching geographic IDs and geography type."""
         if not geographic_ids:
             return []
 
         area_query = GeographyPolygons.query
 
-        if type_name == "local_authorities":
-            local_authority_routes = [
-                "counties_and_unitary_authorities",
-                "local_authority_districts",
-            ]
-            latest_versions = []
-
-            for route in local_authority_routes:
-                geography_type = AreasDAO.get_geography_type(route)
-                if geography_type:
-                    latest_versions.append(geography_type[0])
+        if type_route == "local_authorities":
+            latest_versions = AreasDAO.get_latest_versions_for_local_authorities()
 
             if not latest_versions:
                 return []
@@ -388,8 +366,8 @@ class AreasDAO:
                 GeographyPolygons.geography_version_id.in_(latest_versions),
             )
 
-        elif type_name:
-            geography_type = AreasDAO.get_geography_type(type_name)
+        elif type_route:
+            geography_type = AreasDAO.get_geography_type(type_route)
             if not geography_type:
                 return []
 
@@ -492,12 +470,12 @@ class AreasDAO:
         return db.session.execute(query, {"centroid": centroid, "radius": radius}).scalar()
 
     @staticmethod
-    def get_dominant_parent_geography_id(area_wkt, type_name="local_authorities"):
+    def get_dominant_parent_geography_id(area_wkt, type_route="local_authorities"):
         """Return the ID of the area intersecting the largest part of area_wkt."""
 
         parent_type_version_ids = []
 
-        if type_name == "local_authorities":
+        if type_route == "local_authorities":
             geography_routes = [
                 "counties_and_unitary_authorities",
                 "local_authority_districts",
@@ -508,13 +486,15 @@ class AreasDAO:
                 if geography_type:
                     parent_type_version_ids.append(geography_type[0])
         else:
-            geography_type = AreasDAO.get_geography_type(type_name)
+            geography_type = AreasDAO.get_geography_type(type_route)
             if geography_type:
                 parent_type_version_ids.append(geography_type[0])
 
         if not parent_type_version_ids:
             return None
 
+        # Finds the parent area that overlaps the given child geometry the
+        # most, calculating intersection areas in metres
         sql = text("""
             WITH child AS (
                 SELECT ST_GeomFromText(:area_wkt, 4326) AS geometry
