@@ -46,7 +46,7 @@ def upgrade():
         "geography_polygons",
         type_="foreignkey",
     )
-    
+
     # no longer needed
     op.drop_constraint(
         "geography_polygons_geography_type_id_fkey",
