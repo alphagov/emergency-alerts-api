@@ -1527,7 +1527,7 @@ class RouteAdvisor(db.Model):
 class GeographyType(db.Model):
     __tablename__ = "geography_type"
 
-    id = db.Column(db.String, primary_key=True, default=uuid.uuid4)
+    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = db.Column(db.String, nullable=False, unique=True)
     route = db.Column(db.String, nullable=True, unique=True)
     # How a single area from this library is referred to in Admin application
@@ -1542,8 +1542,8 @@ class GeographyType(db.Model):
 class GeographyVersion(db.Model):
     __tablename__ = "geography_version"
 
-    id = db.Column(db.String, primary_key=True, default=uuid.uuid4)
-    geography_type_id = db.Column(db.String, db.ForeignKey("geography_type.id"), nullable=False)
+    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    geography_type_id = db.Column(UUID(as_uuid=True), db.ForeignKey("geography_type.id"), nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=utc_now())
     version = db.Column(db.String, nullable=False)
     source_url = db.Column(db.String, nullable=False)
@@ -1574,7 +1574,7 @@ class GeographyPolygons(db.Model):
     geometry = db.Column(Geometry("GEOMETRY", srid=4326), nullable=False)
     parent_geography_id = db.Column(UUID(as_uuid=True), nullable=True)
     geography_version_id = db.Column(
-        db.String,
+        UUID(as_uuid=True),
         db.ForeignKey("geography_version.id"),
         nullable=False,
     )
