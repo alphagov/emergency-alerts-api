@@ -14,7 +14,7 @@ def split_into_chunks_and_insert_into_db(
     for chunk in csv_data_chunks:
         try:
             parent_areas = AreasDAO.add_geography_polygons(
-                chunk, geography_type_id, geography_version_id, parent_areas, sub_area, is_selectable
+                chunk, geography_version_id, parent_areas, sub_area, is_selectable
             )
             print(f"{area} geography_polygons data has been added to the table - chunk #{current_chunk}")
             current_chunk += 1

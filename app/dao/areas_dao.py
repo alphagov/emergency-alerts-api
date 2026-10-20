@@ -39,7 +39,7 @@ class AreasDAO:
         return geography_version
 
     @staticmethod
-    def add_geography_polygons(rows, geography_type_id, geography_version_id, parent_areas, sub_area, is_selectable):
+    def add_geography_polygons(rows, geography_version_id, parent_areas, sub_area, is_selectable):
         """Bulk insert a dataframe chunk using SQLAlchemy's insert to GeographyPolygons"""
         parent_id = None
         if rows.empty:
@@ -68,7 +68,6 @@ class AreasDAO:
                     "geometry": WKTElement(row["geometry"], srid=4326),
                     "parent_geography_id": parent_id if sub_area else None,
                     "geography_version_id": geography_version_id,
-                    "geography_type_id": geography_type_id,
                     "is_selectable": is_selectable,
                 }
             )
