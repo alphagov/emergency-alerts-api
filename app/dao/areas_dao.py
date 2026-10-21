@@ -26,15 +26,15 @@ class AreasDAO:
         return geography_type
 
     @staticmethod
-    def add_geography_version(geography_type_id, VERSION, source_url, state="active"):
+    def add_geography_version(geography_type_id, version, source_url, state="active"):
         # only create if version doesn't exist already
         geography_version = GeographyVersion.query.filter_by(
-            geography_type_id=geography_type_id, version=VERSION, source_url=source_url
+            geography_type_id=geography_type_id, version=version, source_url=source_url
         ).one_or_none()
         if not geography_version:
             geography_version = GeographyVersion(
                 geography_type_id=geography_type_id,
-                version=VERSION,
+                version=version,
                 source_url=source_url,
                 state=state,
             )
