@@ -237,7 +237,10 @@ class AreasDAO:
                 GeographyPolygons.parent_geography_id.is_(None),
             )
 
-        areas = area_query.order_by(GeographyPolygons.id).all()
+        areas = area_query.order_by(
+            GeographyPolygons.name,
+            GeographyPolygons.id,
+        ).all()
 
         unique_areas = {}
         for area in areas:
@@ -254,8 +257,10 @@ class AreasDAO:
         ]
         latest_versions = []
         for route in local_authority_routes:
-            latest_version = AreasDAO.get_geography_type(route)[0]
-            latest_versions.append(latest_version)
+            geography_type = AreasDAO.get_geography_type(route)
+            if geography_type:
+                latest_versions.append(geography_type[0])
+
         return latest_versions
 
     @staticmethod
@@ -379,13 +384,13 @@ class AreasDAO:
         ).all()
 
     @staticmethod
-    def check_coordinates_valid(first, second, coordinate_type):
-        if first is None or second is None:
+    def check_coordinates_valid(first_coordinate, second_coordinate, coordinate_type):
+        if first_coordinate is None or second_coordinate is None:
             return False
 
         try:
-            first_val = float(first)
-            second_val = float(second)
+            first_val = float(first_coordinate)
+            second_val = float(second_coordinate)
         except (TypeError, ValueError):
             return False
 
@@ -401,6 +406,9 @@ class AreasDAO:
             point_wkt = f"POINT({easting} {northing})"
             # Spatial Reference Identifier (SRID) for Cartesian - eastings and northings coordinates
             srid_in = 27700
+        else:
+            # Unsupported coordinate type
+            return False
 
         # Retrieve the country area IDs as these will be the basis for
         # checking whether or not coordinates are within UK
@@ -416,7 +424,7 @@ class AreasDAO:
             SELECT EXISTS (
                 SELECT 1
                 FROM geography_polygons gp
-                WHERE gp.id IN :boundary_area_ids
+                WHERE gp.id IN :country_area_ids
                 AND ST_Contains(
                     gp.geometry,
                     ST_Transform(
@@ -429,7 +437,7 @@ class AreasDAO:
 
         result = db.session.execute(
             sql,
-            {"point_wkt": point_wkt, "srid_in": srid_in, "boundary_area_ids": tuple(area_ids)},
+            {"point_wkt": point_wkt, "srid_in": srid_in, "country_area_ids": tuple(area_ids)},
         ).scalar()
 
         return bool(result)
@@ -492,8 +500,8 @@ class AreasDAO:
         if not parent_type_version_ids:
             return None
 
-        # Finds the parent area that overlaps the given child geometry the
-        # most, calculating intersection areas in metres
+        # Finds the parent area (that belongs to specified geography type) that overlaps the given child
+        # geometry the most, calculating intersection areas in metres
         sql = text("""
             WITH child AS (
                 SELECT ST_GeomFromText(:area_wkt, 4326) AS geometry
