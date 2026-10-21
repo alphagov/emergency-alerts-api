@@ -48,23 +48,28 @@ def convert_to_long_lat_coordinates(first_coordinate, second_coordinate, coordin
     """Transforms eastings, northings coordinates from British National Grid
     (EPSG:27700) to WGS84 (EPSG:4326). Coordinates supplied as
     latitude/longitude are just reordered"""
-
-    if coordinate_type == "easting_northing":
-        # Transform coordinates from eastings northings to lat long
-        # always_xy=True ensures the transformer
-        # receives and returns coordinates in correct order
-        transformer = Transformer.from_crs(
-            "EPSG:27700",
-            "EPSG:4326",
-            always_xy=True,
-        )
-        longitude, latitude = transformer.transform(
-            first_coordinate,
-            second_coordinate,
-        )
-    elif coordinate_type == "latitude_longitude":
-        latitude = first_coordinate
-        longitude = second_coordinate
+    try:
+        if coordinate_type == "easting_northing":
+            # Transform coordinates from eastings northings to lat long
+            # always_xy=True ensures the transformer
+            # receives and returns coordinates in correct order
+            transformer = Transformer.from_crs(
+                "EPSG:27700",
+                "EPSG:4326",
+                always_xy=True,
+            )
+            longitude, latitude = transformer.transform(
+                first_coordinate,
+                second_coordinate,
+            )
+        elif coordinate_type == "latitude_longitude":
+            latitude = first_coordinate
+            longitude = second_coordinate
+        else:
+            # If coordinate_id hasn't been split correctly
+            raise ValueError(f"Unsupported coordinate type: {coordinate_type}")
+    except (TypeError, ValueError) as error:
+        raise ValueError("Invalid coordinate values or coordinate type") from error
     return longitude, latitude
 
 
