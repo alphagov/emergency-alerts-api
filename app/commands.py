@@ -449,7 +449,6 @@ def add_areas():
             parent_areas = split_into_chunks_and_insert_into_db(
                 area,
                 geography_version.id,
-                geography_type.id,
                 data,
                 parent_areas,
                 sub_area=False,
@@ -467,7 +466,6 @@ def add_areas():
                     parent_areas = split_into_chunks_and_insert_into_db(
                         area,
                         geography_version.id,
-                        geography_type.id,
                         data,
                         parent_areas,
                         sub_area=True,
