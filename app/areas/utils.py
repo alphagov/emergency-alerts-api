@@ -6,7 +6,7 @@ from app.dao.areas_dao import AreasDAO
 
 
 def split_into_chunks_and_insert_into_db(
-    area, geography_version_id, geography_type_id, data, parent_areas, sub_area=False, is_selectable=False
+    area, geography_version_id, data, parent_areas, sub_area=False, is_selectable=False
 ):
     """Used for splitting data for insertion into GeographyPolygons, in batches/chunks"""
     csv_data_chunks = pd.read_csv(data, index_col=False, chunksize=100_000)
