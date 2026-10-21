@@ -149,8 +149,8 @@ def get_areas_by_ids():
 
         try:
             longitude, latitude = convert_to_long_lat_coordinates(first_coordinate, second_coordinate, coordinate_type)
-        except Exception as error:
-            return jsonify({"message": str(error)}), 400
+        except Exception:
+            return jsonify({"message": "Invalid coordinate values or coordinate type"}), 400
 
         name = f"{radius:g}km around the easting of {first_coordinate:g} " f"and the northing of {second_coordinate:g}"
 
@@ -756,8 +756,8 @@ def remove_area(service_id, message_id, message_type):
 
         try:
             longitude, latitude = convert_to_long_lat_coordinates(first_coordinate, second_coordinate, coordinate_type)
-        except Exception as error:
-            return jsonify({"message": str(error)}), 400
+        except Exception:
+            return jsonify({"message": "Invalid coordinate values or coordinate type"}), 400
 
         centroid = shapely.Point(longitude, latitude).wkt
         area_wkts.append(AreasDAO.create_circle_area(centroid, radius))
