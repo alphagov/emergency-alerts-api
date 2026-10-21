@@ -28,13 +28,17 @@ class AreasDAO:
     @staticmethod
     def add_geography_version(geography_type_id, VERSION, source_url, state="active"):
         # only create if version doesn't exist already
-        geography_version = GeographyVersion(
-            geography_type_id=geography_type_id,
-            version=VERSION,
-            source_url=source_url,
-            state=state,
-        )
-        db.session.add(geography_version)
+        geography_version = GeographyVersion.query.filter_by(
+            geography_type_id=geography_type_id, version=VERSION, source_url=source_url
+        ).one_or_none()
+        if not geography_version:
+            geography_version = GeographyVersion(
+                geography_type_id=geography_type_id,
+                version=VERSION,
+                source_url=source_url,
+                state=state,
+            )
+            db.session.add(geography_version)
         db.session.flush()
         return geography_version
 
@@ -111,10 +115,13 @@ class AreasDAO:
         """Returns an area with the specified geographic id and geography type, or None"""
         geography_type = AreasDAO.get_geography_type(type_route)
 
-        area_query = GeographyPolygons.query.filter_by(
-            geography_version_id=geography_type[0], geographic_id=geographic_id
-        )
-        return area_query.one_or_none()
+        if geography_type:
+            area_query = GeographyPolygons.query.filter_by(
+                geography_version_id=geography_type[0], geographic_id=geographic_id
+            )
+            return area_query.one_or_none()
+        else:
+            return None
 
     @staticmethod
     def geography_version_ordering():
