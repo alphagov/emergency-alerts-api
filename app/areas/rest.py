@@ -111,9 +111,16 @@ def get_areas_by_ids():
     for postcode_id in postcode_ids:
         # Postcode area ID format - "postcodes_{centroid.x}_{centroid.y}_{radius}_{postcode}"
         _, x_coordinate, y_coordinate, radius, postcode = postcode_id.split("_", 4)
-        radius = float(radius)
-        x_coordinate = float(x_coordinate)
-        y_coordinate = float(y_coordinate)
+        try:
+            radius = float(radius)
+            x_coordinate = float(x_coordinate)
+            y_coordinate = float(y_coordinate)
+        except (TypeError, ValueError):
+            return (
+                jsonify({"message": f"Invalid postcode area ID: '{postcode_id}'."}),
+                400,
+            )
+
         centroid = shapely.Point(x_coordinate, y_coordinate).wkt
         name = f"{radius:g}km around the postcode {postcode}"
         parent_area = get_parent_area_name(centroid)
@@ -129,12 +136,22 @@ def get_areas_by_ids():
             }
         )
     for coordinate_id in coordinate_ids:
-        _, first_coordinate, second_coordinate, radius, coordinate_type = coordinate_id.split("_", 4)
-        radius = float(radius)
-        first_coordinate = float(first_coordinate)
-        second_coordinate = float(second_coordinate)
+        try:
+            _, first_coordinate, second_coordinate, radius, coordinate_type = coordinate_id.split("_", 4)
+            radius = float(radius)
+            first_coordinate = float(first_coordinate)
+            second_coordinate = float(second_coordinate)
+        except (TypeError, ValueError):
+            return (
+                jsonify({"message": f"Invalid coordinate area ID: '{coordinate_id}'"}),
+                400,
+            )
 
-        longitude, latitude = convert_to_long_lat_coordinates(first_coordinate, second_coordinate, coordinate_type)
+        try:
+            longitude, latitude = convert_to_long_lat_coordinates(first_coordinate, second_coordinate, coordinate_type)
+        except Exception as error:
+            return jsonify({"message": str(error)}), 400
+
         name = f"{radius:g}km around the easting of {first_coordinate:g} " f"and the northing of {second_coordinate:g}"
 
         centroid = shapely.Point(longitude, latitude).wkt
@@ -277,6 +294,9 @@ def get_geography_types():
 def get_geography_type_examples(type_route):
     """Returns the example hint text for a geography type/library"""
     data = AreasDAO.get_geography_type_examples(type_route)
+    if not data or data["count"] == 0:
+        return jsonify({"data": None})
+
     count = data["count"]
     example_areas = data["examples"]
 
@@ -397,15 +417,21 @@ def create_coordinate_area():
     """Returns WKT string of created coordinate area, created using radius and
     centroid, formed from specified coordinates"""
     data = request.get_json() or {}
-    first_coordinate = float(data.get("first_coordinate"))
-    second_coordinate = float(data.get("second_coordinate"))
-    coordinate_type = data.get("coordinate_type")
-    radius = float(data.get("radius"))
+    try:
+        first_coordinate = float(data.get("first_coordinate"))
+        second_coordinate = float(data.get("second_coordinate"))
+        coordinate_type = data.get("coordinate_type")
+        radius = float(data.get("radius"))
+    except (TypeError, ValueError):
+        return jsonify({"message": "Coordinates and radius must be valid values"}), 400
 
     if not AreasDAO.check_coordinates_valid(first_coordinate, second_coordinate, coordinate_type):
         return jsonify({"message": "Enter coordinates within the UK"}), 400
 
-    longitude, latitude = convert_to_long_lat_coordinates(first_coordinate, second_coordinate, coordinate_type)
+    try:
+        longitude, latitude = convert_to_long_lat_coordinates(first_coordinate, second_coordinate, coordinate_type)
+    except Exception as error:
+        return jsonify({"message": str(error)}), 400
 
     centroid = shapely.Point(longitude, latitude)
     if centroid.is_empty:
@@ -432,7 +458,10 @@ def get_coordinates_centroid():
     if not AreasDAO.check_coordinates_valid(first_coordinate, second_coordinate, coordinate_type):
         return jsonify({"message": "Enter coordinates within the UK"}), 400
 
-    longitude, latitude = convert_to_long_lat_coordinates(first_coordinate, second_coordinate, coordinate_type)
+    try:
+        longitude, latitude = convert_to_long_lat_coordinates(first_coordinate, second_coordinate, coordinate_type)
+    except Exception as error:
+        return jsonify({"message": str(error)}), 400
 
     centroid = shapely.Point(longitude, latitude)
     if centroid.is_empty:
@@ -578,12 +607,19 @@ def add_coordinates_area(service_id, message_id, message_type):
         return jsonify({"message": "Unsupported message type"}), 400
 
     data = request.get_json() or {}
-    first_coordinate = data.get("first_coordinate")
-    second_coordinate = data.get("second_coordinate")
-    coordinate_type = data.get("coordinate_type")
-    radius = data.get("radius")
+    try:
+        first_coordinate = float(data.get("first_coordinate"))
+        second_coordinate = float(data.get("second_coordinate"))
+        radius = float(data.get("radius"))
+    except (TypeError, ValueError):
+        return jsonify({"message": "Coordinates and radius must be valid values"}), 400
 
-    longitude, latitude = convert_to_long_lat_coordinates(first_coordinate, second_coordinate, coordinate_type)
+    coordinate_type = data.get("coordinate_type")
+
+    try:
+        longitude, latitude = convert_to_long_lat_coordinates(first_coordinate, second_coordinate, coordinate_type)
+    except Exception as error:
+        return jsonify({"message": str(error)}), 400
 
     centroid = shapely.Point(longitude, latitude).wkt
     circle = AreasDAO.create_circle_area(centroid, radius)
@@ -718,7 +754,11 @@ def remove_area(service_id, message_id, message_type):
         second_coordinate = float(second_coordinate)
         radius = float(radius)
 
-        longitude, latitude = convert_to_long_lat_coordinates(first_coordinate, second_coordinate, coordinate_type)
+        try:
+            longitude, latitude = convert_to_long_lat_coordinates(first_coordinate, second_coordinate, coordinate_type)
+        except Exception as error:
+            return jsonify({"message": str(error)}), 400
+
         centroid = shapely.Point(longitude, latitude).wkt
         area_wkts.append(AreasDAO.create_circle_area(centroid, radius))
 
