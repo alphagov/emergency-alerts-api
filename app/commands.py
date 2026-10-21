@@ -390,11 +390,6 @@ def add_areas():
             "name_singular": "country",
             "sub_geography_types": [],
         },
-        "fire_region_nations": {
-            "display_name": "Fire Regions",
-            "name_singular": "fire region",
-            "sub_geography_types": ["fire_regions"],
-        },
         "counties_and_unitary_authorities": {
             "display_name": "Counties and Unitary Authorities",
             "name_singular": "county or unitary authority",
