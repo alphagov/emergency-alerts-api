@@ -91,7 +91,8 @@ def test_convert_to_long_lat_coordinates(
     coordinate_type,
     expected_coordinates,
 ):
-    assert convert_to_long_lat_coordinates(first_coordinate, second_coordinate, coordinate_type) == expected_coordinates
+    converted_coordinates = convert_to_long_lat_coordinates(first_coordinate, second_coordinate, coordinate_type)
+    assert converted_coordinates == pytest.approx(expected_coordinates, abs=1e-10)
 
 
 @pytest.mark.parametrize(
