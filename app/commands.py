@@ -390,7 +390,7 @@ def add_areas():
             "name_singular": "country",
             "sub_geography_types": [],
         },
-        "fire_region_parents": {
+        "fire_region_parent_areas": {
             "display_name": "Fire Regions",
             "name_singular": "fire region",
             "sub_geography_types": ["fire_regions"],
@@ -454,7 +454,6 @@ def add_areas():
             parent_areas = split_into_chunks_and_insert_into_db(
                 area,
                 geography_version.id,
-                geography_type.id,
                 data,
                 parent_areas,
                 sub_area=False,
@@ -472,7 +471,6 @@ def add_areas():
                     parent_areas = split_into_chunks_and_insert_into_db(
                         area,
                         geography_version.id,
-                        geography_type.id,
                         data,
                         parent_areas,
                         sub_area=True,
