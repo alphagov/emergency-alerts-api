@@ -1,8 +1,23 @@
 from datetime import datetime
+from io import BytesIO
+from unittest.mock import Mock, patch
 
-from app.commands import audit_broadcast_areas, local_dev_broadcast_permissions
+from geoalchemy2.shape import to_shape
+
+from app.commands import (
+    add_areas,
+    audit_broadcast_areas,
+    local_dev_broadcast_permissions,
+)
 from app.dao.services_dao import dao_add_user_to_service
-from app.models import BROADCAST_TYPE, BroadcastMessage, BroadcastStatusType
+from app.models import (
+    BROADCAST_TYPE,
+    BroadcastMessage,
+    BroadcastStatusType,
+    GeographyPolygons,
+    GeographyType,
+    GeographyVersion,
+)
 from tests.app.db import create_broadcast_message, create_template, create_user
 
 
@@ -72,3 +87,36 @@ def test_audit_broadcast_areas_reports_live_broadcasts_with_invalid_areas(sample
     assert lines_for[str(before_cutoff.id)].endswith("published=False")
     assert result.output.endswith("Checked 5 live alerts: 4 failed, 2 of them published to gov.uk/alerts\n")
     assert BroadcastMessage.query.get(missing_names.id).areas == {"simple_polygons": valid_areas["simple_polygons"]}
+
+
+def test_add_areas(notify_api, notify_db_session):
+    csv_data = (
+        "geographic_id,name,geometry,parent_geography_id\n" 'test-area,Test area,"POLYGON ((0 0, 1 0, 1 1, 0 0))",\n'
+    )
+
+    s3 = Mock()
+    s3.get_object.return_value = {
+        "Body": BytesIO(csv_data.encode("utf-8")),
+    }
+
+    with patch("app.commands.boto3.client", return_value=s3):
+        notify_api.test_cli_runner().invoke(add_areas)
+
+    countries_type = GeographyType.query.filter_by(route="countries").one()
+    assert countries_type.name == "Countries"
+
+    geography_version = GeographyVersion.query.filter_by(
+        geography_type_id=countries_type.id,
+        version="1.0.0",
+    ).one()
+
+    assert geography_version.geography_type_id == countries_type.id
+    assert geography_version.state == "active"
+
+    polygons = GeographyPolygons.query.filter_by(
+        geography_version_id=geography_version.id,
+    ).all()
+
+    polygon_row = polygons[0]
+    assert polygon_row.name == "Test area"
+    assert to_shape(polygon_row.geometry).wkt == "POLYGON ((0 0, 1 0, 1 1, 0 0))"
