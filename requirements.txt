@@ -39,7 +39,7 @@ cachetools==7.0.5
     # via
     #   -r requirements.in
     #   emergency-alerts-utils
-certifi==2025.11.12
+certifi==2026.10.19
     # via
     #   pyproj
     #   requests
