@@ -92,6 +92,14 @@ def upgrade():
         existing_nullable=False,
         postgresql_using="geography_version_id::uuid",
     )
+    op.alter_column(
+        "geography_polygons",
+        "parent_geography_id",
+        existing_type=sa.String(),
+        type_=postgresql.UUID(as_uuid=True),
+        existing_nullable=False,
+        postgresql_using="parent_geography_id::uuid",
+    )
 
     # geography_polygons id type becomes uuid
     op.alter_column(
@@ -174,6 +182,14 @@ def downgrade():
         type_=sa.String(),
         existing_nullable=False,
         postgresql_using="id::text",
+    )
+    op.alter_column(
+        "geography_polygons",
+        "parent_geography_id",
+        existing_type=postgresql.UUID(as_uuid=True),
+        type_=sa.String(),
+        existing_nullable=False,
+        postgresql_using="parent_geography_id::text",
     )
     op.alter_column(
         "geography_version",
