@@ -30,7 +30,7 @@ PyJWT==2.15.0
 SQLAlchemy==1.4.54
 GeoAlchemy2==0.20.0
 urllib3==2.8.0
-Werkzeug==3.1.8
+Werkzeug==3.1.9
 pandas==3.0.4
 
 # For transitive dependency resolution using pip-tools only.
