@@ -522,7 +522,7 @@ periodiq==0.14.0
     #   emergency-alerts-utils
 phonenumbers==9.0.33
     # via emergency-alerts-utils
-pillow==12.3.0
+pillow==13.0.0
     # via -r requirements.in
 platformdirs==4.5.0
     # via black
