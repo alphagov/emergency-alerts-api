@@ -6,6 +6,7 @@ permissions:
 env:
   PYTHON_VERSION: 3.12
   PIP_VERSION: 26.2.2
+  PIP_SHA256: fd7f4dfa8190e014013b9f08f3e973f4e4c26ffd179a204895533a7254813a70
 
 on:
   pull_request:
@@ -51,7 +52,9 @@ jobs:
 
       - name: Install and upgrade pre-requisites
         run: |
-          python3.12 -m pip install --upgrade pip==${PIP_VERSION} wheel setuptools
+          python3.12 -m pip install --upgrade --no-deps \
+            "https://files.pythonhosted.org/packages/3f/06/3e4420302363fbb71be3c7f35ce042f54bfca330e3e66b3a2e3c4cca579f/pip-${PIP_VERSION}-py3-none-any.whl#sha256=${PIP_SHA256}"
+          python3.12 -m pip install --upgrade wheel setuptools
           sudo apt-get update
           sudo apt-get install -y libcurl4-openssl-dev
           sudo apt-get install -y libssl-dev
