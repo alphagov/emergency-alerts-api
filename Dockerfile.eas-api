@@ -11,6 +11,7 @@ ARG BASE_IMAGE=${ECS_ACCOUNT_NUMBER}.dkr.ecr.${AWS_REGION}.amazonaws.com/${RESOU
 FROM ${BASE_IMAGE}
 
 ARG APP_VERSION=unknown
+ARG PIP_VERSION=26.2.2
 
 ENV HTTPS_PROXY=${HTTPS_PROXY}
 ENV NO_PROXY=${NO_PROXY}
@@ -58,6 +59,7 @@ COPY --chown=easuser:easuser . $DIR_API
 
 # Build emergency-alerts-api
 RUN python$PYTHON_VERSION -m venv $VENV_API
+RUN $VENV_API/bin/python -m pip install --upgrade pip==${PIP_VERSION}
 RUN --mount=type=cache,target=/home/easuser/.cache \
     cd $DIR_API && \
     . $VENV_API/bin/activate && \
