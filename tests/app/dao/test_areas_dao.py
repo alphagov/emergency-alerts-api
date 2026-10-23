@@ -116,9 +116,7 @@ def test_add_geography_polygons_adds_polygons_with_parents(notify_db_session):
 
     polygons = GeographyPolygons.query.all()
     assert parent_areas == {polygons[0].geographic_id: polygons[0].id, polygons[1].geographic_id: polygons[1].id}
-    assert polygons[1].parent_geography_id == str(
-        polygons[0].id
-    )  # Stored as a string as geographic_id is a string initially
+    assert polygons[1].parent_geography_id == polygons[0].id
     assert len(polygons) == 2
 
 
