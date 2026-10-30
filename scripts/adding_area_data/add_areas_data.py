@@ -1,8 +1,8 @@
 import os
 import uuid
 from datetime import datetime, timezone
-import pandas as pd
 
+import pandas as pd
 from utils import (
     copy_dataframe_to_table,
     create_db_connection,

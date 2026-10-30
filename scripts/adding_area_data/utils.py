@@ -1,5 +1,6 @@
-from io import StringIO
 import os
+from io import StringIO
+
 import boto3
 import psycopg2
 

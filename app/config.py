@@ -1,7 +1,6 @@
 import json
 import os
 
-
 cbc_proxy_lambda_arn_overrides = json.loads(os.getenv("CBC_PROXY_LAMBDA_ARN_OVERRIDES", "{}"))
 if not isinstance(cbc_proxy_lambda_arn_overrides, dict):
     raise ValueError("CBC_PROXY_LAMBDA_ARN_OVERRIDES must be a JSON object")
