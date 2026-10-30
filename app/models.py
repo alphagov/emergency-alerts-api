@@ -1451,14 +1451,30 @@ class Populations(db.Model):
         return {"id": self.id, "geometry": self.geometry, "density": self.density}
 
 
+PUBLISH_PROGRESS_PENDING = "pending"
+PUBLISH_PROGRESS_PROCESSING = "processing"
+PUBLISH_PROGRESS_FINISHED = "finished"
+
+PUBLISH_PROGRESS_STATUSES = [
+    PUBLISH_PROGRESS_PENDING,
+    PUBLISH_PROGRESS_PROCESSING,
+    PUBLISH_PROGRESS_FINISHED,
+]
+
+
 class PublishTaskProgress(db.Model):
     """
-    This table is used to the progress of gov.uk/alerts Publish tasks.
+    This table is used to keep track of the progress of gov.uk/alerts Publish tasks.
     """
 
     __tablename__ = "publish_task_progress"
     id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     task_id = db.Column(db.String, index=True, unique=False, nullable=False)
+    status = db.Column(
+        db.Enum(*PUBLISH_PROGRESS_STATUSES, name="publish_task_progress_status_types"),
+        nullable=False,
+    )
+    trace_id = db.Column(db.String, nullable=True)
     last_published_file = db.Column(db.String, nullable=True)
     started_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
     last_activity_at = db.Column(
