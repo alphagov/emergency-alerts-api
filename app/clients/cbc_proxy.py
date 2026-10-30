@@ -42,14 +42,25 @@ class CBCProxyRetryableException(Exception):
 
 
 class CBCProxyClient:
-    _lambda_client = None
-    _arn_prefix = ""
+    def __init__(self):
+        self._lambda_client = None
+        self._arn_prefix = ""
+        self._lambda_arn_overrides = {}
+        self._regional_lambda_clients = {}
 
     def init_app(self, app):
         if app.config.get("CBC_PROXY_ENABLED"):
             if app.config.get("CBC_ACCOUNT_NUMBER") is not None:
                 self._arn_prefix = app.config.get("CBC_ACCOUNT_NUMBER") + ":function:"
+            self._lambda_arn_overrides = app.config.get("CBC_PROXY_LAMBDA_ARN_OVERRIDES", {})
+            if not isinstance(self._lambda_arn_overrides, dict):
+                raise ValueError("CBC_PROXY_LAMBDA_ARN_OVERRIDES must be a mapping")
+            for lambda_name, arn in self._lambda_arn_overrides.items():
+                if not isinstance(lambda_name, str) or not isinstance(arn, str):
+                    raise ValueError("CBC_PROXY_LAMBDA_ARN_OVERRIDES must map proxy names to Lambda ARNs")
+                _lambda_arn_region(arn)
             self._lambda_client = boto3.client("lambda", region_name=aws_region)
+            self._regional_lambda_clients = {}
 
     def get_proxy(self, provider) -> "CBCProxyClientBase":
         proxy_classes = {
@@ -58,7 +69,12 @@ class CBCProxyClient:
             BroadcastProvider.O2: CBCProxyO2,
             BroadcastProvider.VODAFONE: CBCProxyVodafone,
         }
-        return proxy_classes[provider](self._lambda_client, self._arn_prefix)
+        return proxy_classes[provider](
+            self._lambda_client,
+            self._arn_prefix,
+            self._lambda_arn_overrides,
+            self._regional_lambda_clients,
+        )
 
 
 class CBCProxyClientBase(ABC):
@@ -85,9 +101,11 @@ class CBCProxyClientBase(ABC):
     def LANGUAGE_WELSH(self):
         pass
 
-    def __init__(self, lambda_client, arn_prefix):
+    def __init__(self, lambda_client, arn_prefix, lambda_arn_overrides=None, regional_lambda_clients=None):
         self._lambda_client = lambda_client
         self._arn_prefix = arn_prefix
+        self._lambda_arn_overrides = lambda_arn_overrides or {}
+        self._regional_lambda_clients = regional_lambda_clients if regional_lambda_clients is not None else {}
 
     def send_link_test(self):
         self._send_link_test(self.primary_lambda, self.CBC_A)
@@ -187,18 +205,30 @@ class CBCProxyClientBase(ABC):
 
     def _invoke_lambda(self, lambda_name, payload, cbc_target):
         payload_bytes = bytes(json.dumps(payload), encoding="utf8")
+        lambda_arn = self._lambda_arn_overrides.get(lambda_name)
+        lambda_client = self._lambda_client
+        function_name = f"{self._arn_prefix}{lambda_name}"
+        if lambda_arn:
+            function_name = lambda_arn
         try:
+            if lambda_arn:
+                region = _lambda_arn_region(lambda_arn)
+                if region != aws_region:
+                    lambda_client = self._regional_lambda_clients.get(region)
+                    if lambda_client is None:
+                        lambda_client = boto3.client("lambda", region_name=region)
+                        self._regional_lambda_clients[region] = lambda_client
             current_app.logger.info(
                 f"Calling lambda {lambda_name}",
                 extra={
                     "cbc_target": cbc_target,
                     "lambda_payload": str(payload),
                     "lambda_invocation_type": "RequestResponse",
-                    "lambda_arn": f"{self._arn_prefix}{lambda_name}",
+                    "lambda_arn": function_name,
                 },
             )
-            response = self._lambda_client.invoke(
-                FunctionName=f"{self._arn_prefix}{lambda_name}",
+            response = lambda_client.invoke(
+                FunctionName=function_name,
                 InvocationType="RequestResponse",
                 Payload=payload_bytes,
             )
@@ -264,6 +294,23 @@ class CBCProxyClientBase(ABC):
         if non_gsm_characters(content):
             return self.LANGUAGE_WELSH
         return self.LANGUAGE_ENGLISH
+
+
+def _lambda_arn_region(lambda_arn):
+    arn_parts = lambda_arn.split(":")
+    if (
+        len(arn_parts) < 7
+        or arn_parts[0] != "arn"
+        or not arn_parts[1]
+        or arn_parts[2] != "lambda"
+        or not arn_parts[3]
+        or len(arn_parts[4]) != 12
+        or not arn_parts[4].isdigit()
+        or arn_parts[5] != "function"
+        or not arn_parts[6]
+    ):
+        raise ValueError(f"Invalid Lambda ARN in CBC_PROXY_LAMBDA_ARN_OVERRIDES: {lambda_arn}")
+    return arn_parts[3]
 
 
 def _convert_lambda_payload_to_json(byte_string):
