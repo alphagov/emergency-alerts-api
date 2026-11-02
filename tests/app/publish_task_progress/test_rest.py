@@ -31,7 +31,9 @@ def test_add_publish_task_with_id(notify_db_session, govuk_publish_request):
 
 def test_add_publish_task_no_id(notify_db_session, govuk_publish_request):
     # "no ID": meaning no ID of an existing publish_task_progress is given (e.g. legacy GovUK or manual run)
-    response = govuk_publish_request.post("publish_task_progress.add_publish_task", _data={"task_id": "test"})
+    response = govuk_publish_request.post(
+        "publish_task_progress.add_publish_task", _data={"task_id": "test", "trace_id": "test_trace"}
+    )
     assert response == {
         "id": response["id"],
         "task_id": "test",
@@ -45,6 +47,7 @@ def test_add_publish_task_no_id(notify_db_session, govuk_publish_request):
     tasks = dao_get_all_publish_tasks()
     assert len(tasks) == 1
     assert tasks[0].status == PUBLISH_PROGRESS_IN_PROGRESS
+    assert tasks[0].trace_id == "test_trace"
 
 
 def test_update_publish_task_file(notify_db_session, govuk_publish_request):
