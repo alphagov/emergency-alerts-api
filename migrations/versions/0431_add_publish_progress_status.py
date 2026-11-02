@@ -20,6 +20,7 @@ def upgrade():
         "pending",
         "processing",
         "finished",
+        "cancelled",
         name="publish_task_progress_status_types",
     )
     status_enum.create(op.get_bind())

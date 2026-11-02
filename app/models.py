@@ -1454,11 +1454,13 @@ class Populations(db.Model):
 PUBLISH_PROGRESS_PENDING = "pending"
 PUBLISH_PROGRESS_PROCESSING = "processing"
 PUBLISH_PROGRESS_FINISHED = "finished"
+PUBLISH_PROGRESS_CANCELLED = "cancelled"  # E.g. if a partial progress is canceled in favour of a 'full' one
 
 PUBLISH_PROGRESS_STATUSES = [
     PUBLISH_PROGRESS_PENDING,
     PUBLISH_PROGRESS_PROCESSING,
     PUBLISH_PROGRESS_FINISHED,
+    PUBLISH_PROGRESS_CANCELLED,
 ]
 
 
