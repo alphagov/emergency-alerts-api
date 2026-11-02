@@ -31,18 +31,20 @@ def add_publish_task():
     # While we hope the OTel trace context is propagated to this request anyway, let's just let GovUK explicitly state
     # what it thinks the current trace is.
     trace_id = request.get_json().get("trace_id")
+    task_id = request.get_json().get("task_id")
 
     # If we're given an explicit ID (not a task_id, which is just something GovUK generates) then it's something API
     # scheduled earlier and would already have a row.
     # (If not then we just retain backwards compatibility and/or allow ad-hoc publishes via the CLI)
     publish_id = request.get_json().get("id")
+
     if publish_id is not None:
         task = dao_get_publish_task(publish_id)
         task.status = PUBLISH_PROGRESS_IN_PROGRESS
+        task.task_id = task_id
         task.trace_id = trace_id
         db.session.commit()
     else:
-        task_id = request.get_json().get("task_id")
         task = dao_create_publish_task(task_id, trace_id=trace_id)
 
     return jsonify(task.serialize())

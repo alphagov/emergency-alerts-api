@@ -35,8 +35,14 @@ def upgrade():
     op.execute("UPDATE publish_task_progress SET status = 'finished'")
     op.alter_column("publish_task_progress", "status", nullable=False)
 
+    op.alter_column("publish_task_progress", "task_id", nullable=True)
+
 
 def downgrade():
     op.drop_column("publish_task_progress", "trace_id")
     op.drop_column("publish_task_progress", "status")
-    op.execute("drop type publish_task_progress_status_types")
+
+    op.execute("DROP TYPE publish_task_progress_status_types")
+
+    op.execute("DELETE FROM publish_task_progress WHERE task_id IS NULL")
+    op.alter_column("publish_task_progress", "task_id", nullable=False)

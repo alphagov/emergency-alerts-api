@@ -10,13 +10,13 @@ from tests.app.db import create_publish_task
 
 
 def test_add_publish_task_with_id(notify_db_session, govuk_publish_request):
-    pending_task = create_publish_task(task_id="test", status=PUBLISH_PROGRESS_PENDING)
+    pending_task = create_publish_task(task_id=None, status=PUBLISH_PROGRESS_PENDING)
     response = govuk_publish_request.post(
-        "publish_task_progress.add_publish_task", _data={"id": str(pending_task.id), "task_id": "test"}
+        "publish_task_progress.add_publish_task", _data={"id": str(pending_task.id), "task_id": "test-task"}
     )
     assert response == {
         "id": response["id"],
-        "task_id": "test",
+        "task_id": "test-task",
         "status": "in_progress",
         "started_at": response["started_at"],
         "finished_at": None,
@@ -26,6 +26,7 @@ def test_add_publish_task_with_id(notify_db_session, govuk_publish_request):
 
     tasks = dao_get_all_publish_tasks()
     assert len(tasks) == 1
+    assert tasks[0].task_id == "test-task"  # Updated from request
     assert tasks[0].status == PUBLISH_PROGRESS_IN_PROGRESS
 
 

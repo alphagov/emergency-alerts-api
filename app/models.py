@@ -1471,7 +1471,7 @@ class PublishTaskProgress(db.Model):
 
     __tablename__ = "publish_task_progress"
     id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    task_id = db.Column(db.String, index=True, unique=False, nullable=False)
+    task_id = db.Column(db.String, index=True, unique=False, nullable=True)
     status = db.Column(
         db.Enum(*PUBLISH_PROGRESS_STATUSES, name="publish_task_progress_status_types"),
         default=PUBLISH_PROGRESS_IN_PROGRESS,
