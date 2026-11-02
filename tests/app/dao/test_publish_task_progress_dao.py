@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
+import pytest
+
 from app import db
 from app.dao.publish_task_progress_dao import (
     dao_create_publish_task,
@@ -12,14 +14,29 @@ from app.dao.publish_task_progress_dao import (
     dao_purge_old_publish_tasks,
     dao_update_publish,
 )
-from app.models import PublishTaskProgress
+from app.models import PUBLISH_PROGRESS_PENDING, PublishTaskProgress
 
 
-def test_dao_create_publish_task(notify_db_session):
+@pytest.mark.parametrize(
+    "status, expected_status",
+    [
+        [
+            None,  # Default
+            "processing",
+        ],
+        [
+            PUBLISH_PROGRESS_PENDING,
+            "pending",
+        ],
+    ],
+)
+def test_dao_create_publish_task(notify_db_session, status, expected_status):
     task_id = "test-task-id"
-    result = dao_create_publish_task(task_id)
+    result = dao_create_publish_task(task_id, status=status, trace_id="test")
 
     assert result.task_id == task_id
+    assert result.status == expected_status
+    assert result.trace_id == "test"
     assert PublishTaskProgress.query.filter_by(task_id=task_id).one() == result
 
 

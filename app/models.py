@@ -1472,6 +1472,7 @@ class PublishTaskProgress(db.Model):
     task_id = db.Column(db.String, index=True, unique=False, nullable=False)
     status = db.Column(
         db.Enum(*PUBLISH_PROGRESS_STATUSES, name="publish_task_progress_status_types"),
+        default=PUBLISH_PROGRESS_PROCESSING,
         nullable=False,
     )
     trace_id = db.Column(db.String, nullable=True)

@@ -3,11 +3,11 @@ from datetime import datetime, timedelta, timezone
 from flask import current_app
 
 from app import db
-from app.models import PublishTaskProgress
+from app.models import PUBLISH_PROGRESS_FINISHED, PublishTaskProgress
 
 
-def dao_create_publish_task(task_id):
-    data = PublishTaskProgress(task_id=task_id)
+def dao_create_publish_task(task_id, status=None, trace_id=None):
+    data = PublishTaskProgress(task_id=task_id, status=status, trace_id=trace_id)
     db.session.add(data)
     db.session.commit()
     return PublishTaskProgress.query.filter_by(task_id=task_id).first()
@@ -44,7 +44,10 @@ def dao_update_publish(id, file):
 
 def dao_finish_publish(id):
     db.session.query(PublishTaskProgress).filter_by(id=id).update(
-        {PublishTaskProgress.finished_at: datetime.now(timezone.utc)}
+        {
+            PublishTaskProgress.finished_at: datetime.now(timezone.utc),
+            PublishTaskProgress.status: PUBLISH_PROGRESS_FINISHED,
+        }
     )
     db.session.commit()
     return dao_get_publish_task(id)
