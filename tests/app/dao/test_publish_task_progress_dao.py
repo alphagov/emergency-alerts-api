@@ -14,7 +14,11 @@ from app.dao.publish_task_progress_dao import (
     dao_purge_old_publish_tasks,
     dao_update_publish,
 )
-from app.models import PUBLISH_PROGRESS_PENDING, PublishTaskProgress
+from app.models import (
+    PUBLISH_PROGRESS_FINISHED,
+    PUBLISH_PROGRESS_PENDING,
+    PublishTaskProgress,
+)
 
 
 @pytest.mark.parametrize(
@@ -22,7 +26,7 @@ from app.models import PUBLISH_PROGRESS_PENDING, PublishTaskProgress
     [
         [
             None,  # Default
-            "processing",
+            "in_progress",
         ],
         [
             PUBLISH_PROGRESS_PENDING,

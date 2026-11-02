@@ -1452,13 +1452,13 @@ class Populations(db.Model):
 
 
 PUBLISH_PROGRESS_PENDING = "pending"
-PUBLISH_PROGRESS_PROCESSING = "processing"
+PUBLISH_PROGRESS_IN_PROGRESS = "in_progress"
 PUBLISH_PROGRESS_FINISHED = "finished"
 PUBLISH_PROGRESS_CANCELLED = "cancelled"  # E.g. if a partial progress is canceled in favour of a 'full' one
 
 PUBLISH_PROGRESS_STATUSES = [
     PUBLISH_PROGRESS_PENDING,
-    PUBLISH_PROGRESS_PROCESSING,
+    PUBLISH_PROGRESS_IN_PROGRESS,
     PUBLISH_PROGRESS_FINISHED,
     PUBLISH_PROGRESS_CANCELLED,
 ]
@@ -1474,7 +1474,7 @@ class PublishTaskProgress(db.Model):
     task_id = db.Column(db.String, index=True, unique=False, nullable=False)
     status = db.Column(
         db.Enum(*PUBLISH_PROGRESS_STATUSES, name="publish_task_progress_status_types"),
-        default=PUBLISH_PROGRESS_PROCESSING,
+        default=PUBLISH_PROGRESS_IN_PROGRESS,
         nullable=False,
     )
     trace_id = db.Column(db.String, nullable=True)

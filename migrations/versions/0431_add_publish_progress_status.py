@@ -18,7 +18,7 @@ def upgrade():
 
     status_enum = sa.Enum(
         "pending",
-        "processing",
+        "in_progress",
         "finished",
         "cancelled",
         name="publish_task_progress_status_types",
