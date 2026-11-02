@@ -1489,6 +1489,7 @@ class PublishTaskProgress(db.Model):
         return {
             "id": self.id,
             "task_id": self.task_id,
+            "status": self.status,
             "last_published_file": self.last_published_file,
             "started_at": self.started_at,
             "last_activity_at": self.last_activity_at,

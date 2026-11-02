@@ -49,7 +49,7 @@ def add_publish_task():
 
 
 @publish_task_progress_blueprint.route("/update-publish", methods=["POST"])
-def update_publish_task():
+def update_publish_task_file():
     data = request.get_json()
     id = data.get("id")
     file = data.get("file")
