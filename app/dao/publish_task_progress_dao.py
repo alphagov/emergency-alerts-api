@@ -3,7 +3,11 @@ from datetime import datetime, timedelta, timezone
 from flask import current_app
 
 from app import db
-from app.models import PUBLISH_PROGRESS_FINISHED, PublishTaskProgress
+from app.models import (
+    PUBLISH_PROGRESS_FINISHED,
+    PUBLISH_PROGRESS_IN_PROGRESS,
+    PublishTaskProgress,
+)
 
 
 def dao_create_publish_task(task_id, status=None, trace_id=None):
@@ -14,7 +18,7 @@ def dao_create_publish_task(task_id, status=None, trace_id=None):
 
 
 def dao_get_all_in_progress_publish_tasks():
-    return PublishTaskProgress.query.filter_by(finished_at=None).all()
+    return PublishTaskProgress.query.filter_by(status=PUBLISH_PROGRESS_IN_PROGRESS).all()
 
 
 def dao_get_all_publish_tasks():

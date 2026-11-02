@@ -47,12 +47,15 @@ def test_dao_create_publish_task(notify_db_session, status, expected_status):
 def test_dao_get_all_in_progress_publish_tasks(notify_db_session):
     task1 = PublishTaskProgress(task_id="test-task1", finished_at=None)
     task2 = PublishTaskProgress(task_id="test-task2", finished_at=None)
-    task3 = PublishTaskProgress(task_id="test-task3", finished_at=datetime.now(timezone.utc))
-    db.session.add_all([task1, task2, task3])
+    task3 = PublishTaskProgress(
+        task_id="test-task3-finished", status=PUBLISH_PROGRESS_FINISHED, finished_at=datetime.now(timezone.utc)
+    )
+    task4 = PublishTaskProgress(task_id="test-task4-pending", status=PUBLISH_PROGRESS_PENDING)
+    db.session.add_all([task1, task2, task3, task4])
     db.session.commit()
 
-    results = [task.id for task in dao_get_all_in_progress_publish_tasks()]
-    assert results.sort() == [str(task1.id), str(task2.id), str(task3.id)].sort()
+    results = {task.task_id for task in dao_get_all_in_progress_publish_tasks()}
+    assert results == {task1.task_id, task2.task_id}
 
 
 def test_dao_get_all_publish_tasks_older_than(notify_db_session):
@@ -101,6 +104,7 @@ def test_dao_finish_publish(notify_db_session):
     # Add TZ for comparison with other timestamps
     finished_at = result.finished_at.replace(tzinfo=timezone.utc)
     assert before <= finished_at <= after
+    assert result.status == PUBLISH_PROGRESS_FINISHED
 
 
 def test_dao_delete_publish_by_id(notify_db_session):
