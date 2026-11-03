@@ -8,12 +8,18 @@ from app import dramatiq
 
 
 @dramatiq.actor(actor_name=TaskNames.PUBLISH_GOVUK_ALERTS_FULL, queue_name=QueueNames.GOVUK_ALERTS)
-def publish_govuk_alerts_full(*args, **kwargs):
+def _publish_govuk_alerts_full(*args, **kwargs):
+    """
+    Note: You likely want to look at govuk_tasks instead, as it has logic to avoid scheduling multiple runs
+    """
     return _not_implemented(TaskNames.PUBLISH_GOVUK_ALERTS_FULL)
 
 
 @dramatiq.actor(actor_name=TaskNames.PUBLISH_GOVUK_ALERTS, queue_name=QueueNames.GOVUK_ALERTS)
-def publish_govuk_alerts(*args, **kwargs):
+def _publish_govuk_alerts(*args, **kwargs):
+    """
+    Note: You likely want to look at govuk_tasks instead, as it has logic to avoid scheduling multiple runs
+    """
     return _not_implemented(TaskNames.PUBLISH_GOVUK_ALERTS)
 
 
