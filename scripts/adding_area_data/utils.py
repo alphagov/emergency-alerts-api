@@ -1,11 +1,7 @@
 import os
 from io import StringIO
 
-import boto3
 import psycopg2
-
-s3 = boto3.client("s3")
-AREAS_SOURCE_BUCKET = os.environ.get("AREAS_SOURCE_BUCKET_NAME")
 
 
 def get_source_data(filename, bucket, s3):
