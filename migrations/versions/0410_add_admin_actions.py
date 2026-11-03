@@ -6,8 +6,8 @@ Create Date: 2025-02-07 13:03:27.866070
 
 """
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision = "5206923870d3"

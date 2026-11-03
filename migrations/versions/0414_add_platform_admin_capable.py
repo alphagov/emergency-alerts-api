@@ -6,8 +6,8 @@ Create Date: 2025-03-05 17:13:13.720166
 
 """
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision = "0414_add_platform_admin_capable"
