@@ -30,7 +30,7 @@ PyJWT==2.15.0
 SQLAlchemy==1.4.54
 GeoAlchemy2==0.20.0
 urllib3==2.8.0
-Werkzeug==3.1.8
+Werkzeug==3.1.9
 pandas==3.0.4
 
 # For transitive dependency resolution using pip-tools only.
@@ -41,7 +41,7 @@ emergency-alerts-utils @ git+https://github.com/alphagov/emergency-alerts-utils.
 debugpy==1.8.21
 
 # Package for testing
-black==26.3.1
+black==26.10.1
 flake8-bugbear==25.11.29
 flake8==7.3.0
 freezegun==1.5.5
