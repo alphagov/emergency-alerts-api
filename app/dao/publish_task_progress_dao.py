@@ -4,8 +4,10 @@ from flask import current_app
 
 from app import db
 from app.models import (
+    PUBLISH_PROGRESS_CANCELLED,
     PUBLISH_PROGRESS_FINISHED,
     PUBLISH_PROGRESS_IN_PROGRESS,
+    PUBLISH_PROGRESS_PENDING,
     PublishTaskProgress,
 )
 
@@ -15,6 +17,19 @@ def dao_create_publish_task(task_id: str, status: str = None, trace_id: str = No
     db.session.add(data)
     db.session.commit()
     return PublishTaskProgress.query.filter_by(task_id=task_id).first()
+
+
+def dao_get_all_pending_publish_tasks() -> list[PublishTaskProgress]:
+    return PublishTaskProgress.query.filter_by(status=PUBLISH_PROGRESS_PENDING).all()
+
+
+def dao_cancel_all_pending_publish_tasks() -> list[PublishTaskProgress]:
+    return PublishTaskProgress.query.filter_by(status=PUBLISH_PROGRESS_PENDING).update(
+        {
+            PublishTaskProgress.finished_at: datetime.now(timezone.utc),
+            PublishTaskProgress.status: PUBLISH_PROGRESS_CANCELLED,
+        }
+    )
 
 
 def dao_get_all_in_progress_publish_tasks() -> list[PublishTaskProgress]:

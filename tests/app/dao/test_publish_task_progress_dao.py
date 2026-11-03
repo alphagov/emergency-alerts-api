@@ -4,10 +4,12 @@ import pytest
 
 from app import db
 from app.dao.publish_task_progress_dao import (
+    dao_cancel_all_pending_publish_tasks,
     dao_create_publish_task,
     dao_delete_publish_by_id,
     dao_finish_publish,
     dao_get_all_in_progress_publish_tasks,
+    dao_get_all_pending_publish_tasks,
     dao_get_all_publish_tasks,
     dao_get_all_publish_tasks_older_than,
     dao_get_publish_task,
@@ -15,6 +17,7 @@ from app.dao.publish_task_progress_dao import (
     dao_update_publish,
 )
 from app.models import (
+    PUBLISH_PROGRESS_CANCELLED,
     PUBLISH_PROGRESS_FINISHED,
     PUBLISH_PROGRESS_PENDING,
     PublishTaskProgress,
@@ -42,6 +45,35 @@ def test_dao_create_publish_task(notify_db_session, status, expected_status):
     assert result.status == expected_status
     assert result.trace_id == "test"
     assert PublishTaskProgress.query.filter_by(task_id=task_id).one() == result
+
+
+def test_dao_get_all_pending_publish_tasks(notify_db_session):
+    task1 = PublishTaskProgress(task_id="test-task1", finished_at=None)
+    task2 = PublishTaskProgress(task_id="test-task2", finished_at=None)
+    task3 = PublishTaskProgress(
+        task_id="test-task3-finished", status=PUBLISH_PROGRESS_FINISHED, finished_at=datetime.now(timezone.utc)
+    )
+    task4 = PublishTaskProgress(task_id="test-task4-pending", status=PUBLISH_PROGRESS_PENDING)
+    db.session.add_all([task1, task2, task3, task4])
+    db.session.commit()
+
+    results = {task.task_id for task in dao_get_all_pending_publish_tasks()}
+    assert results == {task4.task_id}
+
+
+def test_dao_cancel_all_pending_publish_tasks(notify_db_session):
+    task1 = PublishTaskProgress(task_id="test-task1", finished_at=None)
+    task2 = PublishTaskProgress(task_id="test-task2", finished_at=None)
+    task3 = PublishTaskProgress(
+        task_id="test-task3-finished", status=PUBLISH_PROGRESS_FINISHED, finished_at=datetime.now(timezone.utc)
+    )
+    task4 = PublishTaskProgress(task_id="test-task4-pending", status=PUBLISH_PROGRESS_PENDING)
+    db.session.add_all([task1, task2, task3, task4])
+    db.session.commit()
+
+    dao_cancel_all_pending_publish_tasks()
+    assert len(dao_get_all_pending_publish_tasks()) == 0
+    assert PublishTaskProgress.query.filter_by(task_id=task4.task_id).first().status == PUBLISH_PROGRESS_CANCELLED
 
 
 def test_dao_get_all_in_progress_publish_tasks(notify_db_session):
