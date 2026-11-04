@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 from io import BytesIO
 from unittest.mock import Mock, patch
@@ -97,18 +98,19 @@ def test_add_areas(notify_api, notify_db_session):
     )
 
     s3 = Mock()
-    s3.get_object.return_value = {
+    s3.get_object.side_effect = lambda **kwargs: {
         "Body": BytesIO(csv_data.encode("utf-8")),
     }
+    with (
+        patch.dict(
+            os.environ,
+            {"AREAS_SOURCE_BUCKET_NAME": "test-bucket"},
+        ),
+        patch("app.commands.boto3.client", return_value=s3),
+    ):
+        result = notify_api.test_cli_runner().invoke(add_areas)
 
-    with patch("app.commands.boto3.client", return_value=s3):
-        notify_api.test_cli_runner().invoke(add_areas)
-
-    # assert result.exit_code == 0, (
-    #    f"exit_code={result.exit_code}\n" f"output={result.output}\n" f"exception={result.exception}"
-    # )
-
-    print(GeographyType.query.with_entities(GeographyType.route, GeographyType.name).all())
+    assert result.exit_code == 0, result.output
 
     countries_type = GeographyType.query.filter_by(route="countries").one()
     assert countries_type.name == "Countries"
@@ -133,7 +135,5 @@ def test_add_areas(notify_api, notify_db_session):
         "Countries",
         "Test area",
     }
-
     assert to_shape(polygons_by_name["Countries"].geometry).wkt == "POLYGON ((0 0, 10 0, 10 10, 0 0))"
-
     assert to_shape(polygons_by_name["Test area"].geometry).wkt == "POLYGON ((0 0, 1 0, 1 1, 0 0))"
