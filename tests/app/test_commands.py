@@ -100,7 +100,13 @@ def test_add_areas(notify_api, notify_db_session):
     }
 
     with patch("app.commands.boto3.client", return_value=s3):
-        notify_api.test_cli_runner().invoke(add_areas)
+        result = notify_api.test_cli_runner().invoke(add_areas)
+
+    assert result.exit_code == 0, (
+        f"exit_code={result.exit_code}\n" f"output={result.output}\n" f"exception={result.exception}"
+    )
+
+    print(GeographyType.query.with_entities(GeographyType.route, GeographyType.name).all())
 
     countries_type = GeographyType.query.filter_by(route="countries").one()
     assert countries_type.name == "Countries"
