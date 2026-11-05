@@ -23,15 +23,16 @@ def test_publish_schedules_when_no_pending_tasks_present(mocker):
 
 
 def test_does_not_schedule_when_pending_tasks_present(mocker):
+    progress_task = PublishTaskProgress(task_id="test")
     mocker.patch(
         "app.tasks.govuk_tasks.dao_get_all_pending_publish_tasks",
-        return_value=[PublishTaskProgress()],
+        return_value=[progress_task],
     )
     mock_create = mocker.patch("app.tasks.govuk_tasks.dao_create_publish_task", return_value="create")
     mock_send = mocker.patch("app.tasks.govuk_tasks._publish_govuk_alerts.send", return_value="send")
 
     ret = publish_govuk_build()
-    assert ret == (None, None)
+    assert ret == (progress_task, None)
 
     mock_create.assert_not_called()
     mock_send.assert_not_called()

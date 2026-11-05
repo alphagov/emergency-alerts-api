@@ -115,9 +115,15 @@ def send_broadcast_event(broadcast_event_id):
         broadcast_event = dao_get_broadcast_event_by_id(broadcast_event_id)
 
         publish_pending, publish_task = publish_govuk_build(broadcast_event_id=broadcast_event_id)
-        current_app.logger.info(
-            "Enqueued publish GOV UK Alerts: %s, %s", publish_pending.serialize(), publish_task.asdict()
-        )
+        if publish_task is not None:
+            current_app.logger.info(
+                "Enqueued publish GOV UK Alerts: %s, %s", publish_pending.serialize(), publish_task.asdict()
+            )
+        else:
+            current_app.logger.info(
+                "*Not* queued a publish to GOV UK Alerts, one or more pending tasks already: %s",
+                publish_pending.serialize(),
+            )
 
         providers = broadcast_event.service.get_available_broadcast_providers()
         current_app.logger.info(

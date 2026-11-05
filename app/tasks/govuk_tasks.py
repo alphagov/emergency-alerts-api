@@ -20,14 +20,14 @@ def publish_govuk_build(
 ) -> tuple[PublishTaskProgress, Message]:
     """
     Schedule a GovUK publish if no others are pending. Returns the pending model and Dramatiq task if scheduled.
-    If one is pending then it's skipped (when the publish runs it'll bring in latest changes) and both values
-    are returned as None.
+    If one is pending then it's skipped (when the publish runs it'll bring in latest changes anyway) - in such
+    a case the first pending model will be returned and None for the Dramatiq task.
     """
     existing_pending = dao_get_all_pending_publish_tasks()
 
     if len(existing_pending) > 0:
         # There's already a pending publish. Thus scheduling again will not help.
-        return None, None
+        return existing_pending[0], None
 
     # api-scheduled is arbitrary - it's meaningless and will be upserted by GovUK anyway
     new_pending = dao_create_publish_task(

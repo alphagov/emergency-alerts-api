@@ -204,11 +204,15 @@ def queue_after_alert_activities():
             # GovUK calling us back to mark the action as 'done' instead of just assuming.
             current_app.logger.info("Requesting GovUK publish")
             publish_pending, publish_task = publish_govuk_build()
-            current_app.logger.info(
-                "Enqueued publish GOV UK Alerts: %s / %s", publish_pending.serialize(), publish_task.asdict()
-            )
-
-        # Down the line we will look to request logs from MNOs
+            if publish_task is not None:
+                current_app.logger.info(
+                    "Enqueued publish GOV UK Alerts: %s, %s", publish_pending.serialize(), publish_task.asdict()
+                )
+            else:
+                current_app.logger.info(
+                    "*Not* queued a publish to GOV UK Alerts, one or more pending tasks already: %s",
+                    publish_pending.serialize(),
+                )
 
 
 @dramatiq.actor(
