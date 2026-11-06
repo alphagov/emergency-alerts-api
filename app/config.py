@@ -188,6 +188,7 @@ class Config(object):
         if os.environ.get("GOVUK_PUBLISH_CHECKS_FAILED_INTERVAL") is not None
         else 30
     )
+    GOVUK_PENDING_STATUS_MAX_SECONDS = int(os.environ.get("GOVUK_PENDING_STATUS_MAX_SECONDS", "300"))
 
     SES_ENDPOINT = os.environ.get("AWS_ENDPOINT_URL_SES", "http://localstack:4566")
     SES_FROM_ADDRESS = "support@localhost"

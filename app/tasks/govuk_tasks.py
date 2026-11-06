@@ -1,6 +1,9 @@
+from datetime import datetime, timedelta
 from uuid import UUID
 
+import pytz
 from dramatiq.message import Message
+from flask import current_app
 
 from app.dao.publish_task_progress_dao import (
     dao_cancel_all_pending_publish_tasks,
@@ -25,7 +28,18 @@ def publish_govuk_build(
     """
     existing_pending = dao_get_all_pending_publish_tasks()
 
-    if len(existing_pending) > 0:
+    valid_pending: list[PublishTaskProgress] = []
+    too_old = datetime.now(pytz.utc) - timedelta(seconds=current_app.config["GOVUK_PENDING_STATUS_MAX_SECONDS"])
+    for pending in existing_pending:
+        # Make sure not too old...
+        if pending.started_at > too_old:
+            valid_pending.append(pending)
+        else:
+            current_app.logger.warning(
+                "A pending still exists but it's very old? ID: %s, started at: %s", pending.id, pending.started_at
+            )
+
+    if len(valid_pending) > 0:
         # There's already a pending publish. Thus scheduling again will not help.
         return existing_pending[0], None
 
