@@ -40,11 +40,20 @@ def add_publish_task():
 
     if publish_id is not None:
         task = dao_get_publish_task(publish_id)
+        current_app.logger.info(
+            "Using existing publish ID: %s: going from status %s to %s",
+            publish_id,
+            task.status,
+            PUBLISH_PROGRESS_IN_PROGRESS,
+        )
         task.status = PUBLISH_PROGRESS_IN_PROGRESS
         task.task_id = task_id
         task.trace_id = trace_id
         db.session.commit()
     else:
+        current_app.logger.info(
+            "Created new PublishTaskProgress (this wasn't a publish scheduled by API?) with task ID: %s", task_id
+        )
         task = dao_create_publish_task(task_id, trace_id=trace_id)
 
     return jsonify(task.serialize())
@@ -72,6 +81,7 @@ def finish_publish():
     data = request.get_json()
     id = data.get("id")
     task = dao_finish_publish(id)
+    current_app.logger.info("PublishTaskProgress %s has finished", task.id)
     return jsonify(task.serialize())
 
 
