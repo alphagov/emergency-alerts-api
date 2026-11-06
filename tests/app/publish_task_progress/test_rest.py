@@ -1,24 +1,60 @@
 from datetime import datetime
 
+from app.dao.publish_task_progress_dao import dao_get_all_publish_tasks
+from app.models import (
+    PUBLISH_PROGRESS_FINISHED,
+    PUBLISH_PROGRESS_IN_PROGRESS,
+    PUBLISH_PROGRESS_PENDING,
+)
 from tests.app.db import create_publish_task
 
 
-def test_add_publish_task(notify_db_session, govuk_publish_request):
-    response = govuk_publish_request.post("publish_task_progress.add_publish_task", _data={"task_id": "test"})
+def test_add_publish_task_with_id(notify_db_session, govuk_publish_request):
+    pending_task = create_publish_task(task_id=None, status=PUBLISH_PROGRESS_PENDING)
+    response = govuk_publish_request.post(
+        "publish_task_progress.add_publish_task", _data={"id": str(pending_task.id), "task_id": "test-task"}
+    )
     assert response == {
         "id": response["id"],
-        "task_id": "test",
+        "task_id": "test-task",
+        "status": "in_progress",
         "started_at": response["started_at"],
         "finished_at": None,
         "last_activity_at": response["last_activity_at"],
         "last_published_file": None,
     }
 
+    tasks = dao_get_all_publish_tasks()
+    assert len(tasks) == 1
+    assert tasks[0].task_id == "test-task"  # Updated from request
+    assert tasks[0].status == PUBLISH_PROGRESS_IN_PROGRESS
 
-def test_update_publish_task(notify_db_session, govuk_publish_request):
+
+def test_add_publish_task_no_id(notify_db_session, govuk_publish_request):
+    # "no ID": meaning no ID of an existing publish_task_progress is given (e.g. legacy GovUK or manual run)
+    response = govuk_publish_request.post(
+        "publish_task_progress.add_publish_task", _data={"task_id": "test", "trace_id": "test_trace"}
+    )
+    assert response == {
+        "id": response["id"],
+        "task_id": "test",
+        "status": "in_progress",
+        "started_at": response["started_at"],
+        "finished_at": None,
+        "last_activity_at": response["last_activity_at"],
+        "last_published_file": None,
+    }
+
+    tasks = dao_get_all_publish_tasks()
+    assert len(tasks) == 1
+    assert tasks[0].status == PUBLISH_PROGRESS_IN_PROGRESS
+    assert tasks[0].trace_id == "test_trace"
+
+
+def test_update_publish_task_file(notify_db_session, govuk_publish_request):
     publish_task = create_publish_task()
     govuk_publish_request.post(
-        "publish_task_progress.update_publish_task",
+        "publish_task_progress.update_publish_task_file",
         _data={"id": str(publish_task.id), "file": "test_file.txt"},
     )
 
@@ -43,6 +79,7 @@ def test_get_publish_progress(notify_db_session, govuk_publish_request):
 
     assert result["id"] == str(publish_task.id)
     assert result["task_id"] == publish_task.task_id
+    assert result["status"] == PUBLISH_PROGRESS_IN_PROGRESS
     assert "started_at" in result
     assert "finished_at" in result
     assert "last_activity_at" in result
@@ -64,6 +101,7 @@ def test_finish_publish(notify_db_session, govuk_publish_request):
     )
 
     assert result["id"] == str(publish_task.id)
+    assert result["status"] == PUBLISH_PROGRESS_FINISHED
     assert result["finished_at"] is not None
     assert result["last_activity_at"] is not None
 
