@@ -121,7 +121,7 @@ def send_broadcast_event(broadcast_event_id):
             )
         else:
             current_app.logger.info(
-                "*Not* queued a publish to GOV UK Alerts, one or more pending tasks already: %s",
+                "*Not* queued a publish to GOV UK Alerts, at least one pending task already: %s",
                 publish_pending.serialize(),
             )
 

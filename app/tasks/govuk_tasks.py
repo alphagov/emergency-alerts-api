@@ -33,7 +33,9 @@ def publish_govuk_build(
     new_pending = dao_create_publish_task(
         str(broadcast_event_id) or "api-scheduled", PUBLISH_PROGRESS_PENDING, trace_id=get_trace_id()
     )
-    dramatiq_task = _publish_govuk_alerts.send(broadcast_event_id=broadcast_event_id)
+    dramatiq_task = _publish_govuk_alerts.send(
+        pending_progress_id=str(new_pending.id), broadcast_event_id=broadcast_event_id
+    )
 
     return new_pending, dramatiq_task
 
@@ -46,6 +48,6 @@ def publish_govuk_build_full() -> tuple[PublishTaskProgress, Message]:
     dao_cancel_all_pending_publish_tasks()
 
     new_pending = dao_create_publish_task("api-scheduled-full", PUBLISH_PROGRESS_PENDING, trace_id=get_trace_id())
-    dramatiq_task = _publish_govuk_alerts_full.send()
+    dramatiq_task = _publish_govuk_alerts_full.send(pending_progress_id=str(new_pending.id))
 
     return new_pending, dramatiq_task

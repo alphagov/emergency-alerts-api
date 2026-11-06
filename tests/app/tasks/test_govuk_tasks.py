@@ -11,15 +11,16 @@ def test_publish_schedules_when_no_pending_tasks_present(mocker):
         "app.tasks.govuk_tasks.dao_get_all_pending_publish_tasks",
         return_value=[],
     )
-    mock_create = mocker.patch("app.tasks.govuk_tasks.dao_create_publish_task", return_value="create")
+    created_pending = PublishTaskProgress(id="created-pending")
+    mock_create = mocker.patch("app.tasks.govuk_tasks.dao_create_publish_task", return_value=created_pending)
     mock_send = mocker.patch("app.tasks.govuk_tasks._publish_govuk_alerts.send", return_value="send")
 
     create, send = publish_govuk_build("test")
 
-    assert create == "create"
+    assert create == created_pending
     assert send == "send"
     mock_create.assert_called_once_with("test", "pending", trace_id=ANY)
-    mock_send.assert_called_once_with(broadcast_event_id="test")
+    mock_send.assert_called_once_with(pending_progress_id="created-pending", broadcast_event_id="test")
 
 
 def test_does_not_schedule_when_pending_tasks_present(mocker):
@@ -28,7 +29,7 @@ def test_does_not_schedule_when_pending_tasks_present(mocker):
         "app.tasks.govuk_tasks.dao_get_all_pending_publish_tasks",
         return_value=[progress_task],
     )
-    mock_create = mocker.patch("app.tasks.govuk_tasks.dao_create_publish_task", return_value="create")
+    mock_create = mocker.patch("app.tasks.govuk_tasks.dao_create_publish_task", return_value="created-pending")
     mock_send = mocker.patch("app.tasks.govuk_tasks._publish_govuk_alerts.send", return_value="send")
 
     ret = publish_govuk_build()
@@ -40,13 +41,14 @@ def test_does_not_schedule_when_pending_tasks_present(mocker):
 
 def test_full_publish_always_schedules_and_deletes_pending(mocker):
     mock_delete = mocker.patch("app.tasks.govuk_tasks.dao_cancel_all_pending_publish_tasks")
-    mock_create = mocker.patch("app.tasks.govuk_tasks.dao_create_publish_task", return_value="create")
+    created_pending = PublishTaskProgress(id="created-pending")
+    mock_create = mocker.patch("app.tasks.govuk_tasks.dao_create_publish_task", return_value=created_pending)
     mock_send = mocker.patch("app.tasks.govuk_tasks._publish_govuk_alerts_full.send", return_value="send")
 
     create, send = publish_govuk_build_full()
 
-    assert create == "create"
+    assert create == created_pending
     assert send == "send"
     mock_delete.assert_called_once()
     mock_create.assert_called_once_with("api-scheduled-full", "pending", trace_id=ANY)
-    mock_send.assert_called_once_with()
+    mock_send.assert_called_once_with(pending_progress_id="created-pending")
