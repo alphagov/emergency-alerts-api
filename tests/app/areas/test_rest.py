@@ -82,7 +82,7 @@ def test_get_areas_by_ids_returns_expected_postcode_areas(admin_request):
     [
         (
             "coordinates_54.0_-2.0_30.0_latitude_longitude",
-            "30km around the easting of 54 and the northing of -2",
+            "30km around 54 latitude, -2 longitude",
         ),
         (
             "coordinates_400000.0_300000.0_30.0_easting_northing",
