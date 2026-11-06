@@ -1,6 +1,8 @@
 import functools
 import itertools
+import logging
 import os
+import traceback
 import uuid
 
 import boto3
@@ -378,6 +380,9 @@ def audit_broadcast_areas():
 
 @notify_command(name="add-areas")
 def add_areas():
+
+    logging.error("ADD_AREAS CALLED\n%s", "".join(traceback.format_stack()))
+
     s3 = boto3.client("s3")
     VERSION = "1.0.0"
     AREAS_SOURCE_BUCKET = os.environ.get("AREAS_SOURCE_BUCKET_NAME")
