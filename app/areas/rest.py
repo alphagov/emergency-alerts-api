@@ -152,7 +152,10 @@ def get_areas_by_ids():
         except Exception:
             return jsonify({"message": "Invalid coordinate values or coordinate type"}), 400
 
-        name = f"{radius:g}km around the easting of {first_coordinate:g} " f"and the northing of {second_coordinate:g}"
+        if coordinate_type == "latitude_longitude":
+            name = f"{radius:g}km around {first_coordinate:g} latitude, {second_coordinate:g} longitude"
+        elif coordinate_type == "easting_northing":
+            name = f"{radius:g}km around the easting of {first_coordinate:g} and the northing of {second_coordinate:g}"
 
         centroid = shapely.Point(longitude, latitude).wkt
         parent_area = get_parent_area_name(centroid)
