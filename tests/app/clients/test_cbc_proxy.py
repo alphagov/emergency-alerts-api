@@ -50,6 +50,7 @@ def cbc_proxy_client(notify_db_session, client, mocker):
             "CBC_PROXY_AWS_SECRET_ACCESS_KEY": "cbc-proxy-aws-secret-access-key",
             "AWS_SECRET_ACCESS_KEY": "cbc-proxy-aws-secret-access-key",
             "CBC_ACCOUNT_NUMBER": None,
+            "CBC_PROXY_LAMBDA_ARN_OVERRIDES": {},
             "CBC_PROXY_ENABLED": True,
         }
     )
@@ -96,6 +97,49 @@ def test_cbc_proxy_lambda_client_has_correct_keys(cbc_proxy_ee):
     secret = cbc_proxy_ee._lambda_client._request_signer._credentials.secret_key
     assert key == "cbc-proxy-aws-access-key-id"
     assert secret == "cbc-proxy-aws-secret-access-key"
+
+
+def test_cbc_proxy_uses_override_arn_and_region_but_keeps_default_for_other_proxies(client, mocker):
+    default_lambda_client = Mock()
+    override_lambda_client = Mock()
+    default_lambda_client.invoke.return_value = {"StatusCode": 200}
+    override_lambda_client.invoke.return_value = {"StatusCode": 200}
+    create_lambda_client = mocker.patch(
+        "app.clients.cbc_proxy.boto3.client",
+        side_effect=[default_lambda_client, override_lambda_client],
+    )
+    override_arn = "arn:aws:lambda:eu-west-1:123456789012:function:ee-1-proxy"
+
+    cbc_proxy_client = CBCProxyClient()
+    cbc_proxy_client.init_app(
+        Mock(
+            config={
+                "CBC_PROXY_ENABLED": True,
+                "CBC_ACCOUNT_NUMBER": "123456789012",
+                "CBC_PROXY_LAMBDA_ARN_OVERRIDES": {"ee-1-proxy": override_arn},
+            }
+        )
+    )
+    proxy = cbc_proxy_client.get_proxy("ee")
+
+    with client.application.app_context():
+        assert proxy._invoke_lambda("ee-1-proxy", {}, "cbc_a")
+        assert proxy._invoke_lambda("ee-2-proxy", {}, "cbc_a")
+
+    override_lambda_client.invoke.assert_called_once_with(
+        FunctionName=override_arn,
+        InvocationType="RequestResponse",
+        Payload=mocker.ANY,
+    )
+    default_lambda_client.invoke.assert_called_once_with(
+        FunctionName="123456789012:function:ee-2-proxy",
+        InvocationType="RequestResponse",
+        Payload=mocker.ANY,
+    )
+    assert create_lambda_client.call_args_list == [
+        call("lambda", region_name="eu-west-2"),
+        call("lambda", region_name="eu-west-1"),
+    ]
 
 
 def test_cbc_proxy_send_link_test(mocker, cbc_proxy_ee):
