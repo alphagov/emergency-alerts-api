@@ -8,7 +8,7 @@ from app.dao.publish_task_progress_dao import (
     dao_create_publish_task,
     dao_delete_publish_by_id,
     dao_finish_publish,
-    dao_get_all_in_progress_publish_tasks,
+    dao_get_all_pending_or_in_progress_publish_tasks,
     dao_get_all_pending_publish_tasks,
     dao_get_all_publish_tasks,
     dao_get_all_publish_tasks_older_than,
@@ -76,7 +76,7 @@ def test_dao_cancel_all_pending_publish_tasks(notify_db_session):
     assert PublishTaskProgress.query.filter_by(task_id=task4.task_id).first().status == PUBLISH_PROGRESS_CANCELLED
 
 
-def test_dao_get_all_in_progress_publish_tasks(notify_db_session):
+def test_dao_get_all_pending_or_in_progress_publish_tasks(notify_db_session):
     task1 = PublishTaskProgress(task_id="test-task1", finished_at=None)
     task2 = PublishTaskProgress(task_id="test-task2", finished_at=None)
     task3 = PublishTaskProgress(
@@ -86,8 +86,8 @@ def test_dao_get_all_in_progress_publish_tasks(notify_db_session):
     db.session.add_all([task1, task2, task3, task4])
     db.session.commit()
 
-    results = {task.task_id for task in dao_get_all_in_progress_publish_tasks()}
-    assert results == {task1.task_id, task2.task_id}
+    results = {task.task_id for task in dao_get_all_pending_or_in_progress_publish_tasks()}
+    assert results == {task1.task_id, task2.task_id, task4.task_id}
 
 
 def test_dao_get_all_publish_tasks_older_than(notify_db_session):

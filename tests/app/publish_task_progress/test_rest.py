@@ -129,6 +129,20 @@ def test_get_publish_tasks_returns_failed_publish_tasks(notify_db_session, govuk
     assert "publish-dynamic" in result["failed"]
 
 
+def test_get_publish_tasks_returns_overdue_pending_publish_tasks(notify_db_session, govuk_publish_request):
+    create_publish_task(task_id="publish-all_origin1_123")
+    create_publish_task(
+        task_id="publish-dynamic_origin2_124", status=PUBLISH_PROGRESS_PENDING, started_at=datetime(2020, 12, 22)
+    )
+
+    result = govuk_publish_request.get("publish_task_progress.get_publish_tasks")
+
+    assert "ongoing" in result
+    assert "overdue-pending" in result
+    assert "publish-all" in result["ongoing"]
+    assert "publish-dynamic" in result["overdue-pending"]
+
+
 def test_get_publish_tasks_gets_no_tasks(notify_db_session, govuk_publish_request):
     result = govuk_publish_request.get("publish_task_progress.get_publish_tasks")
     assert result == {}

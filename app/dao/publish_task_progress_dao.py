@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
 from flask import current_app
+from sqlalchemy import or_
 
 from app import db
 from app.models import (
@@ -32,8 +33,13 @@ def dao_cancel_all_pending_publish_tasks() -> list[PublishTaskProgress]:
     )
 
 
-def dao_get_all_in_progress_publish_tasks() -> list[PublishTaskProgress]:
-    return PublishTaskProgress.query.filter_by(status=PUBLISH_PROGRESS_IN_PROGRESS).all()
+def dao_get_all_pending_or_in_progress_publish_tasks() -> list[PublishTaskProgress]:
+    return PublishTaskProgress.query.filter(
+        or_(
+            PublishTaskProgress.status == PUBLISH_PROGRESS_IN_PROGRESS,
+            PublishTaskProgress.status == PUBLISH_PROGRESS_PENDING,
+        )
+    ).all()
 
 
 def dao_get_all_publish_tasks() -> list[PublishTaskProgress]:

@@ -6,13 +6,13 @@ from app import db
 from app.dao.publish_task_progress_dao import (
     dao_create_publish_task,
     dao_finish_publish,
-    dao_get_all_in_progress_publish_tasks,
+    dao_get_all_pending_or_in_progress_publish_tasks,
     dao_get_publish_task,
     dao_purge_old_publish_tasks,
     dao_update_publish,
 )
 from app.errors import register_errors
-from app.models import PUBLISH_PROGRESS_IN_PROGRESS
+from app.models import PUBLISH_PROGRESS_IN_PROGRESS, PUBLISH_PROGRESS_PENDING
 
 publish_task_progress_blueprint = Blueprint(
     "publish_task_progress",
@@ -23,7 +23,7 @@ publish_task_progress_blueprint = Blueprint(
 register_errors(publish_task_progress_blueprint)
 
 accepted_publish_types = ["publish-all", "publish-dynamic"]
-accepted_publish_status = ["failed", "ongoing"]
+accepted_publish_status = ["failed", "overdue-pending", "ongoing"]
 
 
 @publish_task_progress_blueprint.route("/add-publish", methods=["POST"])
@@ -88,12 +88,12 @@ def finish_publish():
 @publish_task_progress_blueprint.route("/get-publish-tasks", methods=["GET"])
 def get_publish_tasks():
     now = datetime.utcnow().timestamp()
-    tasks = dao_get_all_in_progress_publish_tasks()
+    tasks = dao_get_all_pending_or_in_progress_publish_tasks()
 
     result = {}
 
     for task in tasks:
-        status = "failed" if has_publish_failed(now, task) else "ongoing"
+        status = calculate_publish_check_status(now, task)
         task_data = parse_task_id(task.task_id)
         publish_type = task_data.get("publish_type")
 
@@ -118,8 +118,17 @@ def parse_task_id(task_id):
     return {"publish_type": publish_type, "publish_origin": publish_origin, "timestamp": timestamp}
 
 
-def has_publish_failed(now, task):
-    return now - task.last_activity_at.timestamp() > current_app.config.get("GOVUK_PUBLISH_CHECKS_FAILED_INTERVAL")
+def calculate_publish_check_status(now, task):
+    if task.status == PUBLISH_PROGRESS_PENDING:
+        too_old = now - current_app.config.get("GOVUK_PENDING_STATUS_MAX_SECONDS")
+        if task.started_at.timestamp() < too_old:
+            return "overdue-pending"
+
+    if task.status == PUBLISH_PROGRESS_IN_PROGRESS:
+        if now - task.last_activity_at.timestamp() > current_app.config.get("GOVUK_PUBLISH_CHECKS_FAILED_INTERVAL"):
+            return "failed"
+
+    return "ongoing"
 
 
 @publish_task_progress_blueprint.route("/purge/<int:days_older_than>", methods=["DELETE"])
