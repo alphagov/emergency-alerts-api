@@ -1,4 +1,9 @@
+import json
 import os
+
+cbc_proxy_lambda_arn_overrides = json.loads(os.getenv("CBC_PROXY_LAMBDA_ARN_OVERRIDES", "{}"))
+if not isinstance(cbc_proxy_lambda_arn_overrides, dict):
+    raise ValueError("CBC_PROXY_LAMBDA_ARN_OVERRIDES must be a JSON object")
 
 
 class BroadcastProvider:
@@ -58,6 +63,7 @@ class Config(object):
     API_RATE_LIMIT_ENABLED = True
 
     CBC_ACCOUNT_NUMBER = os.getenv("CBC_ACCOUNT_NUMBER")
+    CBC_PROXY_LAMBDA_ARN_OVERRIDES = cbc_proxy_lambda_arn_overrides
     CBC_PROXY_ENABLED = True
     ENABLED_CBCS = {BroadcastProvider.EE, BroadcastProvider.THREE, BroadcastProvider.O2, BroadcastProvider.VODAFONE}
 

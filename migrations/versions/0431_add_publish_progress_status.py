@@ -26,14 +26,9 @@ def upgrade():
     status_enum.create(op.get_bind())
     op.add_column(
         "publish_task_progress",
-        sa.Column(
-            "status",
-            status_enum,
-            nullable=True,  # Overridden after updating
-        ),
+        sa.Column("status", status_enum, server_default="in_progress"),
     )
     op.execute("UPDATE publish_task_progress SET status = 'finished'")
-    op.alter_column("publish_task_progress", "status", nullable=False)
 
     op.alter_column("publish_task_progress", "task_id", nullable=True)
 
