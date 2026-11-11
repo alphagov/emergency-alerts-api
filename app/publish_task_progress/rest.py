@@ -114,6 +114,12 @@ def get_publish_tasks():
 
 
 def parse_task_id(task_id):
+    split = task_id.split("_")
+
+    # task_id might be set by API before it gets upserted by GovUK. Assume it's just the type.
+    if len(split) != 3:
+        return {"publish_type": split[0]}
+
     publish_type, publish_origin, timestamp = task_id.split("_")
     return {"publish_type": publish_type, "publish_origin": publish_origin, "timestamp": timestamp}
 

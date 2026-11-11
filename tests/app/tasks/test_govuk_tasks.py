@@ -22,7 +22,7 @@ def test_publish_schedules_when_no_pending_tasks_present(mocker, notify_api):
 
     assert create == created_pending
     assert send == "send"
-    mock_create.assert_called_once_with("test", "pending", trace_id=ANY)
+    mock_create.assert_called_once_with("publish-dynamic", "pending", trace_id=ANY)
     mock_send.assert_called_once_with(pending_progress_id="created-pending", broadcast_event_id="test")
 
 
@@ -42,12 +42,12 @@ def test_publish_still_schedules_when_old_pending_tasks_present(mocker, notify_a
 
     assert create == created_pending
     assert send == "send"
-    mock_create.assert_called_once_with("test", "pending", trace_id=ANY)
+    mock_create.assert_called_once_with("publish-dynamic", "pending", trace_id=ANY)
     mock_send.assert_called_once_with(pending_progress_id="created-pending", broadcast_event_id="test")
 
 
 def test_does_not_schedule_when_pending_tasks_present(mocker, notify_api):
-    progress_task = PublishTaskProgress(task_id="test", started_at=datetime.now(pytz.utc))
+    progress_task = PublishTaskProgress(task_id="publish-dynamic", started_at=datetime.now(pytz.utc))
     mocker.patch(
         "app.tasks.govuk_tasks.dao_get_all_pending_publish_tasks",
         return_value=[progress_task],
@@ -73,5 +73,5 @@ def test_full_publish_always_schedules_and_deletes_pending(mocker, notify_api):
     assert create == created_pending
     assert send == "send"
     mock_delete.assert_called_once()
-    mock_create.assert_called_once_with("api-scheduled-full", "pending", trace_id=ANY)
+    mock_create.assert_called_once_with("publish-all", "pending", trace_id=ANY)
     mock_send.assert_called_once_with(pending_progress_id="created-pending")
