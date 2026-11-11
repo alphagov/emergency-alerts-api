@@ -16,6 +16,7 @@ from app.models import (
     BROADCAST_TYPE,
     BroadcastEventMessageType,
     BroadcastStatusType,
+    PublishTaskProgress,
 )
 from app.tasks.broadcast_message_tasks import (
     BroadcastIntegrityError,
@@ -38,7 +39,7 @@ def test_send_broadcast_event_queues_up_for_active_providers(mocker, notify_api,
     broadcast_message = create_broadcast_message(template, status=BroadcastStatusType.BROADCASTING)
     event = create_broadcast_event(broadcast_message)
 
-    mocker.patch("app.tasks.broadcast_message_tasks.publish_govuk_alerts.send")
+    mocker.patch("app.tasks.broadcast_message_tasks.publish_govuk_build", return_value=(PublishTaskProgress(), Mock()))
 
     mock_send_broadcast_provider_message = mocker.patch(
         "app.tasks.broadcast_message_tasks.send_broadcast_provider_message.send",
@@ -70,7 +71,9 @@ def test_send_broadcast_event_calls_publish_govuk_alerts_task(
         "app.tasks.broadcast_message_tasks.send_broadcast_provider_message",
     )
 
-    mock = mocker.patch("app.tasks.broadcast_message_tasks.publish_govuk_alerts.send")
+    mock = mocker.patch(
+        "app.tasks.broadcast_message_tasks.publish_govuk_build", return_value=(PublishTaskProgress(), Mock())
+    )
 
     with set_config(notify_api, "ENABLED_CBCS", {"ee", "vodafone"}):
         send_broadcast_event(event.id)
@@ -86,7 +89,7 @@ def test_send_broadcast_event_only_sends_to_one_provider_if_set_on_service(
     broadcast_message = create_broadcast_message(template, status=BroadcastStatusType.BROADCASTING)
     event = create_broadcast_event(broadcast_message)
 
-    mocker.patch("app.tasks.broadcast_message_tasks.publish_govuk_alerts.send")
+    mocker.patch("app.tasks.broadcast_message_tasks.publish_govuk_build", return_value=(PublishTaskProgress(), Mock()))
 
     mock_send_broadcast_provider_message = mocker.patch(
         "app.tasks.broadcast_message_tasks.send_broadcast_provider_message.send",
@@ -108,7 +111,7 @@ def test_send_broadcast_event_does_nothing_if_provider_set_on_service_isnt_enabl
     broadcast_message = create_broadcast_message(template, status=BroadcastStatusType.BROADCASTING)
     event = create_broadcast_event(broadcast_message)
 
-    mocker.patch("app.tasks.broadcast_message_tasks.publish_govuk_alerts.send")
+    mocker.patch("app.tasks.broadcast_message_tasks.publish_govuk_build", return_value=(PublishTaskProgress(), Mock()))
 
     mock_send_broadcast_provider_message = mocker.patch(
         "app.tasks.broadcast_message_tasks.send_broadcast_provider_message.send",
