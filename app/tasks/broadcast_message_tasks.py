@@ -22,7 +22,7 @@ from app.models import (
     BroadcastProvider,
     BroadcastProviderMessage,
 )
-from app.tasks.govuk_tasks import publish_govuk_build
+from app.tasks.stub_tasks import publish_govuk_alerts
 from app.utils import format_sequential_number, is_local_host
 
 
@@ -114,16 +114,8 @@ def send_broadcast_event(broadcast_event_id):
     try:
         broadcast_event = dao_get_broadcast_event_by_id(broadcast_event_id)
 
-        publish_pending, publish_task = publish_govuk_build(broadcast_event_id=broadcast_event_id)
-        if publish_task is not None:
-            current_app.logger.info(
-                "Enqueued publish GOV UK Alerts: %s, %s", publish_pending.serialize(), publish_task.asdict()
-            )
-        else:
-            current_app.logger.info(
-                "*Not* queued a publish to GOV UK Alerts, at least one pending task already: %s",
-                publish_pending.serialize(),
-            )
+        publish_task = publish_govuk_alerts.send(broadcast_event_id=broadcast_event_id)
+        current_app.logger.info("Enqueued publish GOV UK Alerts: %s", publish_task.asdict())
 
         providers = broadcast_event.service.get_available_broadcast_providers()
         current_app.logger.info(

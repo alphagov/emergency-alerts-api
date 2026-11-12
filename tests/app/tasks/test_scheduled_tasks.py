@@ -1,7 +1,7 @@
 import time
 from collections import namedtuple
 from datetime import datetime, timedelta, timezone
-from unittest.mock import Mock, call
+from unittest.mock import call
 
 import pytest
 from freezegun import freeze_time
@@ -133,7 +133,7 @@ def test_auto_expire_broadcast_messages(
         finishes_at=finishes_at,
         template=sample_template,
     )
-    mock_task = mocker.patch("app.tasks.scheduled_tasks.publish_govuk_build")
+    mock_task = mocker.patch("app.tasks.broadcast_message_tasks.publish_govuk_alerts.send")
 
     auto_expire_broadcast_messages()
     assert message.status == final_status
@@ -142,7 +142,7 @@ def test_auto_expire_broadcast_messages(
 
 
 def test_remove_yesterdays_planned_tests_on_govuk_alerts(notify_db_session, mocker):
-    mock_task = mocker.patch("app.tasks.scheduled_tasks.publish_govuk_build_full", return_value=(Mock(), Mock()))
+    mock_task = mocker.patch("app.tasks.stub_tasks.publish_govuk_alerts_full.send")
 
     remove_yesterdays_planned_tests_on_govuk_alerts()
 
@@ -202,8 +202,9 @@ def test_validate_functional_test_account_emails(notify_db_session):
     (True, False),
 )
 def test_queue_after_alert_activities_does_govuk_refresh(notify_api, mocker, finished_govuk_acknowledged):
-    task_mock = mocker.patch("app.tasks.scheduled_tasks.publish_govuk_build", return_value=(Mock(), Mock()))
-
+    task_mock = mocker.patch(
+        "app.tasks.broadcast_message_tasks.publish_govuk_alerts.send",
+    )
     mocker.patch(
         "app.tasks.scheduled_tasks.dao_get_all_finished_broadcast_messages_with_outstanding_actions",
         return_value=[BroadcastMessage(finished_govuk_acknowledged=finished_govuk_acknowledged)],

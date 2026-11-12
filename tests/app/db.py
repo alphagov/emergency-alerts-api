@@ -18,7 +18,6 @@ from app.dao.users_dao import save_model_user
 from app.models import (
     BROADCAST_TYPE,
     EMAIL_TYPE,
-    PUBLISH_PROGRESS_IN_PROGRESS,
     AdminAction,
     ApiKey,
     BroadcastEvent,
@@ -509,22 +508,13 @@ def create_broadcast_message_edit_reason(broadcast_message_id, service_id, edit_
 
 
 def create_publish_task(
-    id=None,
-    task_id="test-task-id",
-    status=PUBLISH_PROGRESS_IN_PROGRESS,
-    trace_id=None,
-    last_published_file=None,
-    started_at=None,
-    last_activity_at=None,
-    finished_at=None,
+    id=None, task_id="test-task-id", last_published_file=None, started_at=None, last_activity_at=None, finished_at=None
 ):
     if not id:
         id = create_uuid()
     publish_task = PublishTaskProgress(
         id=id,
         task_id=task_id,
-        status=status,
-        trace_id=trace_id,
         last_activity_at=last_activity_at,
         last_published_file=last_published_file,
         started_at=started_at,
