@@ -66,7 +66,7 @@ def create_broadcast():
                 status_code=400,
             )
         broadcast_message = _cancel_or_reject_broadcast(
-            broadcast_json["references"].split(","), authenticated_service.id
+            [ref.strip() for ref in broadcast_json["references"].split(",")], authenticated_service.id
         )
         current_app.logger.info("Cancelled/rejected BroadcastMessage %s", broadcast_message.id)
         return jsonify(broadcast_message.serialize()), 201
