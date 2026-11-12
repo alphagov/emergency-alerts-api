@@ -121,8 +121,8 @@ def test_get_areas_by_ids_returns_expected_coordinate_areas(admin_request, coord
         ),
         (
             # ID doesn't have the correct format - so splits incorrectly, raising ValueError
-            "coordinates",
-            "Invalid coordinate area ID: 'coordinates'",
+            "coordinates_xxx",
+            "Invalid coordinate area ID: 'coordinates_xxx'",
         ),
     ],
 )
