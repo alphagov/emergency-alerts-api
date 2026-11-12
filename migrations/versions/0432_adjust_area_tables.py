@@ -10,8 +10,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision = "0431_adjust_area_tables.py"
-down_revision = "0430_add_bpm_err_retry_exhausted"
+revision = "0432_adjust_area_tables"
+down_revision = "0431_add_publish_progress_status"
 
 
 def upgrade():
