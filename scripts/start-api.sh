@@ -161,7 +161,7 @@ fi
 
 run_api(){
     cd "$DIR_API";
-    export SERVICE=api && . $VENV_API/bin/activate && exec $PYTHON_COMMAND flask run -p 6011 --host=0.0.0.0;
+    export SERVICE=api && . $VENV_API/bin/activate && exec $PYTHON_COMMAND gunicorn application:application --bind 0.0.0.0:6011
 }
 
 run_worker(){
