@@ -12,4 +12,4 @@ class AreaService:
         # Preserve order while removing duplicates
         unique_ids = list(dict.fromkeys(area_ids))
 
-        return [AreaResolverRegistry.resolve(area_id) for area_id in unique_ids]
+        return AreaResolverRegistry.resolve_all(unique_ids)
