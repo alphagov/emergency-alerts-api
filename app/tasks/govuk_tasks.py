@@ -29,14 +29,18 @@ def publish_govuk_build(
     existing_pending = dao_get_all_pending_publish_tasks()
 
     valid_pending: list[PublishTaskProgress] = []
-    too_old = datetime.now(pytz.utc) - timedelta(seconds=current_app.config["GOVUK_PENDING_STATUS_MAX_SECONDS"])
+    too_old_timestamp = (
+        datetime.now(pytz.utc) - timedelta(seconds=current_app.config["GOVUK_PENDING_STATUS_MAX_SECONDS"])
+    ).timestamp()
     for pending in existing_pending:
         # Make sure not too old...
-        if pending.started_at > too_old:
+        if pending.started_at.timestamp() > too_old_timestamp:
             valid_pending.append(pending)
         else:
             current_app.logger.warning(
-                "A pending still exists but it's very old? ID: %s, started at: %s", pending.id, pending.started_at
+                "A pending still exists but it's very old? Ignoring it. ID: %s, started at: %s",
+                pending.id,
+                pending.started_at,
             )
 
     if len(valid_pending) > 0:

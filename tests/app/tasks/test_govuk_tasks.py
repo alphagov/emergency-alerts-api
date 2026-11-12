@@ -1,8 +1,6 @@
 from datetime import datetime, timedelta
 from unittest.mock import ANY
 
-import pytz
-
 from app.models import (
     PublishTaskProgress,
 )
@@ -30,8 +28,9 @@ def test_publish_still_schedules_when_old_pending_tasks_present(mocker, notify_a
     mocker.patch(
         "app.tasks.govuk_tasks.dao_get_all_pending_publish_tasks",
         return_value=[
-            # Over 10 minutes old: beyond the (default) cutoff in config.py
-            PublishTaskProgress(started_at=datetime.now(pytz.utc) - timedelta(minutes=5))
+            # Over 5 minutes old: beyond the (default) cutoff in config.py
+            # utcnow to be timezone naive to match DB value
+            PublishTaskProgress(started_at=datetime.utcnow() - timedelta(minutes=5))
         ],
     )
     created_pending = PublishTaskProgress(id="created-pending")
@@ -47,7 +46,8 @@ def test_publish_still_schedules_when_old_pending_tasks_present(mocker, notify_a
 
 
 def test_does_not_schedule_when_pending_tasks_present(mocker, notify_api):
-    progress_task = PublishTaskProgress(task_id="publish-dynamic", started_at=datetime.now(pytz.utc))
+    # utcnow to be timezone naive to match DB value
+    progress_task = PublishTaskProgress(task_id="publish-dynamic", started_at=datetime.utcnow())
     mocker.patch(
         "app.tasks.govuk_tasks.dao_get_all_pending_publish_tasks",
         return_value=[progress_task],
