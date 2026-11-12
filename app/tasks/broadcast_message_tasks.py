@@ -109,7 +109,11 @@ def _check_event_makes_sense_in_sequence(broadcast_event: BroadcastEvent, provid
                 )
 
 
-@dramatiq.actor(actor_name=TaskNames.SEND_BROADCAST_EVENT, queue_name=QueueNames.HIGH_PRIORITY)
+@dramatiq.actor(
+    actor_name=TaskNames.SEND_BROADCAST_EVENT,
+    queue_name=QueueNames.HIGH_PRIORITY,
+    allow_retry=True,
+)
 def send_broadcast_event(broadcast_event_id):
     try:
         broadcast_event = dao_get_broadcast_event_by_id(broadcast_event_id)
