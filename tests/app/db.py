@@ -32,6 +32,9 @@ from app.models import (
     Domain,
     FailedLogin,
     FeatureToggle,
+    GeographyPolygons,
+    GeographyType,
+    GeographyVersion,
     InvitedOrganisationUser,
     InvitedUser,
     Organisation,
@@ -523,3 +526,89 @@ def create_publish_task(
     db.session.add(publish_task)
     db.session.commit()
     return publish_task
+
+
+def create_geography_type(notify_db_session, name="Test Areas", route="test_route", name_singular="Test area"):
+    test_geography_type = GeographyType(name=name, route=route, name_singular=name_singular)
+    notify_db_session.add(test_geography_type)
+    notify_db_session.commit()
+    return test_geography_type
+
+
+def create_geography_version(
+    notify_db_session, geography_type_id, version="1.0.0", source_url="test.csv", state="active"
+):
+    test_geography_version = GeographyVersion(
+        geography_type_id=geography_type_id, version=version, source_url=source_url, state=state
+    )
+    notify_db_session.add(test_geography_version)
+    notify_db_session.commit()
+    return test_geography_version
+
+
+def create_area_with_type_and_version(
+    notify_db_session,
+    geographic_id="test123",
+    name="Test Area",
+    geometry=None,
+    parent_geography_id=None,
+    is_selectable=False,
+):
+    geography_type = create_geography_type(notify_db_session)
+    geography_version = create_geography_version(notify_db_session, geography_type_id=geography_type.id)
+    return create_area(
+        notify_db_session,
+        geography_version_id=geography_version.id,
+        geographic_id=geographic_id,
+        name=name,
+        geometry=geometry,
+        parent_geography_id=parent_geography_id,
+        is_selectable=is_selectable,
+    )
+
+
+def create_area(
+    notify_db_session,
+    geography_version_id,
+    geographic_id="test123",
+    name="Test Area",
+    geometry=None,
+    parent_geography_id=None,
+    is_selectable=False,
+):
+    if not geometry:
+        geometry = (
+            "0103000020E61000000100000005000000A4"
+            "703D0AD7A3C0BFE17A14AE47C14940B81E85E"
+            "B51B8BEBFE17A14AE47C14940B81E85EB51B8"
+            "BEBF0000000000C04940A4703D0AD7A3C0BF0"
+            "000000000C04940A4703D0AD7A3C0BFE17A14"
+            "AE47C14940"
+        )
+    test_area = GeographyPolygons(
+        geographic_id=geographic_id,
+        name=name,
+        geometry=geometry,
+        parent_geography_id=parent_geography_id,
+        geography_version_id=geography_version_id,
+        is_selectable=is_selectable,
+    )
+    notify_db_session.add(test_area)
+    notify_db_session.commit()
+    return test_area
+
+
+def create_country_area_data_for_coordinates_checks(notify_db_session):
+    countries_type = create_geography_type(notify_db_session, route="countries")
+    version = create_geography_version(notify_db_session, geography_type_id=countries_type.id)
+    # Creates country area for coordinate validity check - because we check that
+    # they lie within all of the country geometries that we store
+    create_area(
+        notify_db_session,
+        geography_version_id=version.id,
+        geometry=(
+            "0103000020E61000000100000005000000CDCCCCCCCC4C21"
+            "C0CDCCCCCCCCEC48407B14AE47E17AFC3FCDCCCCCCCCEC48407B14AE47E17AFC3FAE"
+            "47E17A146E4E40CDCCCCCCCC4C21C0AE47E17A146E4E40CDCCCCCCCC4C21C0CDCCCCCCCCEC4840"
+        ),
+    )
