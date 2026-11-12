@@ -22,7 +22,7 @@ from app.models import (
     BroadcastProvider,
     BroadcastProviderMessage,
 )
-from app.tasks.stub_tasks import publish_govuk_alerts
+from app.tasks.govuk_tasks import publish_govuk_build
 from app.utils import format_sequential_number, is_local_host
 
 
@@ -109,13 +109,25 @@ def _check_event_makes_sense_in_sequence(broadcast_event: BroadcastEvent, provid
                 )
 
 
-@dramatiq.actor(actor_name=TaskNames.SEND_BROADCAST_EVENT, queue_name=QueueNames.HIGH_PRIORITY)
+@dramatiq.actor(
+    actor_name=TaskNames.SEND_BROADCAST_EVENT,
+    queue_name=QueueNames.HIGH_PRIORITY,
+    allow_retry=True,
+)
 def send_broadcast_event(broadcast_event_id):
     try:
         broadcast_event = dao_get_broadcast_event_by_id(broadcast_event_id)
 
-        publish_task = publish_govuk_alerts.send(broadcast_event_id=broadcast_event_id)
-        current_app.logger.info("Enqueued publish GOV UK Alerts: %s", publish_task.asdict())
+        publish_pending, publish_task = publish_govuk_build(broadcast_event_id=broadcast_event_id)
+        if publish_task is not None:
+            current_app.logger.info(
+                "Enqueued publish GOV UK Alerts: %s, %s", publish_pending.serialize(), publish_task.asdict()
+            )
+        else:
+            current_app.logger.info(
+                "*Not* queued a publish to GOV UK Alerts, at least one pending task already: %s",
+                publish_pending.serialize(),
+            )
 
         providers = broadcast_event.service.get_available_broadcast_providers()
         current_app.logger.info(
