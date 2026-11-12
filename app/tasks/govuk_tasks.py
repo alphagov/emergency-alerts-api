@@ -43,8 +43,10 @@ def publish_govuk_build(
         # There's already a pending publish. Thus scheduling again will not help.
         return existing_pending[0], None
 
-    # The task ID here is a bit arbitrary, but contains the publish type for the out-of-app monitoring
-    new_pending = dao_create_publish_task("publish-dynamic", PUBLISH_PROGRESS_PENDING, trace_id=get_trace_id())
+    # api-scheduled is arbitrary - it's meaningless and will be upserted by GovUK anyway
+    new_pending = dao_create_publish_task(
+        str(broadcast_event_id) or "api-scheduled", PUBLISH_PROGRESS_PENDING, trace_id=get_trace_id()
+    )
     dramatiq_task = _publish_govuk_alerts.send(
         pending_progress_id=str(new_pending.id), broadcast_event_id=broadcast_event_id
     )
@@ -59,8 +61,7 @@ def publish_govuk_build_full() -> tuple[PublishTaskProgress, Message]:
     """
     dao_cancel_all_pending_publish_tasks()
 
-    # The task ID here is a bit arbitrary, but contains the publish type for the out-of-app monitoring
-    new_pending = dao_create_publish_task("publish-all", PUBLISH_PROGRESS_PENDING, trace_id=get_trace_id())
+    new_pending = dao_create_publish_task("api-scheduled-full", PUBLISH_PROGRESS_PENDING, trace_id=get_trace_id())
     dramatiq_task = _publish_govuk_alerts_full.send(pending_progress_id=str(new_pending.id))
 
     return new_pending, dramatiq_task
