@@ -1,8 +1,8 @@
 """
 
-Revision ID: 0431_adjust_area_tables.py
-Revises: 0430_add_bpm_err_retry_exhausted
-Create Date: 2026-08-05 14:22:30
+Revision ID: 0432_adjust_area_tables
+Revises: 0431_add_publish_progress_status
+Create Date: 2026-11-12 14:22:30
 
 """
 
