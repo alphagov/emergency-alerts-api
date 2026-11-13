@@ -629,7 +629,7 @@ six==1.17.0
     #   rfc3339-validator
 smartypants==2.0.2
     # via emergency-alerts-utils
-soupsieve==2.9
+soupsieve==4.0
     # via beautifulsoup4
 sqlalchemy==1.4.54
     # via
