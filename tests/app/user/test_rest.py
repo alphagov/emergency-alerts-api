@@ -794,10 +794,11 @@ def test_send_already_registered_email_returns_400_when_data_is_missing(admin_re
     assert json_resp["message"] == {"email": ["Missing data for required field."]}
 
 
+@freeze_time("2020-01-01 11:09:00.061258")
 def test_send_user_confirm_new_email_returns_204(admin_request, sample_user, mocker):
     mocked = mocker.patch("app.user.rest.notify_send")
     fake_token = "0123456789"
-    mocker.patch("app.utils.generate_token", return_value=fake_token)
+    token_mock = mocker.patch("app.utils.generate_token", return_value=fake_token)
     new_email = "new_address@dig.gov.uk"
     data = {"email": new_email}
 
@@ -820,6 +821,10 @@ def test_send_user_confirm_new_email_returns_204(admin_request, sample_user, moc
         },
     }
 
+    token_args = json.loads(token_mock.call_args[0][0])
+    assert token_args["user_id"] == str(sample_user.id)
+    assert token_args["email"] == new_email
+    assert token_args["created_at"] == "2020-01-01 11:09:00.061258+00:00"
     mocked.assert_called_once_with(notification)
 
 

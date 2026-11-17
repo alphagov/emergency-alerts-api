@@ -1006,7 +1006,7 @@ def _create_verification_url(user, base_url):
 
 
 def _create_confirmation_url(user, email_address):
-    data = json.dumps({"user_id": str(user.id), "email": email_address})
+    data = json.dumps({"user_id": str(user.id), "email": email_address, "created_at": str(datetime.now(timezone.utc))})
     url = "/user-profile/email/confirm/"
     return url_with_token(data, url, current_app.config)
 
