@@ -22,6 +22,9 @@ MAX_NUMBER_OF_POINTS_PER_POLYGON = 250
 
 def clean_up_invalid_polygons(polygons, indent="    "):
     # Taken from Admin SQLite DB scripts but adjusted
+    if isinstance(polygons, MultiPolygon):
+        polygons = polygons.geoms
+
     for polygon in polygons:
         shapely_polygon = Polygon(polygon)
 
@@ -66,7 +69,7 @@ def simplify_geometry(feature):
     raise ValueError(f"unknown geometry type: {geometry_type}")
 
 
-def polygons_and_simplified_polygons(feature, area_type):
+def polygons_and_simplified_polygons(feature, area_type, max_points):
     # Returns full_resolution_polygons, simplified_polygons, utm_crs
 
     raw_polygons = simplify_geometry(feature)
@@ -75,7 +78,6 @@ def polygons_and_simplified_polygons(feature, area_type):
     ]
     polygons = Polygons(clean_raw_polygons)
 
-    # TODO: if flood wrning areas -> don't remove polygons that are too small
     full_resolution = polygons
     smoothed = full_resolution.smooth
     simplified = smoothed.simplify
@@ -85,7 +87,7 @@ def polygons_and_simplified_polygons(feature, area_type):
 
     point_counts.append(simplified.point_count)
 
-    if simplified.point_count >= MAX_NUMBER_OF_POINTS_PER_POLYGON:
+    if simplified.point_count >= max_points:
         raise RuntimeError(
             "Too many points "
             "(adjust Polygons.perimeter_to_simplification_ratio or "
@@ -196,7 +198,13 @@ AREAS = {
         "id_column": "PFA24CD",
         "name_column": "PFA24NM",
     },
+    "Flood_Warning_Target_Areas": {
+        "id_column": "TA_CODE",
+        "name_column": "shortname",
+        "max_points_override": 350,
+    },
 }
+
 
 SOURCE_FILES_DIR = "./source_data"  # The directory where source data is stored
 OUTPUT_FILES_DIR = "./output_data"  # The directory where output data is stored
@@ -213,6 +221,7 @@ for area in AREAS:
     area_config = AREAS[area]
     id_column = area_config["id_column"]
     name_column = area_config["name_column"]
+    max_points = area_config.get("max_points_override", MAX_NUMBER_OF_POINTS_PER_POLYGON)
 
     # Sources lookup file containing parent - child area mapping and returns as a dict
     parent_lookup = load_parent_lookup(area_config)
@@ -241,6 +250,7 @@ for area in AREAS:
             _, simplified_polygons, _ = polygons_and_simplified_polygons(
                 feature["geometry"],
                 area,
+                max_points,
             )
 
             geographic_id = str(properties[id_column]).strip()
