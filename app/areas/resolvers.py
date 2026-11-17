@@ -147,6 +147,7 @@ class LegacyAreaResolver(AreaResolver):
         "lad25-",
         "ctyua23-",
         "ctyua25-",
+        "pfa24-",
     )
 
     @classmethod
@@ -165,7 +166,7 @@ class LegacyAreaResolver(AreaResolver):
         return [
             {
                 **area.serialize(),
-                "geography_type_name": None,  # see note below
+                "geography_type_name": None,
             }
             for area in areas
         ]
