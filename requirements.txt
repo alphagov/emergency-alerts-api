@@ -130,10 +130,10 @@ googleapis-common-protos==1.72.0
     # via
     #   opentelemetry-exporter-otlp-proto-grpc
     #   opentelemetry-exporter-otlp-proto-http
-greenlet==3.5.6
-    # via sqlalchemy
 grpcio==1.76.0
     # via opentelemetry-exporter-otlp-proto-grpc
+gunicorn==27.0.0
+    # via -r requirements.in
 idna==3.18
     # via
     #   jsonschema
