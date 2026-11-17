@@ -152,6 +152,17 @@ def test_update_user_attribute(client, sample_user, user_attribute, user_value):
     save_user_attribute(sample_user, update_dict)
     assert getattr(sample_user, user_attribute) == user_value
 
+    if user_attribute != "email_address":
+        assert sample_user.email_address_changed_at is None
+
+
+@freeze_time("2020-01-24T12:00:00")
+def test_update_user_attribute_updates_email_address_changed_at(client, sample_user):
+    assert sample_user.email_address_changed_at is None
+    update_dict = {"email_address": "test@test.com"}
+    save_user_attribute(sample_user, update_dict)
+    assert sample_user.email_address_changed_at == datetime.now()
+
 
 @freeze_time("2020-01-24T12:00:00")
 def test_update_user_password(notify_api, notify_db_session, sample_user):
