@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 import pytz
 from emergency_alerts_utils.url_safe_token import generate_token
 from flask import current_app, request
+from opentelemetry import trace
 
 DATETIME_FORMAT_NO_TIMEZONE = "%Y-%m-%d %H:%M:%S.%f"
 DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
@@ -133,3 +134,11 @@ def calculate_delay_period(failed_login_count):
 
 def check_request_within_throttle_period(login_attempt, delay_period):
     return datetime.now() - login_attempt.attempted_at < timedelta(seconds=delay_period)
+
+
+def get_trace_id():
+    span = trace.get_current_span()
+    if span is not trace.INVALID_SPAN:
+        # Convert to hex and strip out the 0x prefix
+        trace_id = hex(span.get_span_context().trace_id)[2:]
+        return trace_id
