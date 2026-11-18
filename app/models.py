@@ -74,6 +74,7 @@ class User(db.Model):
     id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = db.Column(db.String, nullable=False, index=True, unique=False)
     email_address = db.Column(db.String(255), nullable=False, index=True, unique=True)
+    email_address_changed_at = db.Column(db.DateTime, index=False, unique=False, nullable=True)
     created_at = db.Column(db.DateTime, index=False, unique=False, nullable=False, default=datetime.datetime.utcnow)
     updated_at = db.Column(db.DateTime, index=False, unique=False, nullable=True, onupdate=datetime.datetime.utcnow)
     _password = db.Column(db.String, index=False, unique=False, nullable=False)
