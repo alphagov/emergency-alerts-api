@@ -62,7 +62,10 @@ class AreasDAO:
             # retrieve parent ID from dictionary
             if sub_area and parent_geography_id:
                 parent_id = parent_areas[parent_geography_id]
-            parent_areas[row["geographic_id"]] = id
+
+            # Only store non-leaf areas that may have children referencing them
+            if not is_selectable:
+                parent_areas[row["geographic_id"]] = id
 
             geography_polygons_list.append(
                 {
@@ -76,6 +79,7 @@ class AreasDAO:
                 }
             )
         db.session.execute(insert(GeographyPolygons), geography_polygons_list)
+        del geography_polygons_list
         db.session.flush()
         return parent_areas
 
