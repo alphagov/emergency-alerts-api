@@ -2,6 +2,7 @@ import os
 import uuid
 from datetime import datetime, timezone
 
+import boto3
 import pandas as pd
 from utils import (
     copy_dataframe_to_table,
@@ -9,6 +10,8 @@ from utils import (
     get_source_data,
     insert_data_into_table,
 )
+
+s3 = boto3.client("s3")
 
 VERSION = "1.0.0"
 AREAS_SOURCE_BUCKET = os.environ.get("AREAS_SOURCE_BUCKET_NAME")
@@ -69,7 +72,7 @@ def insert_geography_type(conn, area):
 
 def insert_geography_polygons(conn, area, geography_version_id, geography_type_id):
     # Insert geography_polygons rows for a given area
-    data = get_source_data(f"{VERSION}/{area}.csv")
+    data = get_source_data(f"{VERSION}/{area}.csv", AREAS_SOURCE_BUCKET, s3)
     # Splits CSV into chunks for chunk/batch processing
     csv_data_chunks = pd.read_csv(data, index_col=False, chunksize=100000)
     current_chunk = 1
