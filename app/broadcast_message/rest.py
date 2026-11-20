@@ -509,6 +509,7 @@ def purge_broadcast_messages(service_id=None, older_than=365):
             )
 
     except Exception as e:
+        current_app.logger.exception(e)
         return jsonify(result="error", message=f"Unable to purge old alert items: {e}"), 500
 
     # Also remove alerts not broadcast (rejected, draft, etc)
