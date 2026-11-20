@@ -254,16 +254,6 @@ def purge_broadcast_messages(service_id=None, older_than=365):
     non_public_messages_purged = dao_purge_old_broadcast_messages(service_id, older_than)
     current_app.logger.info("Additional purged items: %s", non_public_messages_purged)
 
-    current_app.logger.info(
-        result_message.format(
-            counter["msgs"],
-            service_id if service_id else "all services",
-            counter["events"],
-            counter["s3_objects"],
-            older_than,
-        )
-    )
-
 
 def _generate_s3_keys(messages):
     # create a new list of tuples (id, prefix) where the prefix is generated
