@@ -26,6 +26,7 @@ from app.models import (
     Permission,
     User,
 )
+from app.utils import DATETIME_FORMAT
 from tests.app.db import (
     create_organisation,
     create_service,
@@ -60,6 +61,7 @@ def test_get_user(admin_request, sample_service, sample_organisation):
     """
     sample_user = sample_service.users[0]
     sample_user.organisations = [sample_organisation]
+    sample_user.email_address_changed_at = datetime.now()
     json_resp = admin_request.get("user.get_user", user_id=sample_user.id)
 
     expected_permissions = default_service_permissions
@@ -69,6 +71,7 @@ def test_get_user(admin_request, sample_service, sample_organisation):
     assert fetched["name"] == sample_user.name
     assert fetched["mobile_number"] == sample_user.mobile_number
     assert fetched["email_address"] == sample_user.email_address
+    assert fetched["email_address_changed_at"] == sample_user.email_address_changed_at.strftime(DATETIME_FORMAT)
     assert fetched["state"] == sample_user.state
     assert fetched["auth_type"] == SMS_AUTH_TYPE
     assert fetched["permissions"].keys() == {str(sample_service.id)}
