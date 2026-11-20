@@ -348,7 +348,9 @@ def dao_mark_all_as_govuk_acknowledged():
 
 
 def dao_purge_old_broadcast_messages(service, days_older_than=30, dry_run=False):
-    print(f"Purging alerts for service {service if service else "all services"}")
+    current_app.logger.info(
+        f"Purging alerts for service {service if service else "all services"} older than {days_older_than}"
+    )
     message_ids = _get_broadcast_messages(days_older_than, service)
 
     counter = Counter()
