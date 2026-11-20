@@ -480,20 +480,23 @@ def purge_broadcast_messages(service_id=None, older_than=365):
 
                     current_app.logger.info("objects to be deleted on this iteration", extra={"matches": matches})
 
-                    s3_result = s3.delete_objects(Bucket=bucket, Delete={"Objects": matches})
-                    counter["s3_objects"] += len(s3_result.get("Deleted", []))
+                    if len(matches) > 0:
+                        s3_result = s3.delete_objects(Bucket=bucket, Delete={"Objects": matches})
+                        counter["s3_objects"] += len(s3_result.get("Deleted", []))
 
-                    errors = s3_result.get("Errors", [])
-                    if errors:
-                        current_app.logger.info(
-                            "s3 deletion errors",
-                            extra={
-                                "errors": errors,
-                                "bucket": bucket,
-                                "prefix": f"alerts/{message[1]}",
-                            },
-                        )
-                        counter["s3_deletion_errors"] += len(s3_result.get("Errors", []))
+                        errors = s3_result.get("Errors", [])
+                        if errors:
+                            current_app.logger.info(
+                                "s3 deletion errors",
+                                extra={
+                                    "errors": errors,
+                                    "bucket": bucket,
+                                    "prefix": f"alerts/{message[1]}",
+                                },
+                            )
+                            counter["s3_deletion_errors"] += len(s3_result.get("Errors", []))
+                    else:
+                        current_app.logger.info("Iteration had no matches, skipping")
 
                 # delete database records associated with this message
                 counter += dao_delete_records_for_broadcast(message[0])
