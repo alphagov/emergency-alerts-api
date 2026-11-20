@@ -161,7 +161,8 @@ fi
 
 run_api(){
     cd "$DIR_API";
-    export SERVICE=api && . $VENV_API/bin/activate && exec $PYTHON_COMMAND gunicorn application:application --bind 0.0.0.0:6011
+    echo "Provided GUNICORN_OPTS: $GUNICORN_OPTS"
+    export SERVICE=api && . $VENV_API/bin/activate && exec $PYTHON_COMMAND gunicorn application:application ${GUNICORN_OPTS:-} --bind 0.0.0.0:6011
 }
 
 run_worker(){
