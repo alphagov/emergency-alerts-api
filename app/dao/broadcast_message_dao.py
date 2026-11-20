@@ -348,7 +348,9 @@ def dao_mark_all_as_govuk_acknowledged():
 
 
 def dao_purge_old_broadcast_messages(service, days_older_than=30, dry_run=False):
-    print(f"Purging alerts for service {service if service else "all services"}")
+    current_app.logger.info(
+        f"Purging alerts for service {service if service else "all services"} older than {days_older_than}"
+    )
     message_ids = _get_broadcast_messages(days_older_than, service)
 
     counter = Counter()
@@ -465,22 +467,6 @@ def add_broadcast_provider_message_status(
     broadcast_provider_message.statuses.append(new_status)
 
 
-def _resolve_service_id(service):
-    if service is None:
-        service = uuid.UUID(current_app.config["FUNCTIONAL_TESTS_BROADCAST_SERVICE_ID"])
-    else:
-        if not isinstance(service, uuid.UUID):
-            try:
-                service = uuid.UUID(service)
-            except ValueError:
-                return None
-
-    if db.session.query(Service).filter(Service.id == service).one():
-        return str(service)
-
-    return None
-
-
 def _get_broadcast_messages(days_older_than, service_id):
     query = db.session.query(
         BroadcastMessage.id,
@@ -500,11 +486,7 @@ def _get_broadcast_messages(days_older_than, service_id):
 def _get_broadcast_event_ids(message_id):
     broadcast_event_rows = db.session.query(BroadcastEvent.id).filter_by(broadcast_message_id=message_id).all()
     broadcast_event_ids = [str(row[0]) for row in broadcast_event_rows]
-    print(f"BroadcastEvent IDs associated with messsage {message_id}:")
-    if len(broadcast_event_ids):
-        print("\n".join(broadcast_event_ids))
-    else:
-        print("None")
+    current_app.logger.info(f"BroadcastEvent IDs associated with message {message_id}: {",".join(broadcast_event_ids)}")
 
     return broadcast_event_ids
 
