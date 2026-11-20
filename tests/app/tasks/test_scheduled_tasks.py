@@ -13,6 +13,7 @@ from app.tasks.scheduled_tasks import (
     delete_invitations,
     delete_old_records_from_events_table,
     delete_verify_codes,
+    purge_functional_test_alerts,
     queue_after_alert_activities,
     remove_yesterdays_planned_tests_on_govuk_alerts,
     trigger_link_tests,
@@ -195,6 +196,35 @@ def test_validate_functional_test_account_emails(notify_db_session):
 
     assert users[0].email_access_validated_at > now
     assert users[1].email_access_validated_at > now
+
+
+def test_purge_functional_test_alerts_calls_util(notify_api, mocker):
+    mocked_purge = mocker.patch("app.tasks.scheduled_tasks.purge_broadcast_messages")
+
+    purge_functional_test_alerts(older_than=123)
+
+    mocked_purge.assert_called_with(
+        service_id=notify_api.config["FUNCTIONAL_TESTS_BROADCAST_SERVICE_ID"], older_than=123
+    )
+
+
+def test_purge_functional_test_alerts_does_not_run_in_public(mocker):
+    mocked_purge = mocker.patch("app.tasks.scheduled_tasks.purge_broadcast_messages")
+    mocker.patch("app.tasks.scheduled_tasks.is_public_environment", return_value=True)
+
+    purge_functional_test_alerts()
+
+    mocked_purge.assert_not_called()
+
+
+def test_purge_functional_test_alerts_does_not_run_without_service_id(notify_api, mocker):
+    mocked_purge = mocker.patch("app.tasks.scheduled_tasks.purge_broadcast_messages")
+    mocker.patch("app.tasks.scheduled_tasks.is_public_environment", return_value=True)
+
+    with set_config(notify_api, "FUNCTIONAL_TESTS_BROADCAST_SERVICE_ID", None):
+        purge_functional_test_alerts()
+
+    mocked_purge.assert_not_called()
 
 
 @pytest.mark.parametrize(

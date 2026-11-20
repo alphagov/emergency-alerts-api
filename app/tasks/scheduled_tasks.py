@@ -231,13 +231,17 @@ def purge_functional_test_alerts(older_than=1):
         current_app.logger.info("Skipping purge of functional test broadcasts - this is a public environment")
         return
 
-    functional_tests_service = current_app.config.get("FUNCTIONAL_TESTS_BROADCAST_SERVICE_ID")
-    if functional_tests_service is None:
+    functional_tests_service_id = current_app.config.get("FUNCTIONAL_TESTS_BROADCAST_SERVICE_ID")
+    if functional_tests_service_id is None:
         current_app.logger.warning("No FUNCTIONAL_TESTS_BROADCAST_SERVICE_ID? Can't purge functional test alerts")
         # If we give none to the purge method it'll do it for all services, so bail.
         return
 
-    purge_broadcast_messages(service_id=functional_tests_service, older_than=365)
+    current_app.logger.info(
+        f"Starting purge of alerts older than {older_than} days in service {functional_tests_service_id}"
+    )
+    purge_broadcast_messages(service_id=functional_tests_service_id, older_than=older_than)
+    current_app.logger.info("Finished purge")
 
 
 @dramatiq.actor(
