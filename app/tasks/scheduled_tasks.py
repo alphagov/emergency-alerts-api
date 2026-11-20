@@ -7,7 +7,7 @@ from periodiq import cron
 from sqlalchemy.exc import SQLAlchemyError
 
 from app import db, dramatiq
-from app.broadcast_message.rest import purge_broadcast_messages
+from app.broadcast_message.utils import purge_broadcast_messages
 from app.dao.broadcast_message_dao import (
     dao_get_all_finished_broadcast_messages_with_outstanding_actions,
 )
