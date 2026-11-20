@@ -465,22 +465,6 @@ def add_broadcast_provider_message_status(
     broadcast_provider_message.statuses.append(new_status)
 
 
-def _resolve_service_id(service):
-    if service is None:
-        service = uuid.UUID(current_app.config["FUNCTIONAL_TESTS_BROADCAST_SERVICE_ID"])
-    else:
-        if not isinstance(service, uuid.UUID):
-            try:
-                service = uuid.UUID(service)
-            except ValueError:
-                return None
-
-    if db.session.query(Service).filter(Service.id == service).one():
-        return str(service)
-
-    return None
-
-
 def _get_broadcast_messages(days_older_than, service_id):
     query = db.session.query(
         BroadcastMessage.id,
