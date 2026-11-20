@@ -484,11 +484,7 @@ def _get_broadcast_messages(days_older_than, service_id):
 def _get_broadcast_event_ids(message_id):
     broadcast_event_rows = db.session.query(BroadcastEvent.id).filter_by(broadcast_message_id=message_id).all()
     broadcast_event_ids = [str(row[0]) for row in broadcast_event_rows]
-    print(f"BroadcastEvent IDs associated with messsage {message_id}:")
-    if len(broadcast_event_ids):
-        print("\n".join(broadcast_event_ids))
-    else:
-        print("None")
+    current_app.logger.info(f"BroadcastEvent IDs associated with message {message_id}: {",".join(broadcast_event_ids)}")
 
     return broadcast_event_ids
 
