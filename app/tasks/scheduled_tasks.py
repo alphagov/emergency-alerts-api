@@ -7,7 +7,7 @@ from periodiq import cron
 from sqlalchemy.exc import SQLAlchemyError
 
 from app import db, dramatiq
-from app.broadcast_message.rest import purge_broadcast_messages
+from app.broadcast_message.utils import purge_broadcast_messages
 from app.dao.broadcast_message_dao import (
     dao_get_all_finished_broadcast_messages_with_outstanding_actions,
 )
@@ -35,7 +35,11 @@ from app.tasks.broadcast_message_tasks import (
     trigger_link_test_secondary_to_A,
     trigger_link_test_secondary_to_B,
 )
-from app.tasks.stub_tasks import publish_govuk_alerts, publish_govuk_alerts_full
+from app.tasks.govuk_tasks import (
+    publish_govuk_build,
+    publish_govuk_build_full,
+)
+from app.utils import is_public_environment
 
 
 @dramatiq.actor(actor_name=TaskNames.RUN_HEALTH_CHECK, queue_name=QueueNames.PERIODIC, periodic=cron("*/1 * * * *"))
@@ -119,8 +123,12 @@ def remove_yesterdays_planned_tests_on_govuk_alerts():
     # purged from the `publish_task_progress` table
     purge_publish_tasks(days_older_than=1)
 
-    publish_task = publish_govuk_alerts_full.send()
-    current_app.logger.info("Enqueued publish GOV UK Alerts for nightly rebuild: %s", publish_task.asdict())
+    publish_pending, publish_task = publish_govuk_build_full()
+    current_app.logger.info(
+        "Enqueued full publish GOV UK Alerts for nightly rebuild: %s / %s",
+        publish_pending.serialize(),
+        publish_task.asdict(),
+    )
 
 
 @dramatiq.actor(
@@ -196,10 +204,44 @@ def queue_after_alert_activities():
             # This need not be idempotent as any regeneration is 'free', and we rely upon
             # GovUK calling us back to mark the action as 'done' instead of just assuming.
             current_app.logger.info("Requesting GovUK publish")
-            publish_task = publish_govuk_alerts.send()
-            current_app.logger.info("Enqueued publish GOV UK Alerts: %s", publish_task.asdict())
+            publish_pending, publish_task = publish_govuk_build()
+            if publish_task is not None:
+                current_app.logger.info(
+                    "Enqueued publish GOV UK Alerts: %s, %s", publish_pending.serialize(), publish_task.asdict()
+                )
+            else:
+                current_app.logger.info(
+                    "*Not* queued a publish to GOV UK Alerts, one or more pending tasks already: %s",
+                    publish_pending.serialize(),
+                )
 
-        # Down the line we will look to request logs from MNOs
+
+@dramatiq.actor(
+    actor_name=TaskNames.PURGE_FUNCTIONAL_TEST_ALERTS,
+    queue_name=QueueNames.PERIODIC,
+    periodic=cron("0 4 * * *"),
+)
+def purge_functional_test_alerts(older_than=1):
+    """
+    Purge alerts created by functional tests daily.
+    This is housekeeping to reduce the number of alerts that GovUK and admin has to deal with.
+    """
+
+    if is_public_environment():
+        current_app.logger.info("Skipping purge of functional test broadcasts - this is a public environment")
+        return
+
+    functional_tests_service_id = current_app.config.get("FUNCTIONAL_TESTS_BROADCAST_SERVICE_ID")
+    if functional_tests_service_id is None:
+        current_app.logger.warning("No FUNCTIONAL_TESTS_BROADCAST_SERVICE_ID? Can't purge functional test alerts")
+        # If we give none to the purge method it'll do it for all services, so bail.
+        return
+
+    current_app.logger.info(
+        f"Starting purge of alerts older than {older_than} days in service {functional_tests_service_id}"
+    )
+    purge_broadcast_messages(service_id=functional_tests_service_id, older_than=older_than)
+    current_app.logger.info("Finished purge")
 
 
 @dramatiq.actor(

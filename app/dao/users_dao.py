@@ -33,6 +33,9 @@ def get_non_repeating_random_digits(length):
 
 
 def save_user_attribute(usr, update_dict=None):
+    if "email_address" in update_dict:
+        update_dict["email_address_changed_at"] = datetime.now(timezone.utc)
+
     db.session.query(User).filter_by(id=usr.id).update(update_dict or {})
     db.session.commit()
 

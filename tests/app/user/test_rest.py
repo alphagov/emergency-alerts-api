@@ -26,6 +26,7 @@ from app.models import (
     Permission,
     User,
 )
+from app.utils import DATETIME_FORMAT
 from tests.app.db import (
     create_organisation,
     create_service,
@@ -60,6 +61,7 @@ def test_get_user(admin_request, sample_service, sample_organisation):
     """
     sample_user = sample_service.users[0]
     sample_user.organisations = [sample_organisation]
+    sample_user.email_address_changed_at = datetime.now()
     json_resp = admin_request.get("user.get_user", user_id=sample_user.id)
 
     expected_permissions = default_service_permissions
@@ -69,6 +71,7 @@ def test_get_user(admin_request, sample_service, sample_organisation):
     assert fetched["name"] == sample_user.name
     assert fetched["mobile_number"] == sample_user.mobile_number
     assert fetched["email_address"] == sample_user.email_address
+    assert fetched["email_address_changed_at"] == sample_user.email_address_changed_at.strftime(DATETIME_FORMAT)
     assert fetched["state"] == sample_user.state
     assert fetched["auth_type"] == SMS_AUTH_TYPE
     assert fetched["permissions"].keys() == {str(sample_service.id)}
@@ -794,10 +797,11 @@ def test_send_already_registered_email_returns_400_when_data_is_missing(admin_re
     assert json_resp["message"] == {"email": ["Missing data for required field."]}
 
 
+@freeze_time("2020-01-01 11:00:00")
 def test_send_user_confirm_new_email_returns_204(admin_request, sample_user, mocker):
     mocked = mocker.patch("app.user.rest.notify_send")
     fake_token = "0123456789"
-    mocker.patch("app.utils.generate_token", return_value=fake_token)
+    token_mock = mocker.patch("app.utils.generate_token", return_value=fake_token)
     new_email = "new_address@dig.gov.uk"
     data = {"email": new_email}
 
@@ -820,6 +824,10 @@ def test_send_user_confirm_new_email_returns_204(admin_request, sample_user, moc
         },
     }
 
+    token_args = json.loads(token_mock.call_args[0][0])
+    assert token_args["user_id"] == str(sample_user.id)
+    assert token_args["email"] == new_email
+    assert token_args["created_at"] == "2020-01-01 11:00:00+00:00"
     mocked.assert_called_once_with(notification)
 
 

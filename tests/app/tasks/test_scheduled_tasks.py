@@ -1,7 +1,7 @@
 import time
 from collections import namedtuple
 from datetime import datetime, timedelta, timezone
-from unittest.mock import call
+from unittest.mock import Mock, call
 
 import pytest
 from freezegun import freeze_time
@@ -13,6 +13,7 @@ from app.tasks.scheduled_tasks import (
     delete_invitations,
     delete_old_records_from_events_table,
     delete_verify_codes,
+    purge_functional_test_alerts,
     queue_after_alert_activities,
     remove_yesterdays_planned_tests_on_govuk_alerts,
     trigger_link_tests,
@@ -133,7 +134,7 @@ def test_auto_expire_broadcast_messages(
         finishes_at=finishes_at,
         template=sample_template,
     )
-    mock_task = mocker.patch("app.tasks.broadcast_message_tasks.publish_govuk_alerts.send")
+    mock_task = mocker.patch("app.tasks.scheduled_tasks.publish_govuk_build")
 
     auto_expire_broadcast_messages()
     assert message.status == final_status
@@ -142,7 +143,7 @@ def test_auto_expire_broadcast_messages(
 
 
 def test_remove_yesterdays_planned_tests_on_govuk_alerts(notify_db_session, mocker):
-    mock_task = mocker.patch("app.tasks.stub_tasks.publish_govuk_alerts_full.send")
+    mock_task = mocker.patch("app.tasks.scheduled_tasks.publish_govuk_build_full", return_value=(Mock(), Mock()))
 
     remove_yesterdays_planned_tests_on_govuk_alerts()
 
@@ -197,14 +198,42 @@ def test_validate_functional_test_account_emails(notify_db_session):
     assert users[1].email_access_validated_at > now
 
 
+def test_purge_functional_test_alerts_calls_util(notify_api, mocker):
+    mocked_purge = mocker.patch("app.tasks.scheduled_tasks.purge_broadcast_messages")
+
+    purge_functional_test_alerts(older_than=123)
+
+    mocked_purge.assert_called_with(
+        service_id=notify_api.config["FUNCTIONAL_TESTS_BROADCAST_SERVICE_ID"], older_than=123
+    )
+
+
+def test_purge_functional_test_alerts_does_not_run_in_public(mocker):
+    mocked_purge = mocker.patch("app.tasks.scheduled_tasks.purge_broadcast_messages")
+    mocker.patch("app.tasks.scheduled_tasks.is_public_environment", return_value=True)
+
+    purge_functional_test_alerts()
+
+    mocked_purge.assert_not_called()
+
+
+def test_purge_functional_test_alerts_does_not_run_without_service_id(notify_api, mocker):
+    mocked_purge = mocker.patch("app.tasks.scheduled_tasks.purge_broadcast_messages")
+    mocker.patch("app.tasks.scheduled_tasks.is_public_environment", return_value=True)
+
+    with set_config(notify_api, "FUNCTIONAL_TESTS_BROADCAST_SERVICE_ID", None):
+        purge_functional_test_alerts()
+
+    mocked_purge.assert_not_called()
+
+
 @pytest.mark.parametrize(
     "finished_govuk_acknowledged",
     (True, False),
 )
 def test_queue_after_alert_activities_does_govuk_refresh(notify_api, mocker, finished_govuk_acknowledged):
-    task_mock = mocker.patch(
-        "app.tasks.broadcast_message_tasks.publish_govuk_alerts.send",
-    )
+    task_mock = mocker.patch("app.tasks.scheduled_tasks.publish_govuk_build", return_value=(Mock(), Mock()))
+
     mocker.patch(
         "app.tasks.scheduled_tasks.dao_get_all_finished_broadcast_messages_with_outstanding_actions",
         return_value=[BroadcastMessage(finished_govuk_acknowledged=finished_govuk_acknowledged)],

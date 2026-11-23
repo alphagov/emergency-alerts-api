@@ -1,12 +1,11 @@
 import json
-import re
 import uuid
 from datetime import datetime
 
 import pytest
 from freezegun import freeze_time
 
-from app.broadcast_message.rest import _generate_s3_keys
+from app.broadcast_message.utils import _generate_s3_keys
 from app.dao.broadcast_message_dao import (
     add_broadcast_provider_message_status,
     dao_get_broadcast_message_by_id_and_service_id,
@@ -962,23 +961,6 @@ def test_return_broadcast_message_for_edit_errors_with_empty_reason(admin_reques
     )
     # Response is InvalidRequest, raised when edit_reason is empty string
     assert response["message"] == "Enter the reason for returning the alert for edit"
-
-
-def test_purge_service_broadcast_messages(admin_request, sample_broadcast_service, mocker):
-    response = admin_request.delete(
-        "broadcast_message.purge_service_broadcast_messages",
-        service_id=sample_broadcast_service.id,
-        older_than=100,
-        _expected_status=200,
-    )
-
-    print(response["message"])
-
-    pattern = (
-        r"Purged (\d+) \(.*\) BroadcastMessage items, (\d+) BroadcastEvent items"
-        r" and (\d+) S3 objects, created more than 100 days ago"
-    )
-    assert re.match(pattern, response["message"])
 
 
 def test_generate_s3_keys_from_list_of_id_timestamp_tuples():

@@ -137,6 +137,7 @@ class UserUpdateAttributeSchema(BaseSchema):
             "failed_login_count",
             "id",
             "logged_in_at",
+            "email_address_changed_at",
             "password_changed_at",
             "platform_admin_capable",
             "platform_admin_redemption",

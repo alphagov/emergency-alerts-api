@@ -74,6 +74,7 @@ class User(db.Model):
     id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = db.Column(db.String, nullable=False, index=True, unique=False)
     email_address = db.Column(db.String(255), nullable=False, index=True, unique=True)
+    email_address_changed_at = db.Column(db.DateTime, index=False, unique=False, nullable=True)
     created_at = db.Column(db.DateTime, index=False, unique=False, nullable=False, default=datetime.datetime.utcnow)
     updated_at = db.Column(db.DateTime, index=False, unique=False, nullable=True, onupdate=datetime.datetime.utcnow)
     _password = db.Column(db.String, index=False, unique=False, nullable=False)
@@ -143,6 +144,7 @@ class User(db.Model):
             "id": self.id,
             "name": self.name,
             "email_address": self.email_address,
+            "email_address_changed_at": get_dt_string_or_none(self.email_address_changed_at),
             "auth_type": self.auth_type,
             "current_session_id": self.current_session_id,
             "failed_login_count": self.failed_login_count,
@@ -1451,14 +1453,33 @@ class Populations(db.Model):
         return {"id": self.id, "geometry": self.geometry, "density": self.density}
 
 
+PUBLISH_PROGRESS_PENDING = "pending"
+PUBLISH_PROGRESS_IN_PROGRESS = "in_progress"
+PUBLISH_PROGRESS_FINISHED = "finished"
+PUBLISH_PROGRESS_CANCELLED = "cancelled"  # E.g. if a partial progress is canceled in favour of a 'full' one
+
+PUBLISH_PROGRESS_STATUSES = [
+    PUBLISH_PROGRESS_PENDING,
+    PUBLISH_PROGRESS_IN_PROGRESS,
+    PUBLISH_PROGRESS_FINISHED,
+    PUBLISH_PROGRESS_CANCELLED,
+]
+
+
 class PublishTaskProgress(db.Model):
     """
-    This table is used to the progress of gov.uk/alerts Publish tasks.
+    This table is used to keep track of the progress of gov.uk/alerts Publish tasks.
     """
 
     __tablename__ = "publish_task_progress"
     id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    task_id = db.Column(db.String, index=True, unique=False, nullable=False)
+    task_id = db.Column(db.String, index=True, unique=False, nullable=True)
+    status = db.Column(
+        db.Enum(*PUBLISH_PROGRESS_STATUSES, name="publish_task_progress_status_types"),
+        default=PUBLISH_PROGRESS_IN_PROGRESS,
+        nullable=False,
+    )
+    trace_id = db.Column(db.String, nullable=True)
     last_published_file = db.Column(db.String, nullable=True)
     started_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
     last_activity_at = db.Column(
@@ -1470,6 +1491,7 @@ class PublishTaskProgress(db.Model):
         return {
             "id": self.id,
             "task_id": self.task_id,
+            "status": self.status,
             "last_published_file": self.last_published_file,
             "started_at": self.started_at,
             "last_activity_at": self.last_activity_at,
