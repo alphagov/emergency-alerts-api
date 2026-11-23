@@ -7,7 +7,7 @@ from periodiq import cron
 from sqlalchemy.exc import SQLAlchemyError
 
 from app import db, dramatiq
-from app.broadcast_message.rest import purge_broadcast_messages
+from app.broadcast_message.utils import purge_broadcast_messages
 from app.dao.broadcast_message_dao import (
     dao_get_all_finished_broadcast_messages_with_outstanding_actions,
 )
@@ -39,6 +39,7 @@ from app.tasks.govuk_tasks import (
     publish_govuk_build,
     publish_govuk_build_full,
 )
+from app.utils import is_public_environment
 
 
 @dramatiq.actor(actor_name=TaskNames.RUN_HEALTH_CHECK, queue_name=QueueNames.PERIODIC, periodic=cron("*/1 * * * *"))
@@ -213,6 +214,34 @@ def queue_after_alert_activities():
                     "*Not* queued a publish to GOV UK Alerts, one or more pending tasks already: %s",
                     publish_pending.serialize(),
                 )
+
+
+@dramatiq.actor(
+    actor_name=TaskNames.PURGE_FUNCTIONAL_TEST_ALERTS,
+    queue_name=QueueNames.PERIODIC,
+    periodic=cron("0 4 * * *"),
+)
+def purge_functional_test_alerts(older_than=1):
+    """
+    Purge alerts created by functional tests daily.
+    This is housekeeping to reduce the number of alerts that GovUK and admin has to deal with.
+    """
+
+    if is_public_environment():
+        current_app.logger.info("Skipping purge of functional test broadcasts - this is a public environment")
+        return
+
+    functional_tests_service_id = current_app.config.get("FUNCTIONAL_TESTS_BROADCAST_SERVICE_ID")
+    if functional_tests_service_id is None:
+        current_app.logger.warning("No FUNCTIONAL_TESTS_BROADCAST_SERVICE_ID? Can't purge functional test alerts")
+        # If we give none to the purge method it'll do it for all services, so bail.
+        return
+
+    current_app.logger.info(
+        f"Starting purge of alerts older than {older_than} days in service {functional_tests_service_id}"
+    )
+    purge_broadcast_messages(service_id=functional_tests_service_id, older_than=older_than)
+    current_app.logger.info("Finished purge")
 
 
 @dramatiq.actor(
