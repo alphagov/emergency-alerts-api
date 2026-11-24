@@ -530,33 +530,32 @@ def test_get_postcode_centroid_returns_expected_centroid_wkt(admin_request, noti
     )
 
     resp = admin_request.post(
-        "areas.get_postcode_centroid",
-        _data={"postcode": postcode},
+        "areas.get_custom_area_centroid",
+        _data={"area_id": postcode, "library_type": "postcodes"},
     )
     assert resp["data"] == "POINT (-0.125 51.50499999999999)"
 
 
 @pytest.mark.parametrize(
-    "postcode",
+    "postcode, library_type, expected_error",
     [
-        None,
-        "",
-        "AB10 1ZZ",
+        (None, "postcodes", "area_id or library_type not specified"),
+        ("", "postcodes", "area_id or library_type not specified"),
+        ("AB10 1AW", None, "area_id or library_type not specified"),
+        ("AB10 1ZZ", "postcodes", "Area not found"),
     ],
 )
 def test_get_postcode_centroid_returns_expected_error_for_invalid_data(
-    admin_request,
-    notify_db_session,
-    postcode,
+    admin_request, notify_db_session, postcode, library_type, expected_error
 ):
     postcode_type = create_geography_type(notify_db_session, route="postcodes")
     create_geography_version(notify_db_session, geography_type_id=postcode_type.id)
     resp = admin_request.post(
-        "areas.get_postcode_centroid",
-        _data={"postcode": postcode},
+        "areas.get_custom_area_centroid",
+        _data={"area_id": postcode, "library_type": library_type},
         _expected_status=400,
     )
-    assert resp["message"] == "Enter a postcode within the UK"
+    assert resp["message"] == expected_error
 
 
 def test_create_postcode_area_returns_expected_area_wkt(admin_request, notify_db_session):
@@ -578,21 +577,33 @@ def test_create_postcode_area_returns_expected_area_wkt(admin_request, notify_db
     )
 
     resp = admin_request.post(
-        "areas.create_postcode_area",
-        _data={"postcode": postcode, "radius": 5},
+        "areas.create_custom_area",
+        _data={"area_id": postcode, "radius": 5, "library_type": "postcodes"},
     )
     assert resp["circle"].startswith("POLYGON")
     assert resp["id"] == "postcodes_-0.12500000000000003_51.50499999999999_5_AB10 1AL"
 
 
-def test_create_postcode_area_returns_error_response_for_invalid_data(admin_request, notify_db_session):
+@pytest.mark.parametrize(
+    "postcode, radius, library_type, expected_error",
+    [
+        (None, 1, "postcodes", "Enter area_id, radius and library_type to create custom area"),
+        ("", 1, "postcodes", "Enter area_id, radius and library_type to create custom area"),
+        ("AB101AW", None, "postcodes", "Enter area_id, radius and library_type to create custom area"),
+        ("AB101AW", 1, None, "Enter area_id, radius and library_type to create custom area"),
+        ("AB101ZZ", 1, "postcodes", "Area not found"),
+    ],
+)
+def test_create_postcode_area_returns_error_response_for_invalid_data(
+    admin_request, notify_db_session, postcode, radius, library_type, expected_error
+):
     # Assert that when invalid data posted i.e. missing or will raise TypeError - error response returned
     resp = admin_request.post(
-        "areas.create_postcode_area",
-        _data={"postcode": "", "radius": 5},
+        "areas.create_custom_area",
+        _data={"area_id": postcode, "radius": radius, "library_type": library_type},
         _expected_status=400,
     )
-    assert resp["message"] == "Enter postcode and radius to create postcode area"
+    assert resp["message"] == expected_error
 
 
 @pytest.mark.parametrize("message_type", ["broadcast", "templates"])
@@ -631,11 +642,8 @@ def test_add_postcodes_area_returns_expected_updated_message(
         message = create_template(sample_broadcast_service)
 
     resp = admin_request.post(
-        "areas.add_postcodes_area",
-        _data={
-            "postcode": postcode,
-            "radius": radius,
-        },
+        "areas.add_custom_area",
+        _data={"area_id": postcode, "radius": radius, "library_type": "postcodes"},
         service_id=sample_broadcast_service.id,
         message_id=message.id,
         message_type=message_type,
@@ -650,17 +658,31 @@ def test_add_postcodes_area_returns_expected_updated_message(
 
 
 @pytest.mark.parametrize(
-    "postcode, radius, expected_error",
+    "postcode, radius, library_type, expected_error",
     [
         (
             "",
             5,
-            "Enter postcode and radius to create postcode area",
+            "postcodes",
+            "Enter area_id, radius and library_type to create custom area",
         ),
         (
             "AB10 1AL",
             None,
-            "Enter postcode and radius to create postcode area",
+            "postcodes",
+            "Enter area_id, radius and library_type to create custom area",
+        ),
+        (
+            "AB10 1AL",
+            1,
+            None,
+            "Enter area_id, radius and library_type to create custom area",
+        ),
+        (
+            "AB10 1XX",
+            1,
+            "postcodes",
+            "Area not found",
         ),
     ],
 )
@@ -670,6 +692,7 @@ def test_add_postcodes_area_returns_expected_error_response_for_invalid_data(
     sample_broadcast_service,
     postcode,
     radius,
+    library_type,
     expected_error,
 ):
     message = create_broadcast_message(
@@ -679,11 +702,8 @@ def test_add_postcodes_area_returns_expected_error_response_for_invalid_data(
     )
 
     resp = admin_request.post(
-        "areas.add_postcodes_area",
-        _data={
-            "postcode": postcode,
-            "radius": radius,
-        },
+        "areas.add_custom_area",
+        _data={"area_id": postcode, "radius": radius, "library_type": library_type},
         service_id=sample_broadcast_service.id,
         message_id=message.id,
         message_type="broadcast",
