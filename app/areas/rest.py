@@ -360,57 +360,58 @@ def get_coordinates_centroid():
     return jsonify({"data": centroid.wkt})
 
 
-@areas_blueprint.route("/postcodes/get-centroid", methods=["POST"])
-def get_postcode_centroid():
+@areas_blueprint.route("/get-centroid", methods=["POST"])
+def get_custom_area_centroid():
     """
-    Returns the centroid WKT for the specified postcode
+    Returns the centroid WKT for a specified area
     """
     data = request.get_json() or {}
-    postcode = data.get("postcode")
-    if not postcode:
-        return jsonify({"message": "Enter a postcode within the UK"}), 400
+    area_id = data.get("area_id")
+    library_type = data.get("library_type")
+    if not area_id or not library_type:
+        return jsonify({"message": "area_id or library_type not specified"}), 400
 
-    postcode_area = AreasDAO.get_area_by_geographic_id_and_type_route(postcode, "postcodes")
-    if not postcode_area:
-        return jsonify({"message": "Enter a postcode within the UK"}), 400
+    area = AreasDAO.get_area_by_geographic_id_and_type_route(area_id, library_type)
+    if not area:
+        return jsonify({"message": "Area not found"}), 400
 
-    centroid = to_shape(postcode_area.geometry).centroid
+    centroid = to_shape(area.geometry).centroid
     if centroid.is_empty:
         return jsonify({"message": "Centroid has no geometry"}), 400
 
     return jsonify({"data": centroid.wkt})
 
 
-@areas_blueprint.route("/postcode-area", methods=["POST"])
-def create_postcode_area():
-    """Returns WKT string of created postcode area, created using radius and
-    centroid of the latest polygon for the specified postcode boundary"""
+@areas_blueprint.route("/custom-area", methods=["POST"])
+def create_custom_area():
+    """Creates a custom area using the radius and centroid of the given area_id and library_type
+    Returns WKT string of created area"""
     data = request.get_json() or {}
     radius = data.get("radius")
-    postcode = data.get("postcode")
+    area_id = data.get("area_id")
+    library_type = data.get("library_type")
+    if radius is None or not area_id or not library_type:
+        return jsonify({"message": "Enter area_id, radius and library_type to create custom area"}), 400
 
-    if radius is None or not postcode:
-        return jsonify({"message": "Enter postcode and radius to create postcode area"}), 400
-
-    postcode_area = AreasDAO.get_area_by_geographic_id_and_type_route(
-        postcode,
-        "postcodes",
+    area = AreasDAO.get_area_by_geographic_id_and_type_route(
+        area_id,
+        library_type,
     )
-    if not postcode_area:
-        return jsonify({"message": "Enter a postcode within the UK"}), 400
+    if not area:
+        return jsonify({"message": "Area not found"}), 400
 
-    centroid = to_shape(postcode_area.geometry).centroid
+    centroid = to_shape(area.geometry).centroid
     centroid_wkt = centroid.wkt
     circle = AreasDAO.create_circle_area(centroid_wkt, radius)
-    area_id = f"postcodes_{centroid.x}_{centroid.y}_{radius}_{postcode}"
+    area_ref = f"{library_type}_{centroid.x}_{centroid.y}_{radius}_{area_id}"
 
-    return jsonify({"circle": circle, "id": area_id})
+    return jsonify({"circle": circle, "id": area_ref})
 
 
-@areas_blueprint.route("/<service_id>/<message_id>/<message_type>/add-postcodes-area", methods=["POST"])
-def add_postcodes_area(service_id, message_id, message_type):
+@areas_blueprint.route("/<service_id>/<message_id>/<message_type>/add-custom-area", methods=["POST"])
+def add_custom_area(service_id, message_id, message_type):
     """
-    Adds postcode area, created using the `postcode` and `radius` data from request
+    Adds custom area, using the area_id, radius and library_type data from request
     """
     if message_type == "broadcast":
         message = dao_get_broadcast_message_by_id_and_service_id(message_id, service_id)
@@ -420,20 +421,21 @@ def add_postcodes_area(service_id, message_id, message_type):
         return jsonify({"message": "Unsupported message type"}), 400
 
     data = request.get_json() or {}
-    postcode = data.get("postcode")
+    area_id = data.get("area_id")
     radius = data.get("radius")
+    library_type = data.get("library_type")
 
-    if radius is None or not postcode:
-        return jsonify({"message": "Enter postcode and radius to create postcode area"}), 400
+    if radius is None or not area_id or not library_type:
+        return jsonify({"message": "Enter area_id, radius and library_type to create custom area"}), 400
 
-    postcode_area = AreasDAO.get_area_by_geographic_id_and_type_route(
-        postcode,
-        "postcodes",
+    area = AreasDAO.get_area_by_geographic_id_and_type_route(
+        area_id,
+        library_type,
     )
-    if not postcode_area:
-        return jsonify({"message": "Enter a postcode within the UK"}), 400
+    if not area:
+        return jsonify({"message": "Area not found"}), 400
 
-    centroid = to_shape(postcode_area.geometry).centroid
+    centroid = to_shape(area.geometry).centroid
     circle = AreasDAO.create_circle_area(centroid.wkt, radius)
 
     message_areas = message.areas or {}
@@ -450,8 +452,8 @@ def add_postcodes_area(service_id, message_id, message_type):
     else:
         alert_polygons = wkt_geometry_to_alert_polygons(circle)
 
-    area_id = f"postcodes_{centroid.x}_{centroid.y}_{radius}_{postcode}"
-    name = f"{radius:g}km around the postcode {postcode}"
+    area_id = f"{library_type}_{centroid.x}_{centroid.y}_{radius}_{area_id}"
+    name = f"{radius:g}km around the {library_type} {area_id}"
     parent_area = get_parent_area_name(centroid.wkt)
     if parent_area:
         name = f"{name}, in {parent_area}"
