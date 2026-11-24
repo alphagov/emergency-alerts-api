@@ -586,6 +586,62 @@ def test_body_too_large_returns_400(
 
 
 @pytest.mark.parametrize(
+    "xml_content, expected_error",
+    (
+        # This is not exhaustive - see SanitiseSMS in utils
+        (
+            "normal text",
+            None,
+        ),
+        (
+            "welsh diacritic ÂÊÎÔÛŴŶ",
+            None,
+        ),
+        (
+            "not—hcyphens—but—em—dash",
+            "description must not contain these characters (due to GSM7 encoding): —",
+        ),
+        (
+            "🫣",
+            "description must not contain these characters (due to GSM7 encoding): 🫣",
+        ),
+        (
+            "multiple 🫣 🇬🇧",
+            "description must not contain these characters (due to GSM7 encoding): 🇧🇬🫣",
+        ),
+    ),
+)
+def test_invalid_content_characters_return_400(
+    client,
+    sample_broadcast_service,
+    xml_content,
+    expected_error,
+):
+    auth_header = create_service_authorization_header(service_id=sample_broadcast_service.id)
+
+    xml_document = sample_cap_xml_documents.WITH_PLACEHOLDER_FOR_CONTENT.format(xml_content)
+    response = client.post(
+        path="/v2/broadcast",
+        data=xml_document,
+        headers=[("Content-Type", "application/cap+xml"), auth_header],
+    )
+
+    if expected_error is None:
+        assert response.status_code == 201
+    else:
+        assert response.status_code == 400
+        assert json.loads(response.get_data(as_text=True)) == {
+            "errors": [
+                {
+                    "error": "ValidationError",
+                    "message": expected_error,
+                }
+            ],
+            "status_code": 400,
+        }
+
+
+@pytest.mark.parametrize(
     "xml_document, expected_error",
     (
         (

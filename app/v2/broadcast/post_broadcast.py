@@ -2,6 +2,7 @@ from itertools import chain, combinations
 
 from emergency_alerts_utils.api_key import KEY_TYPE_TEAM, KEY_TYPE_TEST
 from emergency_alerts_utils.polygons import Polygons
+from emergency_alerts_utils.sanitise_text import SanitiseSMS
 from emergency_alerts_utils.template import BroadcastMessageTemplate
 from flask import current_app, jsonify, make_response, request
 from shapely.geometry import Polygon as ShapelyPolygon
@@ -74,7 +75,7 @@ def create_broadcast():
     else:
         validate(broadcast_json, post_broadcast_schema)
         _check_broadcast_complexity(broadcast_json)
-        _validate_template(broadcast_json)
+        _validate_content(broadcast_json)
 
         polygons = Polygons(
             list(
@@ -197,8 +198,14 @@ def _check_broadcast_complexity(broadcast_json):
         )
 
 
-def _validate_template(broadcast_json):
+def _validate_content(broadcast_json):
     template = BroadcastMessageTemplate.from_content(broadcast_json["content"])
+
+    invalid_chars = sorted(set(c for c in template.content if c not in SanitiseSMS.ALLOWED_CHARACTERS))
+    if invalid_chars:
+        raise ValidationError(
+            "description must not contain these characters (due to GSM7 encoding): " + "".join(invalid_chars)
+        )
 
     if template.content_too_long:
         raise ValidationError(
