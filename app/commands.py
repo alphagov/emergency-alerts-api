@@ -11,7 +11,7 @@ from jsonschema import Draft7Validator
 from sqlalchemy.exc import IntegrityError
 
 from app import db
-from app.areas.utils import split_into_chunks_and_insert_into_db
+from app.areas.import_utils import split_into_chunks_and_insert_into_db
 from app.dao.areas_dao import AreasDAO
 from app.dao.broadcast_message_dao import (
     dao_get_all_broadcast_messages,

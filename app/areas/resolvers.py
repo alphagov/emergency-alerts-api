@@ -3,10 +3,7 @@ from collections import defaultdict
 
 import shapely
 
-from app.areas.utils import (
-    convert_to_long_lat_coordinates,
-    get_parent_area_name,
-)
+from app.areas.area_utils import convert_to_long_lat_coordinates
 from app.dao.areas_dao import AreasDAO
 
 
@@ -50,7 +47,7 @@ class PostcodeAreaResolver(AreaResolver):
 
             name = f"{radius:g}km around the postcode {postcode}"
 
-            parent_area = get_parent_area_name(centroid)
+            parent_area = AreasDAO.get_parent_area_name(centroid)
 
             if parent_area:
                 name = f"{name}, in {parent_area}"
@@ -115,7 +112,7 @@ class CoordinateAreaResolver(AreaResolver):
 
             centroid = shapely.Point(longitude, latitude).wkt
 
-            parent_area = get_parent_area_name(centroid)
+            parent_area = AreasDAO.get_parent_area_name(centroid)
 
             if parent_area:
                 name = f"{name}, in {parent_area}"

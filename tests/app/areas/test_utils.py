@@ -2,7 +2,7 @@ from io import StringIO
 
 import pytest
 
-from app.areas.utils import (
+from app.areas.area_utils import (
     convert_to_long_lat_coordinates,
     get_parent_area_name,
     reorder_polygons_to_long_lat,

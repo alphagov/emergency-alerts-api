@@ -6,14 +6,13 @@ from emergency_alerts_utils.polygons import Polygons
 from flask import Blueprint, jsonify, request
 from geoalchemy2.shape import to_shape
 
-from app.areas.resolvers import AreaResolutionError, AreaResolverRegistry
-from app.areas.utils import (
+from app.areas.area_utils import (
     convert_to_long_lat_coordinates,
-    get_parent_area_name,
     reorder_polygons_to_long_lat,
-    validate_bulk_area_input,
     wkt_geometry_to_alert_polygons,
 )
+from app.areas.resolvers import AreaResolutionError, AreaResolverRegistry
+from app.areas.validation import validate_bulk_area_input
 from app.dao.areas_dao import AreasDAO
 from app.dao.broadcast_message_dao import (
     dao_get_broadcast_message_by_id_and_service_id,
@@ -455,7 +454,7 @@ def add_custom_area(service_id, message_id, message_type):
 
     area_id = f"{library_type}_{centroid.x}_{centroid.y}_{radius}_{area_id}"
     name = f"{radius:g}km around the {library_type} {area_id}"
-    parent_area = get_parent_area_name(centroid.wkt)
+    parent_area = AreasDAO.get_parent_area_name(centroid.wkt)
     if parent_area:
         name = f"{name}, in {parent_area}"
 
@@ -524,7 +523,7 @@ def add_coordinates_area(service_id, message_id, message_type):
     elif coordinate_type == "easting_northing":
         name = f"{radius:g}km around the easting of {first_coordinate:g} and the northing of {second_coordinate:g}"
 
-    parent_area = get_parent_area_name(centroid)
+    parent_area = AreasDAO.get_parent_area_name(centroid)
     if parent_area:
         name = f"{name}, in {parent_area}"
 
