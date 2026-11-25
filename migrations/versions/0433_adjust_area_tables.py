@@ -23,8 +23,9 @@ def upgrade():
     # How a single area from this library is referred to in Admin application
     op.add_column("geography_type", sa.Column("name_singular", sa.Text(), nullable=True))
 
-    # geographic_id stores the Office for National Statistics (ONS) and Government
-    # Statistical Service (GSS) code for the area
+    # geographic_id either stores data relevant to the area and library, i.e. Office for 
+    # National Statistics (ONS) codes, Government Statistical Service (GSS) codes,
+    # or legacy area IDs from the SQLite database
     op.add_column(
         "geography_polygons",
         sa.Column("geographic_id", sa.String(), nullable=False),
