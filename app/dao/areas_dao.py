@@ -537,3 +537,22 @@ class AreasDAO:
         ).first()
 
         return result[0] if result else None
+
+    @staticmethod
+    def get_parent_area_name(area_wkt):
+        """
+        Gets `parent_geography_id`, retrieves the area with this ID
+        and then appends the parent area name to the name, if called
+        """
+        parent_id = AreasDAO.get_dominant_parent_geography_id(area_wkt)
+        if not parent_id:
+            return None
+        parent = AreasDAO.get_area(parent_id)["area"]
+        if not parent:
+            return None
+        name = parent.name
+        if name.endswith(", City of"):
+            return f"City of {name[:-9]}"
+        if name.endswith(", County of"):
+            return f"County of {name[:-11]}"
+        return name
