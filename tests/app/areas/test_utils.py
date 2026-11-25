@@ -4,12 +4,11 @@ import pytest
 
 from app.areas.area_utils import (
     convert_to_long_lat_coordinates,
-    get_parent_area_name,
     reorder_polygons_to_long_lat,
-    split_into_chunks_and_insert_into_db,
-    validate_bulk_area_input,
     wkt_geometry_to_alert_polygons,
 )
+from app.areas.import_utils import split_into_chunks_and_insert_into_db
+from app.areas.validation import validate_bulk_area_input
 from app.dao.areas_dao import AreasDAO
 from app.models import GeographyPolygons
 from tests.app.db import create_area
@@ -117,7 +116,7 @@ def test_get_parent_area_name(notify_db_session):
     )
     version = AreasDAO.add_geography_version(geography_type.id, "1.0.0", "test_areas.csv")
     create_area(notify_db_session, geography_version_id=version.id, is_selectable=True, name="Test Parent, City of")
-    assert get_parent_area_name("POINT (-0.125 51.505)") == "City of Test Parent"
+    assert AreasDAO.get_parent_area_name("POINT (-0.125 51.505)") == "City of Test Parent"
 
 
 def test_get_parent_area_name_returns_None_if_no_overlapping_area(notify_db_session):
@@ -126,7 +125,7 @@ def test_get_parent_area_name_returns_None_if_no_overlapping_area(notify_db_sess
     )
     version = AreasDAO.add_geography_version(geography_type.id, "1.0.0", "test_areas.csv")
     create_area(notify_db_session, geography_version_id=version.id, is_selectable=True, name="Test Parent")
-    assert get_parent_area_name("POINT (-2 54)") is None
+    assert AreasDAO.get_parent_area_name("POINT (-2 54)") is None
 
 
 def test_validate_bulk_area_input_returns_correct_error_message_for_input():
