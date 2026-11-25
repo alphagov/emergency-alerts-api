@@ -6,8 +6,7 @@ from emergency_alerts_utils.polygons import Polygons
 from flask import Blueprint, jsonify, request
 from geoalchemy2.shape import to_shape
 
-from app.areas.resolvers import AreaResolutionError
-from app.areas.service import AreaService
+from app.areas.resolvers import AreaResolutionError, AreaResolverRegistry
 from app.areas.utils import (
     convert_to_long_lat_coordinates,
     get_parent_area_name,
@@ -62,9 +61,11 @@ def get_areas_by_ids():
     data = request.get_json() or {}
     area_ids = data.get("area_ids") or []
 
-    try:
-        areas = AreaService.get_areas(area_ids)
+    # Preserve order while removing duplicates
+    unique_ids = list(dict.fromkeys(area_ids))
 
+    try:
+        areas = AreaResolverRegistry.resolve_all(unique_ids)
         return jsonify({"data": areas})
 
     except AreaResolutionError as exc:
