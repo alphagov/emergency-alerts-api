@@ -137,3 +137,72 @@ def test_add_areas(notify_api, notify_db_session):
     }
     assert to_shape(polygons_by_name["Countries"].geometry).wkt == "POLYGON ((0 0, 10 0, 10 10, 0 0))"
     assert to_shape(polygons_by_name["Test area"].geometry).wkt == "POLYGON ((0 0, 1 0, 1 1, 0 0))"
+
+
+def test_add_areas_requires_bucket_name(notify_api):
+    with patch.dict(os.environ, {}, clear=True):
+        result = notify_api.test_cli_runner().invoke(add_areas)
+
+    assert result.exit_code != 0
+    assert "AREAS_SOURCE_BUCKET_NAME is not set" in result.output
+
+
+def test_add_areas_rolls_back_on_error(
+    notify_api,
+):
+    with (
+        patch.dict(
+            os.environ,
+            {"AREAS_SOURCE_BUCKET_NAME": "test-bucket"},
+        ),
+        patch("app.commands.boto3.client"),
+        patch(
+            "app.commands.AreasDAO.add_geography_type_if_not_already_stored",
+            side_effect=Exception("boom"),
+        ),
+        patch("app.commands.db.session.rollback") as mock_rollback,
+    ):
+        result = notify_api.test_cli_runner().invoke(add_areas)
+
+    assert result.exit_code != 0
+
+    mock_rollback.assert_called_once()
+
+    assert "Unable to add countries areas data: boom" in result.output
+
+
+def test_add_areas_skips_polygon_import_when_version_exists(
+    notify_api,
+    notify_db_session,
+):
+    geography_type = GeographyType(
+        name="Countries",
+        route="countries",
+        name_singular="country",
+    )
+    notify_db_session.add(geography_type)
+    notify_db_session.commit()
+
+    s3 = Mock()
+
+    with (
+        patch.dict(
+            os.environ,
+            {"AREAS_SOURCE_BUCKET_NAME": "test-bucket"},
+        ),
+        patch("app.commands.boto3.client", return_value=s3),
+        patch(
+            "app.commands.AreasDAO.add_geography_version",
+            return_value=None,
+        ),
+        patch(
+            "app.commands.get_source_data",
+        ) as mock_get_source_data,
+    ):
+        result = notify_api.test_cli_runner().invoke(add_areas)
+
+    assert result.exit_code == 0
+
+    mock_get_source_data.assert_not_called()
+
+    assert "countries geography version (1.0.0) already exists, skipping polygon import" in result.output

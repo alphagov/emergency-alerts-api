@@ -36,7 +36,8 @@ def test_add_geography_version_add_version(notify_db_session):
 def test_add_geography_version_skips_adding_version_if_already_exists(notify_db_session):
     geography_type = AreasDAO.add_geography_type_if_not_already_stored("Test Name", "test_route", "test area")
     geography_version = AreasDAO.add_geography_version(geography_type.id, "1.0.0", "test_areas.csv")
-    AreasDAO.add_geography_version(geography_type.id, "1.0.0", "test_areas.csv")
+    geography_version_dup = AreasDAO.add_geography_version(geography_type.id, "1.0.0", "test_areas.csv")
+    assert geography_version_dup is None
     assert GeographyVersion.query.all() == [geography_version]
 
 
