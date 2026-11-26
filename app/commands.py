@@ -437,46 +437,52 @@ def add_areas():
                 AREAS[area]["display_name"], area, AREAS[area]["name_singular"]
             )
 
-            print(f"Adding {area} geography version")
+            print(f"Adding {area} geography version ({VERSION})")
             geography_version = AreasDAO.add_geography_version(
                 geography_type.id, VERSION, f"s3://{AREAS_SOURCE_BUCKET}/{VERSION}/{area}.csv"
             )
 
-            print(f"Adding {area} geography polygons")
-            data = get_source_data(f"{VERSION}/{area}.csv", AREAS_SOURCE_BUCKET, s3)
+            # AreasDAO.add_geography_version() returns None if the version already exists.
+            # Skip polygon insert so we don't import the same geography twice.
+            if geography_version is None:
+                print(f"{area} geography version ({VERSION}) already exists, skipping polygon import")
 
-            # If area doesn't have subareas, it's areas are `is_selectable` as they are the leaf nodes
-            if not AREAS[area]["sub_geography_types"]:
-                is_selectable = True
             else:
-                is_selectable = False
+                print(f"Adding {area} geography polygons")
+                data = get_source_data(f"{VERSION}/{area}.csv", AREAS_SOURCE_BUCKET, s3)
 
-            parent_areas = split_into_chunks_and_insert_into_db(
-                area,
-                geography_version.id,
-                data,
-                parent_areas,
-                sub_area=False,
-                is_selectable=is_selectable,
-            )
-
-            if AREAS[area]["sub_geography_types"]:
-                for source_area in AREAS[area]["sub_geography_types"]:
+                # If area doesn't have subareas, it's areas are `is_selectable` as they are the leaf nodes
+                if not AREAS[area]["sub_geography_types"]:
+                    is_selectable = True
+                else:
                     is_selectable = False
-                    # if sub area is final subarea AKA leaf nodes -> set is_selectable to True
-                    if AREAS[area]["sub_geography_types"][-1] == source_area:
-                        is_selectable = True
 
-                    data = get_source_data(f"{VERSION}/{source_area}.csv", AREAS_SOURCE_BUCKET, s3)
-                    parent_areas = split_into_chunks_and_insert_into_db(
-                        area,
-                        geography_version.id,
-                        data,
-                        parent_areas,
-                        sub_area=True,
-                        is_selectable=is_selectable,
-                    )
-            db.session.commit()
+                parent_areas = split_into_chunks_and_insert_into_db(
+                    area,
+                    geography_version.id,
+                    data,
+                    parent_areas,
+                    sub_area=False,
+                    is_selectable=is_selectable,
+                )
+
+                if AREAS[area]["sub_geography_types"]:
+                    for source_area in AREAS[area]["sub_geography_types"]:
+                        is_selectable = False
+                        # if sub area is final subarea AKA leaf nodes -> set is_selectable to True
+                        if AREAS[area]["sub_geography_types"][-1] == source_area:
+                            is_selectable = True
+
+                        data = get_source_data(f"{VERSION}/{source_area}.csv", AREAS_SOURCE_BUCKET, s3)
+                        parent_areas = split_into_chunks_and_insert_into_db(
+                            area,
+                            geography_version.id,
+                            data,
+                            parent_areas,
+                            sub_area=True,
+                            is_selectable=is_selectable,
+                        )
+                db.session.commit()
         except Exception as e:
             db.session.rollback()
             raise click.ClickException(f"Unable to add {area} areas data: {e}") from e
