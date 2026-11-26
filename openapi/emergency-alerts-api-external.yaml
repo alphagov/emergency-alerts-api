@@ -11,9 +11,15 @@ info:
     To create a valid JWT, extract the api-key and service-id from your API key as follows:
 
     ```
-    sampleApiKey-00c99afd-e4da-4956-810d-90467f8cd446-a86a5e5a-7a29-423c-a84d-c11103cc9dae
-                 <----------- service_id -----------> <------------ api_key ------------->
+    sampleApiKey_expires_2027-11-26-00c99afd-e4da-4956-810d-90467f8cd446-a86a5e5a-7a29-423c-a84d-c11103cc9dae
+                                    <----------- service_id -----------> <------------ api_key ------------->
     ```
+
+    The api_key is always the last 36 characters of your key, and the service_id is the 36 characters before
+    the hyphen that precedes it, so read them from the end. Everything before the service_id is the key's name.
+
+    API keys expire 12 months after they are created. Newer keys include their expiry date in the name
+    (`_expires_YYYY-MM-DD`), as in the example above. Older keys do not, but are read in the same way.
 
     Create the JWT with the following 'claims' and 'headers'
 

@@ -178,7 +178,14 @@ def create_api_key(service_id=None):
     valid_api_key.service = fetched_service
     save_model_api_key(valid_api_key)
     unsigned_api_key = get_unsigned_secret(valid_api_key.id)
-    return jsonify(data=unsigned_api_key), 201
+    return (
+        jsonify(
+            data=unsigned_api_key,
+            # The admin app includes this in the key it shows the user, so the client can see when it expires
+            scheduled_expiry_date=valid_api_key.scheduled_expiry_date.isoformat(),
+        ),
+        201,
+    )
 
 
 @service_blueprint.route("/<uuid:service_id>/api-key/revoke/<uuid:api_key_id>", methods=["POST"])

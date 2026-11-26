@@ -1,5 +1,8 @@
+from datetime import date, datetime
+
 import pytest
 
+from app.models import ApiKey
 from tests.app.db import create_template_folder
 
 
@@ -37,3 +40,20 @@ def test_user_can_use_webauthn_if_in_broadcast_org(sample_broadcast_service):
 
 def test_user_can_use_webauthn_if_in_notify_team(notify_service):
     assert notify_service.users[0].can_use_webauthn
+
+
+@pytest.mark.parametrize(
+    "created_at, expected_scheduled_expiry_date",
+    [
+        (datetime(2026, 11, 26, 0, 0, 1), date(2027, 11, 26)),
+        (datetime(2026, 11, 26, 23, 59, 59), date(2027, 11, 26)),
+        # No 29 February the following year, so it falls back to the end of the month
+        (datetime(2028, 2, 29, 12, 0), date(2029, 2, 28)),
+    ],
+)
+def test_api_key_scheduled_expiry_date_is_12_months_after_creation(created_at, expected_scheduled_expiry_date):
+    assert ApiKey(created_at=created_at).scheduled_expiry_date == expected_scheduled_expiry_date
+
+
+def test_api_key_scheduled_expiry_date_is_none_before_key_is_saved():
+    assert ApiKey().scheduled_expiry_date is None

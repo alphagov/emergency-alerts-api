@@ -4,12 +4,15 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock, call
 
 import pytest
+from emergency_alerts_utils.clients.slack.slack_client import SlackError
 from freezegun import freeze_time
 
+from app import db
 from app.models import BroadcastMessage, BroadcastStatusType, Event, User
 from app.tasks import scheduled_tasks
 from app.tasks.scheduled_tasks import (
     auto_expire_broadcast_messages,
+    check_api_key_expiry,
     delete_invitations,
     delete_old_records_from_events_table,
     delete_verify_codes,
@@ -19,8 +22,12 @@ from app.tasks.scheduled_tasks import (
     trigger_link_tests,
     validate_functional_test_account_emails,
 )
-from tests.app.db import create_broadcast_message
-from tests.conftest import set_config
+from tests.app.db import (
+    create_api_key,
+    create_broadcast_message,
+    create_service,
+)
+from tests.conftest import set_config, set_config_values
 
 
 def test_should_call_delete_codes_on_delete_verify_codes_task(notify_db_session, mocker):
@@ -246,3 +253,102 @@ def test_queue_after_alert_activities_does_govuk_refresh(notify_api, mocker, fin
         task_mock.assert_called_once_with()
     else:
         task_mock.assert_not_called()
+
+
+def _create_api_key_created_at(service, created_at, key_name=None):
+    api_key = create_api_key(service, key_name=key_name or f"key created {created_at}")
+    api_key.created_at = created_at
+    db.session.commit()
+    return api_key
+
+
+@freeze_time("2026-11-26 09:00:00")
+def test_check_api_key_expiry_warns_about_each_key_once(notify_api, sample_service, mocker):
+    mock_send = mocker.patch("app.tasks.scheduled_tasks.slack_client.send_message_to_slack")
+    overdue = _create_api_key_created_at(sample_service, datetime(2025, 9, 1, 9, 0))
+    expiring = _create_api_key_created_at(sample_service, datetime(2025, 12, 10, 14, 30))
+    not_yet = _create_api_key_created_at(sample_service, datetime(2026, 6, 1, 9, 0))
+
+    check_api_key_expiry()
+
+    messages = [c.args[0] for c in mock_send.call_args_list]
+    assert [m.subject for m in messages] == ["API key is past its expiry date", "API key expires in 14 days"]
+    assert [m.message_type for m in messages] == ["error", "info"]
+    assert {m.webhook_url for m in messages} == {"https://hooks.slack.com/api-key-expiry"}
+    assert overdue.expiry_warning_sent_at == datetime(2026, 11, 26, 9, 0)
+    assert expiring.expiry_warning_sent_at == datetime(2026, 11, 26, 9, 0)
+    assert not_yet.expiry_warning_sent_at is None
+
+    mock_send.reset_mock()
+    check_api_key_expiry()
+    mock_send.assert_not_called()
+
+
+@freeze_time("2026-11-26 09:00:00")
+def test_check_api_key_expiry_slack_message_content(notify_api, notify_db_session, mocker):
+    mock_send = mocker.patch("app.tasks.scheduled_tasks.slack_client.send_message_to_slack")
+    service = create_service(service_name="Floods <North> & East")
+    _create_api_key_created_at(service, datetime(2025, 12, 24, 16, 45), key_name="Live key")
+
+    admin_url = "https://admin.emergency-alerts.service.gov.uk"
+    with set_config_values(notify_api, {"ENVIRONMENT": "production", "ADMIN_EXTERNAL_URL": admin_url}):
+        check_api_key_expiry()
+
+    message = mock_send.call_args.args[0]
+    assert message.subject == "API key expires in 28 days"
+    assert message.markdown_sections == [
+        "*Environment:* production",
+        f"*Service:* Floods &lt;North&gt; &amp; East (`{service.id}`)",
+        "*Key name:* Live key",
+        "*Key type:* normal",
+        "*Created:* 24 December 2025",
+        "*Expires:* 24 December 2026",
+        "Work with the client to replace this key, then revoke it on 24 December 2026 when it reaches 12 months old.",
+        f"<{admin_url}/services/{service.id}/api/keys|View API keys for this service>",
+    ]
+
+
+@freeze_time("2026-11-26 09:00:00")
+@pytest.mark.parametrize(
+    "created_at, expected_subject, expected_type",
+    [
+        (datetime(2025, 11, 27, 9, 0), "API key expires in 1 day", "info"),
+        (datetime(2025, 11, 26, 9, 0), "API key expires today", "error"),
+    ],
+)
+def test_check_api_key_expiry_subject_near_expiry(
+    notify_api, sample_service, mocker, created_at, expected_subject, expected_type
+):
+    mock_send = mocker.patch("app.tasks.scheduled_tasks.slack_client.send_message_to_slack")
+    _create_api_key_created_at(sample_service, created_at)
+
+    check_api_key_expiry()
+
+    message = mock_send.call_args.args[0]
+    assert message.subject == expected_subject
+    assert message.message_type == expected_type
+
+
+@pytest.mark.parametrize("webhook_url", [None, "", "dummy"])
+def test_check_api_key_expiry_does_nothing_without_a_valid_webhook(notify_api, sample_service, mocker, webhook_url):
+    mock_send = mocker.patch("app.tasks.scheduled_tasks.slack_client.send_message_to_slack")
+    api_key = _create_api_key_created_at(sample_service, datetime(2020, 1, 1, 9, 0))
+
+    with set_config(notify_api, "API_KEY_EXPIRY_SLACK_WEBHOOK_URL", webhook_url):
+        check_api_key_expiry()
+
+    mock_send.assert_not_called()
+    assert api_key.expiry_warning_sent_at is None
+
+
+def test_check_api_key_expiry_does_not_record_warning_if_slack_fails(notify_api, sample_service, mocker):
+    mocker.patch(
+        "app.tasks.scheduled_tasks.slack_client.send_message_to_slack",
+        side_effect=SlackError(Mock(status_code=500)),
+    )
+    api_key = _create_api_key_created_at(sample_service, datetime(2020, 1, 1, 9, 0))
+
+    with pytest.raises(SlackError):
+        check_api_key_expiry()
+
+    assert api_key.expiry_warning_sent_at is None

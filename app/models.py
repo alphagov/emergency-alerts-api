@@ -2,6 +2,7 @@ import datetime
 import uuid
 from typing import Optional
 
+from dateutil.relativedelta import relativedelta
 from emergency_alerts_utils.admin_action import (
     ADMIN_ACTION_LIST,
     ADMIN_STATUS_LIST,
@@ -479,6 +480,12 @@ class ServiceCallbackType(db.Model):
     name = db.Column(db.String, primary_key=True)
 
 
+# API keys should be rotated by this age. We revoke them manually, so the policy is enforced
+# by a scheduled Slack warning (see check_api_key_expiry) rather than by rejecting the key.
+API_KEY_MAX_AGE_MONTHS = 12
+API_KEY_EXPIRY_WARNING_DAYS = 28
+
+
 class ApiKey(db.Model, Versioned):
     __tablename__ = "api_keys"
 
@@ -493,10 +500,23 @@ class ApiKey(db.Model, Versioned):
     updated_at = db.Column(db.DateTime, index=False, unique=False, nullable=True, onupdate=datetime.datetime.utcnow)
     created_by = db.relationship("User")
     created_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), index=True, nullable=False)
+    # When we posted the "this key is about to reach its maximum age" Slack warning, so we only warn once
+    expiry_warning_sent_at = db.Column(db.DateTime, nullable=True)
 
     __table_args__ = (
         Index("uix_service_to_key_name", "service_id", "name", unique=True, postgresql_where=expiry_date.is_(None)),
     )
+
+    @property
+    def scheduled_expiry_date(self):
+        """
+        The date this key reaches its maximum age and is due to be revoked.
+
+        Not to be confused with `expiry_date`, which is when the key was actually revoked.
+        """
+        if self.created_at is None:
+            return None
+        return (self.created_at + relativedelta(months=API_KEY_MAX_AGE_MONTHS)).date()
 
     @property
     def secret(self):

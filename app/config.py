@@ -103,6 +103,10 @@ class Config(object):
 
     ZENDESK_API_KEY = os.environ.get("ZENDESK_API_KEY")
     REPORTS_SLACK_WEBHOOK_URL = os.environ.get("REPORTS_SLACK_WEBHOOK_URL")
+    # Incoming webhooks are bound to a channel, so each environment's webhook decides where these go:
+    # production -> #emergency-alerts-support, staging -> #emergency-alerts-staging-notifications,
+    # preview -> #emergency-alerts-preview-notifications. Unset elsewhere, which disables the warnings.
+    API_KEY_EXPIRY_SLACK_WEBHOOK_URL = os.environ.get("API_KEY_EXPIRY_SLACK_WEBHOOK_URL")
 
     # Logging
     DEBUG = True
@@ -291,6 +295,7 @@ class Test(Config):
     SUBDOMAIN = "dev." if ENVIRONMENT == "development" else f"{ENVIRONMENT}." if ENVIRONMENT != "production" else ""
     ADMIN_EXTERNAL_URL = f"https://{TENANT}admin.{SUBDOMAIN}emergency-alerts.service.gov.uk"
     REPORTS_SLACK_WEBHOOK_URL = "https://hooks.slack.com/somewhere"
+    API_KEY_EXPIRY_SLACK_WEBHOOK_URL = "https://hooks.slack.com/api-key-expiry"
     CBC_PROXY_ENABLED = True
 
     GOVUK_ALERTS_S3_BUCKET_NAME = "test-govuk-alerts-bucket"

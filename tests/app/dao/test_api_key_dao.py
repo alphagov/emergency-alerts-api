@@ -1,11 +1,15 @@
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 from emergency_alerts_utils.api_key import KEY_TYPE_NORMAL
+from freezegun import freeze_time
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
 
+from app import db
 from app.dao.api_key_dao import (
+    dao_get_api_keys_needing_expiry_warning,
+    dao_record_api_key_expiry_warning_sent,
     expire_api_key,
     get_model_api_keys,
     get_unsigned_secret,
@@ -14,6 +18,7 @@ from app.dao.api_key_dao import (
     save_model_api_key,
 )
 from app.models import ApiKey
+from tests.app.db import create_api_key
 
 
 def test_save_api_key_should_create_new_api_key_and_history(sample_service):
@@ -185,3 +190,48 @@ def test_dao_purge_test_api_keys(sample_service):
     assert keys[0].name == "Kept-123"
     history_keys = ApiKey.get_history_model().query.filter(ApiKey.service_id == sample_service.id).all()
     assert len(history_keys) == 1
+
+
+def _create_api_key_created_at(service, created_at, **kwargs):
+    api_key = create_api_key(service, key_name=f"key created {created_at}", **kwargs)
+    api_key.created_at = created_at
+    db.session.commit()
+    return api_key
+
+
+def test_dao_get_api_keys_needing_expiry_warning_returns_keys_within_28_days_of_expiry(sample_service):
+    today = date(2026, 11, 26)
+    # Scheduled expiry is 12 months after creation, so 28 days from today means created on 2025-12-24
+    exactly_28_days_left = _create_api_key_created_at(sample_service, datetime(2025, 12, 24, 23, 59))
+    ten_days_left = _create_api_key_created_at(sample_service, datetime(2025, 12, 6, 9, 0))
+    already_expired = _create_api_key_created_at(sample_service, datetime(2025, 6, 1, 9, 0))
+    _create_api_key_created_at(sample_service, datetime(2025, 12, 25, 0, 0))  # 29 days left
+    _create_api_key_created_at(sample_service, datetime(2026, 11, 1, 9, 0))  # brand new
+
+    assert dao_get_api_keys_needing_expiry_warning(today) == [already_expired, ten_days_left, exactly_28_days_left]
+
+
+def test_dao_get_api_keys_needing_expiry_warning_ignores_revoked_keys(sample_service):
+    api_key = _create_api_key_created_at(sample_service, datetime(2025, 6, 1, 9, 0))
+    expire_api_key(service_id=sample_service.id, api_key_id=api_key.id)
+
+    assert dao_get_api_keys_needing_expiry_warning(date(2026, 11, 26)) == []
+
+
+def test_dao_get_api_keys_needing_expiry_warning_ignores_keys_already_warned_about(sample_service):
+    api_key = _create_api_key_created_at(sample_service, datetime(2025, 12, 1, 9, 0))
+    assert dao_get_api_keys_needing_expiry_warning(date(2026, 11, 26)) == [api_key]
+
+    dao_record_api_key_expiry_warning_sent(api_key)
+
+    assert dao_get_api_keys_needing_expiry_warning(date(2026, 11, 26)) == []
+
+
+@freeze_time("2026-11-26 09:00:00")
+def test_dao_record_api_key_expiry_warning_sent_does_not_create_a_new_version(sample_api_key):
+    dao_record_api_key_expiry_warning_sent(sample_api_key)
+
+    saved = ApiKey.query.filter_by(id=sample_api_key.id).one()
+    assert saved.expiry_warning_sent_at == datetime(2026, 11, 26, 9, 0)
+    assert saved.version == 1
+    assert ApiKey.get_history_model().query.filter_by(id=sample_api_key.id).count() == 1

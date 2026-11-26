@@ -2,6 +2,7 @@ import json
 
 from emergency_alerts_utils.api_key import KEY_TYPE_NORMAL
 from flask import url_for
+from freezegun import freeze_time
 
 from app.dao.api_key_dao import expire_api_key
 from app.models import ApiKey
@@ -9,6 +10,7 @@ from tests import create_admin_authorization_header
 from tests.app.db import create_api_key, create_service, create_user
 
 
+@freeze_time("2026-11-26 12:00:00")
 def test_api_key_should_create_new_api_key_for_service(notify_api, sample_service):
     with notify_api.test_request_context():
         with notify_api.test_client() as client:
@@ -24,10 +26,12 @@ def test_api_key_should_create_new_api_key_for_service(notify_api, sample_servic
                 headers=[("Content-Type", "application/json"), auth_header],
             )
             assert response.status_code == 201
-            assert "data" in json.loads(response.get_data(as_text=True))
+            response_json = json.loads(response.get_data(as_text=True))
             saved_api_key = ApiKey.query.filter_by(service_id=sample_service.id).first()
             assert saved_api_key.service_id == sample_service.id
             assert saved_api_key.name == "some secret name"
+            assert response_json["data"] == saved_api_key.secret
+            assert response_json["scheduled_expiry_date"] == "2027-11-26"
 
 
 def test_api_key_should_return_error_when_service_does_not_exist(notify_api, sample_service):

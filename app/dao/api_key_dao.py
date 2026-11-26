@@ -2,10 +2,11 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import func, or_
+from sqlalchemy.orm import joinedload
 
 from app import db
 from app.dao.dao_utils import autocommit, version_class
-from app.models import ApiKey
+from app.models import API_KEY_EXPIRY_WARNING_DAYS, ApiKey
 
 
 @autocommit
@@ -50,6 +51,32 @@ def get_unsigned_secret(key_id):
     """
     api_key = ApiKey.query.filter_by(id=key_id, expiry_date=None).one()
     return api_key.secret
+
+
+def dao_get_api_keys_needing_expiry_warning(today):
+    """
+    Active (unrevoked) API keys that are within API_KEY_EXPIRY_WARNING_DAYS of their scheduled expiry,
+    or already past it, and that we haven't yet warned about.
+    """
+    unwarned_active_keys = (
+        ApiKey.query.filter(
+            ApiKey.expiry_date.is_(None),
+            ApiKey.expiry_warning_sent_at.is_(None),
+        )
+        .options(joinedload(ApiKey.service))
+        .order_by(ApiKey.created_at)
+        .all()
+    )
+    # Filtered here rather than in SQL so that the date maths is the same as the expiry date shown in the key
+    warn_if_expiring_on_or_before = today + timedelta(days=API_KEY_EXPIRY_WARNING_DAYS)
+    return [key for key in unwarned_active_keys if key.scheduled_expiry_date <= warn_if_expiring_on_or_before]
+
+
+@autocommit
+def dao_record_api_key_expiry_warning_sent(api_key):
+    # Deliberately not versioned: this is our own bookkeeping, not a change to the key itself
+    api_key.expiry_warning_sent_at = datetime.now(timezone.utc)
+    db.session.add(api_key)
 
 
 @autocommit
