@@ -1,8 +1,24 @@
+import os
 from datetime import datetime
+from io import BytesIO
+from unittest.mock import Mock, patch
 
-from app.commands import audit_broadcast_areas, local_dev_broadcast_permissions
+from geoalchemy2.shape import to_shape
+
+from app.commands import (
+    add_areas,
+    audit_broadcast_areas,
+    local_dev_broadcast_permissions,
+)
 from app.dao.services_dao import dao_add_user_to_service
-from app.models import BROADCAST_TYPE, BroadcastMessage, BroadcastStatusType
+from app.models import (
+    BROADCAST_TYPE,
+    BroadcastMessage,
+    BroadcastStatusType,
+    GeographyPolygons,
+    GeographyType,
+    GeographyVersion,
+)
 from tests.app.db import create_broadcast_message, create_template, create_user
 
 
@@ -72,3 +88,121 @@ def test_audit_broadcast_areas_reports_live_broadcasts_with_invalid_areas(sample
     assert lines_for[str(before_cutoff.id)].endswith("published=False")
     assert result.output.endswith("Checked 5 live alerts: 4 failed, 2 of them published to gov.uk/alerts\n")
     assert BroadcastMessage.query.get(missing_names.id).areas == {"simple_polygons": valid_areas["simple_polygons"]}
+
+
+def test_add_areas(notify_api, notify_db_session):
+    csv_data = (
+        "geographic_id,name,geometry,parent_geography_id\n"
+        'countries,Countries,"POLYGON ((0 0, 10 0, 10 10, 0 0))",\n'
+        'test-area,Test area,"POLYGON ((0 0, 1 0, 1 1, 0 0))",\n'
+    )
+
+    s3 = Mock()
+    s3.get_object.side_effect = lambda **kwargs: {
+        "Body": BytesIO(csv_data.encode("utf-8")),
+    }
+    with (
+        patch.dict(
+            os.environ,
+            {"AREAS_SOURCE_BUCKET_NAME": "test-bucket"},
+        ),
+        patch("app.commands.boto3.client", return_value=s3),
+    ):
+        result = notify_api.test_cli_runner().invoke(add_areas)
+
+    assert result.exit_code == 0, result.output
+
+    countries_type = GeographyType.query.filter_by(route="countries").one()
+    assert countries_type.name == "Countries"
+
+    geography_version = GeographyVersion.query.filter_by(
+        geography_type_id=countries_type.id,
+        version="1.0.0",
+    ).one()
+
+    assert geography_version.geography_type_id == countries_type.id
+    assert geography_version.state == "active"
+
+    polygons = GeographyPolygons.query.filter_by(
+        geography_version_id=geography_version.id,
+    ).all()
+
+    assert len(polygons) == 2
+
+    polygons_by_name = {p.name: p for p in polygons}
+
+    assert set(polygons_by_name.keys()) == {
+        "Countries",
+        "Test area",
+    }
+    assert to_shape(polygons_by_name["Countries"].geometry).wkt == "POLYGON ((0 0, 10 0, 10 10, 0 0))"
+    assert to_shape(polygons_by_name["Test area"].geometry).wkt == "POLYGON ((0 0, 1 0, 1 1, 0 0))"
+
+
+def test_add_areas_requires_bucket_name(notify_api):
+    with patch.dict(os.environ, {}, clear=True):
+        result = notify_api.test_cli_runner().invoke(add_areas)
+
+    assert result.exit_code != 0
+    assert "AREAS_SOURCE_BUCKET_NAME is not set" in result.output
+
+
+def test_add_areas_rolls_back_on_error(
+    notify_api,
+):
+    with (
+        patch.dict(
+            os.environ,
+            {"AREAS_SOURCE_BUCKET_NAME": "test-bucket"},
+        ),
+        patch("app.commands.boto3.client"),
+        patch(
+            "app.commands.AreasDAO.add_geography_type_if_not_already_stored",
+            side_effect=Exception("boom"),
+        ),
+        patch("app.commands.db.session.rollback") as mock_rollback,
+    ):
+        result = notify_api.test_cli_runner().invoke(add_areas)
+
+    assert result.exit_code != 0
+
+    mock_rollback.assert_called_once()
+
+    assert "Unable to add countries areas data: boom" in result.output
+
+
+def test_add_areas_skips_polygon_import_when_version_exists(
+    notify_api,
+    notify_db_session,
+):
+    geography_type = GeographyType(
+        name="Countries",
+        route="countries",
+        name_singular="country",
+    )
+    notify_db_session.add(geography_type)
+    notify_db_session.commit()
+
+    s3 = Mock()
+
+    with (
+        patch.dict(
+            os.environ,
+            {"AREAS_SOURCE_BUCKET_NAME": "test-bucket"},
+        ),
+        patch("app.commands.boto3.client", return_value=s3),
+        patch(
+            "app.commands.AreasDAO.add_geography_version",
+            return_value=None,
+        ),
+        patch(
+            "app.commands.get_source_data",
+        ) as mock_get_source_data,
+    ):
+        result = notify_api.test_cli_runner().invoke(add_areas)
+
+    assert result.exit_code == 0
+
+    mock_get_source_data.assert_not_called()
+
+    assert "countries geography version (1.0.0) already exists, skipping polygon import" in result.output
