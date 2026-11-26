@@ -54,10 +54,6 @@ def get_unsigned_secret(key_id):
 
 
 def dao_get_api_keys_needing_expiry_warning(today):
-    """
-    Active (unrevoked) API keys that are within API_KEY_EXPIRY_WARNING_DAYS of their scheduled expiry,
-    or already past it, and that we haven't yet warned about.
-    """
     unwarned_active_keys = (
         ApiKey.query.filter(
             ApiKey.expiry_date.is_(None),
@@ -67,21 +63,20 @@ def dao_get_api_keys_needing_expiry_warning(today):
         .order_by(ApiKey.created_at)
         .all()
     )
-    # Filtered here rather than in SQL so that the date maths is the same as the expiry date shown in the key
+    # Filtered here rather than in SQL so the calculated date is the same as the expiry date shown in the key
     warn_if_expiring_on_or_before = today + timedelta(days=API_KEY_EXPIRY_WARNING_DAYS)
     return [key for key in unwarned_active_keys if key.scheduled_expiry_date <= warn_if_expiring_on_or_before]
 
 
 @autocommit
 def dao_record_api_key_expiry_warning_sent(api_key):
-    # Deliberately not versioned: this is our own bookkeeping, not a change to the key itself
     api_key.expiry_warning_sent_at = datetime.now(timezone.utc)
     db.session.add(api_key)
 
 
 @autocommit
 def purge_test_api_keys(service_id):
-    # Only looks for TestKey-blah, which is what the functional tests make
+    # Only looks for TestKey-identifier, which is what the functional tests make
     ApiKey.query.filter(ApiKey.service_id == service_id, ApiKey.name.startswith("Key-")).delete(
         synchronize_session="fetch"
     )

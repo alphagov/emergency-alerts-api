@@ -500,7 +500,6 @@ class ApiKey(db.Model, Versioned):
     updated_at = db.Column(db.DateTime, index=False, unique=False, nullable=True, onupdate=datetime.datetime.utcnow)
     created_by = db.relationship("User")
     created_by_id = db.Column(UUID(as_uuid=True), db.ForeignKey("users.id"), index=True, nullable=False)
-    # When we posted the "this key is about to reach its maximum age" Slack warning, so we only warn once
     expiry_warning_sent_at = db.Column(db.DateTime, nullable=True)
 
     __table_args__ = (

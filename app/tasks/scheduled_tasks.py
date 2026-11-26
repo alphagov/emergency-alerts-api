@@ -284,11 +284,8 @@ def purge_old_alerts_from_preview_environment():
 )
 def check_api_key_expiry():
     """
-    Warn the support team on Slack when an API key is approaching its maximum age, so that they can
-    work with the client to rotate it before revoking the old key by hand.
-
-    Each key is warned about once. Because that's tracked, a key whose warning window opens at the
-    weekend (or while this task isn't running) is picked up on the next run rather than missed.
+    Each key is warned about once and a key whose warning window opens at the
+    weekend (or while this task isn't running) is picked up on the next run.
     """
     webhook_url = current_app.config.get("API_KEY_EXPIRY_SLACK_WEBHOOK_URL")
     if not webhook_url:
