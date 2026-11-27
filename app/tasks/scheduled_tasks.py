@@ -1,13 +1,18 @@
 import time
 from datetime import datetime, timedelta, timezone
 
+from emergency_alerts_utils.clients.slack.slack_client import SlackMessage
 from emergency_alerts_utils.tasks import QueueNames, TaskNames
 from flask import current_app
 from periodiq import cron
 from sqlalchemy.exc import SQLAlchemyError
 
-from app import db, dramatiq
+from app import db, dramatiq, slack_client
 from app.broadcast_message.utils import purge_broadcast_messages
+from app.dao.api_key_dao import (
+    dao_get_api_keys_needing_expiry_warning,
+    dao_record_api_key_expiry_warning_sent,
+)
 from app.dao.broadcast_message_dao import (
     dao_get_all_finished_broadcast_messages_with_outstanding_actions,
 )
@@ -22,7 +27,12 @@ from app.dao.users_dao import (
     get_user_by_email,
     save_model_user,
 )
-from app.models import BroadcastMessage, BroadcastStatusType, Event
+from app.models import (
+    API_KEY_MAX_AGE_MONTHS,
+    BroadcastMessage,
+    BroadcastStatusType,
+    Event,
+)
 from app.publish_task_progress.rest import purge_publish_tasks
 from app.status.healthcheck import (
     get_db_version,
@@ -265,3 +275,90 @@ def purge_old_alerts_from_preview_environment():
         except Exception as e:
             current_app.logger.exception(f"Unable to purge preview messages: {e}")
             raise
+
+
+@dramatiq.actor(
+    actor_name=TaskNames.CHECK_API_KEY_EXPIRY,
+    queue_name=QueueNames.PERIODIC,
+    periodic=cron("0 9 * * 1-5"),  # 09:00 UTC, Monday to Friday
+)
+def check_api_key_expiry():
+    """
+    Each key is warned about once and a key whose warning window opens at the
+    weekend (or while this task isn't running) is picked up on the next run.
+    """
+    webhook_url = current_app.config.get("API_KEY_EXPIRY_SLACK_WEBHOOK_URL")
+    if not webhook_url:
+        current_app.logger.info(
+            "Skipping API key expiry check - no Slack webhook configured for this environment",
+            extra={"python_module": __name__},
+        )
+        return
+    if not webhook_url.startswith("https://"):
+        # e.g. the "dummy" value Terraform creates the SSM parameter with, before it's been set
+        current_app.logger.error(
+            "Skipping API key expiry check - API_KEY_EXPIRY_SLACK_WEBHOOK_URL is not a valid webhook URL",
+            extra={"python_module": __name__},
+        )
+        return
+
+    today = datetime.now(timezone.utc).date()
+    api_keys = dao_get_api_keys_needing_expiry_warning(today)
+    current_app.logger.info(
+        f"Found {len(api_keys)} API keys needing an expiry warning",
+        extra={"python_module": __name__, "task": TaskNames.CHECK_API_KEY_EXPIRY},
+    )
+
+    for api_key in api_keys:
+        # Send before recording, so a failure means a retry rather than a missed warning
+        slack_client.send_message_to_slack(_api_key_expiry_slack_message(webhook_url, api_key, today))
+        dao_record_api_key_expiry_warning_sent(api_key)
+        current_app.logger.info(
+            f"Sent expiry warning for API key {api_key.id} in service {api_key.service_id}",
+            extra={"python_module": __name__, "task": TaskNames.CHECK_API_KEY_EXPIRY},
+        )
+
+
+def _api_key_expiry_slack_message(webhook_url, api_key, today):
+    expires_on = api_key.scheduled_expiry_date
+    days_left = (expires_on - today).days
+    service = api_key.service
+
+    if days_left > 0:
+        subject = f"API key expires in {days_left} day{'' if days_left == 1 else 's'}"
+        message_type = "info"
+        action = (
+            f"Work with the client to replace this key, then revoke it on {expires_on:%-d %B %Y} "
+            f"when it reaches {API_KEY_MAX_AGE_MONTHS} months old."
+        )
+    else:
+        subject = "API key expires today" if days_left == 0 else "API key is past its expiry date"
+        message_type = "error"
+        action = (
+            f"This key has reached {API_KEY_MAX_AGE_MONTHS} months old. "
+            "Work with the client to replace it, then revoke it as soon as possible."
+        )
+
+    sections = [
+        f"*Environment:* {current_app.config.get('ENVIRONMENT')}",
+        f"*Service:* {_slack_escape(service.name)} (`{service.id}`)",
+        f"*Key name:* {_slack_escape(api_key.name)}",
+        f"*Key type:* {api_key.key_type}",
+        f"*Created:* {api_key.created_at:%-d %B %Y}",
+        f"*Expires:* {expires_on:%-d %B %Y}",
+        action,
+    ]
+    if admin_url := current_app.config.get("ADMIN_EXTERNAL_URL"):
+        sections.append(f"<{admin_url}/services/{service.id}/api/keys|View API keys for this service>")
+
+    return SlackMessage(
+        webhook_url=webhook_url,
+        subject=subject,
+        message_type=message_type,
+        markdown_sections=sections,
+    )
+
+
+def _slack_escape(text):
+    # Names are entered by users; these are the only characters Slack mrkdwn needs escaping
+    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")

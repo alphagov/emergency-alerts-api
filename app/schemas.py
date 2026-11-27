@@ -389,6 +389,7 @@ class ApiKeySchema(BaseSchema):
     expiry_date = FlexibleDateTime()
     created_at = FlexibleDateTime()
     updated_at = FlexibleDateTime()
+    expiry_warning_sent_at = FlexibleDateTime(dump_only=True)
 
     class Meta(BaseSchema.Meta):
         model = models.ApiKey
