@@ -76,7 +76,7 @@ def dao_record_api_key_expiry_warning_sent(api_key):
 
 @autocommit
 def purge_test_api_keys(service_id):
-    # Only looks for TestKey-identifier, which is what the functional tests make
+    # Only looks for Key-identifier, which is what the functional tests make
     ApiKey.query.filter(ApiKey.service_id == service_id, ApiKey.name.startswith("Key-")).delete(
         synchronize_session="fetch"
     )
